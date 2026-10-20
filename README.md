@@ -34,6 +34,7 @@ three-video-framework/
 │   ├── index.ts                    # Entry point calling registerRoot
 │   ├── artifacts/                  # Procedural 3D asset library
 │   │   ├── characters/             # SoldierUnit, ArrowVolley
+│   │   ├── dungeon/                # Diorama, SpikePit, Trapdoors, Flamers, Pendulum, Catapult, Mimic
 │   │   ├── machines/               # SiegeTower, ScalingLadder
 │   │   ├── props/                  # Banner, Crate, Rock, Tree
 │   │   └── structures/             # FortressWall
@@ -50,7 +51,8 @@ three-video-framework/
 │   │   └── primitives/             # Motion primitives (FlyInPart, HingePart)
 │   └── episodes/                   # Episodic compositions
 │       ├── registry.ts             # Central episode export registry
-│       ├── siege-tower/            # Full-length production showcase episode
+│       ├── dungeon-trap/           # Evolution of a Dungeon Trap showcase episode
+│       ├── siege-tower/            # Full-length production siege showcase episode
 │       └── starter/                # Minimal template episode
 ├── remotion.config.ts              # Remotion configuration (Rspack, Angle OpenGL)
 ├── tsconfig.json                   # TypeScript configuration
@@ -123,6 +125,16 @@ This command automatically:
 Render the starter topic:
 ```bash
 npm run render:starter
+```
+
+Render the dungeon trap evolution episode:
+```bash
+npm run render:dungeon
+```
+
+Render a still preview of the dungeon trap:
+```bash
+npm run still:dungeon
 ```
 
 Render the siege tower episode:

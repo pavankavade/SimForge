@@ -142,6 +142,7 @@ export interface EpisodeConfig {
   audio?: AudioConfig;
   subtitles?: SubtitleConfig;
   overlays?: OverlayConfig;
+  OverlayComponent?: React.FC;
 }
 
 export interface EpisodeDefinition {

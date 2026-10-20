@@ -37,7 +37,9 @@
     "lint": "eslint src && tsc",
     "new:episode": "node scripts/new-episode.mjs",
     "render:siege": "remotion render SiegeTowerVideo out/siege-tower.mp4 --concurrency=8 --crf=17 --audio-bitrate=192k",
-    "render:starter": "remotion render StarterTopic out/starter.mp4 --concurrency=8 --crf=20"
+    "render:starter": "remotion render StarterTopic out/starter.mp4 --concurrency=8 --crf=20",
+    "render:dungeon": "remotion render DungeonTrap out/dungeon-trap.mp4 --concurrency=8 --crf=18",
+    "still:dungeon": "remotion still DungeonTrap out/dungeon-still.png --frame=500"
   },
   "allowScripts": {
     "esbuild": false

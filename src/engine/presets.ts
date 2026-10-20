@@ -130,4 +130,29 @@ export const ENVIRONMENT_PRESETS = {
       shadows: true,
     },
   },
+  dungeonVault: {
+    sky: {
+      top: "#08090d",
+      mid: "#11131a",
+      bottom: "#161924",
+    },
+    fog: {
+      color: "#12141c",
+      near: 16,
+      far: 48,
+    },
+    ground: {
+      color: "#161720",
+      texture: null,
+    },
+    hills: [],
+    clouds: [],
+    lights: {
+      key: { position: [6, 12, 10], intensity: 2.2, color: "#ffe0a8" },
+      fill: { position: [-8, 8, 8], intensity: 1.0, color: "#7a95bd" },
+      rim: { position: [0, 14, -8], intensity: 1.2, color: "#adc4eb" },
+      ambient: { intensity: 0.65, color: "#283042" },
+      shadows: true,
+    },
+  },
 } satisfies Record<string, EnvironmentConfig>;

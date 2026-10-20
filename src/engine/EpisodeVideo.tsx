@@ -52,6 +52,8 @@ export const EpisodeVideo: React.FC<EpisodeVideoProps> = ({ config, Scene }) => 
 
       {config.subtitles ? <Subtitles {...config.subtitles} /> : null}
 
+      {config.OverlayComponent ? <config.OverlayComponent /> : null}
+
       <FadeOverlay
         fadeInFrames={overlays.fadeInFrames ?? 8}
         fadeOutFrames={overlays.fadeOutFrames ?? 14}
