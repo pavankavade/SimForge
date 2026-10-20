@@ -1,177 +1,7 @@
 import type { EpisodeConfig, SubtitleSegment } from "../../engine/types";
 import { ENVIRONMENT_PRESETS } from "../../engine/presets";
 import { TrapHUD } from "./TrapHUD";
-
-// Word-level synced subtitle segments for the 5-stage evolution script
-const segments: SubtitleSegment[] = [
-  // Beat 1: Basic Spike Pit (Frames 15 - 320)
-  {
-    startFrame: 15,
-    endFrame: 150,
-    words: [
-      { word: "If", startFrame: 15, endFrame: 22 },
-      { word: "you", startFrame: 22, endFrame: 28 },
-      { word: "dig", startFrame: 28, endFrame: 38 },
-      { word: "a", startFrame: 38, endFrame: 44 },
-      { word: "simple", startFrame: 44, endFrame: 58 },
-      { word: "spike", startFrame: 58, endFrame: 72 },
-      { word: "pit", startFrame: 72, endFrame: 86 },
-      { word: "at", startFrame: 86, endFrame: 94 },
-      { word: "your", startFrame: 94, endFrame: 104 },
-      { word: "dungeon", startFrame: 104, endFrame: 122 },
-      { word: "entrance,", startFrame: 122, endFrame: 150 },
-    ],
-  },
-  {
-    startFrame: 155,
-    endFrame: 320,
-    words: [
-      { word: "a", startFrame: 155, endFrame: 164 },
-      { word: "goblin", startFrame: 164, endFrame: 184 },
-      { word: "falls", startFrame: 184, endFrame: 202 },
-      { word: "in—", startFrame: 202, endFrame: 218 },
-      { word: "but", startFrame: 218, endFrame: 230 },
-      { word: "a", startFrame: 230, endFrame: 238 },
-      { word: "Rogue", startFrame: 238, endFrame: 256 },
-      { word: "easily", startFrame: 256, endFrame: 276 },
-      { word: "leaps", startFrame: 276, endFrame: 294 },
-      { word: "over.", startFrame: 294, endFrame: 320 },
-    ],
-  },
-
-  // Beat 2: Greed Bait & False Floor (Frames 335 - 740)
-  {
-    startFrame: 335,
-    endFrame: 510,
-    words: [
-      { word: "So", startFrame: 335, endFrame: 348 },
-      { word: "you", startFrame: 348, endFrame: 358 },
-      { word: "cover", startFrame: 358, endFrame: 374 },
-      { word: "the", startFrame: 374, endFrame: 384 },
-      { word: "gap", startFrame: 384, endFrame: 398 },
-      { word: "with", startFrame: 398, endFrame: 412 },
-      { word: "a", startFrame: 412, endFrame: 420 },
-      { word: "hinged", startFrame: 420, endFrame: 438 },
-      { word: "trapdoor", startFrame: 438, endFrame: 462 },
-      { word: "and", startFrame: 462, endFrame: 474 },
-      { word: "hang", startFrame: 474, endFrame: 488 },
-      { word: "gold", startFrame: 488, endFrame: 510 },
-    ],
-  },
-  {
-    startFrame: 515,
-    endFrame: 740,
-    words: [
-      { word: "forcing", startFrame: 515, endFrame: 535 },
-      { word: "greed", startFrame: 535, endFrame: 555 },
-      { word: "onto", startFrame: 555, endFrame: 575 },
-      { word: "a", startFrame: 575, endFrame: 585 },
-      { word: "hidden", startFrame: 585, endFrame: 610 },
-      { word: "pressure", startFrame: 610, endFrame: 638 },
-      { word: "plate", startFrame: 638, endFrame: 665 },
-      { word: "that", startFrame: 665, endFrame: 680 },
-      { word: "drops", startFrame: 680, endFrame: 705 },
-      { word: "them.", startFrame: 705, endFrame: 740 },
-    ],
-  },
-
-  // Beat 3: Countering Mage Ice Spell (Frames 755 - 1220)
-  {
-    startFrame: 755,
-    endFrame: 960,
-    words: [
-      { word: "When", startFrame: 755, endFrame: 775 },
-      { word: "their", startFrame: 775, endFrame: 792 },
-      { word: "Mage", startFrame: 792, endFrame: 815 },
-      { word: "casts", startFrame: 815, endFrame: 838 },
-      { word: "an", startFrame: 838, endFrame: 850 },
-      { word: "ice", startFrame: 850, endFrame: 870 },
-      { word: "bridge", startFrame: 870, endFrame: 896 },
-      { word: "across", startFrame: 896, endFrame: 924 },
-      { word: "the", startFrame: 924, endFrame: 938 },
-      { word: "pit,", startFrame: 938, endFrame: 960 },
-    ],
-  },
-  {
-    startFrame: 965,
-    endFrame: 1220,
-    words: [
-      { word: "you", startFrame: 965, endFrame: 980 },
-      { word: "install", startFrame: 980, endFrame: 1010 },
-      { word: "copper", startFrame: 1010, endFrame: 1040 },
-      { word: "flamethrowers", startFrame: 1040, endFrame: 1095 },
-      { word: "that", startFrame: 1095, endFrame: 1115 },
-      { word: "melt", startFrame: 1115, endFrame: 1145 },
-      { word: "the", startFrame: 1145, endFrame: 1160 },
-      { word: "frost", startFrame: 1160, endFrame: 1188 },
-      { word: "instantly.", startFrame: 1188, endFrame: 1220 },
-    ],
-  },
-
-  // Beat 4: Paladin Shield vs Pendulum (Frames 1235 - 1700)
-  {
-    startFrame: 1235,
-    endFrame: 1450,
-    words: [
-      { word: "To", startFrame: 1235, endFrame: 1250 },
-      { word: "stop", startFrame: 1250, endFrame: 1272 },
-      { word: "a", startFrame: 1272, endFrame: 1285 },
-      { word: "Paladin", startFrame: 1285, endFrame: 1318 },
-      { word: "pushing", startFrame: 1318, endFrame: 1350 },
-      { word: "through", startFrame: 1350, endFrame: 1378 },
-      { word: "with", startFrame: 1378, endFrame: 1398 },
-      { word: "a", startFrame: 1398, endFrame: 1410 },
-      { word: "tower", startFrame: 1410, endFrame: 1432 },
-      { word: "shield,", startFrame: 1432, endFrame: 1450 },
-    ],
-  },
-  {
-    startFrame: 1455,
-    endFrame: 1700,
-    words: [
-      { word: "a", startFrame: 1455, endFrame: 1470 },
-      { word: "ceiling", startFrame: 1470, endFrame: 1505 },
-      { word: "pendulum", startFrame: 1505, endFrame: 1545 },
-      { word: "axe", startFrame: 1545, endFrame: 1575 },
-      { word: "swings", startFrame: 1575, endFrame: 1612 },
-      { word: "down", startFrame: 1612, endFrame: 1638 },
-      { word: "and", startFrame: 1638, endFrame: 1655 },
-      { word: "smashes", startFrame: 1655, endFrame: 1680 },
-      { word: "him.", startFrame: 1680, endFrame: 1700 },
-    ],
-  },
-
-  // Beat 5: Overkill Catapult & Mimic (Frames 1715 - 2240)
-  {
-    startFrame: 1715,
-    endFrame: 1940,
-    words: [
-      { word: "Finally,", startFrame: 1715, endFrame: 1745 },
-      { word: "for", startFrame: 1745, endFrame: 1765 },
-      { word: "parties", startFrame: 1765, endFrame: 1798 },
-      { word: "refusing", startFrame: 1798, endFrame: 1832 },
-      { word: "to", startFrame: 1832, endFrame: 1848 },
-      { word: "move,", startFrame: 1848, endFrame: 1872 },
-      { word: "the", startFrame: 1872, endFrame: 1890 },
-      { word: "entire", startFrame: 1890, endFrame: 1918 },
-      { word: "floor", startFrame: 1918, endFrame: 1940 },
-    ],
-  },
-  {
-    startFrame: 1945,
-    endFrame: 2240,
-    words: [
-      { word: "catapults", startFrame: 1945, endFrame: 1985 },
-      { word: "them", startFrame: 1985, endFrame: 2010 },
-      { word: "directly", startFrame: 2010, endFrame: 2045 },
-      { word: "into", startFrame: 2045, endFrame: 2070 },
-      { word: "your", startFrame: 2070, endFrame: 2095 },
-      { word: "pet", startFrame: 2095, endFrame: 2125 },
-      { word: "Mimic—", startFrame: 2125, endFrame: 2160 },
-      { word: "unbeatable.", startFrame: 2160, endFrame: 2240 },
-    ],
-  },
-];
+import wordTimestamps from "./data/wordTimestamps.json";
 
 export const config: EpisodeConfig = {
   id: "DungeonTrap",
@@ -229,9 +59,15 @@ export const config: EpisodeConfig = {
     ],
   },
   environment: ENVIRONMENT_PRESETS.dungeonVault,
+  audio: {
+    src: "episodes/dungeon-trap/narration.mp3",
+    volume: 0.9,
+    fadeInFrames: 6,
+    fadeOutFrames: 15,
+  },
   subtitles: {
     title: "The Evolution of a Dungeon Trap",
-    segments,
+    segments: wordTimestamps as SubtitleSegment[],
     activeColor: "#00eeff",
     textColor: "#ffffff",
     bottomOffset: 240,
