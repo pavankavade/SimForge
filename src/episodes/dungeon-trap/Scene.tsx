@@ -93,9 +93,16 @@ export const Scene: React.FC = () => {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const mageExitX = interpolate(frame, [1080, 1170], [2.6, 6.2], {
+  // Second attempt: once the flamers are fitted he steps back onto his ice
+  // bridge, the jets ignite and drop him through the trapdoor.
+  const mageReturnX = interpolate(frame, [1075, 1145], [2.6, 1.1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
+  });
+  const mageBurnY = interpolate(frame, [1145, 1195], [0, -3.0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.in(Easing.quad),
   });
 
   const mageX =
@@ -105,9 +112,10 @@ export const Scene: React.FC = () => {
         ? -2.5
         : frame < 1005
           ? mageCrossX
-          : frame < 1080
+          : frame < 1075
             ? 2.6
-            : mageExitX;
+            : mageReturnX;
+  const mageY = frame < 1145 ? 0 : mageBurnY;
   const magePose: AdventurerPose =
     frame < 865
       ? "walk"
@@ -115,10 +123,12 @@ export const Scene: React.FC = () => {
         ? "cast"
         : frame < 1005
           ? "walk"
-          : frame < 1080
+          : frame < 1075
             ? "idle"
-            : "walk";
-  const showMage = frame >= 755 && frame < 1180;
+            : frame < 1150
+              ? "walk"
+              : "fall";
+  const showMage = frame >= 755 && frame < 1240;
 
   // =========================================================================
   // BEAT 4 (1230 - 1710): PALADIN TOWER SHIELD vs PENDULUM BLADE
@@ -184,9 +194,13 @@ export const Scene: React.FC = () => {
       {/* 3. Stage 2: False Hinged Trapdoor */}
       <HingedTrapdoor
         spawnFrame={330}
-        openFrame={522}
-        closeFrame={700}
-        reopenFrame={1650}
+        events={[
+          { frame: 522, open: true },
+          { frame: 700, open: false },
+          { frame: 1145, open: true },
+          { frame: 1240, open: false },
+          { frame: 1650, open: true },
+        ]}
       />
 
       {/* 4. Stage 2: Hanging Gold Bait Chest */}
@@ -196,12 +210,12 @@ export const Scene: React.FC = () => {
       <PressurePlate spawnFrame={360} triggerFrame={520} />
 
       {/* 6. Stage 3: Mage Ice Bridge Slab */}
-      <IceBridge castFrame={890} meltFrame={1090} />
+      <IceBridge castFrame={890} meltFrame={1145} />
 
       {/* 7. Stage 3: Alchemical Flame Jets & Underground Fuel Tank */}
       <AlchemicalFlamers
-        spawnFrame={960}
-        fireStartFrame={1075}
+        spawnFrame={1010}
+        fireStartFrame={1125}
         fireEndFrame={1400}
       />
 
@@ -255,7 +269,7 @@ export const Scene: React.FC = () => {
         <AdventurerUnit
           classType="mage"
           pose={magePose}
-          position={[mageX, 0, -0.6]}
+          position={[mageX, mageY, -0.6]}
           rotation={[0, frame < 815 ? Math.PI / 2 : frame < 885 ? 0.35 : 0.15, 0]}
           animFrame={frame}
         />
