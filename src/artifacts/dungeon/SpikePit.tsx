@@ -54,9 +54,9 @@ export const SpikePit: React.FC<SpikePitProps> = ({ spawnFrame = 0 }) => {
             <mesh position={[0, 0.65, 0]} castShadow>
               <coneGeometry args={[0.09, 1.3, 6]} />
               <meshStandardMaterial
-                color={spike.index % 3 === 0 ? "#882222" : "#5a626f"}
-                metalness={0.7}
-                roughness={0.4}
+                color={spike.index % 3 === 0 ? "#b23a2a" : "#8791a3"}
+                metalness={0.45}
+                roughness={0.38}
               />
             </mesh>
             {/* Spike Base Collar */}
@@ -67,6 +67,20 @@ export const SpikePit: React.FC<SpikePitProps> = ({ spawnFrame = 0 }) => {
           </group>
         );
       })}
+      <pointLight
+        position={[0, 2.1, 0]}
+        color="#ff8a46"
+        intensity={7.5}
+        distance={9}
+        decay={2}
+      />
+      <pointLight
+        position={[0, 3.8, 0.6]}
+        color="#ffc07a"
+        intensity={3.2}
+        distance={6}
+        decay={2}
+      />
     </group>
   );
 };

@@ -192,7 +192,7 @@ export const Scene: React.FC = () => {
           classType="goblin"
           pose={goblinPose}
           position={[goblinWalk, goblinDropY, -0.6]}
-          rotation={[0, Math.PI / 2, 0]}
+          rotation={[0, frame < 95 ? Math.PI / 2 : 0.3, 0]}
           animFrame={frame}
         />
       )}
@@ -203,7 +203,7 @@ export const Scene: React.FC = () => {
           classType="rogue"
           pose={rogue1Pose}
           position={[rogue1X, rogue1Y, -0.6]}
-          rotation={[0, Math.PI / 2, 0]}
+          rotation={[0, frame < 195 ? Math.PI / 2 : 0.25, 0]}
           animFrame={frame}
         />
       )}
@@ -214,7 +214,7 @@ export const Scene: React.FC = () => {
           classType="rogue"
           pose={rogue2Pose}
           position={[rogue2X, rogue2Y, -0.6]}
-          rotation={[0, Math.PI / 2, 0]}
+          rotation={[0, frame < 480 ? Math.PI / 2 : 0.25, 0]}
           animFrame={frame}
         />
       )}
@@ -225,7 +225,7 @@ export const Scene: React.FC = () => {
           classType="mage"
           pose={magePose}
           position={[mageX, mageY, -0.6]}
-          rotation={[0, Math.PI / 2, 0]}
+          rotation={[0, frame < 815 ? Math.PI / 2 : frame < 885 ? 0.35 : 0.15, 0]}
           animFrame={frame}
         />
       )}
@@ -236,7 +236,7 @@ export const Scene: React.FC = () => {
           classType="paladin"
           pose={paladinPose}
           position={[paladinX, paladinY, -0.6]}
-          rotation={[0, Math.PI / 2, 0]}
+          rotation={[0, frame < 1335 ? 0.9 : 0.25, 0]}
           animFrame={frame}
         />
       )}
@@ -248,21 +248,21 @@ export const Scene: React.FC = () => {
             classType="rogue"
             pose={frame < 1862 ? "idle" : "launch"}
             position={[launchX_R, launchY_R, -0.3]}
-            rotation={[0, Math.PI / 2, frame > 1862 ? (frame - 1862) * 0.2 : 0]}
+            rotation={[0, 0.25 + (frame > 1862 ? (frame - 1862) * 0.08 : 0), frame > 1862 ? (frame - 1862) * 0.12 : 0]}
             animFrame={frame}
           />
           <AdventurerUnit
             classType="mage"
             pose={frame < 1864 ? "idle" : "launch"}
             position={[launchX_M, launchY_M, -0.6]}
-            rotation={[0, Math.PI / 2, frame > 1864 ? (frame - 1864) * 0.2 : 0]}
+            rotation={[0, 0.25 + (frame > 1864 ? (frame - 1864) * 0.08 : 0), frame > 1864 ? (frame - 1864) * 0.12 : 0]}
             animFrame={frame}
           />
           <AdventurerUnit
             classType="paladin"
             pose={frame < 1866 ? "idle" : "launch"}
             position={[launchX_P, launchY_P, -0.9]}
-            rotation={[0, Math.PI / 2, frame > 1866 ? (frame - 1866) * 0.2 : 0]}
+            rotation={[0, 0.25 + (frame > 1866 ? (frame - 1866) * 0.08 : 0), frame > 1866 ? (frame - 1866) * 0.12 : 0]}
             animFrame={frame}
           />
         </>

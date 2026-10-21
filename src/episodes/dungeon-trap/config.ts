@@ -1,6 +1,5 @@
 import type { EpisodeConfig, SubtitleSegment } from "../../engine/types";
 import { ENVIRONMENT_PRESETS } from "../../engine/presets";
-import { TrapHUD } from "./TrapHUD";
 import wordTimestamps from "./data/wordTimestamps.json";
 
 export const config: EpisodeConfig = {
@@ -14,44 +13,51 @@ export const config: EpisodeConfig = {
     fov: 46,
     near: 0.2,
     far: 350,
-    initialPosition: [0.0, 3.5, 12.0],
+    initialPosition: [-5.8, 2.6, 8.6],
     waypoints: [
-      // Beat 1: Goblin and Rogue
-      { frame: 0, position: [0.0, 3.5, 12.0], lookAt: [0.0, 0.0, -0.6] },
-      { frame: 80, position: [-1.2, 1.2, 9.5], lookAt: [-1.0, -1.0, -0.6] },
-      { frame: 180, position: [0.0, 2.2, 10.5], lookAt: [0.0, 0.5, -0.6] },
-      { frame: 320, position: [0.5, 2.4, 10.0], lookAt: [0.5, 0.4, -0.6] },
-
-      // Beat 2: Trapdoor, Hanging Chest, and Pressure Plate
-      { frame: 350, position: [0.8, 2.0, 8.5], lookAt: [0.8, 1.2, -0.6] },
-      { frame: 480, position: [1.1, 0.2, 6.5], lookAt: [0.6, -0.8, -0.6] },
-      { frame: 540, position: [0.8, 0.8, 7.5], lookAt: [0.8, -1.5, -0.6] },
-      { frame: 720, position: [0.0, 1.5, 9.0], lookAt: [0.0, -0.5, -0.6] },
-
-      // Beat 3: Mage, Ice Bridge, and Flame Jets
-      { frame: 760, position: [-1.5, 1.8, 8.2], lookAt: [-1.0, 0.4, -0.6] },
-      { frame: 830, position: [0.0, -0.8, 7.2], lookAt: [0.0, -1.6, -1.2] },
-      { frame: 880, position: [0.0, 1.2, 8.0], lookAt: [0.0, 0.0, -0.6] },
-      { frame: 1200, position: [-0.5, 1.6, 8.8], lookAt: [-0.5, 0.2, -0.6] },
-
-      // Beat 4: Paladin and Swinging Pendulum
-      { frame: 1240, position: [-3.5, 1.5, 8.0], lookAt: [-3.0, 0.6, -0.6] },
-      { frame: 1280, position: [-2.4, 3.6, 7.8], lookAt: [-2.4, 3.2, -0.6] },
-      { frame: 1335, position: [-1.8, 1.2, 8.2], lookAt: [-1.5, 0.2, -0.6] },
-      { frame: 1680, position: [-1.2, 1.8, 9.2], lookAt: [-1.2, 0.4, -0.6] },
-
-      // Beat 5: Underground Catapult, Mimic, and Grand Launch
-      { frame: 1720, position: [-4.8, -0.6, 8.8], lookAt: [-4.8, -1.4, -0.6] },
-      { frame: 1840, position: [0.0, 4.2, 14.5], lookAt: [0.5, 1.2, -0.6] },
-      { frame: 1880, position: [3.2, 3.2, 11.0], lookAt: [4.5, 1.2, -0.6] },
-      { frame: 2050, position: [0.0, 3.2, 12.0], lookAt: [0.0, 0.5, -0.6] },
-      { frame: 2250, position: [0.0, 2.8, 11.2], lookAt: [0.0, 0.4, -0.6] },
+      { frame: 0, position: [-5.8, 2.6, 8.6], lookAt: [-6.0, 0.7, -0.6] },
+      { frame: 80, position: [-4.8, 2.7, 8.2], lookAt: [-4.6, 0.9, -0.6] },
+      { frame: 95, position: [-3.4, 4.6, 5.6], lookAt: [-2.6, -0.2, -0.6] },
+      { frame: 120, position: [-1.8, 5.6, 2.4], lookAt: [-1.8, -2.0, -0.6] },
+      { frame: 145, position: [-1.0, 5.0, 3.6], lookAt: [-1.0, -1.4, -0.6] },
+      { frame: 165, position: [-0.4, 5.8, 7.5], lookAt: [-0.3, -0.4, -0.6] },
+      { frame: 180, position: [0.0, 6.6, 10.5], lookAt: [0.0, -0.4, -0.6] },
+      { frame: 240, position: [0.6, 6.0, 10.5], lookAt: [0.8, -0.2, -0.6] },
+      { frame: 330, position: [0.8, 2.4, 8.0], lookAt: [0.8, 0.4, -0.6] },
+      { frame: 400, position: [0.8, 2.4, 7.8], lookAt: [0.8, 0.5, -0.6] },
+      { frame: 480, position: [1.0, 3.0, 8.5], lookAt: [0.8, 1.1, -0.6] },
+      { frame: 500, position: [0.7, 3.1, 8.5], lookAt: [0.6, 1.1, -0.6] },
+      { frame: 522, position: [0.4, 3.0, 8.0], lookAt: [0.4, 0.3, -0.6] },
+      { frame: 555, position: [0.2, 3.8, 8.0], lookAt: [0.2, -1.8, -0.6] },
+      { frame: 620, position: [0.8, 2.4, 8.0], lookAt: [0.8, 0.4, -0.6] },
+      { frame: 750, position: [-4.8, 2.5, 8.4], lookAt: [-5.2, 0.6, -0.6] },
+      { frame: 830, position: [-2.6, 2.6, 8.2], lookAt: [-2.6, 0.8, -0.6] },
+      { frame: 875, position: [-1.2, 2.7, 8.0], lookAt: [-1.2, 0.7, -0.6] },
+      { frame: 900, position: [0.0, 2.7, 8.2], lookAt: [0.0, 0.6, -0.6] },
+      { frame: 1000, position: [0.5, 2.9, 8.8], lookAt: [0.5, 0.9, -0.6] },
+      { frame: 1230, position: [0.2, 2.7, 8.6], lookAt: [0.2, 0.7, -0.6] },
+      { frame: 1260, position: [-4.0, 2.8, 8.6], lookAt: [-4.2, 0.8, -0.6] },
+      { frame: 1335, position: [-2.6, 3.2, 9.6], lookAt: [-2.4, 1.6, -0.6] },
+      { frame: 1360, position: [-2.0, 3.8, 9.8], lookAt: [-2.0, 2.0, -0.6] },
+      { frame: 1450, position: [-1.8, 3.9, 10.0], lookAt: [-1.8, 2.1, -0.6] },
+      { frame: 1600, position: [-1.2, 3.4, 9.8], lookAt: [-1.2, 1.4, -0.6] },
+      { frame: 1710, position: [-5.5, 3.6, 11.0], lookAt: [-5.5, 1.0, -0.6] },
+      { frame: 1770, position: [-5.8, 3.6, 10.5], lookAt: [-5.8, 1.0, -0.6] },
+      { frame: 1840, position: [-5.4, 3.7, 12.0], lookAt: [-5.4, 1.0, -0.6] },
+      { frame: 1862, position: [-4.8, 4.2, 14.5], lookAt: [-4.8, 1.0, -0.6] },
+      { frame: 1882, position: [-1.4, 4.6, 16.0], lookAt: [-1.4, 2.0, -0.6] },
+      { frame: 1898, position: [3.0, 4.8, 18.0], lookAt: [3.2, 1.7, -0.6] },
+      { frame: 1915, position: [5.0, 4.5, 14.0], lookAt: [5.5, 1.0, -0.6] },
+      { frame: 1960, position: [5.5, 4.2, 13.0], lookAt: [6.0, 0.8, -0.6] },
+      { frame: 2050, position: [6.0, 3.9, 12.2], lookAt: [6.8, 0.9, -0.6] },
+      { frame: 2180, position: [6.5, 3.5, 10.8], lookAt: [7.1, 0.9, -0.6] },
+      { frame: 2250, position: [6.6, 3.2, 9.6], lookAt: [7.1, 0.95, -0.6] },
     ],
     shake: [
       { at: 522, strength: 0.18, spread: 6 },
       { at: 876, strength: 0.22, spread: 8 },
-      { at: 1335, strength: 0.38, spread: 10 },
-      { at: 1862, strength: 0.42, spread: 12 },
+      { at: 1335, strength: 0.3, spread: 10 },
+      { at: 1862, strength: 0.36, spread: 12 },
     ],
     rumbles: [
       { start: 875, end: 920, strength: 0.035 },
@@ -66,18 +72,17 @@ export const config: EpisodeConfig = {
     fadeOutFrames: 15,
   },
   subtitles: {
-    title: "The Evolution of a Dungeon Trap",
     segments: wordTimestamps as SubtitleSegment[],
-    activeColor: "#00eeff",
+    activeColor: "#ffd84d",
     textColor: "#ffffff",
-    bottomOffset: 240,
+    bottomOffset: 235,
   },
   overlays: {
-    grade: "saturate(1.08) contrast(1.06)",
-    vignette: true,
+    grade: "saturate(1.18) contrast(1.05) brightness(1.05)",
+    vignette:
+      "linear-gradient(135deg, rgba(255,156,74,0.10) 0%, rgba(255,156,74,0) 38%, rgba(18,31,60,0.18) 100%), radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 52%, rgba(0,0,0,0.24) 100%), linear-gradient(180deg, rgba(4,7,12,0.16) 0%, rgba(4,7,12,0) 20%, rgba(4,7,12,0) 72%, rgba(4,7,12,0.34) 100%)",
     fadeInFrames: 10,
     fadeOutFrames: 18,
-    backgroundColor: "#0d0e14",
+    backgroundColor: "#20232d",
   },
-  OverlayComponent: TrapHUD,
 };

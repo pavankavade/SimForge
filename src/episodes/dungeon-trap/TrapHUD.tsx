@@ -66,7 +66,7 @@ export const TrapHUD: React.FC = () => {
     <div
       style={{
         position: "absolute",
-        top: 36,
+        top: 92,
         left: 0,
         right: 0,
         display: "flex",

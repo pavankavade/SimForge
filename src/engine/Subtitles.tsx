@@ -1,23 +1,23 @@
 import React from "react";
 import { interpolate, useCurrentFrame } from "remotion";
-import type { SubtitleConfig, SubtitleSegment } from "./types";
+import type { SubtitleConfig, SubtitleSegment, SubtitleWord } from "./types";
 
 const DEFAULT_FONT_STACK =
   "'Arial Black', 'Arial Bold', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
 
-const getActiveSegment = (segments: SubtitleSegment[], frame: number) => {
+const CHUNK_SIZE = 5;
+
+const getActiveSegmentIndex = (segments: SubtitleSegment[], frame: number) => {
   let activeIndex = -1;
   for (let i = 0; i < segments.length; i++) {
-    if (frame >= segments[i].startFrame) {
-      activeIndex = i;
-    } else {
+    if (frame < segments[i].startFrame) {
       break;
     }
+    if (frame <= segments[i].endFrame) {
+      activeIndex = i;
+    }
   }
-  if (activeIndex < 0) {
-    return null;
-  }
-  return segments[activeIndex];
+  return activeIndex;
 };
 
 const needsSpace = (previous: string, current: string) => {
@@ -39,6 +39,35 @@ const needsSpace = (previous: string, current: string) => {
   return true;
 };
 
+const buildChunks = (words: SubtitleWord[]) => {
+  const chunks: SubtitleWord[][] = [];
+  let current: SubtitleWord[] = [];
+
+  for (let index = 0; index < words.length; index++) {
+    const word = words[index];
+    current.push(word);
+
+    const sentenceEnd = /[.!?…]["')\]]?$/.test(word.word);
+    const clauseEnd = /[,;:]["')\]]?$/.test(word.word);
+
+    if (
+      current.length >= CHUNK_SIZE ||
+      (sentenceEnd && current.length >= 3) ||
+      (clauseEnd && current.length >= 4) ||
+      index === words.length - 1
+    ) {
+      chunks.push(current);
+      current = [];
+    }
+  }
+
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+
+  return chunks;
+};
+
 export const Subtitles: React.FC<SubtitleConfig> = ({
   title,
   segments,
@@ -48,11 +77,12 @@ export const Subtitles: React.FC<SubtitleConfig> = ({
   fontFamily = DEFAULT_FONT_STACK,
 }) => {
   const frame = useCurrentFrame();
-  const segment = getActiveSegment(segments, frame);
+  const activeSegmentIndex = getActiveSegmentIndex(segments, frame);
+  const segment =
+    activeSegmentIndex >= 0 ? segments[activeSegmentIndex] : null;
 
   let activeWordIndex = -1;
-  let wordPop = 1;
-  let segmentProgress = 0;
+  let chunkIndex = 0;
 
   if (segment) {
     for (let i = 0; i < segment.words.length; i++) {
@@ -65,32 +95,124 @@ export const Subtitles: React.FC<SubtitleConfig> = ({
     if (activeWordIndex < 0 && segment.words.length > 0) {
       activeWordIndex = 0;
     }
-    if (activeWordIndex >= 0) {
-      const activeWord = segment.words[activeWordIndex];
-      wordPop = interpolate(frame - activeWord.startFrame, [0, 3], [1.09, 1], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-      });
+
+    const chunks = buildChunks(segment.words);
+    let wordOffset = 0;
+    for (let i = 0; i < chunks.length; i++) {
+      if (activeWordIndex >= wordOffset) {
+        chunkIndex = i;
+      }
+      wordOffset += chunks[i].length;
     }
-    const span = Math.max(1, segment.endFrame - segment.startFrame);
-    segmentProgress = Math.min(
-      1,
-      Math.max(0, (frame - segment.startFrame) / span)
+
+    const activeChunk = chunks[chunkIndex] ?? [];
+    const chunkStart = activeChunk[0]?.startFrame ?? segment.startFrame;
+    const enter = interpolate(frame - chunkStart, [0, 4], [12, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    });
+    const opacity = interpolate(frame - chunkStart, [0, 3], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    });
+
+    const chunkOffset = chunks
+      .slice(0, chunkIndex)
+      .reduce((total, chunk) => total + chunk.length, 0);
+
+    return (
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: "none",
+          zIndex: 100,
+          fontFamily,
+        }}
+      >
+        {title ? (
+          <div
+            style={{
+              position: "absolute",
+              top: 34,
+              left: 0,
+              right: 0,
+              color: "rgba(255, 255, 255, 0.9)",
+              fontSize: 21,
+              fontWeight: 900,
+              letterSpacing: "3.2px",
+              textTransform: "uppercase",
+              textAlign: "center",
+              textShadow:
+                "0 2px 10px rgba(0, 0, 0, 0.98), 0 0 4px rgba(0, 0, 0, 0.95)",
+            }}
+          >
+            {title}
+          </div>
+        ) : null}
+
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: bottomOffset,
+            width: "94%",
+            maxWidth: 1000,
+            transform: `translateX(-50%) translateY(${enter}px)`,
+            opacity,
+          }}
+        >
+          <div
+            style={{
+              color: textColor,
+              fontSize: 55,
+              fontWeight: 900,
+              lineHeight: 1.18,
+              letterSpacing: "-0.4px",
+              textAlign: "center",
+            }}
+          >
+            {activeChunk.map((word, index) => {
+              const absoluteIndex = chunkOffset + index;
+              const isActive = absoluteIndex === activeWordIndex;
+              const previous =
+                index > 0
+                  ? activeChunk[index - 1].word
+                  : chunkOffset > 0
+                    ? segment.words[chunkOffset - 1].word
+                    : "";
+
+              return (
+                <React.Fragment key={`${word.startFrame}-${index}`}>
+                  {needsSpace(previous, word.word) ? " " : null}
+                  <span
+                    style={{
+                      display: "inline-block",
+                      color: isActive ? activeColor : textColor,
+                      WebkitTextStroke: "7px rgba(0, 0, 0, 0.96)",
+                      paintOrder: "stroke fill",
+                      textShadow: isActive
+                        ? "0 0 24px rgba(255, 216, 77, 0.55), 0 6px 18px rgba(0, 0, 0, 0.9)"
+                        : "0 6px 18px rgba(0, 0, 0, 0.92)",
+                    }}
+                  >
+                    {word.word}
+                  </span>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     );
   }
 
-  const segmentEnter = segment
-    ? interpolate(frame - segment.startFrame, [0, 5], [14, 0], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-      })
-    : 0;
-  const segmentOpacity = segment
-    ? interpolate(frame - segment.startFrame, [0, 5], [0, 1], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-      })
-    : 0;
+  if (!title) {
+    return null;
+  }
 
   return (
     <div
@@ -105,113 +227,24 @@ export const Subtitles: React.FC<SubtitleConfig> = ({
         fontFamily,
       }}
     >
-      {title ? (
-        <div
-          style={{
-            position: "absolute",
-            top: 28,
-            left: 0,
-            right: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          <div
-            style={{
-              color: "rgba(255, 255, 255, 0.92)",
-              fontSize: 21,
-              fontWeight: 900,
-              letterSpacing: "3.2px",
-              textTransform: "uppercase",
-              textShadow:
-                "0 2px 8px rgba(0, 0, 0, 0.95), 0 0 3px rgba(0, 0, 0, 0.9)",
-              textAlign: "center",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {title}
-          </div>
-        </div>
-      ) : null}
-
-      {segment ? (
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            bottom: bottomOffset,
-            transform: `translateX(-50%) translateY(${segmentEnter}px)`,
-            opacity: segmentOpacity,
-            width: "92%",
-            maxWidth: 960,
-            boxSizing: "border-box",
-            padding: "27px 32px 31px",
-            backgroundColor: "rgba(7, 10, 15, 0.78)",
-            border: "2px solid rgba(255, 229, 0, 0.24)",
-            borderRadius: 24,
-            boxShadow: "0 14px 38px rgba(0, 0, 0, 0.55)",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              color: textColor,
-              fontSize: 44,
-              fontWeight: 900,
-              lineHeight: 1.34,
-              letterSpacing: "-0.3px",
-              textAlign: "center",
-              textShadow: "0 3px 10px rgba(0, 0, 0, 0.85)",
-            }}
-          >
-            {segment.words.length > 0
-              ? segment.words.map((word, index) => {
-                  const isActive = index === activeWordIndex;
-                  const color = isActive
-                    ? activeColor
-                    : index < activeWordIndex
-                      ? textColor
-                      : "rgba(255, 255, 255, 0.82)";
-                  const previous =
-                    index > 0 ? segment.words[index - 1].word : "";
-                  return (
-                    <React.Fragment key={`${word.startFrame}-${index}`}>
-                      {needsSpace(previous, word.word) ? " " : null}
-                      <span
-                        style={{
-                          display: "inline-block",
-                          color,
-                          transform: isActive
-                            ? `scale(${wordPop})`
-                            : undefined,
-                          transformOrigin: "50% 72%",
-                          textShadow: isActive
-                            ? `0 0 18px ${activeColor}73, 0 3px 10px rgba(0, 0, 0, 0.85)`
-                            : "0 3px 10px rgba(0, 0, 0, 0.85)",
-                        }}
-                      >
-                        {word.word}
-                      </span>
-                    </React.Fragment>
-                  );
-                })
-              : segment.text}
-          </div>
-
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              bottom: 0,
-              height: 5,
-              width: `${segmentProgress * 100}%`,
-              backgroundColor: activeColor,
-              boxShadow: `0 0 12px ${activeColor}8c`,
-            }}
-          />
-        </div>
-      ) : null}
+      <div
+        style={{
+          position: "absolute",
+          top: 34,
+          left: 0,
+          right: 0,
+          color: "rgba(255, 255, 255, 0.9)",
+          fontSize: 21,
+          fontWeight: 900,
+          letterSpacing: "3.2px",
+          textTransform: "uppercase",
+          textAlign: "center",
+          textShadow:
+            "0 2px 10px rgba(0, 0, 0, 0.98), 0 0 4px rgba(0, 0, 0, 0.95)",
+        }}
+      >
+        {title}
+      </div>
     </div>
   );
 };

@@ -176,18 +176,20 @@ export const EnvironmentScene: React.FC<EnvironmentSceneProps> = ({ preset }) =>
         </group>
       ))}
 
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.01, 0]}
-        receiveShadow
-      >
-        <planeGeometry args={[220, 220]} />
-        <meshStandardMaterial
-          map={groundTexture ?? undefined}
-          color={preset.ground.color}
-          roughness={0.9}
-        />
-      </mesh>
+      {!preset.ground.hidden && (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, -0.01, 0]}
+          receiveShadow
+        >
+          <planeGeometry args={[220, 220]} />
+          <meshStandardMaterial
+            map={groundTexture ?? undefined}
+            color={preset.ground.color}
+            roughness={0.9}
+          />
+        </mesh>
+      )}
 
       {preset.hills.map((hill, index) => (
         <mesh

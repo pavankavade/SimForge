@@ -66,6 +66,7 @@ export interface EnvironmentConfig {
   ground: {
     color: string;
     texture?: GroundTextureConfig | null;
+    hidden?: boolean;
   };
   hills: HillDefinition[];
   clouds: CloudDefinition[];
