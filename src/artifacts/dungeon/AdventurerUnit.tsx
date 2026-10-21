@@ -12,7 +12,10 @@ export type AdventurerPose =
   | "shieldWalk"
   | "fall"
   | "launch"
-  | "sprawl";
+  | "sprawl"
+  | "slip"
+  | "float"
+  | "smash";
 
 interface AdventurerUnitProps {
   classType: AdventurerClass;
@@ -193,6 +196,42 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
     leftKnee = 0.75;
     rightKnee = 1.0;
     bodyLean = 0.1;
+  } else if (pose === "slip") {
+    // Comical banana-peel slip backward on slime
+    leftArmRot = [-2.1, 0, 0.65];
+    rightArmRot = [-2.05, 0, -0.65];
+    leftElbow = -0.4;
+    rightElbow = -0.4;
+    leftLegRot = [-1.35, 0, 0.15];
+    rightLegRot = [-1.15, 0, -0.15];
+    leftKnee = 0.3;
+    rightKnee = 0.5;
+    bodyLean = -0.55;
+    bodyBob = -0.18;
+  } else if (pose === "float") {
+    // Levitating gently near rafters
+    const floatBob = Math.sin(animFrame * 0.16);
+    leftArmRot = [-0.5, 0, 0.7];
+    rightArmRot = [-0.5, 0, -0.7];
+    leftElbow = -0.35;
+    rightElbow = -0.35;
+    leftLegRot = [0.25 + floatBob * 0.12, 0, 0.1];
+    rightLegRot = [-0.1 - floatBob * 0.12, 0, -0.1];
+    leftKnee = 0.45;
+    rightKnee = 0.3;
+    bodyBob = floatBob * 0.12;
+    bodyLean = 0.04;
+  } else if (pose === "smash") {
+    // Heavy Paladin warhammer stance
+    leftArmRot = [-1.6, 0.35, 0.2];
+    rightArmRot = [-1.6, -0.35, -0.2];
+    leftElbow = -0.85;
+    rightElbow = -0.85;
+    leftLegRot = [-0.45, 0, 0.2];
+    rightLegRot = [0.65, 0, -0.2];
+    leftKnee = 0.5;
+    rightKnee = 0.4;
+    bodyLean = 0.32;
   } else {
     leftLegRot = [-0.05, 0, 0.035];
     rightLegRot = [0.05, 0, -0.035];
