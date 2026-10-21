@@ -7,12 +7,15 @@ interface AlchemicalFlamersProps {
   spawnFrame?: number;
   fireStartFrame?: number;
   fireEndFrame?: number;
+  /** Multiple [start, end] firing windows; overrides start/end when set. */
+  fireWindows?: Array<[number, number]>;
 }
 
 export const AlchemicalFlamers: React.FC<AlchemicalFlamersProps> = ({
   spawnFrame = 1000,
   fireStartFrame = 1130,
   fireEndFrame = 1400,
+  fireWindows,
 }) => {
   const frame = useCurrentFrame();
 
@@ -31,11 +34,16 @@ export const AlchemicalFlamers: React.FC<AlchemicalFlamersProps> = ({
     install(spawnFrame + index * 16, 26);
   const tankProgress = install(spawnFrame + 75, 40);
 
-  const isFiring =
-    fireStartFrame !== undefined &&
-    fireEndFrame !== undefined &&
-    frame >= fireStartFrame &&
-    frame <= fireEndFrame;
+  const windows = fireWindows ?? [[fireStartFrame, fireEndFrame]];
+  const active = windows.find(([start, end]) => frame >= start && frame <= end);
+  const isFiring = active !== undefined;
+  // Jets burst out over a few frames rather than popping to full length.
+  const ignite = active
+    ? interpolate(frame, [active[0], active[0] + 6, active[1] - 4, active[1]], [0.2, 1, 1, 0.3], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 0;
 
   // Flame flicker animation
   const flicker = isFiring
@@ -45,25 +53,26 @@ export const AlchemicalFlamers: React.FC<AlchemicalFlamersProps> = ({
   return (
     <group position={[0, 0, 0]}>
       {/* ================= UNDERGROUND COPPER FUEL TANK ================= */}
-      <group position={[0, -2.6 - (1 - tankProgress) * 3.4, -1.8]}>
+      {/* Tucked up against the back wall so it doesn't read as lava. */}
+      <group position={[0, -1.05 - (1 - tankProgress) * 3.4, -2.0]}>
         {/* Main Cylindrical Copper Tank */}
         <mesh rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.7, 0.7, 3.2, 16]} />
+          <cylinderGeometry args={[0.4, 0.4, 3.4, 16]} />
           <meshStandardMaterial
-            color="#b86532"
-            metalness={0.8}
-            roughness={0.3}
+            color="#8a5434"
+            metalness={0.65}
+            roughness={0.45}
           />
         </mesh>
         {/* Brass Pressure Gauge */}
-        <mesh position={[0, 0.85, 0.4]} castShadow>
-          <cylinderGeometry args={[0.2, 0.2, 0.1, 12]} />
+        <mesh position={[0, 0.2, 0.4]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.16, 0.16, 0.08, 12]} />
           <meshStandardMaterial color="#d4aa42" metalness={0.9} roughness={0.2} />
         </mesh>
         {/* Brass Reinforcement Rings */}
-        {[-1.2, -0.4, 0.4, 1.2].map((x, i) => (
-          <mesh key={`ring-${i}`} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <torusGeometry args={[0.72, 0.05, 8, 16]} />
+        {[-1.3, -0.45, 0.45, 1.3].map((x, i) => (
+          <mesh key={`ring-${i}`} position={[x, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+            <torusGeometry args={[0.42, 0.04, 8, 16]} />
             <meshStandardMaterial color="#2d2217" metalness={0.9} roughness={0.3} />
           </mesh>
         ))}
@@ -103,7 +112,7 @@ export const AlchemicalFlamers: React.FC<AlchemicalFlamersProps> = ({
 
               {/* Massive Jet Flame Stream when firing */}
               {isFiring ? (
-                <group position={[0, 0, 0.4]}>
+                <group position={[0, 0, 0.4]} scale={[1, 1, ignite]}>
                   {/* Core white/yellow flame cone */}
                   <mesh
                     position={[0, 0, 1.1]}

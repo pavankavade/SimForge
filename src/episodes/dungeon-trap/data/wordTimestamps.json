@@ -775,7 +775,7 @@
   },
   {
     "startFrame": 1730,
-    "endFrame": 2249,
+    "endFrame": 2280,
     "words": [
       {
         "word": "Finally,",
@@ -969,33 +969,33 @@
       },
       {
         "word": "Congratulations,",
-        "startFrame": 2172,
-        "endFrame": 2206
+        "startFrame": 2187,
+        "endFrame": 2214
       },
       {
         "word": "your",
-        "startFrame": 2206,
-        "endFrame": 2215
+        "startFrame": 2224,
+        "endFrame": 2227
       },
       {
         "word": "dungeon",
-        "startFrame": 2215,
-        "endFrame": 2230
+        "startFrame": 2227,
+        "endFrame": 2238
       },
       {
         "word": "is",
-        "startFrame": 2230,
-        "endFrame": 2234
+        "startFrame": 2239,
+        "endFrame": 2241
       },
       {
         "word": "now",
-        "startFrame": 2234,
-        "endFrame": 2240
+        "startFrame": 2241,
+        "endFrame": 2255
       },
       {
         "word": "unbeatable.",
-        "startFrame": 2240,
-        "endFrame": 2249
+        "startFrame": 2258,
+        "endFrame": 2280
       }
     ]
   }

@@ -138,8 +138,8 @@ export const ENVIRONMENT_PRESETS = {
     },
     fog: {
       color: "#2b3241",
-      near: 26,
-      far: 78,
+      near: 34,
+      far: 90,
     },
     ground: {
       color: "#3a3d49",

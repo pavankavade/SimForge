@@ -39,7 +39,7 @@
     "new:episode": "node scripts/new-episode.mjs",
     "render:siege": "remotion render SiegeTowerVideo out/siege-tower.mp4 --concurrency=8 --crf=17 --audio-bitrate=192k",
     "render:starter": "remotion render StarterTopic out/starter.mp4 --concurrency=8 --crf=20",
-    "render:dungeon": "remotion render DungeonTrap out/dungeon-trap.mp4 --concurrency=8 --crf=18",
+    "render:dungeon": "remotion render DungeonTrap out/dungeon-trap.raw.mp4 --concurrency=8 --crf=18 --audio-bitrate=192k && ffmpeg -y -hide_banner -loglevel error -i out/dungeon-trap.raw.mp4 -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k out/dungeon-trap.mp4",
     "still:dungeon": "remotion still DungeonTrap out/dungeon-still.png --frame=500"
   },
   "allowScripts": {

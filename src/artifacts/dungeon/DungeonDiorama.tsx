@@ -2,8 +2,29 @@ import type React from "react";
 import { useCurrentFrame, random } from "remotion";
 import * as THREE from "three";
 import { useSurface } from "../../engine/materials";
-import { makeFlagstone, makeMasonry, makeWood } from "../../engine/textures";
-import { DustMotes, GlowSprite } from "./Fx";
+import {
+  makeEarth,
+  makeFlagstone,
+  makeMasonry,
+  makeWood,
+} from "../../engine/textures";
+import { Burst, DustMotes, GlowSprite } from "./Fx";
+
+interface DungeonDioramaProps {
+  /**
+   * Frame the hidden catapult chamber under the entrance floor is revealed.
+   * Before it the left underground is solid earth.
+   */
+  catapultFrame?: number;
+}
+
+/** Hinged catapult slab span (x), kept clear of loose floor decoration. */
+const SLAB_RANGE: [number, number] = [-9.75, -5.35];
+const PIT_RANGE: [number, number] = [-2.3, 2.3];
+const CHAMBER = { left: -9.8, right: -2.35, bottom: -3.6, top: -0.5 };
+
+const inRange = (x: number, [a, b]: [number, number], pad = 0) =>
+  x > a - pad && x < b + pad;
 
 const BRICK_COLORS = [
   "#d7dae3",
@@ -14,8 +35,12 @@ const BRICK_COLORS = [
   "#dde0e8",
 ];
 
-export const DungeonDiorama: React.FC = () => {
+export const DungeonDiorama: React.FC<DungeonDioramaProps> = ({
+  catapultFrame = Infinity,
+}) => {
   const frame = useCurrentFrame();
+  const revealed = frame >= catapultFrame;
+  const revealAge = frame - catapultFrame;
   const flicker = Math.sin(frame * 0.3) * 0.12 + Math.cos(frame * 0.77) * 0.08;
   const flickerTwo = Math.sin(frame * 0.26 + 1.7) * 0.1;
 
@@ -70,17 +95,15 @@ export const DungeonDiorama: React.FC = () => {
       }),
     [1, 1]
   );
-  const foreFloorStone = useSurface(
-    "diorama-fore-floor",
+  const earth = useSurface("diorama-earth", () => makeEarth({}), [2, 1.4]);
+  const earthDark = useSurface(
+    "diorama-earth-dark",
     () =>
-      makeFlagstone({
-        cells: 5,
-        base: "#43454f",
-        baseAlt: "#4e515b",
-        grout: "#191b21",
-        seed: 25,
+      makeEarth({
+        layers: ["#2a201a", "#33261d", "#261e1e", "#2f251f", "#211b1c"],
+        seed: 62,
       }),
-    [1, 2]
+    [2, 1]
   );
   const beamWood = useSurface(
     "diorama-beam",
@@ -113,47 +136,79 @@ export const DungeonDiorama: React.FC = () => {
     }
   }
 
-  const foregroundTiles: Array<{
-    x: number;
-    z: number;
-    color: string;
-    key: string;
-  }> = [];
+  // Loose decoration only on the fixed walkway, never on the pit or the
+  // catapult slab (which flips away).
+  const onFixedFloor = (x: number) =>
+    !inRange(x, PIT_RANGE, 0.1) && !inRange(x, SLAB_RANGE, 0.1);
 
-  for (let row = 0; row < 5; row++) {
-    for (let col = 0; col < 10; col++) {
-      foregroundTiles.push({
-        x: -9.5 + col * 2.1,
-        z: 5.5 + row * 1.8,
-        color:
-          (row + col) % 2 === 0
-            ? "#cfd3dc"
-            : col % 3 === 0
-              ? "#dfe2ea"
-              : "#c4c8d1",
-        key: `foreground-tile-${row}-${col}`,
-      });
-    }
-  }
-
-  const floorCracks = Array.from({ length: 24 }, (_, index) => ({
+  const floorCracks = Array.from({ length: 30 }, (_, index) => ({
     x: -10 + random(`floor-crack-x-${index}`) * 20,
-    z: 3.2 + random(`floor-crack-z-${index}`) * 9.2,
+    z: -2.0 + random(`floor-crack-z-${index}`) * 2.9,
     angle: random(`floor-crack-angle-${index}`) * Math.PI,
-    length: 0.35 + random(`floor-crack-length-${index}`) * 0.65,
+    length: 0.3 + random(`floor-crack-length-${index}`) * 0.5,
     key: `floor-crack-${index}`,
-  }));
+  })).filter((crack) => onFixedFloor(crack.x));
 
-  const debris = Array.from({ length: 18 }, (_, index) => ({
+  const debris = Array.from({ length: 22 }, (_, index) => ({
     x:
       (random(`debris-side-${index}`) > 0.5 ? 1 : -1) *
       (2.6 + random(`debris-x-${index}`) * 7.2),
-    z: -1.2 + random(`debris-z-${index}`) * 12.4,
+    z: -2.0 + random(`debris-z-${index}`) * 2.9,
     size: 0.055 + random(`debris-size-${index}`) * 0.14,
     rotation: random(`debris-rotation-${index}`) * Math.PI,
     color: random(`debris-color-${index}`) > 0.6 ? "#615d62" : "#494950",
     key: `debris-${index}`,
-  }));
+  })).filter((piece) => onFixedFloor(piece.x));
+
+  // Earth plug sealing the chamber front; crumbles away at the reveal.
+  const plugChunks =
+    revealed && revealAge < 40
+      ? Array.from({ length: 24 }, (_, index) => {
+          const col = index % 8;
+          const row = Math.floor(index / 8);
+          const w = (CHAMBER.right - CHAMBER.left) / 8;
+          const h = (CHAMBER.top - CHAMBER.bottom) / 3;
+          const delay = random(`plug-delay-${index}`) * 8;
+          const t = Math.max(0, revealAge - delay);
+          return {
+            key: `plug-${index}`,
+            size: [w * 0.92, h * 0.9, 0.5] as [number, number, number],
+            position: [
+              CHAMBER.left + w * (col + 0.5) + (random(`plug-vx-${index}`) - 0.5) * 0.05 * t,
+              CHAMBER.bottom + h * (row + 0.5) - 0.006 * t * t,
+              0.85 + 0.06 * t,
+            ] as [number, number, number],
+            rotation: [
+              t * 0.08 * (random(`plug-rx-${index}`) - 0.3),
+              0,
+              t * 0.1 * (random(`plug-rz-${index}`) - 0.5),
+            ] as [number, number, number],
+            scale: Math.max(0.001, 1 - t / 36),
+          };
+        })
+      : [];
+
+  const chamberLight = revealed
+    ? Math.min(1, revealAge / 12) * (3.4 + flicker * 1.2)
+    : 0;
+
+  const earthMat = (
+    <meshStandardMaterial
+      map={earth.map}
+      normalMap={earth.normalMap}
+      normalScale={new THREE.Vector2(0.8, 0.8)}
+      color="#d8c8b8"
+      roughness={0.95}
+    />
+  );
+  const earthDarkMat = (
+    <meshStandardMaterial
+      map={earthDark.map}
+      normalMap={earthDark.normalMap}
+      color="#c8b8a8"
+      roughness={0.95}
+    />
+  );
 
   return (
     <group position={[0, 0, 0]}>
@@ -197,7 +252,7 @@ export const DungeonDiorama: React.FC = () => {
               normalMap={pillarStone.normalMap}
               roughnessMap={pillarStone.roughnessMap}
               normalScale={new THREE.Vector2(0.7, 0.7)}
-              color="#b9bfcc"
+              color="#9da3b0"
               roughness={0.86}
             />
           </mesh>
@@ -230,17 +285,67 @@ export const DungeonDiorama: React.FC = () => {
         <group key={`arch-column-${index}`} position={[x, 1.25, -1.88]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[0.62, 2.5, 0.58]} />
-            <meshStandardMaterial color="#626779" roughness={0.84} />
+            <meshStandardMaterial
+              map={pillarStone.map}
+              normalMap={pillarStone.normalMap}
+              roughnessMap={pillarStone.roughnessMap}
+              normalScale={new THREE.Vector2(0.8, 0.8)}
+              color="#a3a8b6"
+              roughness={0.84}
+            />
           </mesh>
           <mesh position={[0, 1.3, 0]} castShadow>
             <boxGeometry args={[0.84, 0.2, 0.68]} />
-            <meshStandardMaterial color="#74798d" roughness={0.8} />
+            <meshStandardMaterial
+              map={pillarStone.map}
+              normalMap={pillarStone.normalMap}
+              color="#b4b9c6"
+              roughness={0.8}
+            />
+          </mesh>
+          <mesh position={[0, -1.18, 0]} castShadow>
+            <boxGeometry args={[0.8, 0.18, 0.66]} />
+            <meshStandardMaterial
+              map={pillarStone.map}
+              normalMap={pillarStone.normalMap}
+              color="#b4b9c6"
+              roughness={0.8}
+            />
           </mesh>
         </group>
       ))}
       <mesh position={[0, 2.5, -1.9]} castShadow>
-        <torusGeometry args={[2.7, 0.3, 8, 26, Math.PI]} />
-        <meshStandardMaterial color="#5d6173" roughness={0.85} />
+        <torusGeometry args={[2.7, 0.3, 10, 32, Math.PI]} />
+        <meshStandardMaterial
+          map={brickStone.map}
+          normalMap={brickStone.normalMap}
+          roughnessMap={brickStone.roughnessMap}
+          normalScale={new THREE.Vector2(0.9, 0.9)}
+          color="#a7acba"
+          roughness={0.85}
+        />
+      </mesh>
+      {/* Voussoir seams + gold keystone so the arch reads as built stone */}
+      {Array.from({ length: 9 }, (_, i) => {
+        const a = ((i + 1) / 10) * Math.PI;
+        return (
+          <mesh
+            key={`voussoir-${i}`}
+            position={[Math.cos(a) * 2.7, 2.5 + Math.sin(a) * 2.7, -1.62]}
+            rotation={[0, 0, a]}
+          >
+            <boxGeometry args={[0.62, 0.035, 0.04]} />
+            <meshStandardMaterial color="#2a2c34" roughness={0.9} />
+          </mesh>
+        );
+      })}
+      <mesh position={[0, 5.2, -1.66]}>
+        <boxGeometry args={[0.42, 0.5, 0.2]} />
+        <meshStandardMaterial
+          color="#c99a3e"
+          metalness={0.6}
+          roughness={0.38}
+        />
       </mesh>
 
       <mesh position={[0, 3.7, -1.72]}>
@@ -263,16 +368,53 @@ export const DungeonDiorama: React.FC = () => {
           roughness={0.35}
         />
       </mesh>
-      <mesh position={[0, 3.7, -1.66]}>
-        <boxGeometry args={[0.09, 1.0, 0.035]} />
-        <meshStandardMaterial
-          color="#d2a545"
-          metalness={0.6}
-          roughness={0.35}
-        />
-      </mesh>
-      <mesh position={[0, 3.9, -1.66]}>
-        <boxGeometry args={[0.6, 0.09, 0.035]} />
+      {/* Crossed swords emblem */}
+      {[-1, 1].map((side) => (
+        <group
+          key={`emblem-sword-${side}`}
+          position={[0, 3.72, -1.66]}
+          rotation={[0, 0, side * 0.62]}
+        >
+          <mesh position={[0, 0.12, 0]}>
+            <boxGeometry args={[0.08, 1.0, 0.03]} />
+            <meshStandardMaterial
+              color="#e3e7ee"
+              metalness={0.75}
+              roughness={0.25}
+            />
+          </mesh>
+          <mesh position={[0, 0.66, 0]} rotation={[0, 0, Math.PI / 4]}>
+            <boxGeometry args={[0.057, 0.057, 0.03]} />
+            <meshStandardMaterial
+              color="#e3e7ee"
+              metalness={0.75}
+              roughness={0.25}
+            />
+          </mesh>
+          <mesh position={[0, -0.4, 0.01]}>
+            <boxGeometry args={[0.32, 0.06, 0.035]} />
+            <meshStandardMaterial
+              color="#d2a545"
+              metalness={0.6}
+              roughness={0.35}
+            />
+          </mesh>
+          <mesh position={[0, -0.53, 0.01]}>
+            <boxGeometry args={[0.06, 0.22, 0.035]} />
+            <meshStandardMaterial color="#4a2e1a" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, -0.67, 0.01]}>
+            <sphereGeometry args={[0.05, 8, 6]} />
+            <meshStandardMaterial
+              color="#d2a545"
+              metalness={0.6}
+              roughness={0.35}
+            />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[0, 3.72, -1.63]}>
+        <circleGeometry args={[0.14, 16]} />
         <meshStandardMaterial
           color="#d2a545"
           metalness={0.6}
@@ -367,16 +509,31 @@ export const DungeonDiorama: React.FC = () => {
         </group>
       ))}
 
-      <mesh position={[-6, -0.25, -0.6]} receiveShadow>
-        <boxGeometry args={[8, 0.5, 3.4]} />
-        <meshStandardMaterial color="#4d505d" roughness={0.88} />
-      </mesh>
+      {revealed ? (
+        <>
+          {/* Floor base minus the hinged slab (drawn by TrebuchetFloor) */}
+          <mesh position={[-9.8575, -0.25, -0.6]} receiveShadow>
+            <boxGeometry args={[0.285, 0.5, 3.4]} />
+            <meshStandardMaterial color="#4d505d" roughness={0.88} />
+          </mesh>
+          <mesh position={[-3.6925, -0.25, -0.6]} receiveShadow>
+            <boxGeometry args={[3.385, 0.5, 3.4]} />
+            <meshStandardMaterial color="#4d505d" roughness={0.88} />
+          </mesh>
+        </>
+      ) : (
+        <mesh position={[-6, -0.25, -0.6]} receiveShadow>
+          <boxGeometry args={[8, 0.5, 3.4]} />
+          <meshStandardMaterial color="#4d505d" roughness={0.88} />
+        </mesh>
+      )}
       <mesh position={[6, -0.25, -0.6]} receiveShadow>
         <boxGeometry args={[8, 0.5, 3.4]} />
         <meshStandardMaterial color="#4d505d" roughness={0.88} />
       </mesh>
 
-      {[-9.2, -8.1, -7.0, -5.9, -4.8, -3.7, -2.6].map((x, index) => (
+      {[-9.2, -8.1, -7.0, -5.9, -4.8, -3.7, -2.6].map((x, index) =>
+        revealed && x < -5.3 ? null : (
         <mesh
           key={`tile-left-${index}`}
           position={[x, 0.012, -0.6]}
@@ -392,7 +549,8 @@ export const DungeonDiorama: React.FC = () => {
             roughness={0.82}
           />
         </mesh>
-      ))}
+        )
+      )}
       {[2.6, 3.7, 4.8, 5.9, 7.0, 8.1, 9.2].map((x, index) => (
         <mesh
           key={`tile-right-${index}`}
@@ -424,67 +582,101 @@ export const DungeonDiorama: React.FC = () => {
         <meshStandardMaterial color="#777c90" roughness={0.72} />
       </mesh>
 
-      <mesh position={[0, -0.26, 9.125]} receiveShadow>
-        <boxGeometry args={[22, 0.52, 8.65]} />
-        <meshStandardMaterial color="#444752" roughness={0.9} />
-      </mesh>
-      {foregroundTiles.map((tile) => (
-        <mesh
-          key={tile.key}
-          position={[tile.x, 0.012, tile.z]}
-          receiveShadow
-        >
-          <boxGeometry args={[1.96, 0.035, 1.7]} />
-          <meshStandardMaterial
-            map={foreFloorStone.map}
-            normalMap={foreFloorStone.normalMap}
-            roughnessMap={foreFloorStone.roughnessMap}
-            normalScale={new THREE.Vector2(0.6, 0.6)}
-            color={tile.color}
-            roughness={0.84}
-          />
-        </mesh>
-      ))}
-
-      <mesh position={[-6, -3.2, -0.6]} receiveShadow>
-        <boxGeometry args={[8, 5.4, 3.4]} />
-        <meshStandardMaterial color="#2b2a2e" roughness={0.95} />
-      </mesh>
-      <mesh position={[6, -3.2, -0.6]} receiveShadow>
-        <boxGeometry args={[8, 5.4, 3.4]} />
-        <meshStandardMaterial color="#2b2a2e" roughness={0.95} />
-      </mesh>
-
-      {[-6, 6].map((x, index) => (
-        <group key={`strata-${index}`}>
-          <mesh position={[x, -1.15, 1.115]}>
-            <boxGeometry args={[8, 0.16, 0.05]} />
-            <meshStandardMaterial color="#4f3b2d" roughness={0.95} />
+      {revealed ? (
+        <group>
+          {/* Hollow catapult chamber: end walls, floor and back wall */}
+          <mesh position={[-9.9, -3.2, -0.6]} receiveShadow>
+            <boxGeometry args={[0.2, 5.4, 3.4]} />
+            {earthMat}
           </mesh>
-          <mesh position={[x, -2.35, 1.115]}>
-            <boxGeometry args={[8, 0.12, 0.05]} />
-            <meshStandardMaterial color="#3e322b" roughness={0.95} />
+          <mesh position={[-2.275, -3.2, -0.6]} receiveShadow>
+            <boxGeometry args={[0.15, 5.4, 3.4]} />
+            {earthMat}
           </mesh>
-          <mesh position={[x, -3.5, 1.115]}>
-            <boxGeometry args={[8, 0.2, 0.05]} />
-            <meshStandardMaterial color="#332b27" roughness={0.95} />
+          <mesh position={[-6.075, -4.75, -0.6]} receiveShadow>
+            <boxGeometry args={[7.45, 2.3, 3.4]} />
+            {earthMat}
           </mesh>
-          {[-2.4, 0.4, 2.8].map((offset, rockIndex) => (
-            <mesh
-              key={`strata-rock-${index}-${rockIndex}`}
-              position={[x + offset, -1.9 - rockIndex * 0.7, 1.12]}
-              rotation={[0, 0, rockIndex * 0.6]}
-            >
-              <dodecahedronGeometry args={[0.32, 0]} />
+          <mesh position={[-6.075, -2.05, -2.15]} receiveShadow>
+            <boxGeometry args={[7.45, 3.1, 0.3]} />
+            {earthDarkMat}
+          </mesh>
+          {/* Timber shoring along the chamber back wall */}
+          {[-9.3, -7.6, -4.2, -2.75].map((x) => (
+            <mesh key={`shore-${x}`} position={[x, -2.05, -1.95]}>
+              <boxGeometry args={[0.18, 3.1, 0.12]} />
               <meshStandardMaterial
-                color="#524238"
-                roughness={0.95}
-                flatShading
+                map={beamWood.map}
+                normalMap={beamWood.normalMap}
+                color="#cbbfae"
+                roughness={0.9}
               />
             </mesh>
           ))}
+          <mesh position={[-6.075, -0.62, -1.95]}>
+            <boxGeometry args={[7.45, 0.16, 0.14]} />
+            <meshStandardMaterial
+              map={beamWood.map}
+              normalMap={beamWood.normalMap}
+              color="#cbbfae"
+              roughness={0.9}
+            />
+          </mesh>
+          <pointLight
+            position={[-6.2, -1.6, 0.6]}
+            color="#ffab5c"
+            intensity={chamberLight}
+            distance={9}
+            decay={2}
+          />
+          <pointLight
+            position={[-3.4, -2.6, -0.8]}
+            color="#ffcf7a"
+            intensity={chamberLight * 0.5}
+            distance={5}
+            decay={2}
+          />
+          {plugChunks.map((chunk) => (
+            <mesh
+              key={chunk.key}
+              position={chunk.position}
+              rotation={chunk.rotation}
+              scale={chunk.scale}
+              castShadow
+            >
+              <boxGeometry args={chunk.size} />
+              {earthMat}
+            </mesh>
+          ))}
+          <Burst
+            at={catapultFrame}
+            position={[-6.1, -2.1, 1.2]}
+            count={70}
+            size={0.9}
+            duration={60}
+            speed={0.14}
+            direction={[0, 0.02, 0.06]}
+            spread={[7, 2.6, 0.4]}
+            color="#a58d72"
+            opacity={0.7}
+            seed="chamber-dust"
+          />
         </group>
-      ))}
+      ) : (
+        <mesh position={[-6, -3.2, -0.6]} receiveShadow>
+          <boxGeometry args={[8, 5.4, 3.4]} />
+          {earthMat}
+        </mesh>
+      )}
+      <mesh position={[6, -3.2, -0.6]} receiveShadow>
+        <boxGeometry args={[8, 5.4, 3.4]} />
+        {earthMat}
+      </mesh>
+      {/* Deep bedrock so wide shots never show empty space below the set */}
+      <mesh position={[0, -10.1, -0.6]} receiveShadow>
+        <boxGeometry args={[26, 12, 3.4]} />
+        {earthDarkMat}
+      </mesh>
 
       <mesh position={[0, -5.7, -0.6]} receiveShadow>
         <boxGeometry args={[22, 0.8, 3.8]} />
@@ -575,7 +767,7 @@ export const DungeonDiorama: React.FC = () => {
         decay={2}
       />
 
-      <group position={[-9.2, 0, 0.35]}>
+      <group position={[9.7, 0, -1.2]}>
         <mesh position={[0, 0.55, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[0.45, 0.5, 1.1, 12]} />
           <meshStandardMaterial color="#5a3d27" roughness={0.88} />
@@ -630,13 +822,13 @@ export const DungeonDiorama: React.FC = () => {
       ))}
 
       {/* Atmospheric Dust Motes */}
-      <DustMotes count={90} />
+      <DustMotes count={130} />
 
       {/* Torch Glow Sprites */}
-      {[-6, 2, 6].map((x, i) => (
+      {[-7.1, -3.5, 3.5, 7.1].map((x, i) => (
         <GlowSprite
           key={`torch-glow-${i}`}
-          position={[x, 3.5, -1.9]}
+          position={[x, 3.71, -1.62]}
           color="#ff9933"
           size={1.6 + flicker}
           opacity={0.65}

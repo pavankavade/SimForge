@@ -531,6 +531,102 @@ export const makeLeather = ({
   return finish(color.canvas, height.canvas, rough.canvas, [1, 1], 1.6);
 };
 
+/** Layered soil / rock strata with embedded stones, for cutaway earth. */
+export const makeEarth = ({
+  size = 512,
+  layers = ["#3a2c22", "#4a3628", "#33282a", "#43352b", "#2c2427"],
+  seed = 61,
+}: {
+  size?: number;
+  layers?: string[];
+  seed?: number;
+}): SurfaceSet => {
+  const color = makeCanvas(size);
+  const height = makeCanvas(size);
+  if (!color || !height) {
+    return { map: null, normalMap: null, roughnessMap: null };
+  }
+
+  const rnd = mulberry32(seed);
+  const { ctx: c } = color;
+  const { ctx: h } = height;
+
+  // Wavy horizontal bands that tile horizontally (sine periods divide size).
+  let y = 0;
+  let index = 0;
+  while (y < size) {
+    const band = size * (0.12 + rnd() * 0.16);
+    const phase = rnd() * Math.PI * 2;
+    const amp = 4 + rnd() * 8;
+    c.fillStyle = layers[index % layers.length];
+    h.fillStyle = `rgb(${110 + index * 14},${110 + index * 14},${110 + index * 14})`;
+    for (const ctx of [c, h]) {
+      ctx.beginPath();
+      ctx.moveTo(0, size);
+      for (let x = 0; x <= size; x += 8) {
+        ctx.lineTo(x, y + Math.sin((x / size) * Math.PI * 4 + phase) * amp);
+      }
+      ctx.lineTo(size, size);
+      ctx.closePath();
+      ctx.fill();
+    }
+    c.strokeStyle = "rgba(0,0,0,0.35)";
+    c.lineWidth = 2;
+    c.beginPath();
+    for (let x = 0; x <= size; x += 8) {
+      const yy = y + Math.sin((x / size) * Math.PI * 4 + phase) * amp;
+      if (x === 0) c.moveTo(x, yy);
+      else c.lineTo(x, yy);
+    }
+    c.stroke();
+    y += band;
+    index++;
+  }
+
+  // Embedded stones.
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * size;
+    const sy = rnd() * size;
+    const rx = 4 + rnd() * 16;
+    const ry = rx * (0.5 + rnd() * 0.4);
+    const rot = rnd() * Math.PI;
+    const l = Math.round(70 + rnd() * 50);
+    c.fillStyle = `rgb(${l},${l - 6},${l - 12})`;
+    c.beginPath();
+    c.ellipse(x, sy, rx, ry, rot, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "rgba(255,255,255,0.12)";
+    c.beginPath();
+    c.ellipse(x - rx * 0.2, sy - ry * 0.3, rx * 0.5, ry * 0.35, rot, 0, Math.PI * 2);
+    c.fill();
+    h.fillStyle = "#e8e8e8";
+    h.beginPath();
+    h.ellipse(x, sy, rx, ry, rot, 0, Math.PI * 2);
+    h.fill();
+  }
+
+  // Roots / fine cracks.
+  c.strokeStyle = "rgba(20,12,8,0.45)";
+  for (let i = 0; i < 26; i++) {
+    let x = rnd() * size;
+    let ry = rnd() * size;
+    c.lineWidth = 0.8 + rnd() * 1.4;
+    c.beginPath();
+    c.moveTo(x, ry);
+    for (let s = 0; s < 6; s++) {
+      x += (rnd() - 0.5) * 24;
+      ry += 6 + rnd() * 14;
+      c.lineTo(x, ry);
+    }
+    c.stroke();
+  }
+
+  speckle(c, size, rnd, 3000, 0.06);
+  speckle(h, size, rnd, 3000, 0.2);
+
+  return finish(color.canvas, height.canvas, null, [1, 1], 2.0);
+};
+
 /** Cache so multiple components share one baked texture set. */
 const cache = new Map<string, SurfaceSet>();
 

@@ -77,6 +77,31 @@ export const PostFX: React.FC<PostFXConfig> = (props) => {
       const normalPass = new NormalPass(scene, camera, {
         resolutionScale: 0.5,
       });
+      // Particles and other non-depth-writing FX would show up as solid
+      // squares/quads in the normal buffer and get "occluded" by SSAO, so
+      // hide them while the normals are rendered.
+      const renderNormals = normalPass.render.bind(normalPass);
+      normalPass.render = (...args: Parameters<typeof normalPass.render>) => {
+        const hidden: THREE.Object3D[] = [];
+        scene.traverse((object) => {
+          const material = (object as THREE.Mesh).material as
+            | THREE.Material
+            | undefined;
+          const isFx =
+            object instanceof THREE.Points ||
+            object instanceof THREE.Sprite ||
+            (material !== undefined &&
+              !Array.isArray(material) &&
+              material.transparent &&
+              !material.depthWrite);
+          if (isFx && object.visible) {
+            object.visible = false;
+            hidden.push(object);
+          }
+        });
+        renderNormals(...args);
+        for (const object of hidden) object.visible = true;
+      };
       instance.addPass(normalPass);
 
       effects.push(

@@ -12,7 +12,7 @@ interface CameraRigProps {
 export const CameraRig: React.FC<CameraRigProps> = ({ config }) => {
   const frame = useCurrentFrame();
   const { camera } = useThree();
-  const { waypoints, shake = [], rumbles = [] } = config;
+  const { waypoints, tracks = [], shake = [], rumbles = [] } = config;
 
   useLayoutEffect(() => {
     if (waypoints.length === 0) return;
@@ -54,6 +54,28 @@ export const CameraRig: React.FC<CameraRigProps> = ({ config }) => {
       ];
     }
 
+    for (const track of tracks) {
+      if (frame < track.start || frame > track.end) continue;
+      const blend = Math.max(1, track.blend ?? 15);
+      const raw = Math.min(
+        1,
+        (frame - track.start) / blend,
+        (track.end - frame) / blend
+      );
+      const w = raw * raw * (3 - 2 * raw);
+      const pose = track.fn(frame);
+      targetPos = [
+        targetPos[0] + (pose.position[0] - targetPos[0]) * w,
+        targetPos[1] + (pose.position[1] - targetPos[1]) * w,
+        targetPos[2] + (pose.position[2] - targetPos[2]) * w,
+      ];
+      targetLook = [
+        targetLook[0] + (pose.lookAt[0] - targetLook[0]) * w,
+        targetLook[1] + (pose.lookAt[1] - targetLook[1]) * w,
+        targetLook[2] + (pose.lookAt[2] - targetLook[2]) * w,
+      ];
+    }
+
     const burstAmount = shake.reduce((total, burst) => {
       const spread = burst.spread ?? 8;
       return total + burst.strength * Math.exp(-Math.pow((frame - burst.at) / spread, 2));
@@ -86,7 +108,7 @@ export const CameraRig: React.FC<CameraRigProps> = ({ config }) => {
       )
     );
     camera.updateProjectionMatrix();
-  }, [camera, frame, shake, waypoints, rumbles]);
+  }, [camera, frame, shake, waypoints, tracks, rumbles]);
 
   return null;
 };

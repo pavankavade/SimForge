@@ -9,6 +9,28 @@ export interface TrapdoorEvent {
   open: boolean;
 }
 
+/**
+ * Flap opening rotation (0 = flat closed, PI / 2.2 = dropped open). Each event
+ * owns its own transition, so the trap can cycle freely.
+ */
+export const trapdoorAngle = (frame: number, events: TrapdoorEvent[]) => {
+  const MAX_OPEN = Math.PI / 2.2;
+  const OPEN_DUR = 10;
+  const CLOSE_DUR = 16;
+  let openAngle = 0;
+  for (const event of events) {
+    if (frame < event.frame) break;
+    const duration = event.open ? OPEN_DUR : CLOSE_DUR;
+    const t = interpolate(frame, [event.frame, event.frame + duration], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: event.open ? Easing.out(Easing.cubic) : Easing.inOut(Easing.cubic),
+    });
+    openAngle = event.open ? MAX_OPEN * t : MAX_OPEN * (1 - t);
+  }
+  return openAngle;
+};
+
 interface HingedTrapdoorProps {
   spawnFrame?: number;
   /** Open/close schedule, so the trap can reset between victims. */
@@ -61,22 +83,7 @@ export const HingedTrapdoor: React.FC<HingedTrapdoorProps> = ({
 
   const installOffsetY = (1 - installProgress) * 4;
 
-  // Flap opening rotation (0 = flat closed, Math.PI / 2.2 = dropped open).
-  // Each event owns its own transition, so the trap can cycle freely.
-  const MAX_OPEN = Math.PI / 2.2;
-  const OPEN_DUR = 10;
-  const CLOSE_DUR = 16;
-  let openAngle = 0;
-  for (const event of events) {
-    if (frame < event.frame) break;
-    const duration = event.open ? OPEN_DUR : CLOSE_DUR;
-    const t = interpolate(frame, [event.frame, event.frame + duration], [0, 1], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: event.open ? Easing.out(Easing.cubic) : Easing.inOut(Easing.cubic),
-    });
-    openAngle = event.open ? MAX_OPEN * t : MAX_OPEN * (1 - t);
-  }
+  const openAngle = trapdoorAngle(frame, events);
 
   const flapMaterial = (
     <meshStandardMaterial

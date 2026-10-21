@@ -20,12 +20,30 @@ export interface CameraRumble {
   strength: number;
 }
 
+export interface CameraPose {
+  position: Vec3;
+  lookAt: Vec3;
+}
+
+/**
+ * Procedural camera move (e.g. following a projectile). Between `start` and
+ * `end` the waypoint pose is blended toward `fn(frame)`, easing in and out
+ * over `blend` frames.
+ */
+export interface CameraTrack {
+  start: number;
+  end: number;
+  blend?: number;
+  fn: (frame: number) => CameraPose;
+}
+
 export interface CameraConfig {
   fov?: number;
   near?: number;
   far?: number;
   initialPosition: Vec3;
   waypoints: CameraWaypoint[];
+  tracks?: CameraTrack[];
   shake?: CameraShakeBurst[];
   rumbles?: CameraRumble[];
 }
@@ -114,6 +132,16 @@ export interface AudioConfig {
   fadeOutFrames?: number;
 }
 
+export interface SfxCue {
+  src: string;
+  frame: number;
+  volume?: number;
+  /** Trim the clip (frames). Defaults to the full file. */
+  durationInFrames?: number;
+  /** Fade-out at the end of a trimmed clip (frames). */
+  fadeOutFrames?: number;
+}
+
 export interface SubtitleConfig {
   title?: string;
   segments: SubtitleSegment[];
@@ -154,6 +182,7 @@ export interface EpisodeConfig {
   environment?: EnvironmentConfig;
   audio?: AudioConfig;
   music?: AudioConfig;
+  sfx?: SfxCue[];
   subtitles?: SubtitleConfig;
   overlays?: OverlayConfig;
   OverlayComponent?: React.FC;

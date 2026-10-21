@@ -1,5 +1,5 @@
 export { DungeonDiorama } from "./DungeonDiorama";
-export { DustMotes, GlowSprite } from "./Fx";
+export { Burst, DustMotes, GlowSprite } from "./Fx";
 export { SpikePit } from "./SpikePit";
 export { HingedTrapdoor } from "./HingedTrapdoor";
 export { BaitChest } from "./BaitChest";

@@ -6,6 +6,11 @@ const DEFAULT_FONT_STACK =
   "'Arial Black', 'Arial Bold', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
 
 const CHUNK_SIZE = 5;
+const MAX_CHARS = 22;
+const BASE_FONT_SIZE = 62;
+const MAX_LINE_WIDTH = 960;
+/** Rough advance width of the bold display face, in em. */
+const CHAR_WIDTH_EM = 0.66;
 
 const getActiveSegmentIndex = (segments: SubtitleSegment[], frame: number) => {
   let activeIndex = -1;
@@ -39,33 +44,81 @@ const needsSpace = (previous: string, current: string) => {
   return true;
 };
 
-const buildChunks = (words: SubtitleWord[]) => {
-  const chunks: SubtitleWord[][] = [];
-  let current: SubtitleWord[] = [];
+const textLength = (words: SubtitleWord[]) =>
+  words.reduce((total, w, i) => total + w.word.length + (i > 0 ? 1 : 0), 0);
 
-  for (let index = 0; index < words.length; index++) {
-    const word = words[index];
-    current.push(word);
+/**
+ * Splits a clause into the fewest single-line chunks that respect the word
+ * and character limits, balancing their lengths and avoiding one-word orphans.
+ */
+const splitClause = (words: SubtitleWord[]): SubtitleWord[][] => {
+  const n = words.length;
+  const fits = (from: number, to: number) =>
+    to - from <= CHUNK_SIZE &&
+    (to - from === 1 || textLength(words.slice(from, to)) <= MAX_CHARS);
 
-    const sentenceEnd = /[.!?…]["')\]]?$/.test(word.word);
-    const clauseEnd = /[,;:]["')\]]?$/.test(word.word);
-
-    if (
-      current.length >= CHUNK_SIZE ||
-      (sentenceEnd && current.length >= 3) ||
-      (clauseEnd && current.length >= 4) ||
-      index === words.length - 1
-    ) {
-      chunks.push(current);
-      current = [];
+  // best[i] = [parts, cost, previous cut] for words[0..i)
+  const best: Array<[number, number, number]> = [[0, 0, -1]];
+  for (let i = 1; i <= n; i++) {
+    best[i] = [Infinity, Infinity, -1];
+    for (let j = Math.max(0, i - CHUNK_SIZE); j < i; j++) {
+      if (!fits(j, i) || best[j][0] === Infinity) continue;
+      const len = textLength(words.slice(j, i));
+      const orphan = i - j === 1 && n > 1 ? 400 : 0;
+      const parts = best[j][0] + 1;
+      const cost = best[j][1] + (MAX_CHARS - len) ** 2 + orphan;
+      const [bestParts, bestCost] = best[i];
+      if (parts < bestParts || (parts === bestParts && cost < bestCost)) {
+        best[i] = [parts, cost, j];
+      }
     }
   }
 
-  if (current.length > 0) {
-    chunks.push(current);
+  const chunks: SubtitleWord[][] = [];
+  for (let i = n; i > 0; i = best[i][2]) {
+    chunks.unshift(words.slice(best[i][2], i));
+  }
+  return chunks;
+};
+
+const buildChunks = (words: SubtitleWord[]) => {
+  const clauses: SubtitleWord[][] = [];
+  let current: SubtitleWord[] = [];
+
+  for (const word of words) {
+    current.push(word);
+    if (/[.!?…,;:]["')\]]?$/.test(word.word)) {
+      clauses.push(current);
+      current = [];
+    }
+  }
+  if (current.length > 0) clauses.push(current);
+
+  // A lone lead-in word ("However,") rides with the clause that follows it.
+  const merged: SubtitleWord[][] = [];
+  for (let i = 0; i < clauses.length; i++) {
+    const clause = clauses[i];
+    if (clause.length === 1 && i < clauses.length - 1) {
+      clauses[i + 1] = [...clause, ...clauses[i + 1]];
+      continue;
+    }
+    if (clause.length === 1 && merged.length > 0) {
+      const previous = merged[merged.length - 1];
+      if (
+        previous.length < CHUNK_SIZE &&
+        textLength([...previous, ...clause]) <= MAX_CHARS
+      ) {
+        previous.push(...clause);
+        continue;
+      }
+    }
+    merged.push(clause);
   }
 
-  return chunks;
+  return merged.reduce<SubtitleWord[][]>(
+    (all, clause) => all.concat(splitClause(clause)),
+    []
+  );
 };
 
 export const Subtitles: React.FC<SubtitleConfig> = ({
@@ -107,14 +160,19 @@ export const Subtitles: React.FC<SubtitleConfig> = ({
 
     const activeChunk = chunks[chunkIndex] ?? [];
     const chunkStart = activeChunk[0]?.startFrame ?? segment.startFrame;
-    const enter = interpolate(frame - chunkStart, [0, 4], [12, 0], {
+    const pop = interpolate(frame - chunkStart, [0, 3, 6], [0.78, 1.06, 1], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     });
-    const opacity = interpolate(frame - chunkStart, [0, 3], [0, 1], {
+    const opacity = interpolate(frame - chunkStart, [0, 2], [0.2, 1], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     });
+    const chunkChars = textLength(activeChunk);
+    const fontSize = Math.min(
+      BASE_FONT_SIZE,
+      MAX_LINE_WIDTH / Math.max(1, chunkChars * CHAR_WIDTH_EM)
+    );
 
     const chunkOffset = chunks
       .slice(0, chunkIndex)
@@ -159,20 +217,21 @@ export const Subtitles: React.FC<SubtitleConfig> = ({
             position: "absolute",
             left: "50%",
             bottom: bottomOffset,
-            width: "94%",
-            maxWidth: 1000,
-            transform: `translateX(-50%) translateY(${enter}px)`,
+            width: "96%",
+            transform: `translateX(-50%) scale(${pop})`,
+            transformOrigin: "50% 60%",
             opacity,
           }}
         >
           <div
             style={{
               color: textColor,
-              fontSize: 55,
+              fontSize,
               fontWeight: 900,
               lineHeight: 1.18,
               letterSpacing: "-0.4px",
               textAlign: "center",
+              whiteSpace: "nowrap",
             }}
           >
             {activeChunk.map((word, index) => {
@@ -191,6 +250,12 @@ export const Subtitles: React.FC<SubtitleConfig> = ({
                   <span
                     style={{
                       display: "inline-block",
+                      transform: isActive ? "scale(1.08)" : undefined,
+                      // Reserve the room the scaled-up word grows into so it
+                      // never swallows the neighbouring spaces.
+                      margin: isActive
+                        ? `0 ${word.word.length * CHAR_WIDTH_EM * 0.04}em`
+                        : undefined,
                       color: isActive ? activeColor : textColor,
                       WebkitTextStroke: "7px rgba(0, 0, 0, 0.96)",
                       paintOrder: "stroke fill",

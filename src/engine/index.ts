@@ -9,8 +9,10 @@ export { ENVIRONMENT_PRESETS } from "./presets";
 export type {
   AudioConfig,
   CameraConfig,
+  CameraPose,
   CameraRumble,
   CameraShakeBurst,
+  CameraTrack,
   CameraWaypoint,
   CloudDefinition,
   EnvironmentConfig,
@@ -19,6 +21,7 @@ export type {
   GroundTextureConfig,
   HillDefinition,
   OverlayConfig,
+  SfxCue,
   SubtitleConfig,
   SubtitleSegment,
   SubtitleWord,

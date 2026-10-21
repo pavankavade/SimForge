@@ -7,6 +7,7 @@ import { EnvironmentScene } from "./EnvironmentScene";
 import { FadeOverlay, Vignette } from "./Overlays";
 import { PostFX } from "./PostFX";
 import { SceneEnvironment } from "./SceneEnvironment";
+import { SfxTrack } from "./SfxTrack";
 import { Subtitles } from "./Subtitles";
 import type { EpisodeConfig } from "./types";
 
@@ -26,6 +27,7 @@ export const EpisodeVideo: React.FC<EpisodeVideoProps> = ({ config, Scene }) => 
     >
       {config.audio ? <AudioTrack config={config.audio} /> : null}
       {config.music ? <AudioTrack config={config.music} /> : null}
+      {config.sfx ? <SfxTrack cues={config.sfx} /> : null}
 
       <AbsoluteFill style={{ filter: overlays.grade ?? "saturate(1.06) contrast(1.03)" }}>
         <ThreeCanvas

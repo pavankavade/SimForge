@@ -9,8 +9,10 @@ export type AdventurerPose =
   | "jump"
   | "cast"
   | "shield"
+  | "shieldWalk"
   | "fall"
-  | "launch";
+  | "launch"
+  | "sprawl";
 
 interface AdventurerUnitProps {
   classType: AdventurerClass;
@@ -157,6 +159,29 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
     leftKnee = 0.3;
     rightKnee = 0.22;
     bodyLean = 0.08;
+  } else if (pose === "shieldWalk") {
+    // Shield braced forward while trudging on.
+    const cycle = Math.sin(animFrame * 0.26);
+    leftArmRot = [-1.5, 0.55, 0.5];
+    rightArmRot = [-0.45 + cycle * 0.15, 0.1, -0.3];
+    leftElbow = -1.0;
+    rightElbow = -0.55;
+    leftLegRot = [-cycle * 0.5, 0, 0.06];
+    rightLegRot = [cycle * 0.5, 0, -0.06];
+    leftKnee = Math.max(0, -cycle) * 0.7 + 0.12;
+    rightKnee = Math.max(0, cycle) * 0.7 + 0.12;
+    bodyBob = Math.abs(cycle) * 0.035;
+    bodyLean = 0.14;
+  } else if (pose === "sprawl") {
+    // Limp, splayed body lying where it landed.
+    leftArmRot = [-0.4, 0, 1.25];
+    rightArmRot = [0.3, 0, -1.1];
+    leftElbow = -0.25;
+    rightElbow = -0.6;
+    leftLegRot = [0.15, 0, 0.35];
+    rightLegRot = [-0.25, 0, -0.28];
+    leftKnee = 0.2;
+    rightKnee = 0.5;
   } else if (pose === "fall" || pose === "launch") {
     const flail = Math.sin(animFrame * 0.55);
     leftArmRot = [-2.2 + flail * 0.45, 0, -0.75];
@@ -696,13 +721,13 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
               <boxGeometry args={[0.46, 0.75, 0.04]} />
               <meshStandardMaterial color="#a32424" roughness={0.6} />
             </mesh>
-            <mesh position={[0, 0.02, 0.068]}>
-              <boxGeometry args={[0.055, 0.42, 0.025]} />
+            <mesh position={[0, 0.06, 0.066]} rotation={[0, 0, Math.PI / 4]}>
+              <boxGeometry args={[0.24, 0.24, 0.025]} />
               {metalMat(style.trim, 0.2, 0.65)}
             </mesh>
-            <mesh position={[0, 0.07, 0.068]}>
-              <boxGeometry args={[0.3, 0.055, 0.025]} />
-              {metalMat(style.trim, 0.2, 0.65)}
+            <mesh position={[0, 0.06, 0.08]} rotation={[0, 0, Math.PI / 4]}>
+              <boxGeometry args={[0.13, 0.13, 0.02]} />
+              <meshStandardMaterial color="#a32424" roughness={0.5} />
             </mesh>
             <mesh position={[0, -0.26, 0.072]} rotation={[Math.PI / 2, 0, 0]}>
               <cylinderGeometry args={[0.095, 0.095, 0.03, 14]} />
