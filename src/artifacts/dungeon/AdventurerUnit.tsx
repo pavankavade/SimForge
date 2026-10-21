@@ -626,11 +626,11 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
                     <mesh position={[0, 1.14, 0]} castShadow>
                       <sphereGeometry args={[0.115, 18, 14]} />
                       <meshStandardMaterial
-                        color={style.accent}
-                        emissive={style.accent}
-                        emissiveIntensity={2.6}
+                        color="#a8f6ff"
+                        emissive="#2fd4ff"
+                        emissiveIntensity={1.35}
                         transparent
-                        opacity={0.92}
+                        opacity={0.9}
                         roughness={0.15}
                       />
                     </mesh>

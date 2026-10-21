@@ -81,52 +81,69 @@ export const Scene: React.FC = () => {
   const showRogue2 = frame >= 415 && frame < 750;
 
   // =========================================================================
-  // BEAT 3 (750 - 1230): MAGE ICE SPELL vs FLAMETHROWER
+  // BEAT 3 (750 - 1230): MAGE BEATS THE PIT, THEN THE FLAMERS COUNTER IT
   // =========================================================================
-  const mageWalkX = interpolate(frame, [760, 815], [-6.5, -2.4], {
+  // Narration: the Mage freezes the trapdoor and crosses safely, so you
+  // install the alchemical flamers as the next counter-measure.
+  const mageWalkX = interpolate(frame, [770, 865], [-6.5, -2.5], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const mageCrossX = interpolate(frame, [845, 885], [-2.4, 0.2], {
+  const mageCrossX = interpolate(frame, [935, 1005], [-2.5, 2.6], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const mageFallY = interpolate(frame, [885, 915], [0, -3.8], {
+  const mageExitX = interpolate(frame, [1080, 1170], [2.6, 6.2], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
-    easing: Easing.in(Easing.quad),
   });
 
-  const mageX = frame < 845 ? mageWalkX : mageCrossX;
-  const mageY = frame < 885 ? 0 : mageFallY;
-  const magePose =
-    frame < 815 ? "walk" : frame < 845 ? "cast" : frame < 885 ? "walk" : "fall";
-  const showMage = frame >= 755 && frame < 942;
+  const mageX =
+    frame < 865
+      ? mageWalkX
+      : frame < 935
+        ? -2.5
+        : frame < 1005
+          ? mageCrossX
+          : frame < 1080
+            ? 2.6
+            : mageExitX;
+  const magePose: AdventurerPose =
+    frame < 865
+      ? "walk"
+      : frame < 935
+        ? "cast"
+        : frame < 1005
+          ? "walk"
+          : frame < 1080
+            ? "idle"
+            : "walk";
+  const showMage = frame >= 755 && frame < 1180;
 
   // =========================================================================
   // BEAT 4 (1230 - 1710): PALADIN TOWER SHIELD vs PENDULUM BLADE
   // =========================================================================
-  const paladinWalkX = interpolate(frame, [1240, 1335], [-6.5, -0.9], {
+  const paladinWalkX = interpolate(frame, [1240, 1400], [-6.5, -0.9], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   // Holds the safe zone with the tower shield while the blade sweeps, then is
-  // knocked into the pit near the end of the line.
-  const paladinKnockX = interpolate(frame, [1600, 1650], [-0.9, -1.5], {
+  // knocked through the trapdoor at the end of the line.
+  const paladinKnockX = interpolate(frame, [1650, 1705], [-0.9, -1.6], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const paladinFallY = interpolate(frame, [1600, 1655], [0, -3.8], {
+  const paladinFallY = interpolate(frame, [1650, 1705], [0, -3.0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.in(Easing.quad),
   });
 
-  const paladinX = frame < 1600 ? paladinWalkX : paladinKnockX;
-  const paladinY = frame < 1600 ? 0 : paladinFallY;
+  const paladinX = frame < 1650 ? paladinWalkX : paladinKnockX;
+  const paladinY = frame < 1650 ? 0 : paladinFallY;
   const paladinPose: AdventurerPose =
-    frame < 1330 ? "walk" : frame < 1600 ? "shield" : "fall";
-  const showPaladin = frame >= 1235 && frame < 1710;
+    frame < 1400 ? "walk" : frame < 1650 ? "shield" : "fall";
+  const showPaladin = frame >= 1235 && frame < 1712;
 
   // =========================================================================
   // BEAT 5 (1710 - 2250): FULL PARTY vs OVERKILL CATAPULT & MIMIC
@@ -165,7 +182,12 @@ export const Scene: React.FC = () => {
       <SpikePit spawnFrame={15} />
 
       {/* 3. Stage 2: False Hinged Trapdoor */}
-      <HingedTrapdoor spawnFrame={330} openFrame={522} />
+      <HingedTrapdoor
+        spawnFrame={330}
+        openFrame={522}
+        closeFrame={700}
+        reopenFrame={1650}
+      />
 
       {/* 4. Stage 2: Hanging Gold Bait Chest */}
       <BaitChest spawnFrame={350} />
@@ -174,13 +196,17 @@ export const Scene: React.FC = () => {
       <PressurePlate spawnFrame={360} triggerFrame={520} />
 
       {/* 6. Stage 3: Mage Ice Bridge Slab */}
-      <IceBridge castFrame={820} meltFrame={880} />
+      <IceBridge castFrame={890} meltFrame={1090} />
 
       {/* 7. Stage 3: Alchemical Flame Jets & Underground Fuel Tank */}
-      <AlchemicalFlamers spawnFrame={800} fireStartFrame={875} fireEndFrame={1220} />
+      <AlchemicalFlamers
+        spawnFrame={960}
+        fireStartFrame={1075}
+        fireEndFrame={1400}
+      />
 
       {/* 8. Stage 4: Ceiling Mounted Pendulum Executioner Blade */}
-      <PendulumBlade spawnFrame={1250} swingStartFrame={1300} />
+      <PendulumBlade spawnFrame={1440} swingStartFrame={1500} />
 
       {/* 9. Stage 5: Catapult Launch Floor & Underground Spring Lever */}
       <TrebuchetFloor spawnFrame={1710} launchFrame={1860} />
@@ -229,7 +255,7 @@ export const Scene: React.FC = () => {
         <AdventurerUnit
           classType="mage"
           pose={magePose}
-          position={[mageX, mageY, -0.6]}
+          position={[mageX, 0, -0.6]}
           rotation={[0, frame < 815 ? Math.PI / 2 : frame < 885 ? 0.35 : 0.15, 0]}
           animFrame={frame}
         />

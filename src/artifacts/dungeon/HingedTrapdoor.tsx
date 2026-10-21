@@ -6,11 +6,17 @@ import { makeMetal, makeWood } from "../../engine/textures";
 interface HingedTrapdoorProps {
   spawnFrame?: number;
   openFrame?: number;
+  /** Springs shut again so the corridor is walkable for the next party. */
+  closeFrame?: number;
+  /** Drops open a second time, e.g. when the Paladin is knocked in. */
+  reopenFrame?: number;
 }
 
 export const HingedTrapdoor: React.FC<HingedTrapdoorProps> = ({
   spawnFrame = 330,
   openFrame,
+  closeFrame,
+  reopenFrame,
 }) => {
   const frame = useCurrentFrame();
 
@@ -49,13 +55,30 @@ export const HingedTrapdoor: React.FC<HingedTrapdoorProps> = ({
   const installOffsetY = (1 - installProgress) * 4;
 
   // Flap opening rotation (0 = flat closed, Math.PI / 2.2 = dropped open)
+  const MAX_OPEN = Math.PI / 2.2;
   let openAngle = 0;
   if (openFrame !== undefined && frame >= openFrame) {
-    openAngle = interpolate(frame, [openFrame, openFrame + 10], [0, Math.PI / 2.2], {
+    openAngle = interpolate(frame, [openFrame, openFrame + 10], [0, MAX_OPEN], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
       easing: Easing.out(Easing.cubic),
     });
+  }
+  if (closeFrame !== undefined && frame >= closeFrame) {
+    const shut = interpolate(frame, [closeFrame, closeFrame + 14], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    });
+    openAngle *= 1 - shut;
+  }
+  if (reopenFrame !== undefined && frame >= reopenFrame) {
+    const drop = interpolate(frame, [reopenFrame, reopenFrame + 8], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    });
+    openAngle = MAX_OPEN * drop;
   }
 
   const flapMaterial = (
