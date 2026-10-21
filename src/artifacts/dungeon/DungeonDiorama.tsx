@@ -1,20 +1,99 @@
 import type React from "react";
 import { useCurrentFrame, random } from "remotion";
+import * as THREE from "three";
+import { useSurface } from "../../engine/materials";
+import { makeFlagstone, makeMasonry, makeWood } from "../../engine/textures";
 import { DustMotes, GlowSprite } from "./Fx";
 
 const BRICK_COLORS = [
-  "#4b4e5d",
-  "#555868",
-  "#454855",
-  "#5c5f6f",
-  "#50525f",
-  "#5a5863",
+  "#d7dae3",
+  "#e2e5ec",
+  "#cdd1db",
+  "#e9ecf2",
+  "#d2d6df",
+  "#dde0e8",
 ];
 
 export const DungeonDiorama: React.FC = () => {
   const frame = useCurrentFrame();
   const flicker = Math.sin(frame * 0.3) * 0.12 + Math.cos(frame * 0.77) * 0.08;
   const flickerTwo = Math.sin(frame * 0.26 + 1.7) * 0.1;
+
+  const wallStone = useSurface(
+    "diorama-wall",
+    () =>
+      makeMasonry({
+        rows: 7,
+        cols: 4,
+        base: "#3d414e",
+        baseAlt: "#4a4e5c",
+        mortar: "#1b1d24",
+        seed: 21,
+      }),
+    [6, 2]
+  );
+  const brickStone = useSurface(
+    "diorama-brick",
+    () =>
+      makeMasonry({
+        rows: 5,
+        cols: 3,
+        base: "#4c505f",
+        baseAlt: "#5a5e6d",
+        mortar: "#1e2029",
+        seed: 22,
+      }),
+    [1, 1]
+  );
+  const pillarStone = useSurface(
+    "diorama-pillar",
+    () =>
+      makeMasonry({
+        rows: 9,
+        cols: 3,
+        base: "#565a6b",
+        baseAlt: "#646879",
+        mortar: "#20222b",
+        seed: 23,
+      }),
+    [1, 3]
+  );
+  const floorStone = useSurface(
+    "diorama-floor",
+    () =>
+      makeFlagstone({
+        cells: 4,
+        base: "#4b4e5a",
+        baseAlt: "#565965",
+        grout: "#1c1e25",
+        seed: 24,
+      }),
+    [1, 1]
+  );
+  const foreFloorStone = useSurface(
+    "diorama-fore-floor",
+    () =>
+      makeFlagstone({
+        cells: 5,
+        base: "#43454f",
+        baseAlt: "#4e515b",
+        grout: "#191b21",
+        seed: 25,
+      }),
+    [1, 2]
+  );
+  const beamWood = useSurface(
+    "diorama-beam",
+    () =>
+      makeWood({
+        planks: 3,
+        base: "#4a3320",
+        baseAlt: "#573d26",
+        seam: "#1e140c",
+        seed: 26,
+      }),
+    [3, 1]
+  );
 
   const bricks: Array<{
     x: number;
@@ -48,10 +127,10 @@ export const DungeonDiorama: React.FC = () => {
         z: 5.5 + row * 1.8,
         color:
           (row + col) % 2 === 0
-            ? "#514f58"
+            ? "#cfd3dc"
             : col % 3 === 0
-              ? "#5d5a62"
-              : "#49474f",
+              ? "#dfe2ea"
+              : "#c4c8d1",
         key: `foreground-tile-${row}-${col}`,
       });
     }
@@ -80,7 +159,14 @@ export const DungeonDiorama: React.FC = () => {
     <group position={[0, 0, 0]}>
       <mesh position={[0, 3.1, -2.55]} receiveShadow>
         <boxGeometry args={[22, 6.4, 0.5]} />
-        <meshStandardMaterial color="#2c2f3a" roughness={0.94} />
+        <meshStandardMaterial
+          map={wallStone.map}
+          normalMap={wallStone.normalMap}
+          roughnessMap={wallStone.roughnessMap}
+          normalScale={new THREE.Vector2(0.8, 0.8)}
+          color="#c8ccd8"
+          roughness={0.95}
+        />
       </mesh>
 
       {bricks.map((brick) => (
@@ -91,6 +177,10 @@ export const DungeonDiorama: React.FC = () => {
         >
           <boxGeometry args={[2.34, 0.94, 0.08]} />
           <meshStandardMaterial
+            map={brickStone.map}
+            normalMap={brickStone.normalMap}
+            roughnessMap={brickStone.roughnessMap}
+            normalScale={new THREE.Vector2(0.9, 0.9)}
             color={brick.color}
             roughness={0.9}
             metalness={0.02}
@@ -102,15 +192,32 @@ export const DungeonDiorama: React.FC = () => {
         <group key={`pillar-${index}`} position={[x, 3, -2.02]}>
           <mesh castShadow receiveShadow>
             <boxGeometry args={[0.82, 6.1, 0.52]} />
-            <meshStandardMaterial color="#5a5e70" roughness={0.86} />
+            <meshStandardMaterial
+              map={pillarStone.map}
+              normalMap={pillarStone.normalMap}
+              roughnessMap={pillarStone.roughnessMap}
+              normalScale={new THREE.Vector2(0.7, 0.7)}
+              color="#b9bfcc"
+              roughness={0.86}
+            />
           </mesh>
           <mesh position={[0, 3.02, 0.05]} castShadow>
             <boxGeometry args={[1.16, 0.32, 0.66]} />
-            <meshStandardMaterial color="#6b7084" roughness={0.8} />
+            <meshStandardMaterial
+              map={pillarStone.map}
+              normalMap={pillarStone.normalMap}
+              color="#ccd2dd"
+              roughness={0.8}
+            />
           </mesh>
           <mesh position={[0, -3.02, 0.05]} castShadow>
             <boxGeometry args={[1.16, 0.36, 0.66]} />
-            <meshStandardMaterial color="#6b7084" roughness={0.8} />
+            <meshStandardMaterial
+              map={pillarStone.map}
+              normalMap={pillarStone.normalMap}
+              color="#ccd2dd"
+              roughness={0.8}
+            />
           </mesh>
           <mesh position={[0, 0, 0.3]}>
             <boxGeometry args={[0.9, 0.06, 0.04]} />
@@ -277,7 +384,11 @@ export const DungeonDiorama: React.FC = () => {
         >
           <boxGeometry args={[1.03, 0.035, 3.2]} />
           <meshStandardMaterial
-            color={index % 2 === 0 ? "#585b69" : "#50535f"}
+            map={floorStone.map}
+            normalMap={floorStone.normalMap}
+            roughnessMap={floorStone.roughnessMap}
+            normalScale={new THREE.Vector2(0.6, 0.6)}
+            color={index % 2 === 0 ? "#c9cedb" : "#bcc1cc"}
             roughness={0.82}
           />
         </mesh>
@@ -290,7 +401,11 @@ export const DungeonDiorama: React.FC = () => {
         >
           <boxGeometry args={[1.03, 0.035, 3.2]} />
           <meshStandardMaterial
-            color={index % 2 === 0 ? "#555865" : "#4d505c"}
+            map={floorStone.map}
+            normalMap={floorStone.normalMap}
+            roughnessMap={floorStone.roughnessMap}
+            normalScale={new THREE.Vector2(0.6, 0.6)}
+            color={index % 2 === 0 ? "#c4c9d5" : "#b8bdc8"}
             roughness={0.82}
           />
         </mesh>
@@ -320,7 +435,14 @@ export const DungeonDiorama: React.FC = () => {
           receiveShadow
         >
           <boxGeometry args={[1.96, 0.035, 1.7]} />
-          <meshStandardMaterial color={tile.color} roughness={0.84} />
+          <meshStandardMaterial
+            map={foreFloorStone.map}
+            normalMap={foreFloorStone.normalMap}
+            roughnessMap={foreFloorStone.roughnessMap}
+            normalScale={new THREE.Vector2(0.6, 0.6)}
+            color={tile.color}
+            roughness={0.84}
+          />
         </mesh>
       ))}
 
@@ -377,13 +499,24 @@ export const DungeonDiorama: React.FC = () => {
       {[-1.55, 0, 1.55].map((x, index) => (
         <mesh key={`pit-beam-${index}`} position={[x, -2.4, -2.06]}>
           <boxGeometry args={[0.2, 5.0, 0.1]} />
-          <meshStandardMaterial color="#5a3d27" roughness={0.9} />
+          <meshStandardMaterial
+            map={beamWood.map}
+            normalMap={beamWood.normalMap}
+            roughnessMap={beamWood.roughnessMap}
+            color="#d8cdbd"
+            roughness={0.9}
+          />
         </mesh>
       ))}
       {[-1.3, -3.1].map((y, index) => (
         <mesh key={`pit-crossbeam-${index}`} position={[0, y, -2.0]}>
           <boxGeometry args={[3.9, 0.18, 0.12]} />
-          <meshStandardMaterial color="#4a3222" roughness={0.9} />
+          <meshStandardMaterial
+            map={beamWood.map}
+            normalMap={beamWood.normalMap}
+            color="#cbbfae"
+            roughness={0.9}
+          />
         </mesh>
       ))}
       {[-1.6, -2.8].map((y, index) => (
@@ -392,7 +525,12 @@ export const DungeonDiorama: React.FC = () => {
           position={[-2.01, y, -0.6]}
         >
           <boxGeometry args={[0.1, 0.16, 3.1]} />
-          <meshStandardMaterial color="#4a3222" roughness={0.9} />
+          <meshStandardMaterial
+            map={beamWood.map}
+            normalMap={beamWood.normalMap}
+            color="#cbbfae"
+            roughness={0.9}
+          />
         </mesh>
       ))}
       {[-1.6, -2.8].map((y, index) => (
@@ -401,7 +539,12 @@ export const DungeonDiorama: React.FC = () => {
           position={[2.01, y, -0.6]}
         >
           <boxGeometry args={[0.1, 0.16, 3.1]} />
-          <meshStandardMaterial color="#4a3222" roughness={0.9} />
+          <meshStandardMaterial
+            map={beamWood.map}
+            normalMap={beamWood.normalMap}
+            color="#cbbfae"
+            roughness={0.9}
+          />
         </mesh>
       ))}
       <mesh position={[-2.1, -2.6, -0.6]} receiveShadow>

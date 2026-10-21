@@ -14,12 +14,13 @@
     "@remotion/media": "4.0.537",
     "@remotion/three": "4.0.537",
     "@remotion/zod-types": "4.0.537",
+    "mediabunny": "1.61.6",
+    "postprocessing": "^6.39.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.537",
     "three": "0.178.0",
-    "zod": "4.5.4",
-    "mediabunny": "1.61.6"
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.537",

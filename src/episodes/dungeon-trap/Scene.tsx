@@ -13,6 +13,7 @@ import {
   MimicChest,
   AdventurerUnit,
 } from "../../artifacts";
+import type { AdventurerPose } from "../../artifacts/dungeon/AdventurerUnit";
 
 export const Scene: React.FC = () => {
   const frame = useCurrentFrame();
@@ -100,56 +101,60 @@ export const Scene: React.FC = () => {
   const mageY = frame < 885 ? 0 : mageFallY;
   const magePose =
     frame < 815 ? "walk" : frame < 845 ? "cast" : frame < 885 ? "walk" : "fall";
-  const showMage = frame >= 755 && frame < 1230;
+  const showMage = frame >= 755 && frame < 942;
 
   // =========================================================================
   // BEAT 4 (1230 - 1710): PALADIN TOWER SHIELD vs PENDULUM BLADE
   // =========================================================================
-  const paladinWalkX = interpolate(frame, [1240, 1335], [-6.5, -2.4], {
+  const paladinWalkX = interpolate(frame, [1240, 1335], [-6.5, -0.9], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const paladinSmashX = interpolate(frame, [1335, 1370], [-2.4, -0.6], {
+  // Holds the safe zone with the tower shield while the blade sweeps, then is
+  // knocked into the pit near the end of the line.
+  const paladinKnockX = interpolate(frame, [1600, 1650], [-0.9, -1.5], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const paladinSmashY = interpolate(frame, [1335, 1370], [0, -3.8], {
+  const paladinFallY = interpolate(frame, [1600, 1655], [0, -3.8], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.in(Easing.quad),
   });
 
-  const paladinX = frame < 1335 ? paladinWalkX : paladinSmashX;
-  const paladinY = frame < 1335 ? 0 : paladinSmashY;
-  const paladinPose = frame < 1335 ? "shield" : "fall";
+  const paladinX = frame < 1600 ? paladinWalkX : paladinKnockX;
+  const paladinY = frame < 1600 ? 0 : paladinFallY;
+  const paladinPose: AdventurerPose =
+    frame < 1330 ? "walk" : frame < 1600 ? "shield" : "fall";
   const showPaladin = frame >= 1235 && frame < 1710;
 
   // =========================================================================
   // BEAT 5 (1710 - 2250): FULL PARTY vs OVERKILL CATAPULT & MIMIC
   // =========================================================================
-  // Catapult launch trajectory for 3 party members into Mimic at x = 7.0
-  const launchT_R = interpolate(frame, [1862, 1912], [0, 1], {
+  // Catapult launch trajectory: staggered launches keep the three bodies
+  // readable instead of stacking them into one clump mid-air.
+  const launchT_R = interpolate(frame, [1856, 1910], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   const launchX_R = interpolate(launchT_R, [0, 1], [-7.0, 7.0]);
-  const launchY_R = Math.sin(launchT_R * Math.PI) * 5.8;
+  const launchY_R = Math.sin(launchT_R * Math.PI) * 6.0;
 
-  const launchT_M = interpolate(frame, [1864, 1914], [0, 1], {
+  const launchT_M = interpolate(frame, [1868, 1924], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   const launchX_M = interpolate(launchT_M, [0, 1], [-6.0, 7.0]);
   const launchY_M = Math.sin(launchT_M * Math.PI) * 5.2;
 
-  const launchT_P = interpolate(frame, [1866, 1916], [0, 1], {
+  const launchT_P = interpolate(frame, [1880, 1938], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   const launchX_P = interpolate(launchT_P, [0, 1], [-5.0, 7.0]);
-  const launchY_P = Math.sin(launchT_P * Math.PI) * 4.6;
+  const launchY_P = Math.sin(launchT_P * Math.PI) * 4.4;
 
-  const showParty5 = frame >= 1730 && frame < 1920;
+  const showParty5 = frame >= 1730 && frame < 1950;
 
   return (
     <>
@@ -241,30 +246,48 @@ export const Scene: React.FC = () => {
         />
       )}
 
-      {/* Beat 5: 3-Man Party Catapult Launch */}
+      {/* Beat 5: 3-Man Party Catapult Launch (staggered) */}
       {showParty5 && (
         <>
-          <AdventurerUnit
-            classType="rogue"
-            pose={frame < 1862 ? "idle" : "launch"}
-            position={[launchX_R, launchY_R, -0.3]}
-            rotation={[0, 0.25 + (frame > 1862 ? (frame - 1862) * 0.08 : 0), frame > 1862 ? (frame - 1862) * 0.12 : 0]}
-            animFrame={frame}
-          />
-          <AdventurerUnit
-            classType="mage"
-            pose={frame < 1864 ? "idle" : "launch"}
-            position={[launchX_M, launchY_M, -0.6]}
-            rotation={[0, 0.25 + (frame > 1864 ? (frame - 1864) * 0.08 : 0), frame > 1864 ? (frame - 1864) * 0.12 : 0]}
-            animFrame={frame}
-          />
-          <AdventurerUnit
-            classType="paladin"
-            pose={frame < 1866 ? "idle" : "launch"}
-            position={[launchX_P, launchY_P, -0.9]}
-            rotation={[0, 0.25 + (frame > 1866 ? (frame - 1866) * 0.08 : 0), frame > 1866 ? (frame - 1866) * 0.12 : 0]}
-            animFrame={frame}
-          />
+          {frame < 1911 ? (
+            <AdventurerUnit
+              classType="rogue"
+              pose={frame < 1856 ? "idle" : "launch"}
+              position={[launchX_R, launchY_R, -0.3]}
+              rotation={[
+                0,
+                frame > 1856 ? 0.25 + (frame - 1856) * 0.03 : 0.25,
+                frame > 1856 ? (frame - 1856) * 0.07 : 0,
+              ]}
+              animFrame={frame}
+            />
+          ) : null}
+          {frame < 1925 ? (
+            <AdventurerUnit
+              classType="mage"
+              pose={frame < 1868 ? "idle" : "launch"}
+              position={[launchX_M, launchY_M, -0.6]}
+              rotation={[
+                0,
+                frame > 1868 ? 0.25 + (frame - 1868) * 0.03 : 0.25,
+                frame > 1868 ? (frame - 1868) * 0.07 : 0,
+              ]}
+              animFrame={frame}
+            />
+          ) : null}
+          {frame < 1939 ? (
+            <AdventurerUnit
+              classType="paladin"
+              pose={frame < 1880 ? "idle" : "launch"}
+              position={[launchX_P, launchY_P, -0.9]}
+              rotation={[
+                0,
+                frame > 1880 ? 0.25 + (frame - 1880) * 0.03 : 0.25,
+                frame > 1880 ? (frame - 1880) * 0.07 : 0,
+              ]}
+              animFrame={frame}
+            />
+          ) : null}
         </>
       )}
     </>

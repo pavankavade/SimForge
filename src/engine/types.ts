@@ -123,12 +123,24 @@ export interface SubtitleConfig {
   fontFamily?: string;
 }
 
+export interface PostFXConfig {
+  enabled?: boolean;
+  bloomIntensity?: number;
+  bloomThreshold?: number;
+  bloomRadius?: number;
+  aoIntensity?: number;
+  aoRadius?: number;
+  exposure?: number;
+  grain?: number;
+}
+
 export interface OverlayConfig {
   grade?: string;
   vignette?: boolean | string;
   fadeInFrames?: number;
   fadeOutFrames?: number;
   backgroundColor?: string;
+  postfx?: PostFXConfig;
 }
 
 export interface EpisodeConfig {
@@ -141,6 +153,7 @@ export interface EpisodeConfig {
   camera: CameraConfig;
   environment?: EnvironmentConfig;
   audio?: AudioConfig;
+  music?: AudioConfig;
   subtitles?: SubtitleConfig;
   overlays?: OverlayConfig;
   OverlayComponent?: React.FC;

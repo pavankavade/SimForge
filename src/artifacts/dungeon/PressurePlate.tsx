@@ -58,12 +58,64 @@ export const PressurePlate: React.FC<PressurePlateProps> = ({
       <mesh position={[0, 0.05 - depression, 0]} castShadow receiveShadow>
         <boxGeometry args={[0.9, 0.06, 0.9]} />
         <meshStandardMaterial
-          color={isTriggered ? "#c93434" : "#802b2b"}
-          emissive={isTriggered ? "#ff2222" : "#440000"}
-          emissiveIntensity={pulseIntensity}
-          roughness={0.6}
+          color="#3d414e"
+          metalness={0.72}
+          roughness={0.42}
         />
       </mesh>
+
+      {/* Iron rim */}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={`rim-x-${side}`}
+          position={[side * 0.42, 0.075 - depression, 0]}
+        >
+          <boxGeometry args={[0.07, 0.05, 0.92]} />
+          <meshStandardMaterial color="#6d7484" metalness={0.85} roughness={0.3} />
+        </mesh>
+      ))}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={`rim-z-${side}`}
+          position={[0, 0.075 - depression, side * 0.42]}
+        >
+          <boxGeometry args={[0.92, 0.05, 0.07]} />
+          <meshStandardMaterial color="#6d7484" metalness={0.85} roughness={0.3} />
+        </mesh>
+      ))}
+
+      {/* Glowing rune cross on the plate face */}
+      <mesh position={[0, 0.083 - depression, 0]}>
+        <boxGeometry args={[0.56, 0.012, 0.05]} />
+        <meshStandardMaterial
+          color="#e04a3a"
+          emissive="#ff2a1a"
+          emissiveIntensity={pulseIntensity * 1.5}
+          roughness={0.4}
+        />
+      </mesh>
+      <mesh position={[0, 0.083 - depression, 0]}>
+        <boxGeometry args={[0.05, 0.012, 0.56]} />
+        <meshStandardMaterial
+          color="#e04a3a"
+          emissive="#ff2a1a"
+          emissiveIntensity={pulseIntensity * 1.5}
+          roughness={0.4}
+        />
+      </mesh>
+
+      {/* Corner rivets */}
+      {[
+        [-0.36, -0.36],
+        [0.36, -0.36],
+        [-0.36, 0.36],
+        [0.36, 0.36],
+      ].map(([x, z]) => (
+        <mesh key={`plate-rivet-${x}-${z}`} position={[x, 0.085 - depression, z]}>
+          <sphereGeometry args={[0.028, 10, 10]} />
+          <meshStandardMaterial color="#9aa2b2" metalness={0.9} roughness={0.25} />
+        </mesh>
+      ))}
 
       {/* ================= UNDERGROUND LINKAGE RODS ================= */}
       {/* Vertical plunger underneath plate extending down to y = -1.2 */}

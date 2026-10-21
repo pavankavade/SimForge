@@ -1,5 +1,7 @@
 import React from "react";
+import * as THREE from "three";
 import { interpolate, useCurrentFrame, Easing } from "remotion";
+import { GlowSprite } from "./Fx";
 
 interface AlchemicalFlamersProps {
   spawnFrame?: number;
@@ -98,35 +100,44 @@ export const AlchemicalFlamers: React.FC<AlchemicalFlamersProps> = ({
               <group position={[0, 0, 0.4]}>
                 {/* Core white/yellow flame cone */}
                 <mesh
-                  position={[0, 0, 1.2]}
+                  position={[0, 0, 1.1]}
                   rotation={[Math.PI / 2, 0, 0]}
                   scale={[1 + flicker, 1 + flicker, 1 + flicker * 0.3]}
                 >
-                  <coneGeometry args={[0.35, 2.4, 10]} />
+                  <coneGeometry args={[0.26, 2.3, 14]} />
                   <meshStandardMaterial
-                    color="#fff066"
-                    emissive="#ff8800"
-                    emissiveIntensity={3.5}
+                    color="#fff3b0"
+                    emissive="#ffab00"
+                    emissiveIntensity={4.2}
                     transparent
-                    opacity={0.9}
+                    opacity={0.92}
                   />
                 </mesh>
 
                 {/* Outer orange flame envelope */}
                 <mesh
-                  position={[0, 0, 1.4]}
+                  position={[0, 0, 1.35]}
                   rotation={[Math.PI / 2, 0, 0]}
-                  scale={[1.3 + flicker, 1.3 + flicker, 1.1]}
+                  scale={[1.25 + flicker, 1.25 + flicker, 1.05]}
                 >
-                  <coneGeometry args={[0.55, 2.8, 10]} />
+                  <coneGeometry args={[0.4, 3.0, 14]} />
                   <meshStandardMaterial
-                    color="#ff4400"
-                    emissive="#cc2200"
-                    emissiveIntensity={2.5}
+                    color="#ff5511"
+                    emissive="#d92c00"
+                    emissiveIntensity={2.2}
                     transparent
-                    opacity={0.65}
+                    opacity={0.42}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
                   />
                 </mesh>
+
+                <GlowSprite
+                  position={[0, 0, 0.65]}
+                  color="#ff8a2a"
+                  size={1.5 + flicker * 0.4}
+                  opacity={0.55}
+                />
 
                 {/* Bright Fire Point Light */}
                 <pointLight

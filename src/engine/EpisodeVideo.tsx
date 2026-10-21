@@ -5,6 +5,8 @@ import { AudioTrack } from "./AudioTrack";
 import { CameraRig } from "./CameraRig";
 import { EnvironmentScene } from "./EnvironmentScene";
 import { FadeOverlay, Vignette } from "./Overlays";
+import { PostFX } from "./PostFX";
+import { SceneEnvironment } from "./SceneEnvironment";
 import { Subtitles } from "./Subtitles";
 import type { EpisodeConfig } from "./types";
 
@@ -23,6 +25,7 @@ export const EpisodeVideo: React.FC<EpisodeVideoProps> = ({ config, Scene }) => 
       style={{ backgroundColor: overlays.backgroundColor ?? "#1a2530" }}
     >
       {config.audio ? <AudioTrack config={config.audio} /> : null}
+      {config.music ? <AudioTrack config={config.music} /> : null}
 
       <AbsoluteFill style={{ filter: overlays.grade ?? "saturate(1.06) contrast(1.03)" }}>
         <ThreeCanvas
@@ -40,11 +43,17 @@ export const EpisodeVideo: React.FC<EpisodeVideoProps> = ({ config, Scene }) => 
 
           <CameraRig config={config.camera} />
 
+          <SceneEnvironment intensity={0.4} />
+
           {config.environment ? (
             <EnvironmentScene preset={config.environment} />
           ) : null}
 
           <Scene />
+
+          {overlays.postfx?.enabled !== false ? (
+            <PostFX {...overlays.postfx} />
+          ) : null}
         </ThreeCanvas>
       </AbsoluteFill>
 
