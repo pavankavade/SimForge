@@ -1,675 +1,665 @@
 import type React from "react";
 import { useCurrentFrame } from "remotion";
-import * as THREE from "three";
 import {
   AdventurerUnit,
+  BlastDoor,
+  BoulderHallway,
+  BoulderShatter,
   Burst,
-  CeilingPistons,
-  GelatinousCubeTrap,
-  MagneticSpikeBoulder,
-  SlimeSlick,
-  SlopedCorridor,
-  SplitBoulder,
-  TripwireBoulder,
+  CeilingCrushers,
+  Electromagnet,
+  GelatinousCube,
+  GlowSprite,
+  HalfPipe,
+  ReleaseGate,
+  RollingBoulder,
+  Skeleton,
+  SlimePuddle,
+  Tripwire,
 } from "../../artifacts";
 import type { AdventurerClass, AdventurerPose } from "../../artifacts";
 import type { Vec3 } from "../../engine/types";
 import {
   BEATS,
-  launchTrajectory,
-  SLOPE_ANGLE,
-  yFloor,
+  BOULDERS,
+  CEILING_Y,
+  CRUSHER_XS,
+  CUBE_CENTER,
+  CUBE_SIZE,
+  DOOR_X,
+  EDGE_X,
+  FLIGHT_START,
+  FLOAT_X,
+  FOOT_X,
+  GOBLIN_HIT_X,
+  LEDGE_Y,
+  MAGNET_X,
+  PALADIN_X,
+  PALADIN_YANK_X,
+  PARTY,
+  PARTY_ENTER,
+  PIPE_CENTER,
+  PIPE_R,
+  R_DRUM,
+  ROGUE1_LEAP_X,
+  ROGUE2_LIE_X,
+  ROGUE_ENTER,
+  ROGUE_SNAP_X,
+  SLIME_RANGE,
+  SLIME_SPOUT_X,
+  WIRE_EVENTS,
+  WIRE_RETIRE,
+  WIRE_X,
+  Z,
+  boulderById,
+  boulderState,
+  clamp01,
+  easeInOut,
+  easeOutCubic,
+  enterAfter,
+  footFrame,
+  gateOpenAmount,
+  lerp,
+  partyState,
+  progress,
+  rogueEntryX,
 } from "./timeline";
+import type { BoulderSpec } from "./timeline";
 
 const CHAR_SCALE = 1.12;
-const Z = -0.6;
+/** Hip height: pivot for flips and tumbles. */
+const HIP = 0.95 * CHAR_SCALE;
 const FACE_RIGHT = Math.PI / 2;
-const FACE_LEFT = -Math.PI / 2;
+/** Feet height of a body lying flat on its back/front (pivot at the hips). */
+const LIE_Y = 0.2 - HIP;
+const LEFT_ENTRY = -10.6;
+const FLOAT_Y = 2.8;
+const PIPE_FLAT: [number, number] = [-10.6, -7.3];
+const DRUM_LENGTH = 3.1;
+const STYLE_SCALE: Record<AdventurerClass, number> = { goblin: 0.78, rogue: 1, mage: 1, paladin: 1.04 };
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const progress = (frame: number, [a, b]: readonly [number, number]) =>
-  clamp01((frame - a) / (b - a));
-const easeInOut = (t: number) => t * t * (3 - 2 * t);
-const easeOut = (t: number) => 1 - (1 - t) * (1 - t);
-
-interface ActorState {
-  classType: AdventurerClass;
+interface Actor {
   pose: AdventurerPose;
   position: Vec3;
-  rotation: Vec3;
+  yaw: number;
+  /** World-space roll about z, applied around `pivot` above the feet. */
+  tilt?: number;
+  pivot?: number;
   scale?: number;
+  /** Animation speed multiplier (jogging, heavy stomping). */
+  speed?: number;
 }
 
-// ---------------------------------------------------------------------------
-// Stage 1: Goblin trips wire, gets squashed. Rogue leaps over boulder.
-// ---------------------------------------------------------------------------
-const goblinActor = (frame: number): ActorState | null => {
-  const [enterStart, enterEnd] = BEATS.goblinEnter;
-  if (frame < enterStart || frame > BEATS.goblinSink + 14) return null;
-
-  if (frame < enterEnd) {
-    const t = progress(frame, BEATS.goblinEnter);
-    const x = lerp(-7.2, -2.0, t);
-    return {
-      classType: "goblin",
-      pose: "walk",
-      position: [x, yFloor(x), Z],
-      rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-    };
-  }
-
-  if (frame < BEATS.goblinSquash) {
-    // Reaching down / stepping on wire
-    const t = progress(frame, [enterEnd, BEATS.goblinSquash]);
-    return {
-      classType: "goblin",
-      pose: t < 0.6 ? "walk" : "idle",
-      position: [-2.0, yFloor(-2.0), Z],
-      rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-    };
-  }
-
-  // Squashed flat on the ramp floor
-  const sink = 0.8 * clamp01((frame - BEATS.goblinSink) / 14);
-  return {
-    classType: "goblin",
-    pose: "sprawl",
-    position: [-2.0, yFloor(-2.0) - 0.22 - sink, Z],
-    rotation: [0, 0.2, Math.PI / 2 + SLOPE_ANGLE],
-    scale: 0.9,
-  };
+const ActorView: React.FC<{
+  classType: AdventurerClass;
+  actor: Actor | null;
+  frame: number;
+  weapon?: "sword" | "warhammer";
+}> = ({ classType, actor, frame, weapon }) => {
+  if (!actor) return null;
+  const pivot = actor.pivot ?? 0;
+  const [x, y, z] = actor.position;
+  return (
+    <group position={[x, y + pivot, z]} rotation={[0, 0, actor.tilt ?? 0]}>
+      <AdventurerUnit
+        classType={classType}
+        pose={actor.pose}
+        position={[0, -pivot, 0]}
+        rotation={[0, actor.yaw, 0]}
+        scale={CHAR_SCALE * (actor.scale ?? 1)}
+        animFrame={frame * (actor.speed ?? 1)}
+        weapon={weapon}
+      />
+    </group>
+  );
 };
 
-const rogue1Actor = (frame: number): ActorState | null => {
-  const [runStart, runEnd] = BEATS.rogue1Run;
-  const [leapStart, leapEnd] = BEATS.rogue1Leap;
-  const [exitStart, exitEnd] = BEATS.rogue1Exit;
-
-  if (frame < runStart || frame > exitEnd) return null;
-
-  if (frame < runEnd) {
-    const t = progress(frame, BEATS.rogue1Run);
-    const x = lerp(-7.5, -2.8, t);
-    return {
-      classType: "rogue",
-      pose: "walk",
-      position: [x, yFloor(x), Z],
-      rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-    };
-  }
-
-  if (frame < leapStart) {
-    // Spots wire and flicks dagger to trigger early
-    const look = Math.sin(Math.PI * progress(frame, [runEnd, leapStart]));
-    return {
-      classType: "rogue",
-      pose: "cast",
-      position: [-2.8, yFloor(-2.8), Z],
-      rotation: [0.2 * look, FACE_RIGHT, SLOPE_ANGLE],
-    };
-  }
-
-  if (frame < leapEnd) {
-    const t = progress(frame, BEATS.rogue1Leap);
-    const x = lerp(-2.8, 1.2, t);
-    const jumpHeight = Math.sin(Math.PI * t) * 2.3;
-    return {
-      classType: "rogue",
-      pose: "jump",
-      position: [x, yFloor(x) + jumpHeight, Z],
-      rotation: [0, FACE_RIGHT, -0.3 * Math.sin(Math.PI * t) + SLOPE_ANGLE],
-    };
-  }
-
-  if (frame < exitStart) {
-    return {
-      classType: "rogue",
-      pose: "idle",
-      position: [1.2, yFloor(1.2), Z],
-      rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-    };
-  }
-
-  const t = progress(frame, BEATS.rogue1Exit);
-  const x = lerp(1.2, 8.2, t);
-  return {
-    classType: "rogue",
-    pose: "walk",
-    position: [x, yFloor(x), Z],
-    rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-  };
+/** Lying flat on the floor: tilt +π/2 is on the back (head to -x when facing right). */
+const lying = (x: number, yaw: number, tilt: number, frame: number, since: number): Actor => {
+  const settle = 0.12 * Math.sin(Math.PI * clamp01((frame - since) / 7));
+  return { pose: "sprawl", position: [x, LIE_Y + settle, Z], yaw, tilt, pivot: HIP };
 };
 
 // ---------------------------------------------------------------------------
-// Stage 2: Rogue slips on green slime into wide boulder; Paladin smashes boulder
+// Squashed victims ride the boulder's camera face and spin away with it.
 // ---------------------------------------------------------------------------
-const rogue2Actor = (frame: number): ActorState | null => {
-  const [runStart, runEnd] = BEATS.rogue2Run;
-  const [, leapEnd] = BEATS.rogue2Leap;
-  const [, slipEnd] = BEATS.rogue2Slip;
+interface SplatProps {
+  classType: AdventurerClass;
+  hitAngle: number;
+  faceZ: number;
+  size?: number;
+  /** Extra in-plane rotation (for the crossed pair on B3). */
+  spin?: number;
+  /** z squash factor (0.1 = pancake, 0.5 = merely skewered). */
+  flat?: number;
+  frame: number;
+  weapon?: "sword" | "warhammer";
+}
 
-  if (frame < runStart || frame > BEATS.rogue2Sink + 14) return null;
-
-  if (frame < runEnd) {
-    const t = progress(frame, BEATS.rogue2Run);
-    const x = lerp(-7.5, -2.4, t);
-    return {
-      classType: "rogue",
-      pose: "walk",
-      position: [x, yFloor(x), Z],
-      rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-    };
-  }
-
-  if (frame < leapEnd) {
-    const t = progress(frame, BEATS.rogue2Leap);
-    const x = lerp(-2.4, -1.5, t);
-    const jumpH = Math.sin(Math.PI * t) * 1.6;
-    return {
-      classType: "rogue",
-      pose: "jump",
-      position: [x, yFloor(x) + jumpH, Z],
-      rotation: [0, FACE_RIGHT, -0.2 * Math.sin(Math.PI * t) + SLOPE_ANGLE],
-    };
-  }
-
-  if (frame < slipEnd) {
-    const t = progress(frame, BEATS.rogue2Slip);
-    // Slipping backward down the slope on green slime!
-    const x = lerp(-1.5, -2.1, easeOut(t));
-    return {
-      classType: "rogue",
-      pose: "slip",
-      position: [x, yFloor(x), Z],
-      rotation: [0, FACE_RIGHT, -0.6 * t + SLOPE_ANGLE],
-    };
-  }
-
-  // Squashed / flattened by boulder on slime
-  const sink = 0.8 * clamp01((frame - BEATS.rogue2Sink) / 14);
-  return {
-    classType: "rogue",
-    pose: "sprawl",
-    position: [-2.1, yFloor(-2.1) - 0.2 - sink, Z],
-    rotation: [0, -0.2, -Math.PI / 2 + SLOPE_ANGLE],
-  };
+const Splat: React.FC<SplatProps> = ({ classType, hitAngle, faceZ, size = 1, spin = 0, flat = 0.12, frame, weapon }) => {
+  const s = CHAR_SCALE * size;
+  return (
+    <group rotation={[0, 0, -hitAngle + spin]}>
+      <group position={[0, 0, faceZ]} scale={[1, 1, flat]}>
+        <AdventurerUnit
+          classType={classType}
+          pose="sprawl"
+          position={[0, -0.88 * s * STYLE_SCALE[classType], 0]}
+          scale={s}
+          animFrame={frame}
+          weapon={weapon}
+        />
+      </group>
+    </group>
+  );
 };
 
-const paladinActor = (frame: number): ActorState | null => {
-  // Stage 2 Paladin: enters, braces stance, raises hammer, smashes boulder
-  if (frame >= BEATS.paladinEnter[0] && frame < 940) {
-    const [, enterEnd] = BEATS.paladinEnter;
-    if (frame < enterEnd) {
-      const t = progress(frame, BEATS.paladinEnter);
-      const x = lerp(-7.5, -3.0, t);
-      return {
-        classType: "paladin",
-        pose: "shieldWalk",
-        position: [x, yFloor(x), Z],
-        rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-      };
-    }
-
-    if (frame < BEATS.paladinSmash) {
-      return {
-        classType: "paladin",
-        pose: "shield",
-        position: [-3.0, yFloor(-3.0), Z],
-        rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-      };
-    }
-
-    if (frame < BEATS.paladinSmash + 18) {
-      return {
-        classType: "paladin",
-        pose: "smash",
-        position: [-3.0, yFloor(-3.0), Z],
-        rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-      };
-    }
-
-    return {
-      classType: "paladin",
-      pose: "idle",
-      position: [-3.0, yFloor(-3.0), Z],
-      rotation: [0, 0.3, SLOPE_ANGLE],
-    };
-  }
-
-  // Stage 3 Paladin: steps forward, violently dragged magnetically into spiked iron ball
-  if (frame >= BEATS.paladinStep[0] && frame < BEATS.paladinSink3 + 14) {
-    const [, stepEnd] = BEATS.paladinStep;
-    if (frame < stepEnd) {
-      const t = progress(frame, BEATS.paladinStep);
-      const x = lerp(-3.0, -2.2, t);
-      return {
-        classType: "paladin",
-        pose: "walk",
-        position: [x, yFloor(x), Z],
-        rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-      };
-    }
-
-    if (frame < BEATS.paladinSpikeHit) {
-      const t = progress(frame, BEATS.paladinMagnetDrag);
-      // Pulled violently forward into the spiked ball at x = -1.5
-      const x = lerp(-2.2, -1.5, easeInOut(t));
-      return {
-        classType: "paladin",
-        pose: "launch",
-        position: [x, yFloor(x) + 0.3 * Math.sin(t * Math.PI), Z],
-        rotation: [0, FACE_RIGHT, -0.4 * t + SLOPE_ANGLE],
-      };
-    }
-
-    const sink = 0.8 * clamp01((frame - BEATS.paladinSink3) / 14);
-    return {
-      classType: "paladin",
-      pose: "sprawl",
-      position: [-1.5, yFloor(-1.5) - 0.2 - sink, Z],
-      rotation: [0, 0.4, Math.PI / 2 + SLOPE_ANGLE],
-    };
-  }
-
-  return null;
-};
+const hitAngle = (id: string, at: number) => boulderState(boulderById(id), at).angle;
 
 // ---------------------------------------------------------------------------
-// Stage 3 & 4: Mage casts Levitate, party floats to ceiling; Piston swats Mage
+// Level 1: the goblin trips the wire; it gets up just in time to be flattened.
 // ---------------------------------------------------------------------------
-const mageActor = (frame: number): ActorState | null => {
-  if (frame < BEATS.mageEnter[0] || frame > BEATS.mageSink4 + 14) return null;
-
-  const [, enterEnd] = BEATS.mageEnter;
-  if (frame < enterEnd) {
-    const t = progress(frame, BEATS.mageEnter);
-    const x = lerp(-7.0, -0.8, t);
+const GOBLIN_WALK: [number, number] = [36, BEATS.goblinTrip];
+const goblinActor = (frame: number): Actor | null => {
+  if (frame < GOBLIN_WALK[0] || frame >= BEATS.goblinHit) return null;
+  const tripX = WIRE_X - 0.12;
+  if (frame < BEATS.goblinTrip) {
     return {
-      classType: "mage",
       pose: "walk",
-      position: [x, yFloor(x), Z],
-      rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
+      position: [lerp(-8.4, tripX, progress(frame, GOBLIN_WALK)), 0, Z],
+      yaw: FACE_RIGHT,
     };
   }
-
-  if (frame < BEATS.partyFloatUp[0]) {
-    // Chanting / raising staff to cast Levitate
+  const t = progress(frame, [BEATS.goblinTrip, BEATS.goblinTrip + 12]);
+  if (t < 1) {
+    // Faceplant over the wire.
     return {
-      classType: "mage",
-      pose: "cast",
-      position: [-0.8, yFloor(-0.8), Z],
-      rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
-    };
-  }
-
-  if (frame < BEATS.partyFloatUp[1]) {
-    const t = progress(frame, BEATS.partyFloatUp);
-    const floatY = lerp(yFloor(-0.8), yFloor(-0.8) + 3.8, easeOut(t));
-    return {
-      classType: "mage",
-      pose: "float",
-      position: [-0.8, floatY, Z],
-      rotation: [0, FACE_RIGHT, 0],
-    };
-  }
-
-  // Floating near rafters until hydraulic piston slams down
-  if (frame < BEATS.pistonSlam) {
-    const bob = Math.sin(frame * 0.12) * 0.15;
-    return {
-      classType: "mage",
-      pose: "float",
-      position: [-0.8, yFloor(-0.8) + 3.8 + bob, Z],
-      rotation: [0, FACE_RIGHT, 0],
-    };
-  }
-
-  if (frame < BEATS.mageSwatted[1]) {
-    // Swatted rapidly down to floor
-    const t = progress(frame, BEATS.mageSwatted);
-    const y = lerp(yFloor(-0.8) + 3.8, yFloor(-0.8), t * t);
-    return {
-      classType: "mage",
       pose: "fall",
-      position: [-0.8, y, Z],
-      rotation: [0, FACE_RIGHT, Math.PI * t],
+      position: [lerp(tripX, tripX + 0.25, t), 0.25 * Math.sin(Math.PI * t), Z],
+      yaw: FACE_RIGHT,
+      tilt: -1.5 * (t * t),
     };
   }
-
-  // Sprawled on track floor
-  const sink = 0.8 * clamp01((frame - BEATS.mageSink4) / 14);
+  const upStart = BEATS.goblinHit - 18;
+  if (frame < upStart) {
+    return { pose: "sprawl", position: [tripX + 0.25, 0.12, Z], yaw: FACE_RIGHT, tilt: -1.5 };
+  }
+  const up = easeOutCubic(progress(frame, [upStart, upStart + 8]));
   return {
-    classType: "mage",
-    pose: "sprawl",
-    position: [-0.8, yFloor(-0.8) - 0.2 - sink, Z],
-    rotation: [0, -0.3, Math.PI / 2 + SLOPE_ANGLE],
-  };
-};
-
-// Additional floating party members during Levitate (Stage 3)
-const floatingRogueActor = (frame: number): ActorState | null => {
-  if (frame < BEATS.partyFloatUp[0] || frame >= BEATS.pistonSlam) return null;
-  const x = -2.2;
-  const t = progress(frame, BEATS.partyFloatUp);
-  const floatY = lerp(yFloor(x), yFloor(x) + 3.6, easeOut(t));
-  const bob = Math.sin(frame * 0.14 + 1.2) * 0.12;
-  return {
-    classType: "rogue",
-    pose: "float",
-    position: [x, floatY + (t >= 1 ? bob : 0), Z + 0.3],
-    rotation: [0, FACE_RIGHT, 0],
-  };
-};
-
-const floatingPaladinActor = (frame: number): ActorState | null => {
-  if (frame < BEATS.partyFloatUp[0] || frame >= BEATS.pistonSlam) return null;
-  const x = 0.6;
-  const t = progress(frame, BEATS.partyFloatUp);
-  const floatY = lerp(yFloor(x), yFloor(x) + 3.7, easeOut(t));
-  const bob = Math.sin(frame * 0.11 + 2.1) * 0.14;
-  return {
-    classType: "paladin",
-    pose: "float",
-    position: [x, floatY + (t >= 1 ? bob : 0), Z - 0.3],
-    rotation: [0, FACE_RIGHT, 0],
+    pose: up < 1 ? "sprawl" : "cower",
+    position: [lerp(tripX + 0.25, GOBLIN_HIT_X, up), 0.12 * (1 - up), Z],
+    yaw: FACE_RIGHT,
+    tilt: -1.5 * (1 - up),
   };
 };
 
 // ---------------------------------------------------------------------------
-// Stage 5 Finale: Party flees left, door slams, ramp launches party into Cube!
+// Levels 1-2: the rogue snaps the wire, leaps B2, then slips on the slime.
 // ---------------------------------------------------------------------------
-const finalePartyMember = (
-  frame: number,
-  classType: AdventurerClass,
-  startX: number,
-  offsetZ: number
-): ActorState | null => {
-  if (frame < BEATS.partyFleeLeft[0]) return null;
+const SLIP_START_X = 1.3;
 
-  // Running left towards the entrance
-  if (frame < BEATS.doorSlam + 10) {
-    const t = progress(frame, BEATS.partyFleeLeft);
-    const x = lerp(startX, -7.2, t);
+const rogueActor = (frame: number): Actor | null => {
+  const [leapA, leapB] = BEATS.rogue1Leap;
+  if (frame < ROGUE_ENTER[0] || frame >= BEATS.rogue2Hit) return null;
+  if (frame < ROGUE_ENTER[1]) {
+    return { pose: "walk", position: [rogueEntryX(frame), 0, Z], yaw: FACE_RIGHT, speed: 2.2 };
+  }
+  if (frame < BEATS.rogue1Snap - 8) {
+    return { pose: "idle", position: [ROGUE_SNAP_X, 0, Z], yaw: FACE_RIGHT - 0.2 };
+  }
+  if (frame < BEATS.rogue1Snap + 6) {
+    return { pose: frame < BEATS.rogue1Snap ? "cast" : "smash", position: [ROGUE_SNAP_X, 0, Z], yaw: FACE_RIGHT };
+  }
+  // Backs off for a run-up while the boulder comes down.
+  const backEnd = BEATS.rogue1Snap + 30;
+  if (frame < backEnd) {
+    const t = easeInOut(progress(frame, [BEATS.rogue1Snap + 6, backEnd]));
+    return { pose: "walk", position: [lerp(ROGUE_SNAP_X, ROGUE1_LEAP_X[0] - 0.4, t), 0, Z], yaw: FACE_RIGHT, speed: -1 };
+  }
+  if (frame < leapA - 6) {
+    return { pose: "idle", position: [ROGUE1_LEAP_X[0] - 0.4, 0, Z], yaw: FACE_RIGHT };
+  }
+  if (frame < leapA) {
+    const t = progress(frame, [leapA - 6, leapA]);
+    return { pose: "walk", position: [lerp(ROGUE1_LEAP_X[0] - 0.4, ROGUE1_LEAP_X[0], t), 0, Z], yaw: FACE_RIGHT, speed: 2 };
+  }
+  if (frame < leapB) {
+    // Front flip right over the boulder's crown.
+    const t = progress(frame, [leapA, leapB]);
     return {
-      classType,
-      pose: "walk",
-      position: [x, yFloor(x), Z + offsetZ],
-      rotation: [0, FACE_LEFT, SLOPE_ANGLE],
+      pose: "jump",
+      position: [lerp(ROGUE1_LEAP_X[0], ROGUE1_LEAP_X[1], t), Math.sin(Math.PI * t) * 2.55, Z],
+      yaw: FACE_RIGHT,
+      tilt: -Math.PI * 2 * easeInOut(t),
+      pivot: HIP,
     };
   }
-
-  // Trapped against blast door at half-pipe ramp
-  if (frame < BEATS.launchStart) {
+  const landX = ROGUE1_LEAP_X[1];
+  if (frame < leapB + 8) {
+    return { pose: "cower", position: [landX, 0, Z], yaw: FACE_RIGHT, scale: 1 };
+  }
+  // Fist pump to the camera, then waits around for the next trap.
+  if (frame < leapB + 28) return { pose: "cast", position: [landX, 0, Z], yaw: 0.35 };
+  const slimeLook = BEATS.slimePour[0] - 10;
+  if (frame < boulderById("d1").spawn + 4) return { pose: "idle", position: [landX, 0, Z], yaw: 0.35 };
+  if (frame < slimeLook) return { pose: "idle", position: [landX, 0, Z], yaw: FACE_RIGHT - 0.3 };
+  if (frame < BEATS.slimePour[1] + 8) return { pose: "idle", position: [landX, 0, Z], yaw: -0.4 };
+  // Snap the new wire, then back up for a run-up... onto the slime.
+  if (frame < BEATS.rogue2Snap - 8) {
+    const t = easeInOut(progress(frame, [BEATS.slimePour[1] + 8, BEATS.rogue2Snap - 8]));
+    return { pose: t < 1 ? "walk" : "idle", position: [lerp(landX, ROGUE_SNAP_X + 0.1, t), 0, Z], yaw: FACE_RIGHT };
+  }
+  if (frame < BEATS.rogue2Snap + 6) {
+    return { pose: frame < BEATS.rogue2Snap ? "cast" : "smash", position: [ROGUE_SNAP_X + 0.1, 0, Z], yaw: FACE_RIGHT };
+  }
+  if (frame < BEATS.rogue2Slip) {
+    const t = progress(frame, [BEATS.rogue2Snap + 6, BEATS.rogue2Slip]);
+    return { pose: "walk", position: [lerp(ROGUE_SNAP_X + 0.1, SLIP_START_X, t), 0, Z], yaw: FACE_RIGHT, speed: -1.3 };
+  }
+  // Feet shoot forward, he flies up and lands flat on his back in the path.
+  const slipEnd = BEATS.rogue2Slip + 18;
+  if (frame < slipEnd) {
+    const t = progress(frame, [BEATS.rogue2Slip, slipEnd]);
+    const startY = 0;
     return {
-      classType,
-      pose: "idle",
-      position: [-7.2, yFloor(-7.2), Z + offsetZ],
-      rotation: [0, FACE_RIGHT, SLOPE_ANGLE],
+      pose: "slip",
+      position: [lerp(SLIP_START_X, ROGUE2_LIE_X, easeOutCubic(t)), lerp(startY, LIE_Y, t) + 0.9 * Math.sin(Math.PI * t), Z],
+      yaw: FACE_RIGHT,
+      tilt: (Math.PI / 2) * easeInOut(Math.min(1, t * 1.3)),
+      pivot: HIP,
     };
   }
-
-  // Airborne flight from ramp launch into the Gelatinous Cube
-  if (frame < BEATS.cubeSplash) {
-    const traj = launchTrajectory(frame, BEATS.launchStart, BEATS.cubeSplash, offsetZ);
-    return {
-      classType,
-      pose: "launch",
-      position: traj.position,
-      rotation: traj.rotation,
-    };
-  }
-
-  // Floating inside the Gelatinous Cube! (dissolving into jelly)
-  const cubeWobbleTime = (frame - BEATS.cubeSplash) * 0.08;
-  const floatX = 4.0 + Math.sin(cubeWobbleTime + offsetZ * 2) * 0.6;
-  const floatY = yFloor(4.0) + 4.2 + Math.cos(cubeWobbleTime * 0.8 + offsetZ) * 0.5;
-  const floatZ = Z + offsetZ * 0.7;
-
-  return {
-    classType,
-    pose: "sprawl",
-    position: [floatX, floatY, floatZ],
-    rotation: [0.3 * Math.sin(cubeWobbleTime), 0.5, cubeWobbleTime * 0.2],
-    scale: 0.9,
-  };
-};
-
-// Final launched boulder in Stage 5
-const finaleBoulderPosition = (frame: number): { position: Vec3; rotation: Vec3 } | null => {
-  if (frame < BEATS.boulderRollFinal) return null;
-
-  const radius = 1.2;
-
-  // Rolling down track towards ramp at x = -7.4
-  if (frame < BEATS.launchStart) {
-    const t = progress(frame, [BEATS.boulderRollFinal, BEATS.launchStart]);
-    const x = lerp(6.8, -7.4, t);
-    const y = yFloor(x) + radius * 0.98;
-    const rotZ = (6.8 - x) / radius;
-    return {
-      position: [x, y, Z],
-      rotation: [0, 0, rotZ],
-    };
-  }
-
-  // Airborne flight off launch ramp into Gelatinous Cube
-  if (frame < BEATS.cubeSplash) {
-    const traj = launchTrajectory(frame, BEATS.launchStart, BEATS.cubeSplash, 0);
-    return {
-      position: [traj.position[0], traj.position[1] + 0.3, Z],
-      rotation: traj.rotation,
-    };
-  }
-
-  // Trapped inside cube
-  const wobbleT = (frame - BEATS.cubeSplash) * 0.06;
-  return {
-    position: [
-      4.0 + Math.sin(wobbleT) * 0.3,
-      yFloor(4.0) + 3.8 + Math.cos(wobbleT) * 0.2,
-      Z,
-    ],
-    rotation: [wobbleT * 0.2, wobbleT * 0.3, 0],
-  };
+  return { ...lying(ROGUE2_LIE_X, FACE_RIGHT, Math.PI / 2, frame, slipEnd), pose: "sprawl" };
 };
 
 // ---------------------------------------------------------------------------
-// Main Procedural Scene
+// Levels 2-3: the paladin stomps through, smashes D2, then gets magnetised.
 // ---------------------------------------------------------------------------
+const PALADIN_ENTER = enterAfter("d1");
+const STOMP_START = 728;
+
+const paladinActor = (frame: number): Actor | null => {
+  if (frame < PALADIN_ENTER || frame >= BEATS.skewer) return null;
+  if (frame < STOMP_START) {
+    const t = progress(frame, [PALADIN_ENTER, STOMP_START]);
+    return { pose: "walk", position: [lerp(LEFT_ENTRY, SLIME_RANGE[0] - 0.6, t), 0, Z], yaw: FACE_RIGHT, speed: 1.1 };
+  }
+  if (frame < BEATS.paladinStomp) {
+    // Heavy, deliberate steps through the slime.
+    const t = progress(frame, [STOMP_START, BEATS.paladinStomp]);
+    return { pose: "walk", position: [lerp(SLIME_RANGE[0] - 0.6, PALADIN_X, t), 0, Z], yaw: FACE_RIGHT, speed: 0.75 };
+  }
+  if (frame < BEATS.paladinBrace) {
+    return { pose: "idle", position: [PALADIN_X, -0.04 * Math.sin(Math.PI * progress(frame, [BEATS.paladinStomp, BEATS.paladinBrace])), Z], yaw: FACE_RIGHT };
+  }
+  if (frame < BEATS.smash - 4) return { pose: "windup", position: [PALADIN_X, 0, Z], yaw: FACE_RIGHT };
+  if (frame < BEATS.smash + 16) return { pose: "smash", position: [PALADIN_X, 0, Z], yaw: FACE_RIGHT };
+  if (frame < BEATS.smash + 40) return { pose: "idle", position: [PALADIN_X, 0, Z], yaw: FACE_RIGHT };
+  // Smug pose to camera through the Level 3 install.
+  if (frame < boulderById("s1").spawn + 6) return { pose: "idle", position: [PALADIN_X, 0, Z], yaw: 0.45 };
+  if (frame < BEATS.paladin3Brace) return { pose: "idle", position: [PALADIN_X, 0, Z], yaw: FACE_RIGHT - 0.35 };
+  if (frame < BEATS.yank) return { pose: "windup", position: [PALADIN_X, 0, Z], yaw: FACE_RIGHT };
+  // Yanked by his armour onto the magnet plate.
+  const yankEnd = BEATS.yank + 10;
+  if (frame < yankEnd) {
+    const t = easeOutCubic(progress(frame, [BEATS.yank, yankEnd]));
+    return {
+      pose: "fall",
+      position: [lerp(PALADIN_X, PALADIN_YANK_X, t), 0.3 * Math.sin(Math.PI * t), Z],
+      yaw: FACE_RIGHT,
+      tilt: -0.35 * Math.sin(Math.PI * t),
+    };
+  }
+  const jitter = 0.03 * Math.sin(frame * 2.3);
+  return { pose: "fall", position: [PALADIN_YANK_X + jitter, 0, Z], yaw: FACE_RIGHT - 0.25, tilt: 0.04 * Math.sin(frame * 1.7), speed: 1.6 };
+};
+
+// ---------------------------------------------------------------------------
+// Levels 3-4: mage levitates herself and a rogue; crushers swat them down.
+// ---------------------------------------------------------------------------
+const FLOATER_ENTER = enterAfter("s1");
+const FALL_FRAMES = 9;
+
+const floaterActor = (who: "mage" | "rogue", frame: number): Actor | null => {
+  const x = FLOAT_X[who];
+  const delay = who === "mage" ? 0 : 8;
+  const enter: [number, number] = [FLOATER_ENTER + delay, BEATS.cast - 14 + delay];
+  const hit = who === "mage" ? BEATS.hitMage4 : BEATS.hitRogue4;
+  if (frame < enter[0] || frame >= hit) return null;
+  if (frame < enter[1]) {
+    return { pose: "walk", position: [lerp(LEFT_ENTRY, x, progress(frame, enter)), 0, Z], yaw: FACE_RIGHT, speed: 1.2 };
+  }
+  const bob = 0.08 * Math.sin(frame * 0.09 + delay);
+  if (frame < BEATS.float[0]) {
+    if (who === "mage" && frame >= BEATS.cast) return { pose: "cast", position: [x, 0, Z], yaw: 0.7 };
+    return { pose: "idle", position: [x, 0, Z], yaw: who === "mage" ? FACE_RIGHT - 0.3 : 0.3 };
+  }
+  if (frame < BEATS.swat) {
+    const rise = easeInOut(progress(frame, [BEATS.float[0] + delay * 0.5, BEATS.float[1]]));
+    return {
+      pose: who === "mage" && frame < BEATS.float[1] ? "cast" : "float",
+      position: [x, rise * FLOAT_Y + bob * rise, Z],
+      yaw: who === "mage" ? 0.55 : 0.25,
+      tilt: 0.06 * Math.sin(frame * 0.05 + delay) * rise,
+      pivot: HIP,
+    };
+  }
+  // Swatted straight down, landing flat on their backs.
+  const land = BEATS.swat + FALL_FRAMES;
+  if (frame < land) {
+    const t = progress(frame, [BEATS.swat, land]);
+    return {
+      pose: "fall",
+      position: [x, lerp(FLOAT_Y, LIE_Y, t), Z],
+      yaw: FACE_RIGHT,
+      tilt: (Math.PI / 2) * easeInOut(t),
+      pivot: HIP,
+    };
+  }
+  return lying(x, FACE_RIGHT, Math.PI / 2, frame, land);
+};
+
+// ---------------------------------------------------------------------------
+// Level 5: the party flees, cowers, gets chased up the pipe into the cube.
+// ---------------------------------------------------------------------------
+const partyActor = (index: number, frame: number): Actor | null => {
+  const m = PARTY[index];
+  if (frame < PARTY_ENTER + m.delay) return null;
+  const s = partyState(m, frame);
+  const base = { position: s.position, yaw: s.yaw, tilt: s.tilt };
+  switch (s.phase) {
+    case "enter":
+      return { ...base, pose: "walk", speed: 1.5 };
+    case "stare":
+      return { ...base, pose: m.classType === "paladin" ? "shield" : "idle" };
+    case "flee":
+      return { ...base, pose: "walk", speed: 2.3 };
+    case "bonk":
+      return { ...base, pose: m.classType === "rogue" ? "fall" : "idle" };
+    case "cower":
+      return { ...base, pose: s.t < 1 ? "walk" : "cower", speed: 1.4 };
+    case "look":
+      return { ...base, pose: "cower" };
+    case "scramble":
+      return { ...base, pose: "walk", speed: 2.6 };
+    case "pinned":
+      return { ...base, pose: "fall", speed: 1.5 };
+    case "flight":
+    case "jelly":
+      return {
+        ...base,
+        position: [s.position[0], s.position[1] - HIP, s.position[2]],
+        pose: s.phase === "flight" ? "launch" : "float",
+        pivot: HIP,
+        speed: s.phase === "jelly" ? 0.3 : 1,
+      };
+    default:
+      return null;
+  }
+};
+
+const PartySkeleton: React.FC<{ index: number; frame: number }> = ({ index, frame }) => {
+  const m = PARTY[index];
+  const s = partyState(m, frame);
+  if (s.phase !== "skeleton") return null;
+  return (
+    <group position={s.position} rotation={[0, 0, s.tilt]}>
+      <Skeleton variant={m.classType} position={[0, -HIP, 0]} rotation={[0, s.yaw, 0]} scale={CHAR_SCALE} animFrame={frame} />
+    </group>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Boulders + riders
+// ---------------------------------------------------------------------------
+const Riders: React.FC<{ b: BoulderSpec; frame: number }> = ({ b, frame }) => {
+  const face = b.kind === "drum" ? DRUM_LENGTH / 2 + 0.02 : b.r * 0.92;
+  switch (b.id) {
+    case "b1":
+      return frame >= BEATS.goblinHit ? (
+        <Splat classType="goblin" hitAngle={hitAngle("b1", BEATS.goblinHit)} faceZ={face} size={0.95} frame={frame} />
+      ) : null;
+    case "d1":
+      return frame >= BEATS.rogue2Hit ? (
+        <Splat classType="rogue" hitAngle={hitAngle("d1", BEATS.rogue2Hit)} faceZ={face} size={1.05} frame={frame} />
+      ) : null;
+    case "s1":
+      return frame >= BEATS.skewer ? (
+        <Splat
+          classType="paladin"
+          hitAngle={hitAngle("s1", BEATS.skewer)}
+          faceZ={b.r * 0.7}
+          size={0.85}
+          flat={0.55}
+          frame={frame}
+          weapon="warhammer"
+        />
+      ) : null;
+    case "b3":
+      return (
+        <>
+          {frame >= BEATS.hitRogue4 ? (
+            <Splat classType="rogue" hitAngle={hitAngle("b3", BEATS.hitRogue4)} faceZ={face} size={0.85} spin={0.55} frame={frame} />
+          ) : null}
+          {frame >= BEATS.hitMage4 ? (
+            <Splat classType="mage" hitAngle={hitAngle("b3", BEATS.hitMage4)} faceZ={face + 0.04} size={0.85} spin={-0.55} frame={frame} />
+          ) : null}
+        </>
+      );
+    default:
+      return null;
+  }
+};
+
+const magnetCharge = (frame: number) =>
+  frame >= BEATS.yank ? Math.max(0, 1 - Math.max(0, frame - BEATS.skewer) / 18) : 0;
+
+const Boulders: React.FC<{ frame: number }> = ({ frame }) => (
+  <>
+    {BOULDERS.map((b) => {
+      const st = boulderState(b, frame);
+      if (!st.visible) return null;
+      return (
+        <RollingBoulder
+          key={b.id}
+          kind={b.kind}
+          radius={b.r}
+          position={st.position}
+          angle={st.angle}
+          drumLength={DRUM_LENGTH}
+          charge={b.id === "s1" ? magnetCharge(frame) : 0}
+        >
+          <Riders b={b} frame={frame} />
+        </RollingBoulder>
+      );
+    })}
+  </>
+);
+
+// ---------------------------------------------------------------------------
+// Effects
+// ---------------------------------------------------------------------------
+const dust = (at: number, position: Vec3, seed: string, scale = 1) => (
+  <Burst
+    key={seed}
+    at={at}
+    position={position}
+    count={Math.round(34 * scale)}
+    size={0.55 * scale}
+    duration={40}
+    speed={0.09 * scale}
+    spread={[1.2 * scale, 0.2, 1.6]}
+    color="#b8b0a6"
+    seed={seed}
+  />
+);
+
+const slimeSplash = (at: number, position: Vec3, seed: string, scale = 1) => (
+  <Burst
+    key={seed}
+    at={at}
+    position={position}
+    count={Math.round(22 * scale)}
+    size={0.22 * scale}
+    duration={22}
+    speed={0.09 * scale}
+    direction={[0, 0.07, 0.02]}
+    gravity={-0.012}
+    spread={[0.5, 0.05, 0.6]}
+    color="#8fef55"
+    opacity={0.95}
+    seed={seed}
+  />
+);
+
+const sparks = (at: number, position: Vec3, seed: string, color = "#ffd27a", count = 40) => (
+  <Burst
+    key={seed}
+    at={at}
+    position={position}
+    count={count}
+    size={0.15}
+    duration={22}
+    speed={0.2}
+    gravity={-0.012}
+    spread={[0.3, 0.3, 0.3]}
+    color={color}
+    additive
+    opacity={1}
+    seed={seed}
+  />
+);
+
+const jellySplash = (at: number, position: Vec3, seed: string) => (
+  <Burst
+    key={seed}
+    at={at}
+    position={position}
+    count={30}
+    size={0.3}
+    duration={26}
+    speed={0.12}
+    gravity={-0.008}
+    spread={[0.4, 0.4, 0.4]}
+    color="#8ff5b0"
+    opacity={0.85}
+    seed={seed}
+  />
+);
+
+const LevitateAura: React.FC<{ frame: number }> = ({ frame }) => {
+  if (frame < BEATS.levitate || frame >= BEATS.swat) return null;
+  const on = clamp01((frame - BEATS.levitate) / 10);
+  const rise = easeInOut(progress(frame, [BEATS.float[0], BEATS.float[1]]));
+  const pulse = 0.85 + 0.15 * Math.sin(frame * 0.3);
+  return (
+    <>
+      {(["mage", "rogue"] as const).map((who) => (
+        <group key={who} position={[FLOAT_X[who], rise * FLOAT_Y + 1.0, Z + 0.1]}>
+          <GlowSprite color="#7de9ff" size={2.6 * on * pulse} opacity={0.32 * on} />
+          <mesh position={[0, -1.0, 0]} rotation={[-Math.PI / 2, 0, frame * 0.05]}>
+            <ringGeometry args={[0.45, 0.55, 28]} />
+            <meshBasicMaterial color="#9ff0ff" transparent opacity={0.6 * on} toneMapped={false} />
+          </mesh>
+        </group>
+      ))}
+    </>
+  );
+};
+
 export const Scene: React.FC = () => {
   const frame = useCurrentFrame();
-
-  const actors: (ActorState | null)[] = [
-    goblinActor(frame),
-    rogue1Actor(frame),
-    rogue2Actor(frame),
-    paladinActor(frame),
-    mageActor(frame),
-    floatingRogueActor(frame),
-    floatingPaladinActor(frame),
-    finalePartyMember(frame, "paladin", 2.2, 0),
-    finalePartyMember(frame, "rogue", 3.2, 0.4),
-    finalePartyMember(frame, "mage", 4.2, -0.4),
-  ];
-
-  const finaleBoulder = finaleBoulderPosition(frame);
+  const d2 = boulderById("d2");
+  const d2Hit = boulderState(d2, BEATS.smash - 1).position;
+  const lipX = PIPE_CENTER[0] - PIPE_R;
 
   return (
     <>
-      {/* Dynamic Master Incline Diorama */}
-      <SlopedCorridor />
-
-      {/* Stage 1: Tripwire Boulder */}
-      <TripwireBoulder
-        rollStartFrame={BEATS.boulderRoll1}
-        wireSnappedFrame={BEATS.goblinTrip}
-        showWire={frame < BEATS.wideBoulderSpawn}
-        activeWindow={[0, 440]}
+      <BoulderHallway edgeX={EDGE_X} ledgeY={LEDGE_Y} pipeRange={PIPE_FLAT} magnetX={MAGNET_X} ceilingY={CEILING_Y} />
+      <ReleaseGate edgeX={EDGE_X} ledgeY={LEDGE_Y} open={gateOpenAmount(frame)} z={Z} />
+      <Tripwire x={WIRE_X} events={WIRE_EVENTS} retireFrame={WIRE_RETIRE} footX={FOOT_X} edgeX={EDGE_X} ledgeY={LEDGE_Y} />
+      <SlimePuddle range={SLIME_RANGE} spoutX={SLIME_SPOUT_X} pourWindow={BEATS.slimePour} goneFrame={BEATS.slimeGone} ceilingY={CEILING_Y} />
+      <Electromagnet x={MAGNET_X} installFrame={BEATS.magnetInstall} armFrame={BEATS.paladin3Brace} pullWindow={[BEATS.yank, BEATS.skewer]} />
+      <CeilingCrushers xs={CRUSHER_XS} installFrame={BEATS.crusherInstall} gearsStart={BEATS.gearsStart} slamFrame={BEATS.swat} ceilingY={CEILING_Y} slamY={4.0} />
+      <HalfPipe center={PIPE_CENTER} radius={PIPE_R} flatRange={PIPE_FLAT} curveWindow={BEATS.curve} z={Z} />
+      <BlastDoor x={DOOR_X} dropWindow={[BEATS.doorDrop, BEATS.doorSlam]} ceilingY={CEILING_Y} />
+      <GelatinousCube
+        center={CUBE_CENTER}
+        size={CUBE_SIZE}
+        spawnFrame={BEATS.cubeSpawn}
+        impulses={[...PARTY.map((m) => FLIGHT_START + m.flightFrames), FLIGHT_START + 30]}
       />
 
-      {/* Stage 1b: Rogue leap boulder */}
-      {frame >= 320 && frame <= 440 && (
-        <TripwireBoulder
-          rollStartFrame={BEATS.boulderRoll1b}
-          wireSnappedFrame={BEATS.boulderRoll1b}
-          showWire={false}
-          showGate={false}
-          activeWindow={[320, 440]}
-        />
-      )}
+      <Boulders frame={frame} />
+      <BoulderShatter at={BEATS.smash} position={d2Hit} radius={R_DRUM} drumLength={DRUM_LENGTH} />
 
-      {/* Stage 2: Green Alchemical Slime Slick */}
-      <SlimeSlick spawnFrame={BEATS.slimeSpawn} endFrame={BEATS.spikeSpawn} />
+      <ActorView classType="goblin" actor={goblinActor(frame)} frame={frame} />
+      <ActorView classType="rogue" actor={rogueActor(frame)} frame={frame} />
+      <ActorView classType="paladin" actor={paladinActor(frame)} frame={frame} weapon="warhammer" />
+      <ActorView classType="mage" actor={floaterActor("mage", frame)} frame={frame} />
+      <ActorView classType="rogue" actor={floaterActor("rogue", frame)} frame={frame} />
+      {PARTY.map((m, i) => (
+        <ActorView key={m.classType} classType={m.classType} actor={partyActor(i, frame)} frame={frame} />
+      ))}
+      {PARTY.map((m, i) => (
+        <PartySkeleton key={`skel-${m.classType}`} index={i} frame={frame} />
+      ))}
+      <LevitateAura frame={frame} />
 
-      {/* Stage 2: Wide Boulder (splits on Paladin warhammer smash) */}
-      <SplitBoulder
-        rollStartFrame={BEATS.boulderRoll2b}
-        shatterFrame={BEATS.paladinSmash}
-        endFrame={950}
-      />
+      {/* Boulder drops onto the ledge, and the floor impact at the ramp foot */}
+      {BOULDERS.map((b) => dust(b.spawn + 10, [EDGE_X + b.r + 0.1, LEDGE_Y + 0.05, Z], `drop-${b.id}`, 0.8))}
+      {BOULDERS.filter((b) => b.mode !== "shatter").map((b) => dust(Math.round(footFrame(b)), [FOOT_X - 0.4, 0.05, Z], `foot-${b.id}`, 0.9))}
 
-      {/* Stage 3: Magnetic Spiked Iron Boulder & Underground Electromagnet */}
-      <MagneticSpikeBoulder
-        spawnFrame={BEATS.spikeSpawn}
-        rollStartFrame={BEATS.ironBoulderRoll3}
-        magnetActiveFrame={BEATS.magnetActive}
-        endFrame={1780}
-      />
+      {/* Level 1 */}
+      {sparks(BEATS.goblinTrip, [WIRE_X, 0.3, Z + 0.4], "wire-goblin", "#fff2c0", 14)}
+      {dust(BEATS.goblinTrip + 12, [WIRE_X + 0.8, 0.05, Z], "goblin-faceplant", 0.6)}
+      {dust(BEATS.goblinHit, [GOBLIN_HIT_X, 0.4, Z], "goblin-squash", 1.1)}
+      {sparks(BEATS.rogue1Snap, [WIRE_X, 0.3, Z + 0.4], "wire-rogue1", "#fff2c0", 14)}
+      {dust(BEATS.rogue1Leap[1], [ROGUE1_LEAP_X[1], 0.05, Z], "rogue1-land", 0.5)}
 
-      {/* Stage 3b: Harmless roll under floating party */}
-      {frame >= 1320 && frame <= 1470 && (
-        <TripwireBoulder
-          rollStartFrame={BEATS.ironBoulderRoll3b}
-          wireSnappedFrame={BEATS.ironBoulderRoll3b}
-          showWire={false}
-          showGate={false}
-          activeWindow={[1320, 1470]}
-        />
-      )}
-
-      {/* Stage 4: Hydraulic Ceiling Crushers */}
-      <CeilingPistons
-        spawnFrame={BEATS.pistonsReveal}
-        slamFrame={BEATS.pistonSlam}
-        endFrame={1790}
-      />
-
-      {/* Stage 5: Entrance Blast Door, Half-Pipe Ramp & Suspended Gelatinous Cube */}
-      <GelatinousCubeTrap
-        spawnFrame={BEATS.cubeTrapReveal}
-        doorSlamFrame={BEATS.doorSlam}
-        splashFrame={BEATS.cubeSplash}
-      />
-
-      {/* Stage 5: Finale launched boulder */}
-      {finaleBoulder && (
-        <group position={finaleBoulder.position} rotation={finaleBoulder.rotation as unknown as THREE.Euler}>
-          <mesh castShadow receiveShadow>
-            <sphereGeometry args={[1.2, 20, 16]} />
-            <meshStandardMaterial color="#4a4d58" roughness={0.85} metalness={0.1} />
-          </mesh>
-        </group>
-      )}
-
-      {/* Dynamic Animated Character Units */}
-      {actors.map((actor, idx) => {
-        if (!actor) return null;
-        return (
-          <AdventurerUnit
-            key={`actor-${actor.classType}-${idx}`}
-            classType={actor.classType}
-            pose={actor.pose}
-            position={actor.position}
-            rotation={actor.rotation}
-            scale={(actor.scale ?? 1) * CHAR_SCALE}
-            animFrame={frame}
-          />
-        );
+      {/* Level 2 */}
+      {slimeSplash(BEATS.slimePour[0] + 8, [SLIME_SPOUT_X, 0.05, Z + 0.3], "pour-splash", 1.2)}
+      {sparks(BEATS.rogue2Snap, [WIRE_X, 0.3, Z + 0.4], "wire-rogue2", "#fff2c0", 14)}
+      {slimeSplash(BEATS.rogue2Slip, [SLIP_START_X, 0.05, Z], "slip-splash", 1.2)}
+      {slimeSplash(BEATS.rogue2Slip + 18, [ROGUE2_LIE_X, 0.05, Z], "slip-land", 1.4)}
+      {dust(BEATS.rogue2Hit, [ROGUE2_LIE_X, 0.4, Z], "rogue2-squash", 1.2)}
+      {slimeSplash(BEATS.rogue2Hit, [ROGUE2_LIE_X + 0.4, 0.05, Z + 0.4], "rogue2-slime", 1.6)}
+      {[0, 1, 2, 3, 4].map((i) => {
+        const at = STOMP_START + 6 + i * 10;
+        const x = lerp(SLIME_RANGE[0] - 0.6, PALADIN_X, progress(at, [STOMP_START, BEATS.paladinStomp]));
+        return x > SLIME_RANGE[0] && x < SLIME_RANGE[1] ? slimeSplash(at, [x, 0.05, Z], `stomp-${i}`, 0.9) : null;
       })}
+      {sparks(BEATS.paladinStomp, [WIRE_X, 0.3, Z + 0.4], "wire-paladin", "#fff2c0", 14)}
+      {dust(BEATS.paladinStomp, [PALADIN_X + 0.2, 0.05, Z], "paladin-stomp", 0.6)}
+      {sparks(BEATS.smash, [d2Hit[0] - R_DRUM, d2Hit[1] - 0.4, Z + 0.4], "smash-sparks", "#ffd27a", 60)}
+      {dust(BEATS.smash, [d2Hit[0], d2Hit[1], Z], "smash-dust", 1.8)}
 
-      {/* Particle Bursts on Impacts and Key Action Beats */}
-      {/* Goblin squashed dust */}
-      <Burst
-        at={BEATS.goblinSquash}
-        position={[-2.0, yFloor(-2.0) + 0.3, Z]}
-        color="#a09485"
-        count={35}
-        size={0.16}
-        speed={0.12}
-      />
+      {/* Level 3 */}
+      {dust(BEATS.magnetInstall + 4, [MAGNET_X, 0.1, Z + 0.8], "magnet-install", 0.8)}
+      {sparks(BEATS.yank, [PALADIN_YANK_X, 0.4, Z + 0.3], "yank-arcs", "#9fe8ff", 40)}
+      {sparks(BEATS.skewer, [PALADIN_YANK_X + 0.4, 1.0, Z + 0.4], "skewer-sparks", "#ffd27a", 60)}
+      {dust(BEATS.skewer, [PALADIN_YANK_X, 0.4, Z], "skewer-dust", 1.2)}
+      {sparks(BEATS.levitate, [FLOAT_X.mage, 1.2, Z + 0.3], "levitate-mage", "#9ff0ff", 50)}
+      {sparks(BEATS.levitate + 4, [FLOAT_X.rogue, 1.2, Z + 0.3], "levitate-rogue", "#9ff0ff", 40)}
+      {dust(Math.round(BEATS.underneath - 6), [-1.5, 0.05, Z], "s2-pass", 0.8)}
 
-      {/* Paladin hammer smash rock burst & golden sparks */}
-      <Burst
-        at={BEATS.paladinSmash}
-        position={[-1.7, yFloor(-1.7) + 1.2, Z]}
-        color="#8c8a92"
-        count={50}
-        size={0.22}
-        speed={0.18}
-      />
-      <Burst
-        at={BEATS.paladinSmash}
-        position={[-1.7, yFloor(-1.7) + 1.2, Z]}
-        color="#ffd84d"
-        count={25}
-        size={0.18}
-        additive
-        speed={0.22}
-      />
+      {/* Level 4 */}
+      {CRUSHER_XS.map((x) => dust(BEATS.crusherInstall + 12, [x, CEILING_Y - 0.6, Z + 0.2], `crusher-install-${x}`, 0.7))}
+      {CRUSHER_XS.map((x) => sparks(BEATS.swat, [x, FLOAT_Y + 1.9, Z + 0.3], `swat-${x}`, "#ffd27a", 30))}
+      {CRUSHER_XS.map((x) => dust(BEATS.swat + FALL_FRAMES, [x, 0.05, Z], `swat-land-${x}`, 0.9))}
+      {dust(BEATS.hitRogue4, [FLOAT_X.rogue, 0.4, Z], "b3-rogue", 1.1)}
+      {dust(BEATS.hitMage4, [FLOAT_X.mage, 0.4, Z], "b3-mage", 1.1)}
 
-      {/* Electromagnet cyan electric sparks */}
-      <Burst
-        at={BEATS.magnetActive}
-        position={[-1.5, yFloor(-1.5) + 0.2, Z]}
-        color="#4dc4ff"
-        count={30}
-        size={0.18}
-        additive
-        speed={0.16}
-      />
-
-      {/* Mage Levitate purple arcane aura burst */}
-      <Burst
-        at={BEATS.mageLevitate}
-        position={[-0.8, yFloor(-0.8) + 1.2, Z]}
-        color="#aa44ff"
-        count={40}
-        size={0.2}
-        additive
-        speed={0.14}
-      />
-
-      {/* Ceiling Piston impact dust & debris */}
-      <Burst
-        at={BEATS.pistonSlam + 6}
-        position={[-0.8, yFloor(-0.8) + 0.4, Z]}
-        color="#c8bcae"
-        count={45}
-        size={0.2}
-        speed={0.2}
-      />
-
-      {/* Blast door slam ground dust */}
-      <Burst
-        at={BEATS.doorSlam + 4}
-        position={[-8.2, yFloor(-8.2) + 0.2, Z]}
-        color="#857c72"
-        count={40}
-        size={0.18}
-        speed={0.15}
-      />
-
-      {/* Gelatinous Cube splash emerald green droplet explosion */}
-      <Burst
-        at={BEATS.cubeSplash}
-        position={[4.0, yFloor(4.0) + 4.2, Z]}
-        color="#00ff66"
-        count={65}
-        size={0.25}
-        additive
-        speed={0.24}
-      />
+      {/* Level 5 */}
+      {dust(BEATS.doorSlam, [DOOR_X + 0.3, 0.05, Z], "door-slam", 1.4)}
+      {sparks(BEATS.doorSlam + 2, [DOOR_X + 0.4, 1.6, Z + 0.3], "door-bonk", "#fff2a0", 20)}
+      {[0, 1, 2, 3].map((i) =>
+        dust(Math.round(BEATS.curve[0] + i * 8), [PIPE_CENTER[0] - 0.6 - i * 0.65, 0.1 + i * 0.3, Z], `pipe-lift-${i}`, 0.7)
+      )}
+      {jellySplash(BEATS.cubeSpawn, [CUBE_CENTER[0], CUBE_CENTER[1] + 0.8, Z + 0.4], "cube-spawn")}
+      {dust(BEATS.launch, [lipX + 0.4, PIPE_CENTER[1], Z], "launch-dust", 1.2)}
+      {PARTY.map((m) => jellySplash(FLIGHT_START + m.flightFrames, m.target, `jelly-${m.classType}`))}
+      {PARTY.map((m) => jellySplash(BEATS.dissolve, m.target, `dissolve-${m.classType}`))}
     </>
   );
 };

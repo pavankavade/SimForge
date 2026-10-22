@@ -627,6 +627,101 @@ export const makeEarth = ({
   return finish(color.canvas, height.canvas, null, [1, 1], 2.0);
 };
 
+export interface GraniteOptions {
+  size?: number;
+  base?: string;
+  baseAlt?: string;
+  darkVein?: string;
+  seed?: number;
+}
+
+/** Chiseled granite / rock surface with crags, mottling, mica flecks and chisel gouges. */
+export const makeGranite = ({
+  size = 512,
+  base = "#525664",
+  baseAlt = "#6a6e7e",
+  darkVein = "#363844",
+  seed = 42,
+}: GraniteOptions = {}): SurfaceSet => {
+  const color = makeCanvas(size);
+  const height = makeCanvas(size);
+  const rough = makeCanvas(size);
+  if (!color || !height || !rough) {
+    return { map: null, normalMap: null, roughnessMap: null };
+  }
+
+  const rnd = mulberry32(seed);
+  const { ctx: c } = color;
+  const { ctx: h } = height;
+  const { ctx: r } = rough;
+
+  c.fillStyle = base;
+  c.fillRect(0, 0, size, size);
+  h.fillStyle = "#808080";
+  h.fillRect(0, 0, size, size);
+  r.fillStyle = "#d0d0d0";
+  r.fillRect(0, 0, size, size);
+
+  for (let i = 0; i < 40; i++) {
+    const px = rnd() * size;
+    const py = rnd() * size;
+    const pr = 20 + rnd() * 60;
+    c.fillStyle = rnd() > 0.5 ? baseAlt : darkVein;
+    c.globalAlpha = 0.25 + rnd() * 0.25;
+    c.beginPath();
+    c.arc(px, py, pr, 0, Math.PI * 2);
+    c.fill();
+    c.globalAlpha = 1.0;
+
+    const ht = Math.round(90 + rnd() * 80);
+    h.fillStyle = `rgb(${ht},${ht},${ht})`;
+    h.globalAlpha = 0.3;
+    h.beginPath();
+    h.arc(px, py, pr, 0, Math.PI * 2);
+    h.fill();
+    h.globalAlpha = 1.0;
+  }
+
+  for (let i = 0; i < 70; i++) {
+    const gx = rnd() * size;
+    const gy = rnd() * size;
+    const gw = 6 + rnd() * 22;
+    const gh = 3 + rnd() * 8;
+    const rot = rnd() * Math.PI;
+
+    c.save();
+    c.translate(gx, gy);
+    c.rotate(rot);
+    c.fillStyle = "rgba(0,0,0,0.22)";
+    c.fillRect(-gw / 2, -gh / 2, gw, gh);
+    c.fillStyle = "rgba(255,255,255,0.18)";
+    c.fillRect(-gw / 2, -gh / 2, gw, 1.5);
+    c.restore();
+
+    h.save();
+    h.translate(gx, gy);
+    h.rotate(rot);
+    h.fillStyle = "#303030";
+    h.fillRect(-gw / 2, -gh / 2, gw, gh);
+    h.fillStyle = "#ffffff";
+    h.fillRect(-gw / 2, -gh / 2, gw, 1.5);
+    h.restore();
+
+    r.save();
+    r.translate(gx, gy);
+    r.rotate(rot);
+    r.fillStyle = "#f5f5f5";
+    r.fillRect(-gw / 2, -gh / 2, gw, gh);
+    r.restore();
+  }
+
+  speckle(c, size, rnd, 2500, 0.12);
+  speckle(h, size, rnd, 2500, 0.25);
+  speckle(r, size, rnd, 1500, 0.15);
+
+  return finish(color.canvas, height.canvas, rough.canvas, [1, 1], 2.8);
+};
+
 /** Cache so multiple components share one baked texture set. */
 const cache = new Map<string, SurfaceSet>();
 

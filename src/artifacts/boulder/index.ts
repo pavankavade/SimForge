@@ -1,7 +1,11 @@
-export { SlopedCorridor } from "./SlopedCorridor";
-export { TripwireBoulder } from "./TripwireBoulder";
-export { SlimeSlick } from "./SlimeSlick";
-export { SplitBoulder } from "./SplitBoulder";
-export { MagneticSpikeBoulder } from "./MagneticSpikeBoulder";
-export { CeilingPistons } from "./CeilingPistons";
-export { GelatinousCubeTrap } from "./GelatinousCubeTrap";
+export { BoulderHallway } from "./BoulderHallway";
+export { RollingBoulder, BoulderShatter } from "./RollingBoulder";
+export type { RollingBoulderKind } from "./RollingBoulder";
+export { ReleaseGate, Tripwire } from "./TripwireGate";
+export { SlimePuddle } from "./SlimePuddle";
+export { Electromagnet } from "./Electromagnet";
+export { CeilingCrushers } from "./CeilingCrushers";
+export { HalfPipe } from "./HalfPipe";
+export { BlastDoor } from "./BlastDoor";
+export { GelatinousCube } from "./GelatinousCube";
+export { Skeleton } from "./Skeleton";

@@ -1,6 +1,6 @@
 import type React from "react";
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
-import { BEATS } from "./timeline";
+import { BEATS, STAGE_STARTS } from "./timeline";
 
 const FONT =
   "'Arial Black', 'Arial Bold', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
@@ -9,12 +9,12 @@ const STROKE =
   "-4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, 0 6px 18px rgba(0,0,0,0.6)";
 
 const STAGES = [
-  { at: 84, name: "TRIPWIRE BOULDER", color: "#ff9a3d" },
-  { at: BEATS.wideBoulderSpawn, name: "WIDE BOULDER + SLIME", color: "#2aff66" },
-  { at: BEATS.spikeSpawn, name: "MAGNETIC SPIKE CORE", color: "#4dc4ff" },
-  { at: BEATS.pistonsReveal, name: "CEILING PISTONS", color: "#ffba42" },
-  { at: BEATS.cubeTrapReveal, name: "GELATINOUS CUBE LAUNCH", color: "#00ff88" },
-];
+  { name: "TRIPWIRE BOULDER", color: "#ff9a3d" },
+  { name: "HALL-WIDE BOULDER + SLIME", color: "#7dff5a" },
+  { name: "SPIKED IRON + ELECTROMAGNET", color: "#4dc4ff" },
+  { name: "CEILING CRUSHERS", color: "#ffba42" },
+  { name: "BLAST DOOR + HALF-PIPE", color: "#ff5d8f" },
+].map((s, i) => ({ ...s, at: STAGE_STARTS[i] }));
 const BADGE_FRAMES = 110;
 
 const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
@@ -145,7 +145,7 @@ const StageBadge: React.FC<{ frame: number }> = ({ frame }) => {
       </div>
       <div
         style={{
-          fontSize: 62,
+          fontSize: stage.name.length > 24 ? 50 : 62,
           color: stage.color,
           textShadow: STROKE,
           lineHeight: 1.1,

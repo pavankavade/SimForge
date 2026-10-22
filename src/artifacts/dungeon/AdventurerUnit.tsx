@@ -15,7 +15,9 @@ export type AdventurerPose =
   | "sprawl"
   | "slip"
   | "float"
-  | "smash";
+  | "windup"
+  | "smash"
+  | "cower";
 
 interface AdventurerUnitProps {
   classType: AdventurerClass;
@@ -24,6 +26,8 @@ interface AdventurerUnitProps {
   rotation?: Vec3;
   scale?: number;
   animFrame?: number;
+  /** Paladin only: swap sword for a two-handed warhammer (shield goes on the back). */
+  weapon?: "sword" | "warhammer";
 }
 
 const STYLES = {
@@ -100,12 +104,14 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
   rotation = [0, 0, 0],
   scale = 1,
   animFrame = 0,
+  weapon = "sword",
 }) => {
   const style = STYLES[classType];
   const isGoblin = classType === "goblin";
   const isRogue = classType === "rogue";
   const isMage = classType === "mage";
   const isPaladin = classType === "paladin";
+  const hasHammer = isPaladin && weapon === "warhammer";
 
   // ---- Pose rig -----------------------------------------------------------
   let leftArmRot: Vec3 = [0.1, 0, 0.06];
@@ -221,17 +227,42 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
     rightKnee = 0.3;
     bodyBob = floatBob * 0.12;
     bodyLean = 0.04;
+  } else if (pose === "windup") {
+    // Two-handed overhead windup, weight on the back foot.
+    leftArmRot = [-2.85, 0.15, 0.25];
+    rightArmRot = [-2.95, -0.15, -0.25];
+    leftElbow = -0.45;
+    rightElbow = -0.35;
+    leftLegRot = [-0.45, 0, 0.14];
+    rightLegRot = [0.4, 0, -0.14];
+    leftKnee = 0.35;
+    rightKnee = 0.3;
+    bodyLean = -0.16;
+    bodyBob = -0.04;
   } else if (pose === "smash") {
-    // Heavy Paladin warhammer stance
-    leftArmRot = [-1.6, 0.35, 0.2];
-    rightArmRot = [-1.6, -0.35, -0.2];
-    leftElbow = -0.85;
-    rightElbow = -0.85;
-    leftLegRot = [-0.45, 0, 0.2];
-    rightLegRot = [0.65, 0, -0.2];
-    leftKnee = 0.5;
-    rightKnee = 0.4;
-    bodyLean = 0.32;
+    // Follow-through of a downward two-handed swing.
+    leftArmRot = [-1.05, 0.2, 0.18];
+    rightArmRot = [-1.0, -0.2, -0.18];
+    leftElbow = -0.08;
+    rightElbow = -0.05;
+    leftLegRot = [-0.6, 0, 0.16];
+    rightLegRot = [0.5, 0, -0.16];
+    leftKnee = 0.55;
+    rightKnee = 0.25;
+    bodyLean = 0.36;
+    bodyBob = -0.08;
+  } else if (pose === "cower") {
+    // Crouched, arms crossed over the head.
+    leftArmRot = [-2.5, 0, -0.45];
+    rightArmRot = [-2.5, 0, 0.45];
+    leftElbow = -1.7;
+    rightElbow = -1.7;
+    leftLegRot = [-0.95, 0, 0.12];
+    rightLegRot = [-0.75, 0, -0.12];
+    leftKnee = 1.5;
+    rightKnee = 1.35;
+    bodyLean = 0.3;
+    bodyBob = -0.24 + Math.sin(animFrame * 1.3) * 0.012;
   } else {
     leftLegRot = [-0.05, 0, 0.035];
     rightLegRot = [0.05, 0, -0.035];
@@ -708,7 +739,36 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
                   </group>
                 ) : null}
 
-                {isPaladin && side === 1 ? (
+                {hasHammer && side === 1 ? (
+                  <group position={[0, -0.25, 0.02]}>
+                    <mesh position={[0, -0.28, 0]} castShadow>
+                      <cylinderGeometry args={[0.03, 0.034, 0.86, 8]} />
+                      {leatherMat("#4a3220")}
+                    </mesh>
+                    {[0.06, -0.12].map((y) => (
+                      <mesh key={`grip-${y}`} position={[0, y, 0]}>
+                        <cylinderGeometry args={[0.04, 0.04, 0.05, 8]} />
+                        {metalMat(style.trim, 0.25, 0.7)}
+                      </mesh>
+                    ))}
+                    <mesh position={[0, -0.74, 0]} castShadow>
+                      <boxGeometry args={[0.22, 0.24, 0.5]} />
+                      {metalMat("#b7c0cf", 0.3, 0.9)}
+                    </mesh>
+                    {[-0.2, 0.2].map((dz) => (
+                      <mesh key={`face-${dz}`} position={[0, -0.74, dz]}>
+                        <boxGeometry args={[0.25, 0.27, 0.06]} />
+                        {metalMat(style.trim, 0.22, 0.75)}
+                      </mesh>
+                    ))}
+                    <mesh position={[0, -0.92, 0]}>
+                      <coneGeometry args={[0.05, 0.14, 6]} />
+                      {metalMat("#eef4ff", 0.15, 0.95)}
+                    </mesh>
+                  </group>
+                ) : null}
+
+                {isPaladin && !hasHammer && side === 1 ? (
                   <group position={[0, -0.28, 0.05]} rotation={[0.12, 0, 0.06]}>
                     <mesh position={[0, 0.14, 0]}>
                       <cylinderGeometry args={[0.026, 0.03, 0.13, 8]} />
@@ -751,7 +811,11 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
 
         {/* Paladin tower shield */}
         {isPaladin ? (
-          <group position={[-0.42, 0.94, 0.3]} rotation={[0.02, -0.14, 0.05]}>
+          <group
+            position={hasHammer ? [0, 1.12, -0.26] : [-0.42, 0.94, 0.3]}
+            rotation={hasHammer ? [0.12, Math.PI, 0] : [0.02, -0.14, 0.05]}
+            scale={hasHammer ? 0.85 : 1}
+          >
             <mesh castShadow>
               <boxGeometry args={[0.56, 0.86, 0.06]} />
               {metalMat(style.metal, 0.28, 0.62)}
