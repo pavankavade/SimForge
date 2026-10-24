@@ -4,6 +4,16 @@
 
 ---
 
+## 🎬 Output Demo (10s Showcase)
+
+<div align="center">
+  <img src="media/demo.gif" width="340" alt="SimForge 3D Output Demo" />
+  <p><em>Procedural 3D simulation, dynamic waypoint camera tracking, particle FX, and synchronized word-level captions rendered entirely with SimForge.</em></p>
+  <p><a href="media/demo.mp4">▶ <strong>Watch 10s Clip with Audio & SFX (demo.mp4)</strong></a></p>
+</div>
+
+---
+
 ## Overview
 
 `SimForge` provides a structured workflow for generating high-fidelity 3D vertical simulation and explainer videos. It combines **Remotion** (React-based video rendering engine) with **Three.js** and **React Three Fiber** (`@react-three/fiber`), enabling code-driven 3D animation, dynamic camera direction, procedural environments, audio integration, and synchronized word-level captions.
