@@ -1,6 +1,6 @@
 import type React from "react";
 import { useMemo } from "react";
-import { AbsoluteFill } from "remotion";
+import { AbsoluteFill, random } from "remotion";
 import * as THREE from "three";
 import { EpisodeVideo } from "../../engine/EpisodeVideo";
 import type { CameraPose, EpisodeConfig, Vec3 } from "../../engine/types";
@@ -239,13 +239,14 @@ function createAncientRockTextures() {
   // Dense multi-tone mineral grain (tiny quartz grains, iron specks, rock dust)
   const speckles = 32000;
   for (let i = 0; i < speckles; i++) {
-    const sx = Math.random() * size;
-    const sy = Math.random() * size;
-    const sr = 0.5 + Math.random() * 1.4;
-    const isDark = Math.random() > 0.38;
+    const sx = random(`grain-x-${i}`) * size;
+    const sy = random(`grain-y-${i}`) * size;
+    const sr = 0.5 + random(`grain-r-${i}`) * 1.4;
+    const isDark = random(`grain-d-${i}`) > 0.38;
+    const a = random(`grain-a-${i}`);
     ctx.fillStyle = isDark
-      ? `rgba(16, 12, 9, ${0.2 + Math.random() * 0.35})`
-      : `rgba(195, 188, 175, ${0.12 + Math.random() * 0.28})`;
+      ? `rgba(16, 12, 9, ${0.2 + a * 0.35})`
+      : `rgba(195, 188, 175, ${0.12 + a * 0.28})`;
     ctx.fillRect(sx, sy, sr, sr);
   }
 

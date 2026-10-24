@@ -9,5 +9,6 @@ export { AlchemicalFlamers } from "./AlchemicalFlamers";
 export { PendulumBlade } from "./PendulumBlade";
 export { TrebuchetFloor } from "./TrebuchetFloor";
 export { MimicChest } from "./MimicChest";
-export { AdventurerUnit } from "./AdventurerUnit";
-export type { AdventurerClass, AdventurerPose } from "./AdventurerUnit";
+// The hero cast lives in ../characters/hero; re-exported here for existing imports.
+export { AdventurerUnit, CLASS_SCALE, RIG } from "../characters/hero";
+export type { AdventurerClass, AdventurerPose, Expression, Weapon } from "../characters/hero";

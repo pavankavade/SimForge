@@ -15,7 +15,7 @@ import {
   SpikePit,
   TrebuchetFloor,
 } from "../../artifacts";
-import type { AdventurerClass, AdventurerPose } from "../../artifacts";
+import type { AdventurerClass, AdventurerPose, Expression } from "../../artifacts";
 import type { Vec3 } from "../../engine/types";
 import {
   BEATS,
@@ -56,6 +56,8 @@ interface Actor {
   position: Vec3;
   rotation: Vec3;
   scale?: number;
+  /** Face override; defaults to the pose's expression. */
+  expression?: Expression;
 }
 
 interface FallSpec {
@@ -92,6 +94,7 @@ const fallActor = (frame: number, spec: FallSpec): Actor | null => {
     pose: "sprawl",
     position: [spec.toX, LIE_Y + bounce - sink, Z],
     rotation: [0, restYaw, spec.roll],
+    expression: "dead",
   };
 };
 
@@ -330,6 +333,7 @@ const ActorView: React.FC<{ classType: AdventurerClass; actor: Actor | null; fra
       rotation={actor.rotation}
       scale={CHAR_SCALE * (actor.scale ?? 1)}
       animFrame={frame}
+      expression={actor.expression}
     />
   ) : null;
 

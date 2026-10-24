@@ -188,8 +188,13 @@ export interface EpisodeConfig {
   OverlayComponent?: React.FC;
 }
 
+/** Story beats by name (frame, or list of frames). Exposed for review tooling. */
+export type EpisodeBeats = Record<string, number | readonly number[]>;
+
 export interface EpisodeDefinition {
   config: EpisodeConfig;
   Scene: React.FC;
-  Video: React.FC;
+  Video: React.FC<{ beats?: EpisodeBeats }>;
+  /** Passed to the composition as defaultProps so `scripts/review.mjs --beats` can find them. */
+  beats?: EpisodeBeats;
 }

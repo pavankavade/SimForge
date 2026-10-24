@@ -1,5 +1,6 @@
 import type { EpisodeConfig, SfxCue, SubtitleSegment, Vec3 } from "../../engine/types";
 import { ENVIRONMENT_PRESETS } from "../../engine/presets";
+import { sfxFor, walkTrack } from "../../kit";
 import wordTimestamps from "./data/wordTimestamps.json";
 import { TrapHUD } from "./TrapHUD";
 import {
@@ -21,12 +22,7 @@ import {
   type BoulderSpec,
 } from "./timeline";
 
-const sfx = (name: string, frame: number, volume = 1, extra: Partial<SfxCue> = {}): SfxCue => ({
-  src: `episodes/rolling-boulder/sfx/${name}.wav`,
-  frame: Math.round(frame),
-  volume,
-  ...extra,
-});
+const sfx = sfxFor("rolling-boulder");
 
 /** Last frame a boulder is audible: shatter/launch, or rolling out the left exit. */
 const rollEnd = (b: BoulderSpec) => {
@@ -130,17 +126,6 @@ const boulderRumbles = BOULDERS.map((b) => ({
   end: rollEnd(b),
   strength: b.kind === "drum" ? 0.03 : 0.02,
 }));
-
-/** Follows a newcomer walking in linearly from the exit. */
-const walkTrack = (start: number, end: number, x0: number, x1: number, dist = 9, blend = 8) => ({
-  start,
-  end,
-  blend,
-  fn: (f: number) => {
-    const x = x0 + (x1 - x0) * Math.min(1, Math.max(0, (f - start) / (end - start))) + 0.6;
-    return { position: [x, 2.3, -0.6 + dist] as Vec3, lookAt: [x + 0.2, 1.0, -0.6] as Vec3 };
-  },
-});
 
 const b1 = boulderById("b1");
 const d1 = boulderById("d1");

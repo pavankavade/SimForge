@@ -1,155 +1,153 @@
 import type React from "react";
 import type { Vec3 } from "../../engine/types";
+import { G, INK_THIN, Part, RIG, flat, onSphere, vinyl, type AdventurerClass } from "../characters/hero";
 
 interface SkeletonProps {
   /** Keeps the victim's headgear so you can tell who it was. */
-  variant: "rogue" | "mage" | "paladin";
+  variant: AdventurerClass;
   position?: Vec3;
   rotation?: Vec3;
   scale?: number;
   animFrame?: number;
 }
 
-const BONE = "#efe6cf";
-const BONE_DARK = "#c9bd9c";
+const BONE = "#f1e7cc";
+const BONE_DARK = "#d6c69f";
+const SOCKET = "#1f1418";
 
-const boneMat = (color = BONE) => <meshStandardMaterial color={color} roughness={0.6} />;
+const bone = () => vinyl(BONE, "bone");
+const boneDark = () => vinyl(BONE_DARK, "bone");
 
-const Limb: React.FC<{ position: Vec3; rotation: Vec3; upper: number; lower: number; bend: number }> = ({
+/** Two-segment bone limb with knobbly joints; `foot` adds a boot-sized foot bone. */
+const Limb: React.FC<{ position: Vec3; rotation: Vec3; upper: number; lower: number; bend: number; foot?: boolean }> = ({
   position,
   rotation,
   upper,
   lower,
   bend,
+  foot,
 }) => (
   <group position={position} rotation={rotation}>
-    <mesh position={[0, -upper / 2, 0]}>
-      <cylinderGeometry args={[0.028, 0.024, upper, 6]} />
-      {boneMat()}
-    </mesh>
-    <mesh position={[0, -upper, 0]}>
-      <sphereGeometry args={[0.045, 8, 6]} />
-      {boneMat(BONE_DARK)}
-    </mesh>
+    <Part geo={G.sphere(0.055)} mat={boneDark()} ink={INK_THIN} />
+    <Part geo={G.capsule(0.034, upper)} mat={bone()} position={[0, -upper / 2, 0]} ink={INK_THIN} />
     <group position={[0, -upper, 0]} rotation={[bend, 0, 0]}>
-      {[-0.018, 0.018].map((dx) => (
-        <mesh key={dx} position={[dx, -lower / 2, 0]}>
-          <cylinderGeometry args={[0.016, 0.014, lower, 5]} />
-          {boneMat()}
-        </mesh>
+      <Part geo={G.sphere(0.05)} mat={boneDark()} ink={INK_THIN} />
+      {[-0.02, 0.02].map((dx) => (
+        <Part key={dx} geo={G.capsule(0.02, lower)} mat={bone()} position={[dx, -lower / 2, 0]} ink={INK_THIN} />
       ))}
-      <mesh position={[0, -lower - 0.03, 0.02]}>
-        <boxGeometry args={[0.07, 0.05, 0.09]} />
-        {boneMat(BONE_DARK)}
-      </mesh>
+      {foot ? (
+        <Part geo={G.box(0.11, 0.06, 0.2, 0.025)} mat={boneDark()} position={[0, -lower - 0.02, 0.05]} ink={INK_THIN} />
+      ) : (
+        <Part geo={G.sphere(0.05)} mat={boneDark()} position={[0, -lower - 0.02, 0]} scale={[0.9, 1.1, 0.7]} ink={INK_THIN} />
+      )}
     </group>
   </group>
 );
 
+const Headgear: React.FC<{ variant: AdventurerClass; r: number; sway: number }> = ({ variant, r, sway }) => {
+  switch (variant) {
+    case "goblin":
+      return (
+        <group position={[0, 0.06, 0]} rotation={[-0.2, 0, 0.25]}>
+          <Part geo={G.sphere(r * 1.08, 0, Math.PI * 0.4)} inkGeo={G.sphere(r * 1.08, 0, Math.PI * 0.4)} mat={vinyl("#9c6a44", "metal")} />
+          <Part
+            geo={G.torus(r * 1.08 * Math.sin(Math.PI * 0.4), 0.026)}
+            mat={vinyl("#7d5536", "metal")}
+            position={[0, r * 1.08 * Math.cos(Math.PI * 0.4), 0]}
+            rotation={[Math.PI / 2, 0, 0]}
+            ink={INK_THIN}
+          />
+        </group>
+      );
+    case "rogue":
+      return (
+        <Part
+          geo={G.sphere(r + 0.035, 0, Math.PI * 0.55, Math.PI / 2 + 0.9, Math.PI * 2 - 1.8)}
+          inkGeo={G.sphere(r + 0.035, 0, Math.PI * 0.55)}
+          mat={vinyl("#2f6f62", "cloth")}
+          position={[0, 0.02, -0.01]}
+        />
+      );
+    case "mage":
+      return (
+        <group position={[0, 0.14, -0.01]} rotation={[-0.15 + sway * 0.4, 0, 0.12]}>
+          <Part geo={G.cyl(0.38, 0.4, 0.035, 36)} mat={vinyl("#383ba8", "cloth")} />
+          <Part geo={G.cyl(0.19, 0.24, 0.24, 28)} mat={vinyl("#4b4fd1", "cloth")} position={[0, 0.12, 0]} />
+          <group position={[0, 0.24, 0]} rotation={[-0.6, 0, 0]}>
+            <Part geo={G.cone(0.19, 0.36, 24)} mat={vinyl("#4b4fd1", "cloth")} position={[0, 0.16, 0]} />
+          </group>
+        </group>
+      );
+    case "paladin":
+      return (
+        <group position={[0, 0.02, -0.005]} rotation={[0.15, 0, -0.1]}>
+          <Part
+            geo={G.sphere(r + 0.03, 0, Math.PI * 0.55, Math.PI / 2 + 0.75, Math.PI * 2 - 1.5)}
+            inkGeo={G.sphere(r + 0.03, 0, Math.PI * 0.55)}
+            mat={vinyl("#d9e1ec", "metal")}
+          />
+          {[0, 1, 2].map((i) => (
+            <Part key={i} geo={G.sphere(0.08 - i * 0.015)} mat={vinyl("#e84a44", "cloth")} position={[0, r + 0.06 - i * 0.07, -0.06 - i * 0.11]} scale={[0.7, 1, 1.15]} />
+          ))}
+        </group>
+      );
+  }
+};
+
 /**
- * Cartoon skeleton matching the AdventurerUnit proportions (feet at the
- * origin, facing +z) so a digested character can be swapped in place.
+ * Cartoon skeleton on the hero rig proportions (feet at the origin, facing +z)
+ * so a digested character can be swapped in place. Keeps the victim's
+ * headgear so the audience can tell who it was.
  */
 export const Skeleton: React.FC<SkeletonProps> = ({ variant, position = [0, 0, 0], rotation = [0, 0, 0], scale = 1, animFrame = 0 }) => {
   const sway = Math.sin(animFrame * 0.08) * 0.12;
-  const jaw = 0.12 + 0.1 * Math.max(0, Math.sin(animFrame * 0.21));
+  const jaw = 0.15 + 0.12 * Math.max(0, Math.sin(animFrame * 0.21));
+  const r = 0.23;
+  const s = variant === "goblin" ? 0.82 : variant === "paladin" ? 1.06 : 1;
   return (
-    <group position={position} rotation={rotation} scale={scale}>
-      {/* Spine */}
+    <group position={position} rotation={rotation} scale={scale * s}>
+      {/* Pelvis + spine */}
+      <Part geo={G.torus(0.11, 0.04)} mat={bone()} position={[0, RIG.hipY, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1.2, 0.8, 1]} ink={INK_THIN} />
       {Array.from({ length: 6 }, (_, i) => (
-        <mesh key={`vert-${i}`} position={[0, 0.94 + i * 0.075, -0.02]}>
-          <cylinderGeometry args={[0.035, 0.035, 0.05, 8]} />
-          {boneMat(i % 2 === 0 ? BONE : BONE_DARK)}
-        </mesh>
+        <Part key={i} geo={G.cyl(0.036, 0.036, 0.05, 12)} mat={i % 2 ? boneDark() : bone()} position={[0, 0.67 + i * 0.075, -0.05]} ink={INK_THIN} />
       ))}
       {/* Ribcage */}
-      {[0, 1, 2, 3].map((i) => (
-        <mesh key={`rib-${i}`} position={[0, 1.33 - i * 0.075, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1 - i * 0.07, 0.8, 1]}>
-          <torusGeometry args={[0.15, 0.018, 6, 18, Math.PI * 1.6]} />
-          {boneMat()}
-        </mesh>
+      {[0, 1, 2].map((i) => (
+        <Part
+          key={i}
+          geo={G.torus(0.17 - i * 0.015, 0.022, Math.PI * 1.55)}
+          mat={bone()}
+          position={[0, 1.02 - i * 0.09, -0.02]}
+          rotation={[Math.PI / 2, 0, Math.PI / 2 + Math.PI * 0.225]}
+          scale={[1, 0.8, 1]}
+          ink={INK_THIN}
+        />
       ))}
-      <mesh position={[0, 1.24, 0.13]}>
-        <boxGeometry args={[0.04, 0.24, 0.03]} />
-        {boneMat()}
-      </mesh>
-      {/* Collarbone + pelvis */}
-      <mesh position={[0, 1.37, 0.02]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.02, 0.02, 0.46, 6]} />
-        {boneMat()}
-      </mesh>
-      <mesh position={[0, 0.9, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 1, 0.6]}>
-        <torusGeometry args={[0.11, 0.035, 6, 14]} />
-        {boneMat()}
-      </mesh>
+      <Part geo={G.box(0.05, 0.24, 0.04, 0.015)} mat={bone()} position={[0, 0.94, 0.12]} ink={INK_THIN} />
+      <Part geo={G.capsule(0.025, 0.56)} mat={bone()} position={[0, 1.07, 0]} rotation={[0, 0, Math.PI / 2]} ink={INK_THIN} />
 
       {/* Skull */}
-      <group position={[0, 1.58, 0]}>
-        <mesh scale={[1, 1.05, 1.05]}>
-          <sphereGeometry args={[0.15, 18, 14]} />
-          {boneMat()}
-        </mesh>
-        {[-0.055, 0.055].map((dx) => (
-          <mesh key={dx} position={[dx, 0.01, 0.125]}>
-            <sphereGeometry args={[0.042, 10, 8]} />
-            <meshStandardMaterial color="#1b1712" roughness={0.9} />
-          </mesh>
+      <group position={[0, RIG.headY, 0]} rotation={[0.1 + sway * 0.3, 0, sway * 0.6]}>
+        <Part geo={G.sphere(r)} mat={bone()} scale={[1, 0.98, 1]} />
+        <Part geo={G.sphere(r * 0.72)} mat={bone()} position={[0, -0.1, 0.06]} scale={[0.95, 0.75, 0.9]} />
+        {([-1, 1] as const).map((side) => (
+          <mesh key={side} geometry={G.sphere(0.062)} material={flat(SOCKET)} position={onSphere(r - 0.035, side * 0.36, 0.06)} scale={[1, 1.12, 0.5]} />
         ))}
-        <mesh position={[0, -0.05, 0.145]} rotation={[Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[0.022, 0.04, 3]} />
-          <meshStandardMaterial color="#1b1712" roughness={0.9} />
-        </mesh>
-        <group position={[0, -0.08, 0.02]} rotation={[jaw, 0, 0]}>
-          <mesh position={[0, -0.035, 0.07]}>
-            <boxGeometry args={[0.17, 0.05, 0.1]} />
-            {boneMat()}
-          </mesh>
-          {[-0.05, -0.017, 0.017, 0.05].map((dx) => (
-            <mesh key={dx} position={[dx, -0.005, 0.115]}>
-              <boxGeometry args={[0.025, 0.03, 0.015]} />
-              {boneMat("#fffaf0")}
-            </mesh>
+        <mesh geometry={G.cone(0.03, 0.05, 3)} material={flat(SOCKET)} position={onSphere(r - 0.004, 0, 0.3)} rotation={[0, 0, Math.PI]} />
+        <group position={[0, -0.12, 0.02]} rotation={[jaw, 0, 0]}>
+          <Part geo={G.box(0.24, 0.07, 0.17, 0.03)} mat={bone()} position={[0, -0.05, 0.08]} />
+          {[-0.06, -0.02, 0.02, 0.06].map((dx) => (
+            <mesh key={dx} geometry={G.box(0.03, 0.035, 0.02, 0.008)} material={vinyl("#fffaf0", "gloss")} position={[dx, -0.01, 0.165]} />
           ))}
         </group>
-
-        {variant === "mage" ? (
-          <>
-            <mesh position={[0, 0.13, 0]}>
-              <cylinderGeometry args={[0.235, 0.245, 0.03, 20]} />
-              <meshStandardMaterial color="#37497a" roughness={0.86} />
-            </mesh>
-            <mesh position={[0, 0.33, -0.035]} rotation={[-0.14 + sway * 0.5, 0, 0.05]}>
-              <coneGeometry args={[0.17, 0.46, 12]} />
-              <meshStandardMaterial color="#4a63a3" roughness={0.86} />
-            </mesh>
-          </>
-        ) : null}
-        {variant === "paladin" ? (
-          <>
-            <mesh position={[0, 0.03, -0.01]} scale={[1.08, 1.0, 1.05]}>
-              <sphereGeometry args={[0.165, 18, 12, 0, Math.PI * 2, 0, Math.PI / 1.8]} />
-              <meshStandardMaterial color="#c9d4e6" metalness={0.85} roughness={0.25} />
-            </mesh>
-            <mesh position={[0, 0.22, -0.055]} rotation={[-0.38, 0, 0]}>
-              <coneGeometry args={[0.062, 0.28, 8]} />
-              <meshStandardMaterial color="#a32020" roughness={0.8} />
-            </mesh>
-          </>
-        ) : null}
-        {variant === "rogue" ? (
-          <mesh position={[0, 0.06, -0.03]}>
-            <sphereGeometry args={[0.175, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2.05]} />
-            <meshStandardMaterial color="#333a4f" roughness={0.92} />
-          </mesh>
-        ) : null}
+        <Headgear variant={variant} r={r} sway={sway} />
       </group>
 
-      {/* Arms */}
-      <Limb position={[-0.24, 1.35, 0]} rotation={[-0.5 + sway, 0, 0.7]} upper={0.3} lower={0.27} bend={-0.6} />
-      <Limb position={[0.24, 1.35, 0]} rotation={[-0.4 - sway, 0, -0.75]} upper={0.3} lower={0.27} bend={-0.5} />
-      {/* Legs */}
-      <Limb position={[-0.1, 0.86, 0]} rotation={[0.3 + sway * 0.5, 0, 0.15]} upper={0.36} lower={0.36} bend={0.5} />
-      <Limb position={[0.1, 0.86, 0]} rotation={[-0.2 - sway * 0.5, 0, -0.15]} upper={0.36} lower={0.36} bend={0.35} />
+      {/* Arms + legs */}
+      <Limb position={[-RIG.shoulderX, RIG.shoulderY, 0]} rotation={[-0.5 + sway, 0, -0.6]} upper={0.2} lower={0.19} bend={-0.6} />
+      <Limb position={[RIG.shoulderX, RIG.shoulderY, 0]} rotation={[-0.4 - sway, 0, 0.65]} upper={0.2} lower={0.19} bend={-0.5} />
+      <Limb position={[-RIG.hipX, RIG.hipY, 0]} rotation={[0.3 + sway * 0.5, 0, -0.12]} upper={RIG.thigh} lower={RIG.shin} bend={0.5} foot />
+      <Limb position={[RIG.hipX, RIG.hipY, 0]} rotation={[-0.2 - sway * 0.5, 0, 0.12]} upper={RIG.thigh} lower={RIG.shin} bend={0.35} foot />
     </group>
   );
 };

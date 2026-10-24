@@ -9,3 +9,4 @@ export { Rock } from "./props/Rock";
 export { Tree } from "./props/Tree";
 export * from "./dungeon";
 export * from "./boulder";
+export * from "./sets";

@@ -1,4 +1,5 @@
 import type { CameraPose, Vec3 } from "../../engine/types";
+import { clamp01, createCues, easeInOut, easeOutCubic, lerp, progress } from "../../kit";
 import cues from "./data/narrationCues.json";
 
 /**
@@ -8,29 +9,8 @@ import cues from "./data/narrationCues.json";
  * line moves the action with it.
  */
 
-type CueWord = { word: string; startFrame: number; endFrame: number };
-type LineId = keyof typeof cues.lines;
-
-const bare = (s: string) => s.toLowerCase().replace(/[^a-z0-9'-]/g, "");
-
-/** Start frame of the nth occurrence of `word` in a narration line. */
-export const w = (lineId: LineId, word: string, nth = 0): number => {
-  const words = cues.lines[lineId].words as CueWord[];
-  const hit = words.filter((x) => bare(x.word) === bare(word))[nth];
-  if (!hit) throw new Error(`Missing narration cue ${lineId}:${word}#${nth}`);
-  return hit.startFrame;
-};
-export const lineStart = (lineId: LineId) => cues.lines[lineId].startFrame;
-
-export const DURATION = cues.durationFrames + 10;
-
-export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-export const progress = (frame: number, [a, b]: readonly [number, number]) =>
-  clamp01((frame - a) / (b - a));
-export const easeInOut = (t: number) => t * t * (3 - 2 * t);
-export const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
-export const easeInCubic = (t: number) => t * t * t;
+export const { w, lineStart, DURATION } = createCues(cues);
+export { clamp01, easeInCubic, easeInOut, easeOutCubic, lerp, progress } from "../../kit";
 
 // ---------------------------------------------------------------------------
 // Geometry

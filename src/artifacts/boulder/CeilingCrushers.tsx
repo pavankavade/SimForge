@@ -8,17 +8,20 @@ interface CeilingCrushersProps {
   installFrame: number;
   /** Gears start turning (armed and synced to the boulder). */
   gearsStart: number;
-  /** Frame the crusher faces reach the floaters. */
+  /** Slam cue: the faces start dropping 4 frames before and bottom out 4 frames after. */
   slamFrame: number;
+  /** Extra slams (same timing as slamFrame) for crushers that cycle. */
+  moreSlams?: number[];
   ceilingY?: number;
   z?: number;
   width?: number;
   depth?: number;
   /** Lowest point of the crusher face during the slam. */
   slamY?: number;
+  /** How far the crusher face hangs below the ceiling at rest (raise it to keep it in frame). */
+  restDrop?: number;
 }
 
-const REST_DROP = 0.45;
 const STRIPES = 7;
 
 const Gear: React.FC<{ radius: number; teeth: number; angle: number; color?: string }> = ({
@@ -69,6 +72,8 @@ export const CeilingCrushers: React.FC<CeilingCrushersProps> = ({
   width = 1.15,
   depth = 2.0,
   slamY = 2.7,
+  moreSlams = [],
+  restDrop = 0.45,
 }) => {
   const frame = useCurrentFrame();
   const iron = useSurface("crusher-iron", () => makeMetal({ base: "#4a4f5a", seed: 31, roughness: 160 }), [1, 1]);
@@ -79,22 +84,27 @@ export const CeilingCrushers: React.FC<CeilingCrushersProps> = ({
   const installOffset = drop < 1 ? (1 - drop) ** 2 * 1.6 : -0.08 * Math.sin((age - 14) * 0.9) * Math.exp(-(age - 14) / 5);
 
   // Slam: fast extension, short hold, slow ratcheting retract.
-  const restBottom = ceilingY - REST_DROP;
-  let extend = 0;
-  if (frame >= slamFrame - 4 && frame < slamFrame + 4) {
-    const t = (frame - slamFrame + 4) / 8;
-    extend = t * t;
-  } else if (frame >= slamFrame + 4 && frame < slamFrame + 16) {
-    extend = 1;
-  } else if (frame >= slamFrame + 16 && frame < slamFrame + 50) {
-    const t = (frame - slamFrame - 16) / 34;
-    extend = 1 - t + 0.03 * Math.sin(t * 40) * (1 - t);
-  }
-  extend = Math.max(0, Math.min(1, extend));
+  const restBottom = ceilingY - restDrop;
+  const slams = [slamFrame].concat(moreSlams);
+  const extendFor = (s: number) => {
+    if (frame >= s - 4 && frame < s + 4) {
+      const t = (frame - s + 4) / 8;
+      return t * t;
+    }
+    if (frame >= s + 4 && frame < s + 16) return 1;
+    if (frame >= s + 16 && frame < s + 50) {
+      const t = (frame - s - 16) / 34;
+      return 1 - t + 0.03 * Math.sin(t * 40) * (1 - t);
+    }
+    return 0;
+  };
+  const extend = Math.max(0, Math.min(1, Math.max(...slams.map(extendFor))));
   const bottom = restBottom - (restBottom - slamY) * extend;
 
-  const running = frame >= gearsStart && frame < slamFrame + 50;
-  const spin = running ? (frame - gearsStart) * 0.09 + (frame >= slamFrame - 4 ? (Math.min(frame, slamFrame + 4) - slamFrame + 4) * 0.25 : 0) : 0;
+  const lastSlam = Math.max(...slams);
+  const running = frame >= gearsStart && frame < lastSlam + 50;
+  const kick = slams.reduce((sum, s) => sum + (frame >= s - 4 ? (Math.min(frame, s + 4) - s + 4) * 0.25 : 0), 0);
+  const spin = running ? (frame - gearsStart) * 0.09 + kick : 0;
   const front = z + depth / 2;
   const plateH = 0.5;
   const centerX = (xs[0] + xs[xs.length - 1]) / 2;

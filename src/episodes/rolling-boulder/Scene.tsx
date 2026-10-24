@@ -1,11 +1,9 @@
 import type React from "react";
 import { useCurrentFrame } from "remotion";
 import {
-  AdventurerUnit,
   BlastDoor,
   BoulderHallway,
   BoulderShatter,
-  Burst,
   CeilingCrushers,
   Electromagnet,
   GelatinousCube,
@@ -17,8 +15,20 @@ import {
   SlimePuddle,
   Tripwire,
 } from "../../artifacts";
-import type { AdventurerClass, AdventurerPose } from "../../artifacts";
-import type { Vec3 } from "../../engine/types";
+import {
+  ActorView,
+  CHAR_SCALE,
+  FACE_RIGHT,
+  HIP,
+  Splat,
+  dust,
+  jellySplash,
+  lieHeight,
+  lying,
+  slimeSplash,
+  sparks,
+  type Actor,
+} from "../../kit";
 import {
   BEATS,
   BOULDERS,
@@ -66,100 +76,22 @@ import {
 } from "./timeline";
 import type { BoulderSpec } from "./timeline";
 
-const CHAR_SCALE = 1.12;
-/** Hip height: pivot for flips and tumbles. */
-const HIP = 0.95 * CHAR_SCALE;
-const FACE_RIGHT = Math.PI / 2;
-/** Feet height of a body lying flat on its back/front (pivot at the hips). */
-const LIE_Y = 0.2 - HIP;
+/** Feet height of a body lying flat on its back (pivot at the hips), same as kit `lying` at class scale 1. */
+const LIE_Y = lieHeight("rogue") - HIP;
 const LEFT_ENTRY = -10.6;
 const FLOAT_Y = 2.8;
 const PIPE_FLAT: [number, number] = [-10.6, -7.3];
 const DRUM_LENGTH = 3.1;
-const STYLE_SCALE: Record<AdventurerClass, number> = { goblin: 0.78, rogue: 1, mage: 1, paladin: 1.04 };
 
-interface Actor {
-  pose: AdventurerPose;
-  position: Vec3;
-  yaw: number;
-  /** World-space roll about z, applied around `pivot` above the feet. */
-  tilt?: number;
-  pivot?: number;
-  scale?: number;
-  /** Animation speed multiplier (jogging, heavy stomping). */
-  speed?: number;
-}
-
-const ActorView: React.FC<{
-  classType: AdventurerClass;
-  actor: Actor | null;
-  frame: number;
-  weapon?: "sword" | "warhammer";
-}> = ({ classType, actor, frame, weapon }) => {
-  if (!actor) return null;
-  const pivot = actor.pivot ?? 0;
-  const [x, y, z] = actor.position;
-  return (
-    <group position={[x, y + pivot, z]} rotation={[0, 0, actor.tilt ?? 0]}>
-      <AdventurerUnit
-        classType={classType}
-        pose={actor.pose}
-        position={[0, -pivot, 0]}
-        rotation={[0, actor.yaw, 0]}
-        scale={CHAR_SCALE * (actor.scale ?? 1)}
-        animFrame={frame * (actor.speed ?? 1)}
-        weapon={weapon}
-      />
-    </group>
-  );
-};
-
-/** Lying flat on the floor: tilt +π/2 is on the back (head to -x when facing right). */
-const lying = (x: number, yaw: number, tilt: number, frame: number, since: number): Actor => {
-  const settle = 0.12 * Math.sin(Math.PI * clamp01((frame - since) / 7));
-  return { pose: "sprawl", position: [x, LIE_Y + settle, Z], yaw, tilt, pivot: HIP };
-};
-
-// ---------------------------------------------------------------------------
-// Squashed victims ride the boulder's camera face and spin away with it.
-// ---------------------------------------------------------------------------
-interface SplatProps {
-  classType: AdventurerClass;
-  hitAngle: number;
-  faceZ: number;
-  size?: number;
-  /** Extra in-plane rotation (for the crossed pair on B3). */
-  spin?: number;
-  /** z squash factor (0.1 = pancake, 0.5 = merely skewered). */
-  flat?: number;
-  frame: number;
-  weapon?: "sword" | "warhammer";
-}
-
-const Splat: React.FC<SplatProps> = ({ classType, hitAngle, faceZ, size = 1, spin = 0, flat = 0.12, frame, weapon }) => {
-  const s = CHAR_SCALE * size;
-  return (
-    <group rotation={[0, 0, -hitAngle + spin]}>
-      <group position={[0, 0, faceZ]} scale={[1, 1, flat]}>
-        <AdventurerUnit
-          classType={classType}
-          pose="sprawl"
-          position={[0, -0.88 * s * STYLE_SCALE[classType], 0]}
-          scale={s}
-          animFrame={frame}
-          weapon={weapon}
-        />
-      </group>
-    </group>
-  );
-};
-
+/** Squashed victims ride the boulder's camera face and spin away with it. */
 const hitAngle = (id: string, at: number) => boulderState(boulderById(id), at).angle;
 
 // ---------------------------------------------------------------------------
 // Level 1: the goblin trips the wire; it gets up just in time to be flattened.
 // ---------------------------------------------------------------------------
 const GOBLIN_WALK: [number, number] = [36, BEATS.goblinTrip];
+/** Face-down on the floor: chest rests RIG.lieY (scaled) above it. */
+const GOBLIN_PRONE_Y = lieHeight("goblin");
 const goblinActor = (frame: number): Actor | null => {
   if (frame < GOBLIN_WALK[0] || frame >= BEATS.goblinHit) return null;
   const tripX = WIRE_X - 0.12;
@@ -175,19 +107,19 @@ const goblinActor = (frame: number): Actor | null => {
     // Faceplant over the wire.
     return {
       pose: "fall",
-      position: [lerp(tripX, tripX + 0.25, t), 0.25 * Math.sin(Math.PI * t), Z],
+      position: [lerp(tripX, tripX + 0.25, t), GOBLIN_PRONE_Y * t + 0.25 * Math.sin(Math.PI * t), Z],
       yaw: FACE_RIGHT,
       tilt: -1.5 * (t * t),
     };
   }
   const upStart = BEATS.goblinHit - 18;
   if (frame < upStart) {
-    return { pose: "sprawl", position: [tripX + 0.25, 0.12, Z], yaw: FACE_RIGHT, tilt: -1.5 };
+    return { pose: "sprawl", position: [tripX + 0.25, GOBLIN_PRONE_Y, Z], yaw: FACE_RIGHT, tilt: -1.5 };
   }
   const up = easeOutCubic(progress(frame, [upStart, upStart + 8]));
   return {
     pose: up < 1 ? "sprawl" : "cower",
-    position: [lerp(tripX + 0.25, GOBLIN_HIT_X, up), 0.12 * (1 - up), Z],
+    position: [lerp(tripX + 0.25, GOBLIN_HIT_X, up), GOBLIN_PRONE_Y * (1 - up), Z],
     yaw: FACE_RIGHT,
     tilt: -1.5 * (1 - up),
   };
@@ -269,7 +201,7 @@ const rogueActor = (frame: number): Actor | null => {
       pivot: HIP,
     };
   }
-  return { ...lying(ROGUE2_LIE_X, FACE_RIGHT, Math.PI / 2, frame, slipEnd), pose: "sprawl" };
+  return lying({ classType: "rogue", x: ROGUE2_LIE_X, z: Z, frame, since: slipEnd });
 };
 
 // ---------------------------------------------------------------------------
@@ -356,7 +288,7 @@ const floaterActor = (who: "mage" | "rogue", frame: number): Actor | null => {
       pivot: HIP,
     };
   }
-  return lying(x, FACE_RIGHT, Math.PI / 2, frame, land);
+  return lying({ classType: who, x, z: Z, frame, since: land });
 };
 
 // ---------------------------------------------------------------------------
@@ -417,17 +349,17 @@ const Riders: React.FC<{ b: BoulderSpec; frame: number }> = ({ b, frame }) => {
   switch (b.id) {
     case "b1":
       return frame >= BEATS.goblinHit ? (
-        <Splat classType="goblin" hitAngle={hitAngle("b1", BEATS.goblinHit)} faceZ={face} size={0.95} frame={frame} />
+        <Splat classType="goblin" angle={-hitAngle("b1", BEATS.goblinHit)} faceZ={face} size={0.95} frame={frame} />
       ) : null;
     case "d1":
       return frame >= BEATS.rogue2Hit ? (
-        <Splat classType="rogue" hitAngle={hitAngle("d1", BEATS.rogue2Hit)} faceZ={face} size={1.05} frame={frame} />
+        <Splat classType="rogue" angle={-hitAngle("d1", BEATS.rogue2Hit)} faceZ={face} size={1.05} frame={frame} />
       ) : null;
     case "s1":
       return frame >= BEATS.skewer ? (
         <Splat
           classType="paladin"
-          hitAngle={hitAngle("s1", BEATS.skewer)}
+          angle={-hitAngle("s1", BEATS.skewer)}
           faceZ={b.r * 0.7}
           size={0.85}
           flat={0.55}
@@ -439,10 +371,10 @@ const Riders: React.FC<{ b: BoulderSpec; frame: number }> = ({ b, frame }) => {
       return (
         <>
           {frame >= BEATS.hitRogue4 ? (
-            <Splat classType="rogue" hitAngle={hitAngle("b3", BEATS.hitRogue4)} faceZ={face} size={0.85} spin={0.55} frame={frame} />
+            <Splat classType="rogue" angle={-hitAngle("b3", BEATS.hitRogue4) + 0.55} faceZ={face} size={0.85} frame={frame} />
           ) : null}
           {frame >= BEATS.hitMage4 ? (
-            <Splat classType="mage" hitAngle={hitAngle("b3", BEATS.hitMage4)} faceZ={face + 0.04} size={0.85} spin={-0.55} frame={frame} />
+            <Splat classType="mage" angle={-hitAngle("b3", BEATS.hitMage4) - 0.55} faceZ={face + 0.04} size={0.85} frame={frame} />
           ) : null}
         </>
       );
@@ -479,74 +411,6 @@ const Boulders: React.FC<{ frame: number }> = ({ frame }) => (
 // ---------------------------------------------------------------------------
 // Effects
 // ---------------------------------------------------------------------------
-const dust = (at: number, position: Vec3, seed: string, scale = 1) => (
-  <Burst
-    key={seed}
-    at={at}
-    position={position}
-    count={Math.round(34 * scale)}
-    size={0.55 * scale}
-    duration={40}
-    speed={0.09 * scale}
-    spread={[1.2 * scale, 0.2, 1.6]}
-    color="#b8b0a6"
-    seed={seed}
-  />
-);
-
-const slimeSplash = (at: number, position: Vec3, seed: string, scale = 1) => (
-  <Burst
-    key={seed}
-    at={at}
-    position={position}
-    count={Math.round(22 * scale)}
-    size={0.22 * scale}
-    duration={22}
-    speed={0.09 * scale}
-    direction={[0, 0.07, 0.02]}
-    gravity={-0.012}
-    spread={[0.5, 0.05, 0.6]}
-    color="#8fef55"
-    opacity={0.95}
-    seed={seed}
-  />
-);
-
-const sparks = (at: number, position: Vec3, seed: string, color = "#ffd27a", count = 40) => (
-  <Burst
-    key={seed}
-    at={at}
-    position={position}
-    count={count}
-    size={0.15}
-    duration={22}
-    speed={0.2}
-    gravity={-0.012}
-    spread={[0.3, 0.3, 0.3]}
-    color={color}
-    additive
-    opacity={1}
-    seed={seed}
-  />
-);
-
-const jellySplash = (at: number, position: Vec3, seed: string) => (
-  <Burst
-    key={seed}
-    at={at}
-    position={position}
-    count={30}
-    size={0.3}
-    duration={26}
-    speed={0.12}
-    gravity={-0.008}
-    spread={[0.4, 0.4, 0.4]}
-    color="#8ff5b0"
-    opacity={0.85}
-    seed={seed}
-  />
-);
-
 const LevitateAura: React.FC<{ frame: number }> = ({ frame }) => {
   if (frame < BEATS.levitate || frame >= BEATS.swat) return null;
   const on = clamp01((frame - BEATS.levitate) / 10);

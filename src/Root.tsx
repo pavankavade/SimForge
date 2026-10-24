@@ -6,6 +6,7 @@ import { DURATION as DUNGEON_DURATION } from "./episodes/dungeon-trap/timeline";
 import { RollingBoulderThumbnail } from "./episodes/rolling-boulder/Thumbnail";
 import { DURATION as BOULDER_DURATION } from "./episodes/rolling-boulder/timeline";
 import { ToonTest } from "./episodes/toon-test/ToonTest";
+import { CharacterLab, LAB_DURATION } from "./lab/CharacterLab";
 import { DURATION as TOON_TEST_DURATION } from "./episodes/toon-test/timeline";
 
 export const RemotionRoot: React.FC = () => {
@@ -20,6 +21,7 @@ export const RemotionRoot: React.FC = () => {
           fps={episode.config.fps}
           width={episode.config.width}
           height={episode.config.height}
+          defaultProps={{ beats: episode.beats }}
         />
       ))}
       <Composition
@@ -40,6 +42,7 @@ export const RemotionRoot: React.FC = () => {
         height={1920}
         defaultProps={{ variant: 0 }}
       />
+      <Composition id="CharacterLab" component={CharacterLab} durationInFrames={LAB_DURATION} fps={30} width={1080} height={1920} />
       <Composition id="ToonTest" component={ToonTest} durationInFrames={TOON_TEST_DURATION} fps={30} width={1080} height={1920} />
     </>
   );
