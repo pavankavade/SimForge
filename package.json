@@ -1,7 +1,7 @@
 {
-  "name": "three-video-framework",
+  "name": "simforge",
   "version": "1.0.0",
-  "description": "Reusable Remotion + React Three Fiber framework for episodic 3D topic videos",
+  "description": "SimForge: Reusable Remotion + React Three Fiber framework for procedural 3D simulations & vertical video generation",
   "repository": {},
   "license": "UNLICENSED",
   "engines": {

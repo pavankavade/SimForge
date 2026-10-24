@@ -208,76 +208,78 @@ RNG = da.RNG
 
 
 def sfx_roll():
-    """Heavy stone rolling over flagstones: sub rumble with per-turn thumps."""
+    """Heavy stone rolling over flagstones: smooth sub rumble with subtle texture."""
     dur = 4.0
     t = t_axis(dur)
-    x = lp(noise(dur), 90, 4) * 3.2 + lp(noise(dur), 320) * 0.35
-    for i in range(int(dur * 4.2)):
-        place(x, thud(0.22, 70, 40, 0.06, 0.4) * RNG.uniform(0.3, 0.6), i / 4.2 + RNG.uniform(0, 0.04))
-    x += crackle(dur, 30, 0.006, 500) * 0.25
-    fade = int(0.1 * SR)
+    x = lp(noise(dur), 80, 4) * 2.6 + lp(noise(dur), 220) * 0.22
+    for i in range(int(dur * 3.5)):
+        place(x, thud(0.2, 60, 35, 0.05, 0.25) * RNG.uniform(0.2, 0.4), i / 3.5 + RNG.uniform(0, 0.03))
+    x += lp(crackle(dur, 18, 0.003, 300), 900) * 0.1
+    fade = int(0.12 * SR)
     x[:fade] *= np.linspace(0, 1, fade)
     x[-fade:] *= np.linspace(1, 0, fade)
-    return x * (0.85 + 0.15 * np.sin(2 * np.pi * 0.9 * t))
+    return x * (0.88 + 0.12 * np.sin(2 * np.pi * 0.8 * t))
 
 
 def sfx_squash():
-    """Comic flattening: thump plus a wet slap."""
-    out = thud(0.6, 120, 40, 0.09, 1.0)
-    slap = hp(noise(0.12), 600) * decay(0.12, 0.02, 0.001)
-    place(out, slap * 0.8, 0.01)
-    place(out, lp(noise(0.25), 800) * decay(0.25, 0.05) * 0.5, 0.03)
+    """Comic flattening: solid low thump plus a muted slap."""
+    out = thud(0.5, 110, 38, 0.08, 0.8)
+    slap = bp(noise(0.1), 400, 1800) * decay(0.1, 0.02, 0.001)
+    place(out, slap * 0.5, 0.01)
     return out
 
 
 def sfx_snap():
-    """Taut wire snapping."""
-    out = da.sfx_twang() * 0.7
-    place(out, hp(noise(0.05), 2500) * decay(0.05, 0.006, 0.0003) * 1.2, 0.0)
+    """Taut wire snapping: crisp but not ear-piercing."""
+    out = da.sfx_twang() * 0.5
+    place(out, bp(noise(0.04), 1000, 2200) * decay(0.04, 0.005, 0.0003) * 0.7, 0.0)
     return out
 
 
 def sfx_gate():
     """Wooden stop-log dropping away from the boulder."""
     out = silence(0.9)
-    place(out, creak(0.3, 140, 80) * 0.6, 0.0)
-    place(out, thud(0.5, 150, 70, 0.07, 0.7), 0.22)
+    place(out, creak(0.3, 140, 80) * 0.5, 0.0)
+    place(out, thud(0.45, 140, 65, 0.06, 0.6), 0.22)
     return out
 
 
 def sfx_squelch():
-    dur = 0.7
+    """Natural viscous liquid splash without obnoxious 23Hz vibrato."""
+    dur = 0.45
     t = t_axis(dur)
-    f = 180 + 260 * np.sin(np.pi * t / dur)
-    phase = np.cumsum(f) / SR
-    body = bp(np.sin(2 * np.pi * phase) * (1 + 0.6 * np.sin(2 * np.pi * 23 * t)), 120, 1400)
-    x = body * np.sin(np.pi * t / dur) ** 0.6 + lp(noise(dur), 1200) * decay(dur, 0.12) * 0.4
-    return x
+    f = 280 * np.exp(-t / 0.12) + 90
+    phase = 2 * np.pi * np.cumsum(f) / SR
+    body = np.sin(phase) * decay(dur, 0.14)
+    wet = lp(noise(dur), 950) * decay(dur, 0.08) * 0.45
+    return (body * 0.7 + wet) * np.minimum(1, t / 0.005)
 
 
 def sfx_slip():
-    out = whoosh(0.5, 600, 3200, 0.35) * 0.8
-    place(out, sfx_squelch() * 0.7, 0.0)
+    """Subtle foot-loss skid on slime."""
+    dur = 0.4
+    out = whoosh(dur, 200, 1100, 0.3) * 0.45
+    place(out, sfx_squelch() * 0.5, 0.02)
     return out
 
 
 def sfx_crack():
     """Boulder shattering: big impact, splintering crackle and falling rubble."""
-    out = da.sfx_boom() * 0.7
-    place(out, crackle(0.5, 160, 0.008, 400) * 1.2, 0.0)
-    for i in range(16):
-        place(out, thud(0.2, RNG.uniform(140, 260), 80, 0.03, 0.8) * RNG.uniform(0.2, 0.6), 0.25 + RNG.uniform(0, 1.1))
+    out = da.sfx_boom() * 0.6
+    place(out, lp(crackle(0.45, 120, 0.006, 350), 2200) * 0.8, 0.0)
+    for i in range(12):
+        place(out, thud(0.18, RNG.uniform(120, 220), 70, 0.025, 0.6) * RNG.uniform(0.2, 0.5), 0.2 + RNG.uniform(0, 0.9))
     return out
 
 
 def sfx_zap():
-    """Electromagnet energising: rising mains hum plus arcing crackle."""
-    dur = 1.6
+    """Magnetic power surge: low inductive thrum with controlled ionization."""
+    dur = 0.75
     t = t_axis(dur)
-    hum = sum(np.sin(2 * np.pi * f * t) / k for k, f in enumerate((60, 120, 180, 240), start=1))
-    hum = hum * np.minimum(1, t / 0.4) * np.minimum(1, (dur - t) / 0.2)
-    arcs = crackle(dur, 90, 0.002, 2500) * np.minimum(1, t / 0.6)
-    return hum * 0.6 + arcs * 0.7
+    sub = da.sweep_sine(dur, 130, 45, 0.6) * decay(dur, 0.25)
+    arcs = bp(crackle(dur, 45, 0.003, 700), 600, 2000) * np.minimum(1, t / 0.1) * np.exp(-t / 0.4) * 0.35
+    hum = (np.sin(2 * np.pi * 60 * t) + 0.35 * np.sin(2 * np.pi * 120 * t)) * decay(dur, 0.35) * 0.25
+    return sub * 0.6 + arcs + hum
 
 
 def sfx_skewer():
@@ -287,78 +289,104 @@ def sfx_skewer():
 
 
 def sfx_levitate():
-    dur = 1.6
+    """Ethereal, warm magical resonance with soft harmonic shimmer."""
+    dur = 1.4
     t = t_axis(dur)
-    x = sum(np.sin(2 * np.pi * f * t * (1 + 0.5 * t / dur)) for f in (330, 495, 660, 990))
-    x = x * np.minimum(1, t / 0.3) * np.exp(-t / 0.9) * 0.25
-    return x + whoosh(dur, 300, 2400, 0.4) * 0.5
+    notes = [261.6, 392.0, 523.2, 659.3]
+    chord = np.zeros_like(t)
+    for i, freq in enumerate(notes):
+        detune = 1.0 + 0.003 * np.sin(2 * np.pi * (1.2 + i * 0.4) * t)
+        phase = 2 * np.pi * np.cumsum(freq * detune) / SR
+        weight = 1.0 / (1.0 + 0.5 * i)
+        chord += weight * np.sin(phase)
+    env = np.minimum(1, t / 0.12) * np.exp(-t / 0.7)
+    body = lp(chord * env, 1600) * 0.4
+    breath = whoosh(dur, 250, 1400, 0.35) * 0.25
+    return body + breath
 
 
 def sfx_hydraulic():
     """Hiss plus piston clunk."""
-    dur = 1.0
+    dur = 0.85
     t = t_axis(dur)
-    hiss = hp(noise(dur), 2500) * np.exp(-t / 0.3) * 0.6
-    out = hiss + thud(dur, 110, 50, 0.08, 0.8) * 0.9
-    place(out, metal(0.4, 420, 0.1) * 0.4, 0.0)
+    hiss = bp(noise(dur), 800, 2200) * np.exp(-t / 0.25) * 0.45
+    out = hiss + thud(dur, 100, 45, 0.07, 0.7) * 0.8
+    place(out, metal(0.35, 380, 0.08) * 0.3, 0.0)
     return out
 
 
 def sfx_gears():
     dur = 2.0
     out = silence(dur)
-    tick = metal(0.05, 1300, 0.02) * 0.5 + hp(noise(0.05), 1500) * decay(0.05, 0.006) * 0.6
-    for i in range(int(dur * 9)):
-        place(out, tick * (0.5 + 0.5 * (i % 3 == 0)), i / 9)
-    out += lp(creak(dur, 50, 65), 700) * 0.2
+    tick = metal(0.04, 1100, 0.015) * 0.35 + bp(noise(0.04), 900, 1800) * decay(0.04, 0.005) * 0.4
+    for i in range(int(dur * 8)):
+        place(out, tick * (0.5 + 0.5 * (i % 3 == 0)), i / 8)
+    out += lp(creak(dur, 50, 65), 600) * 0.15
     return out
 
 
 def sfx_slam():
     """Steel blast door hitting its sill."""
-    out = metal(2.0, 95, 1.0, (1.0, 2.1, 3.7, 5.3), (1, 0.6, 0.35, 0.2)) * 0.7
-    place(out, thud(1.2, 70, 30, 0.2, 1.0) * 1.3, 0.0)
-    place(out, whoosh(0.4, 200, 1400, 0.8) * 0.4, 0.0)
+    out = metal(1.8, 90, 0.8, (1.0, 2.1, 3.7, 5.3), (1, 0.5, 0.3, 0.15)) * 0.65
+    place(out, thud(1.0, 65, 28, 0.18, 0.9) * 1.1, 0.0)
+    place(out, whoosh(0.35, 180, 1100, 0.7) * 0.3, 0.0)
     return out
 
 
 def sfx_ramp():
     """Floor segments ratcheting up into the half-pipe."""
-    out = silence(1.6)
+    out = silence(1.5)
     for i in range(8):
-        place(out, thud(0.25, 160, 90, 0.04, 0.6) * 0.7, i * 0.13)
-        place(out, metal(0.15, 700 + i * 30, 0.04) * 0.25, i * 0.13)
-    out += lp(creak(1.6, 70, 110), 1200) * 0.25
+        place(out, thud(0.2, 140, 80, 0.035, 0.5) * 0.6, i * 0.13)
+        place(out, metal(0.12, 600 + i * 25, 0.03) * 0.2, i * 0.13)
+    out += lp(creak(1.5, 65, 100), 1000) * 0.18
     return out
 
 
 def sfx_jelly():
     """Big gelatinous splash and wobble."""
-    dur = 1.6
+    dur = 1.4
     t = t_axis(dur)
-    f = 90 + 70 * np.exp(-t * 3) * np.sin(2 * np.pi * 6 * t)
+    f = 85 + 55 * np.exp(-t * 3) * np.sin(2 * np.pi * 5 * t)
     phase = np.cumsum(f) / SR
-    wob = bp(np.sin(2 * np.pi * phase) + 0.4 * np.sin(4 * np.pi * phase), 60, 900) * np.exp(-t / 0.6)
-    splash = lp(noise(dur), 2200) * decay(dur, 0.12) * 0.9
-    out = wob * 1.2 + splash
-    place(out, sfx_squelch() * 0.6, 0.05)
+    wob = bp(np.sin(2 * np.pi * phase) + 0.3 * np.sin(4 * np.pi * phase), 50, 750) * np.exp(-t / 0.55)
+    splash = lp(noise(dur), 1800) * decay(dur, 0.1) * 0.65
+    out = wob * 0.9 + splash
+    place(out, sfx_squelch() * 0.5, 0.04)
     return out
 
 
 def sfx_bubble():
-    out = silence(1.2)
-    for i in range(7):
-        f0 = RNG.uniform(500, 900)
-        d = 0.08
-        blip = np.sin(2 * np.pi * np.cumsum(np.linspace(f0, f0 * 1.8, int(d * SR))) / SR) * decay(d, 0.03)
-        place(out, blip * RNG.uniform(0.3, 0.7), i * 0.15 + RNG.uniform(0, 0.05))
+    """Organic liquid bubbles popping in viscous slime."""
+    dur = 1.0
+    out = silence(dur)
+    for i in range(5):
+        f0 = RNG.uniform(220, 380)
+        d = 0.09
+        blip = da.sweep_sine(d, f0, f0 * 0.65, 0.5) * decay(d, 0.035, 0.003)
+        pop = lp(noise(d), 1200) * decay(d, 0.015) * 0.22
+        place(out, (blip + pop) * RNG.uniform(0.3, 0.55), i * 0.18 + RNG.uniform(0, 0.04))
     return out
 
 
+def sfx_sparkle():
+    """Soft, warm bell chimes with low-pass roll-off."""
+    dur = 1.0
+    out = silence(dur)
+    chimes = [392.0, 493.9, 587.3, 784.0]
+    for i, f in enumerate(chimes):
+        at = i * 0.08 + RNG.uniform(0, 0.02)
+        d = 0.35
+        t = t_axis(d)
+        ping = (np.sin(2 * np.pi * f * t) + 0.3 * np.sin(2 * np.pi * f * 2 * t)) * decay(d, 0.12)
+        place(out, ping * 0.35, at)
+    return lp(out, 1800)
+
+
 def sfx_ding():
-    dur = 1.2
+    dur = 1.0
     t = t_axis(dur)
-    return (np.sin(2 * np.pi * 1320 * t) + 0.4 * np.sin(2 * np.pi * 2640 * t)) * np.exp(-t / 0.35)
+    return (np.sin(2 * np.pi * 1046 * t) + 0.3 * np.sin(2 * np.pi * 2093 * t)) * np.exp(-t / 0.3)
 
 
 EXTRA = {
@@ -379,6 +407,7 @@ EXTRA = {
     "jelly": sfx_jelly,
     "bubble": sfx_bubble,
     "ding": sfx_ding,
+    "sparkle": sfx_sparkle,
 }
 
 

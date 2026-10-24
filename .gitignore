@@ -18,6 +18,11 @@ Thumbs.db
 # Remotion renders and output media
 out/
 
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
 # TypeScript build info
 *.tsbuildinfo
 

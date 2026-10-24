@@ -1,0 +1,60 @@
+{
+  "durationFrames": 138,
+  "lines": {
+    "title": [
+      {
+        "word": "Level",
+        "start": 7,
+        "end": 14
+      },
+      {
+        "word": "one,",
+        "start": 14,
+        "end": 24
+      },
+      {
+        "word": "the",
+        "start": 29,
+        "end": 32
+      },
+      {
+        "word": "iron",
+        "start": 34,
+        "end": 43
+      },
+      {
+        "word": "cannonball.",
+        "start": 44,
+        "end": 61
+      }
+    ],
+    "heavy": [
+      {
+        "word": "Heavy.",
+        "start": 67,
+        "end": 75
+      }
+    ],
+    "simple": [
+      {
+        "word": "Simple.",
+        "start": 80,
+        "end": 91
+      }
+    ],
+    "brutal": [
+      {
+        "word": "Brutal.",
+        "start": 96,
+        "end": 106
+      }
+    ],
+    "yelp": [
+      {
+        "word": "Ow!",
+        "start": 115,
+        "end": 125
+      }
+    ]
+  }
+}

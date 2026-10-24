@@ -1,12 +1,12 @@
-# Three Video Framework
+# SimForge
 
-> Modular Remotion + React Three Fiber framework for creating episodic, 3D animated short-form vertical videos (9:16, 1080x1920 @ 30fps).
+> Modular Remotion + React Three Fiber framework for creating episodic, 3D animated procedural simulations and short-form vertical videos (9:16, 1080x1920 @ 30fps).
 
 ---
 
 ## Overview
 
-`three-video-framework` provides a structured workflow for generating high-fidelity 3D vertical explainer videos. It combines **Remotion** (React-based video rendering engine) with **Three.js** and **React Three Fiber** (`@react-three/fiber`), enabling code-driven 3D animation, dynamic camera direction, procedural environments, audio integration, and synchronized word-level captions.
+`SimForge` provides a structured workflow for generating high-fidelity 3D vertical simulation and explainer videos. It combines **Remotion** (React-based video rendering engine) with **Three.js** and **React Three Fiber** (`@react-three/fiber`), enabling code-driven 3D animation, dynamic camera direction, procedural environments, audio integration, and synchronized word-level captions.
 
 ### Highlights
 
@@ -22,7 +22,7 @@
 ## Architecture
 
 ```
-three-video-framework/
+simforge/
 ├── scripts/
 │   └── new-episode.mjs             # Scaffolding CLI for new episodes
 ├── templates/

@@ -164,7 +164,7 @@ const EndCard: React.FC<{ frame: number }> = ({ frame }) => {
     ...clamp,
     easing: Easing.out(Easing.cubic),
   });
-  const slam = interpolate(age, [0, 5], [2.6, 1], {
+  const slam = interpolate(age, [0, 5], [1.75, 1], {
     ...clamp,
     easing: Easing.in(Easing.cubic),
   });
