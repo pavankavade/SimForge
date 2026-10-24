@@ -7,6 +7,7 @@ import { RollingBoulderThumbnail } from "./episodes/rolling-boulder/Thumbnail";
 import { DURATION as BOULDER_DURATION } from "./episodes/rolling-boulder/timeline";
 import { ToonTest } from "./episodes/toon-test/ToonTest";
 import { CharacterLab, LAB_DURATION } from "./lab/CharacterLab";
+import { ProfileAvatar } from "./lab/ProfileAvatar";
 import { DURATION as TOON_TEST_DURATION } from "./episodes/toon-test/timeline";
 
 export const RemotionRoot: React.FC = () => {
@@ -43,6 +44,7 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ variant: 0 }}
       />
       <Composition id="CharacterLab" component={CharacterLab} durationInFrames={LAB_DURATION} fps={30} width={1080} height={1920} />
+      <Composition id="ProfileAvatar" component={ProfileAvatar} durationInFrames={30} fps={30} width={1024} height={1024} defaultProps={{ classType: "paladin" }} />
       <Composition id="ToonTest" component={ToonTest} durationInFrames={TOON_TEST_DURATION} fps={30} width={1080} height={1920} />
     </>
   );

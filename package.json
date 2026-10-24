@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "SimForge: Reusable Remotion + React Three Fiber framework for procedural 3D simulations & vertical video generation",
   "repository": {},
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": "^20.19.0 || ^22.13.0 || >=24"
   },

@@ -1,0 +1,70 @@
+SimForge Dual License
+=====================
+
+Copyright (c) 2026 SimForge (@SimForgeYT).
+
+This repository uses a dual-licensing structure common in game development and creative tech:
+the underlying simulation engine and developer tools are open-source under the MIT License,
+while the creative content, characters, episodes, storylines, and brand identity remain
+fully protected.
+
+--------------------------------------------------------------------------------
+1. Engine, Framework & Tooling (MIT License)
+--------------------------------------------------------------------------------
+
+The core procedural engine, shared kit, development lab, and developer scripts located in:
+  - `src/engine/`
+  - `src/kit/`
+  - `src/lab/`
+  - `scripts/` (general tooling CLI scripts)
+
+are licensed under the MIT License:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+2. Creative Content, Characters, Episodes & Brand Assets (All Rights Reserved)
+--------------------------------------------------------------------------------
+
+All original creative intellectual property, artistic works, storytelling scripts,
+character models, and channel branding located in:
+  - `src/episodes/` (storyline scripts, scene staging, kinematics, timing data)
+  - `src/artifacts/` (character designs, adventurer rigs, diorama models, prop geometry)
+  - `media/` (channel branding, logos, profile pictures, banners, demo videos)
+  - `public/episodes/` (voiceover narration, audio stems, SFX, music)
+  - `out/` (rendered videos, thumbnails, review contact sheets)
+  - The name "SimForge", the handle "@SimForgeYT", and associated channel trademarks
+
+are proprietary works. ALL RIGHTS RESERVED.
+
+Without express written permission from the copyright owner, you MAY NOT:
+  1. Re-upload, distribute, broadcast, or monetize the generated video files, audio tracks,
+     or storyline scripts on YouTube, TikTok, Instagram, or any other media platform.
+  2. Use the character models, visual identities, or channel branding for commercial
+     content creation or automated content generation channels.
+  3. Claim ownership of or redistribute the creative storytelling assets as your own.
+
+--------------------------------------------------------------------------------
+3. Third-Party Licenses & Remotion
+--------------------------------------------------------------------------------
+
+This project incorporates third-party libraries, notably Three.js (MIT) and Remotion.
+Use of the Remotion video engine is subject to Remotion's license terms. Commercial
+monetization of Remotion video output may require a commercial license from Remotion
+(see https://remotion.dev/pricing).
