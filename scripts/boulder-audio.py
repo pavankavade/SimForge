@@ -4,29 +4,40 @@
   python scripts/boulder-audio.py narration  # only re-voice the narration
 
 Outputs:
-  public/episodes/rolling-boulder/narration_v2.mp3  voiced line by line with
-      edge-tts, laid end to end (never overlapping), compressed and
-      loudness-normalised to about -16 LUFS
-  public/episodes/rolling-boulder/score_v2.mp3      series score, -27 LUFS
+  public/episodes/rolling-boulder/narration_v3.mp3  voiced line by line with
+      Gemini API custom TTS (voice_ax8s6hqwv0of), laid end to end,
+      compressed and loudness-normalised to about -16 LUFS
+  public/episodes/rolling-boulder/score_v3.mp3      series score, -27 LUFS
   public/episodes/rolling-boulder/sfx/*.wav         procedural sound effects
   src/episodes/rolling-boulder/data/wordTimestamps.json  subtitle segments
   src/episodes/rolling-boulder/data/narrationCues.json   per-line word frames
       that timeline.ts uses to lock the animation to the voice
 
-Every word frame comes from edge-tts WordBoundary events, so subtitles and
+Every word frame comes from audio transcription word timestamps, so subtitles and
 action beats follow the real voice. Requires ffmpeg on PATH plus numpy,
-scipy and edge-tts.
+scipy and google-genai.
 """
 
 import asyncio
+import base64
 import importlib.util
 import json
+import os
 import re
 import sys
 import time
+import urllib.request
+import wave
 from pathlib import Path
 
+from dotenv import load_dotenv
 import numpy as np
+
+load_dotenv()
+
+SLUG = "rolling-boulder"
+VERSION = 3
+VOICE_ID = "voice_ax8s6hqwv0of"
 
 ROOT = Path(__file__).resolve().parent.parent
 EP = ROOT / "public" / "episodes" / "rolling-boulder"
@@ -63,6 +74,34 @@ LINES = [
     ("l5c", "Congratulations, your hallway is now unbeatable.", 1.6),
 ]
 
+WORD_FIXES = {
+    "l1a": [(["then"], "and")],
+    "l4a": [(["gear", "driven"], "gear-driven")],
+    "l5a": [(["half", "pipe"], "half-pipe")],
+}
+
+
+def _bare(w):
+    return re.sub(r"[^\w'-]", "", w).lower()
+
+
+def fix_words(line_id, words):
+    out = list(words)
+    for old, new in WORD_FIXES.get(line_id, []):
+        n = len(old)
+        for i in range(len(out) - n + 1):
+            if [_bare(x[0]) for x in out[i:i + n]] == [_bare(o) for o in old]:
+                parts = new.split()
+                s, e = out[i][1], out[i + n - 1][2]
+                if len(parts) == n:
+                    rep = [[p, out[i + k][1], out[i + k][2]] for k, p in enumerate(parts)]
+                else:
+                    step = (e - s) / len(parts)
+                    rep = [[p, s + k * step, s + (k + 1) * step] for k, p in enumerate(parts)]
+                out[i:i + n] = rep
+                break
+    return out
+
 
 # Narration ---------------------------------------------------------------
 
@@ -92,6 +131,98 @@ def tts_with_retry(text, dst):
             print("  tts retry", attempt, exc)
         time.sleep(3)
     raise SystemExit("edge-tts failed")
+
+
+def tts_gemini_line(text, dst_wav):
+    """Synthesizes text using Gemini API with custom voice, then gets word timestamps."""
+    api_key = os.getenv("GEMINI_API_KEY")
+    json_cache = dst_wav.with_suffix(".json")
+    if dst_wav.exists() and dst_wav.stat().st_size > 1000 and json_cache.exists():
+        return json.loads(json_cache.read_text(encoding="utf-8"))
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY environment variable not set.")
+
+    if dst_wav.exists() and dst_wav.stat().st_size > 1000:
+        audio_bytes = dst_wav.read_bytes()
+    else:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent?key={api_key}"
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": f"## Transcript:\n{text}\n"}
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {
+                    "voiceConfig": {
+                        "voice": VOICE_ID
+                    }
+                }
+            }
+        }
+
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}
+        )
+
+        for attempt in range(4):
+            try:
+                with urllib.request.urlopen(req) as resp:
+                    res = json.loads(resp.read().decode())
+                part = res["candidates"][0]["content"]["parts"][0]
+                data_b64 = part["inlineData"]["data"]
+                audio_bytes = base64.b64decode(data_b64)
+                dst_wav.write_bytes(audio_bytes)
+                break
+            except Exception as e:
+                if attempt == 3:
+                    raise
+                print(f"TTS retry {attempt + 1}: {e}")
+                time.sleep(2)
+
+    if json_cache.exists():
+        return json.loads(json_cache.read_text(encoding="utf-8"))
+
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=api_key)
+    words = []
+    try:
+        t_resp = client.models.generate_content(
+            model="gemini-3.5-transcribe",
+            contents=[
+                types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav"),
+            ],
+            config=types.GenerateContentConfig(
+                audio_transcription_config=types.AudioTranscriptionConfig(
+                    word_timestamp=True
+                )
+            )
+        )
+        t_part = t_resp.candidates[0].content.parts[0]
+        if hasattr(t_part, "audio_transcription") and t_part.audio_transcription and t_part.audio_transcription.words:
+            for w in t_part.audio_transcription.words:
+                s = float(w.start_offset.rstrip("s"))
+                e = float(w.end_offset.rstrip("s"))
+                words.append([w.word, s, e])
+    except Exception as e:
+        print(f"Warning: transcription fallback for line: {e}")
+
+    if not words:
+        tokens = text.split()
+        total_sec = len(audio_bytes) / (24000 * 2)
+        w_dur = total_sec / max(1, len(tokens))
+        for i, token in enumerate(tokens):
+            words.append([token, i * w_dur, (i + 1) * w_dur])
+
+    json_cache.write_text(json.dumps(words), encoding="utf-8")
+    return words
 
 
 def decode_samples(path):
@@ -134,18 +265,23 @@ def build_narration():
     track = np.zeros(int(LEAD_IN * SR))
     cues = {}
     segments = []
+
+    print(f"Building narration for {len(LINES)} lines (v{VERSION})...")
     for line_id, text, pause in LINES:
-        mp3 = TMP / f"{line_id}.mp3"
-        words = tts_with_retry(text, mp3)
-        x = decode_samples(mp3)
-        a, b = trim_silence(x)
+        wav_file = TMP / f"{line_id}.wav"
+        words = fix_words(line_id, tts_gemini_line(text, wav_file))
+        x = decode_samples(wav_file)
+
+        first_word_s = words[0][1]
+        last_word_e = words[-1][2]
+        a = max(0, int((first_word_s - 0.04) * SR))
+        b = min(len(x), int((last_word_e + 0.05) * SR))
         x = x[a:b]
         offset = len(track) / SR - a / SR
         track = np.concatenate([track, x, np.zeros(int(pause * SR))])
 
-        labelled = attach_punctuation(text, words)
         wf = []
-        for label, s, e in labelled:
+        for label, s, e in attach_punctuation(text, words):
             sf = round((offset + s) * FPS)
             ef = max(sf + 1, round((offset + e) * FPS))
             wf.append({"word": label, "startFrame": sf, "endFrame": ef})
@@ -156,7 +292,7 @@ def build_narration():
         end = wf[-1]["endFrame"]
         cues[line_id] = {"startFrame": start, "endFrame": end, "words": wf}
         segments.append({"startFrame": start, "endFrame": end, "text": text, "words": wf})
-        print(f"{line_id}: frames {start}-{end}  ({text[:48]}...)")
+        print(f"{line_id}: frames {start}-{end} (dur: {(end-start)/FPS:.2f}s) ({text[:48]}...)")
 
     total = len(track) / SR
     print(f"narration length {total:.2f}s = {round(total * FPS)} frames")
@@ -171,19 +307,20 @@ def build_narration():
             str(comp),
         ]
     )
-    da.loudnorm(comp, EP / "narration_v2.mp3", -16, tp=-1.5)
-    print("narration_v2.mp3", da.measure_lufs(EP / "narration_v2.mp3"), "LUFS")
+    EP.mkdir(parents=True, exist_ok=True)
+    out = EP / f"narration_v{VERSION}.mp3"
+    da.loudnorm(comp, out, -16, tp=-1.5)
+    print(f"{out.name} -> {da.measure_lufs(out):.1f} LUFS")
 
     DATA.mkdir(parents=True, exist_ok=True)
     (DATA / "wordTimestamps.json").write_text(json.dumps(segments, indent=2))
     (DATA / "narrationCues.json").write_text(
         json.dumps({"durationFrames": round(total * FPS), "lines": cues}, indent=2)
     )
+    print(f"Saved cues to {DATA / 'narrationCues.json'}")
 
 
 def build_score():
-    # Same series theme as Ep1, re-normalised so it sits under the voice at
-    # volume 1 (do not turn it down in config instead).
     looped = TMP / "score_loop.wav"
     src = ROOT / "public" / "episodes" / "dungeon-trap" / "score.mp3"
     da.run(
@@ -194,8 +331,9 @@ def build_score():
             str(looped),
         ]
     )
-    da.loudnorm(looped, EP / "score_v2.mp3", -27, tp=-6)
-    print("score_v2.mp3", da.measure_lufs(EP / "score_v2.mp3"), "LUFS")
+    out = EP / f"score_v{VERSION}.mp3"
+    da.loudnorm(looped, out, -27, tp=-6)
+    print(f"{out.name} -> {da.measure_lufs(out):.1f} LUFS")
 
 
 # Extra SFX ------------------------------------------------------------------
@@ -389,7 +527,18 @@ def sfx_ding():
     return (np.sin(2 * np.pi * 1046 * t) + 0.3 * np.sin(2 * np.pi * 2093 * t)) * np.exp(-t / 0.3)
 
 
+def sfx_pop():
+    """Warm, soft CC0 interface pop for stage badges (Kenney Interface Sounds CC0)."""
+    cc0_path = ROOT / "src" / "episodes" / "rolling-boulder" / "assets" / "pop_cc0.wav"
+    if cc0_path.exists():
+        with wave.open(str(cc0_path), "rb") as w:
+            raw = w.readframes(w.getnframes())
+            return np.frombuffer(raw, dtype=np.int16).astype(np.float64) / 32768.0
+    return da.sfx_pop()
+
+
 EXTRA = {
+    "pop": sfx_pop,
     "roll": sfx_roll,
     "squash": sfx_squash,
     "snap": sfx_snap,

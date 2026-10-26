@@ -1,1127 +1,1127 @@
 [
   {
-    "startFrame": 19,
-    "endFrame": 193,
+    "startFrame": 21,
+    "endFrame": 252,
     "text": "If you rig a simple boulder to a tripwire, a clumsy goblin will walk right into it, and get flattened.",
     "words": [
       {
         "word": "If",
-        "startFrame": 19,
-        "endFrame": 22
+        "startFrame": 21,
+        "endFrame": 24
       },
       {
         "word": "you",
-        "startFrame": 22,
-        "endFrame": 26
+        "startFrame": 24,
+        "endFrame": 27
       },
       {
         "word": "rig",
-        "startFrame": 26,
-        "endFrame": 32
+        "startFrame": 27,
+        "endFrame": 33
       },
       {
         "word": "a",
-        "startFrame": 32,
-        "endFrame": 34
+        "startFrame": 33,
+        "endFrame": 36
       },
       {
         "word": "simple",
-        "startFrame": 34,
-        "endFrame": 46
+        "startFrame": 36,
+        "endFrame": 54
       },
       {
         "word": "boulder",
-        "startFrame": 46,
-        "endFrame": 58
+        "startFrame": 54,
+        "endFrame": 72
       },
       {
         "word": "to",
-        "startFrame": 58,
-        "endFrame": 61
+        "startFrame": 72,
+        "endFrame": 78
       },
       {
         "word": "a",
-        "startFrame": 61,
-        "endFrame": 63
+        "startFrame": 78,
+        "endFrame": 81
       },
       {
         "word": "tripwire,",
-        "startFrame": 63,
-        "endFrame": 83
+        "startFrame": 81,
+        "endFrame": 105
       },
       {
         "word": "a",
-        "startFrame": 94,
-        "endFrame": 95
+        "startFrame": 114,
+        "endFrame": 115
       },
       {
         "word": "clumsy",
-        "startFrame": 96,
-        "endFrame": 110
+        "startFrame": 114,
+        "endFrame": 129
       },
       {
         "word": "goblin",
-        "startFrame": 110,
-        "endFrame": 122
+        "startFrame": 129,
+        "endFrame": 147
       },
       {
         "word": "will",
-        "startFrame": 123,
-        "endFrame": 127
+        "startFrame": 147,
+        "endFrame": 150
       },
       {
         "word": "walk",
-        "startFrame": 128,
-        "endFrame": 138
+        "startFrame": 150,
+        "endFrame": 159
       },
       {
         "word": "right",
-        "startFrame": 138,
-        "endFrame": 144
-      },
-      {
-        "word": "into",
-        "startFrame": 144,
-        "endFrame": 153
-      },
-      {
-        "word": "it,",
-        "startFrame": 153,
-        "endFrame": 157
-      },
-      {
-        "word": "and",
-        "startFrame": 170,
+        "startFrame": 159,
         "endFrame": 171
       },
       {
+        "word": "into",
+        "startFrame": 171,
+        "endFrame": 180
+      },
+      {
+        "word": "it,",
+        "startFrame": 180,
+        "endFrame": 186
+      },
+      {
+        "word": "and",
+        "startFrame": 225,
+        "endFrame": 228
+      },
+      {
         "word": "get",
-        "startFrame": 172,
-        "endFrame": 177
+        "startFrame": 228,
+        "endFrame": 234
       },
       {
         "word": "flattened.",
-        "startFrame": 177,
-        "endFrame": 193
+        "startFrame": 234,
+        "endFrame": 252
       }
     ]
   },
   {
-    "startFrame": 222,
-    "endFrame": 362,
+    "startFrame": 282,
+    "endFrame": 435,
     "text": "However, any sharp-eyed Rogue will snap the wire early, and leap right over it.",
     "words": [
       {
         "word": "However,",
-        "startFrame": 222,
-        "endFrame": 236
+        "startFrame": 282,
+        "endFrame": 300
       },
       {
         "word": "any",
-        "startFrame": 248,
-        "endFrame": 252
+        "startFrame": 306,
+        "endFrame": 312
       },
       {
         "word": "sharp-eyed",
-        "startFrame": 252,
-        "endFrame": 268
+        "startFrame": 312,
+        "endFrame": 336
       },
       {
         "word": "Rogue",
-        "startFrame": 268,
-        "endFrame": 276
+        "startFrame": 336,
+        "endFrame": 351
       },
       {
         "word": "will",
-        "startFrame": 276,
-        "endFrame": 280
-      },
-      {
-        "word": "snap",
-        "startFrame": 280,
-        "endFrame": 292
-      },
-      {
-        "word": "the",
-        "startFrame": 293,
-        "endFrame": 296
-      },
-      {
-        "word": "wire",
-        "startFrame": 296,
-        "endFrame": 307
-      },
-      {
-        "word": "early,",
-        "startFrame": 307,
-        "endFrame": 321
-      },
-      {
-        "word": "and",
-        "startFrame": 332,
-        "endFrame": 337
-      },
-      {
-        "word": "leap",
-        "startFrame": 337,
-        "endFrame": 343
-      },
-      {
-        "word": "right",
-        "startFrame": 343,
-        "endFrame": 349
-      },
-      {
-        "word": "over",
-        "startFrame": 349,
+        "startFrame": 351,
         "endFrame": 357
       },
       {
-        "word": "it.",
+        "word": "snap",
         "startFrame": 357,
-        "endFrame": 362
+        "endFrame": 372
+      },
+      {
+        "word": "the",
+        "startFrame": 372,
+        "endFrame": 375
+      },
+      {
+        "word": "wire",
+        "startFrame": 375,
+        "endFrame": 387
+      },
+      {
+        "word": "early,",
+        "startFrame": 387,
+        "endFrame": 399
+      },
+      {
+        "word": "and",
+        "startFrame": 405,
+        "endFrame": 408
+      },
+      {
+        "word": "leap",
+        "startFrame": 408,
+        "endFrame": 417
+      },
+      {
+        "word": "right",
+        "startFrame": 417,
+        "endFrame": 423
+      },
+      {
+        "word": "over",
+        "startFrame": 423,
+        "endFrame": 429
+      },
+      {
+        "word": "it.",
+        "startFrame": 429,
+        "endFrame": 435
       }
     ]
   },
   {
-    "startFrame": 394,
-    "endFrame": 555,
+    "startFrame": 467,
+    "endFrame": 665,
     "text": "So you upgrade to a boulder as wide as the hallway, and pour slippery slime right where Rogues take off.",
     "words": [
       {
         "word": "So",
-        "startFrame": 394,
-        "endFrame": 396
+        "startFrame": 467,
+        "endFrame": 470
       },
       {
         "word": "you",
-        "startFrame": 396,
-        "endFrame": 400
+        "startFrame": 470,
+        "endFrame": 476
       },
       {
         "word": "upgrade",
-        "startFrame": 400,
-        "endFrame": 411
+        "startFrame": 476,
+        "endFrame": 491
       },
       {
         "word": "to",
-        "startFrame": 411,
-        "endFrame": 413
+        "startFrame": 491,
+        "endFrame": 494
       },
       {
         "word": "a",
-        "startFrame": 413,
-        "endFrame": 415
+        "startFrame": 494,
+        "endFrame": 497
       },
       {
         "word": "boulder",
-        "startFrame": 416,
-        "endFrame": 428
+        "startFrame": 497,
+        "endFrame": 512
       },
       {
         "word": "as",
-        "startFrame": 428,
-        "endFrame": 431
+        "startFrame": 515,
+        "endFrame": 521
       },
       {
         "word": "wide",
-        "startFrame": 431,
-        "endFrame": 441
+        "startFrame": 521,
+        "endFrame": 539
       },
       {
         "word": "as",
-        "startFrame": 441,
-        "endFrame": 443
+        "startFrame": 539,
+        "endFrame": 542
       },
       {
         "word": "the",
-        "startFrame": 443,
-        "endFrame": 445
+        "startFrame": 542,
+        "endFrame": 545
       },
       {
         "word": "hallway,",
-        "startFrame": 445,
-        "endFrame": 462
+        "startFrame": 545,
+        "endFrame": 569
       },
       {
         "word": "and",
-        "startFrame": 474,
-        "endFrame": 478
+        "startFrame": 572,
+        "endFrame": 575
       },
       {
         "word": "pour",
-        "startFrame": 478,
-        "endFrame": 485
+        "startFrame": 575,
+        "endFrame": 584
       },
       {
         "word": "slippery",
-        "startFrame": 485,
-        "endFrame": 498
+        "startFrame": 584,
+        "endFrame": 599
       },
       {
         "word": "slime",
-        "startFrame": 498,
-        "endFrame": 511
+        "startFrame": 599,
+        "endFrame": 617
       },
       {
         "word": "right",
-        "startFrame": 519,
-        "endFrame": 524
+        "startFrame": 617,
+        "endFrame": 623
       },
       {
         "word": "where",
-        "startFrame": 525,
-        "endFrame": 530
+        "startFrame": 623,
+        "endFrame": 629
       },
       {
         "word": "Rogues",
-        "startFrame": 530,
-        "endFrame": 538
+        "startFrame": 629,
+        "endFrame": 644
       },
       {
         "word": "take",
-        "startFrame": 538,
-        "endFrame": 544
+        "startFrame": 644,
+        "endFrame": 653
       },
       {
         "word": "off.",
-        "startFrame": 544,
-        "endFrame": 555
+        "startFrame": 653,
+        "endFrame": 665
       }
     ]
   },
   {
-    "startFrame": 568,
-    "endFrame": 645,
+    "startFrame": 679,
+    "endFrame": 769,
     "text": "Now he slips backward, straight into its path.",
     "words": [
       {
         "word": "Now",
-        "startFrame": 568,
-        "endFrame": 571
+        "startFrame": 679,
+        "endFrame": 688
       },
       {
         "word": "he",
-        "startFrame": 571,
-        "endFrame": 574
+        "startFrame": 688,
+        "endFrame": 694
       },
       {
         "word": "slips",
-        "startFrame": 575,
-        "endFrame": 583
+        "startFrame": 694,
+        "endFrame": 706
       },
       {
         "word": "backward,",
-        "startFrame": 583,
-        "endFrame": 598
+        "startFrame": 706,
+        "endFrame": 724
       },
       {
         "word": "straight",
-        "startFrame": 606,
-        "endFrame": 620
+        "startFrame": 727,
+        "endFrame": 745
       },
       {
         "word": "into",
-        "startFrame": 620,
-        "endFrame": 627
+        "startFrame": 745,
+        "endFrame": 751
       },
       {
         "word": "its",
-        "startFrame": 627,
-        "endFrame": 630
+        "startFrame": 751,
+        "endFrame": 757
       },
       {
         "word": "path.",
-        "startFrame": 630,
-        "endFrame": 645
+        "startFrame": 757,
+        "endFrame": 769
       }
     ]
   },
   {
-    "startFrame": 674,
-    "endFrame": 880,
+    "startFrame": 798,
+    "endFrame": 990,
     "text": "But a heavily armored Paladin just stomps through the slime, braces himself, and shatters the boulder with his warhammer.",
     "words": [
       {
         "word": "But",
-        "startFrame": 674,
-        "endFrame": 677
+        "startFrame": 798,
+        "endFrame": 799
       },
       {
         "word": "a",
-        "startFrame": 677,
-        "endFrame": 678
+        "startFrame": 798,
+        "endFrame": 801
       },
       {
         "word": "heavily",
-        "startFrame": 678,
-        "endFrame": 692
+        "startFrame": 801,
+        "endFrame": 813
       },
       {
         "word": "armored",
-        "startFrame": 692,
-        "endFrame": 702
+        "startFrame": 813,
+        "endFrame": 825
       },
       {
         "word": "Paladin",
-        "startFrame": 702,
-        "endFrame": 717
+        "startFrame": 825,
+        "endFrame": 840
       },
       {
         "word": "just",
-        "startFrame": 723,
-        "endFrame": 729
+        "startFrame": 840,
+        "endFrame": 852
       },
       {
         "word": "stomps",
-        "startFrame": 729,
-        "endFrame": 746
+        "startFrame": 852,
+        "endFrame": 864
       },
       {
         "word": "through",
-        "startFrame": 747,
-        "endFrame": 752
+        "startFrame": 864,
+        "endFrame": 873
       },
       {
         "word": "the",
-        "startFrame": 752,
-        "endFrame": 755
+        "startFrame": 873,
+        "endFrame": 876
       },
       {
         "word": "slime,",
-        "startFrame": 755,
-        "endFrame": 770
+        "startFrame": 876,
+        "endFrame": 894
       },
       {
         "word": "braces",
-        "startFrame": 783,
-        "endFrame": 796
+        "startFrame": 900,
+        "endFrame": 912
       },
       {
         "word": "himself,",
-        "startFrame": 796,
-        "endFrame": 815
+        "startFrame": 912,
+        "endFrame": 930
       },
       {
         "word": "and",
-        "startFrame": 828,
-        "endFrame": 829
+        "startFrame": 933,
+        "endFrame": 939
       },
       {
         "word": "shatters",
-        "startFrame": 829,
-        "endFrame": 843
+        "startFrame": 939,
+        "endFrame": 954
       },
       {
         "word": "the",
-        "startFrame": 843,
-        "endFrame": 846
+        "startFrame": 954,
+        "endFrame": 957
       },
       {
         "word": "boulder",
-        "startFrame": 847,
-        "endFrame": 857
+        "startFrame": 957,
+        "endFrame": 966
       },
       {
         "word": "with",
-        "startFrame": 857,
-        "endFrame": 860
+        "startFrame": 966,
+        "endFrame": 972
       },
       {
         "word": "his",
-        "startFrame": 860,
-        "endFrame": 863
+        "startFrame": 972,
+        "endFrame": 975
       },
       {
         "word": "warhammer.",
-        "startFrame": 863,
-        "endFrame": 880
+        "startFrame": 975,
+        "endFrame": 990
       }
     ]
   },
   {
-    "startFrame": 913,
-    "endFrame": 1060,
+    "startFrame": 1023,
+    "endFrame": 1194,
     "text": "So you switch to a solid iron ball covered in spikes, and bury an electromagnet under the floor.",
     "words": [
       {
         "word": "So",
-        "startFrame": 913,
-        "endFrame": 915
+        "startFrame": 1023,
+        "endFrame": 1032
       },
       {
         "word": "you",
-        "startFrame": 915,
-        "endFrame": 919
+        "startFrame": 1032,
+        "endFrame": 1035
       },
       {
         "word": "switch",
-        "startFrame": 919,
-        "endFrame": 927
+        "startFrame": 1035,
+        "endFrame": 1044
       },
       {
         "word": "to",
-        "startFrame": 927,
-        "endFrame": 931
-      },
-      {
-        "word": "a",
-        "startFrame": 931,
-        "endFrame": 933
-      },
-      {
-        "word": "solid",
-        "startFrame": 933,
-        "endFrame": 944
-      },
-      {
-        "word": "iron",
-        "startFrame": 944,
-        "endFrame": 952
-      },
-      {
-        "word": "ball",
-        "startFrame": 952,
-        "endFrame": 962
-      },
-      {
-        "word": "covered",
-        "startFrame": 963,
-        "endFrame": 971
-      },
-      {
-        "word": "in",
-        "startFrame": 971,
-        "endFrame": 973
-      },
-      {
-        "word": "spikes,",
-        "startFrame": 974,
-        "endFrame": 994
-      },
-      {
-        "word": "and",
-        "startFrame": 1002,
-        "endFrame": 1006
-      },
-      {
-        "word": "bury",
-        "startFrame": 1006,
-        "endFrame": 1016
-      },
-      {
-        "word": "an",
-        "startFrame": 1016,
-        "endFrame": 1018
-      },
-      {
-        "word": "electromagnet",
-        "startFrame": 1018,
-        "endFrame": 1041
-      },
-      {
-        "word": "under",
-        "startFrame": 1041,
-        "endFrame": 1045
-      },
-      {
-        "word": "the",
-        "startFrame": 1046,
+        "startFrame": 1044,
         "endFrame": 1047
       },
       {
+        "word": "a",
+        "startFrame": 1047,
+        "endFrame": 1048
+      },
+      {
+        "word": "solid",
+        "startFrame": 1047,
+        "endFrame": 1062
+      },
+      {
+        "word": "iron",
+        "startFrame": 1062,
+        "endFrame": 1074
+      },
+      {
+        "word": "ball",
+        "startFrame": 1074,
+        "endFrame": 1083
+      },
+      {
+        "word": "covered",
+        "startFrame": 1083,
+        "endFrame": 1092
+      },
+      {
+        "word": "in",
+        "startFrame": 1092,
+        "endFrame": 1095
+      },
+      {
+        "word": "spikes,",
+        "startFrame": 1095,
+        "endFrame": 1116
+      },
+      {
+        "word": "and",
+        "startFrame": 1119,
+        "endFrame": 1128
+      },
+      {
+        "word": "bury",
+        "startFrame": 1128,
+        "endFrame": 1137
+      },
+      {
+        "word": "an",
+        "startFrame": 1137,
+        "endFrame": 1140
+      },
+      {
+        "word": "electromagnet",
+        "startFrame": 1140,
+        "endFrame": 1170
+      },
+      {
+        "word": "under",
+        "startFrame": 1170,
+        "endFrame": 1173
+      },
+      {
+        "word": "the",
+        "startFrame": 1173,
+        "endFrame": 1176
+      },
+      {
         "word": "floor.",
-        "startFrame": 1048,
-        "endFrame": 1060
+        "startFrame": 1176,
+        "endFrame": 1194
       }
     ]
   },
   {
-    "startFrame": 1073,
-    "endFrame": 1209,
+    "startFrame": 1207,
+    "endFrame": 1339,
     "text": "The moment the Paladin braces, it yanks his armor straight into the spikes.",
     "words": [
       {
         "word": "The",
-        "startFrame": 1073,
-        "endFrame": 1074
+        "startFrame": 1207,
+        "endFrame": 1210
       },
       {
         "word": "moment",
-        "startFrame": 1074,
-        "endFrame": 1087
+        "startFrame": 1210,
+        "endFrame": 1222
       },
       {
         "word": "the",
-        "startFrame": 1087,
-        "endFrame": 1090
+        "startFrame": 1222,
+        "endFrame": 1225
       },
       {
         "word": "Paladin",
-        "startFrame": 1090,
-        "endFrame": 1104
+        "startFrame": 1225,
+        "endFrame": 1240
       },
       {
         "word": "braces,",
-        "startFrame": 1104,
-        "endFrame": 1125
+        "startFrame": 1240,
+        "endFrame": 1264
       },
       {
         "word": "it",
-        "startFrame": 1136,
-        "endFrame": 1139
+        "startFrame": 1267,
+        "endFrame": 1273
       },
       {
         "word": "yanks",
-        "startFrame": 1139,
-        "endFrame": 1149
+        "startFrame": 1273,
+        "endFrame": 1285
       },
       {
         "word": "his",
-        "startFrame": 1149,
-        "endFrame": 1152
+        "startFrame": 1285,
+        "endFrame": 1291
       },
       {
         "word": "armor",
-        "startFrame": 1153,
-        "endFrame": 1162
+        "startFrame": 1291,
+        "endFrame": 1303
       },
       {
         "word": "straight",
-        "startFrame": 1163,
-        "endFrame": 1180
+        "startFrame": 1303,
+        "endFrame": 1318
       },
       {
         "word": "into",
-        "startFrame": 1183,
-        "endFrame": 1187
+        "startFrame": 1318,
+        "endFrame": 1321
       },
       {
         "word": "the",
-        "startFrame": 1187,
-        "endFrame": 1190
+        "startFrame": 1321,
+        "endFrame": 1324
       },
       {
         "word": "spikes.",
-        "startFrame": 1190,
-        "endFrame": 1209
+        "startFrame": 1324,
+        "endFrame": 1339
       }
     ]
   },
   {
-    "startFrame": 1238,
-    "endFrame": 1469,
+    "startFrame": 1369,
+    "endFrame": 1594,
     "text": "However, a clever Mage simply casts Levitate, and floats the party up to the rafters while the ball rolls harmlessly underneath.",
     "words": [
       {
         "word": "However,",
-        "startFrame": 1238,
-        "endFrame": 1253
+        "startFrame": 1369,
+        "endFrame": 1378
       },
       {
         "word": "a",
-        "startFrame": 1265,
-        "endFrame": 1266
+        "startFrame": 1390,
+        "endFrame": 1391
       },
       {
         "word": "clever",
-        "startFrame": 1266,
-        "endFrame": 1277
+        "startFrame": 1390,
+        "endFrame": 1399
       },
       {
         "word": "Mage",
-        "startFrame": 1277,
-        "endFrame": 1291
+        "startFrame": 1399,
+        "endFrame": 1423
       },
       {
         "word": "simply",
-        "startFrame": 1294,
-        "endFrame": 1310
+        "startFrame": 1423,
+        "endFrame": 1432
       },
       {
         "word": "casts",
-        "startFrame": 1310,
-        "endFrame": 1326
+        "startFrame": 1432,
+        "endFrame": 1444
       },
       {
         "word": "Levitate,",
-        "startFrame": 1326,
-        "endFrame": 1345
+        "startFrame": 1444,
+        "endFrame": 1471
       },
       {
         "word": "and",
-        "startFrame": 1355,
-        "endFrame": 1357
+        "startFrame": 1471,
+        "endFrame": 1477
       },
       {
         "word": "floats",
-        "startFrame": 1357,
-        "endFrame": 1367
+        "startFrame": 1477,
+        "endFrame": 1489
       },
       {
         "word": "the",
-        "startFrame": 1367,
-        "endFrame": 1370
+        "startFrame": 1489,
+        "endFrame": 1492
       },
       {
         "word": "party",
-        "startFrame": 1370,
-        "endFrame": 1381
+        "startFrame": 1492,
+        "endFrame": 1504
       },
       {
         "word": "up",
-        "startFrame": 1381,
-        "endFrame": 1384
+        "startFrame": 1504,
+        "endFrame": 1507
       },
       {
         "word": "to",
-        "startFrame": 1385,
-        "endFrame": 1387
+        "startFrame": 1507,
+        "endFrame": 1510
       },
       {
         "word": "the",
-        "startFrame": 1387,
-        "endFrame": 1389
+        "startFrame": 1510,
+        "endFrame": 1513
       },
       {
         "word": "rafters",
-        "startFrame": 1389,
-        "endFrame": 1403
+        "startFrame": 1513,
+        "endFrame": 1528
       },
       {
         "word": "while",
-        "startFrame": 1403,
-        "endFrame": 1406
+        "startFrame": 1528,
+        "endFrame": 1534
       },
       {
         "word": "the",
-        "startFrame": 1406,
-        "endFrame": 1408
+        "startFrame": 1534,
+        "endFrame": 1535
       },
       {
         "word": "ball",
-        "startFrame": 1409,
-        "endFrame": 1418
+        "startFrame": 1534,
+        "endFrame": 1543
       },
       {
         "word": "rolls",
-        "startFrame": 1419,
-        "endFrame": 1431
+        "startFrame": 1543,
+        "endFrame": 1558
       },
       {
         "word": "harmlessly",
-        "startFrame": 1432,
-        "endFrame": 1452
+        "startFrame": 1558,
+        "endFrame": 1579
       },
       {
         "word": "underneath.",
-        "startFrame": 1452,
-        "endFrame": 1469
+        "startFrame": 1579,
+        "endFrame": 1594
       }
     ]
   },
   {
-    "startFrame": 1497,
-    "endFrame": 1604,
+    "startFrame": 1624,
+    "endFrame": 1777,
     "text": "So you mount gear-driven crushers in the ceiling, timed to the next boulder.",
     "words": [
       {
         "word": "So",
-        "startFrame": 1497,
-        "endFrame": 1501
+        "startFrame": 1624,
+        "endFrame": 1636
       },
       {
         "word": "you",
-        "startFrame": 1501,
-        "endFrame": 1505
+        "startFrame": 1636,
+        "endFrame": 1642
       },
       {
         "word": "mount",
-        "startFrame": 1505,
-        "endFrame": 1514
+        "startFrame": 1642,
+        "endFrame": 1654
       },
       {
         "word": "gear-driven",
-        "startFrame": 1517,
-        "endFrame": 1533
+        "startFrame": 1657,
+        "endFrame": 1681
       },
       {
         "word": "crushers",
-        "startFrame": 1533,
-        "endFrame": 1545
+        "startFrame": 1681,
+        "endFrame": 1702
       },
       {
         "word": "in",
-        "startFrame": 1545,
-        "endFrame": 1547
+        "startFrame": 1702,
+        "endFrame": 1705
       },
       {
         "word": "the",
-        "startFrame": 1547,
-        "endFrame": 1550
+        "startFrame": 1705,
+        "endFrame": 1711
       },
       {
         "word": "ceiling,",
-        "startFrame": 1550,
-        "endFrame": 1563
+        "startFrame": 1711,
+        "endFrame": 1729
       },
       {
         "word": "timed",
-        "startFrame": 1571,
-        "endFrame": 1580
+        "startFrame": 1732,
+        "endFrame": 1747
       },
       {
         "word": "to",
-        "startFrame": 1580,
-        "endFrame": 1582
+        "startFrame": 1747,
+        "endFrame": 1750
       },
       {
         "word": "the",
-        "startFrame": 1582,
-        "endFrame": 1584
+        "startFrame": 1750,
+        "endFrame": 1753
       },
       {
         "word": "next",
-        "startFrame": 1584,
-        "endFrame": 1591
+        "startFrame": 1753,
+        "endFrame": 1762
       },
       {
         "word": "boulder.",
-        "startFrame": 1591,
-        "endFrame": 1604
+        "startFrame": 1762,
+        "endFrame": 1777
       }
     ]
   },
   {
-    "startFrame": 1614,
-    "endFrame": 1717,
+    "startFrame": 1788,
+    "endFrame": 1890,
     "text": "Anyone floating gets swatted right back down into its path.",
     "words": [
       {
         "word": "Anyone",
-        "startFrame": 1614,
-        "endFrame": 1627
+        "startFrame": 1788,
+        "endFrame": 1800
       },
       {
         "word": "floating",
-        "startFrame": 1628,
-        "endFrame": 1639
+        "startFrame": 1800,
+        "endFrame": 1815
       },
       {
         "word": "gets",
-        "startFrame": 1640,
-        "endFrame": 1644
+        "startFrame": 1815,
+        "endFrame": 1821
       },
       {
         "word": "swatted",
-        "startFrame": 1645,
-        "endFrame": 1661
+        "startFrame": 1821,
+        "endFrame": 1842
       },
       {
         "word": "right",
-        "startFrame": 1667,
-        "endFrame": 1674
+        "startFrame": 1842,
+        "endFrame": 1851
       },
       {
         "word": "back",
-        "startFrame": 1675,
-        "endFrame": 1683
+        "startFrame": 1851,
+        "endFrame": 1860
       },
       {
         "word": "down",
-        "startFrame": 1683,
-        "endFrame": 1692
+        "startFrame": 1860,
+        "endFrame": 1866
       },
       {
         "word": "into",
-        "startFrame": 1692,
-        "endFrame": 1699
+        "startFrame": 1866,
+        "endFrame": 1872
       },
       {
         "word": "its",
-        "startFrame": 1699,
-        "endFrame": 1702
+        "startFrame": 1872,
+        "endFrame": 1875
       },
       {
         "word": "path.",
-        "startFrame": 1702,
-        "endFrame": 1717
+        "startFrame": 1875,
+        "endFrame": 1890
       }
     ]
   },
   {
-    "startFrame": 1753,
-    "endFrame": 1962,
+    "startFrame": 1926,
+    "endFrame": 2199,
     "text": "Finally, for parties that turn and run for the exit, you seal the entrance with a steel blast door, and curve the floor into a half-pipe.",
     "words": [
       {
         "word": "Finally,",
-        "startFrame": 1753,
-        "endFrame": 1769
-      },
-      {
-        "word": "for",
-        "startFrame": 1770,
-        "endFrame": 1776
-      },
-      {
-        "word": "parties",
-        "startFrame": 1776,
-        "endFrame": 1786
-      },
-      {
-        "word": "that",
-        "startFrame": 1786,
-        "endFrame": 1790
-      },
-      {
-        "word": "turn",
-        "startFrame": 1790,
-        "endFrame": 1798
-      },
-      {
-        "word": "and",
-        "startFrame": 1798,
-        "endFrame": 1801
-      },
-      {
-        "word": "run",
-        "startFrame": 1801,
-        "endFrame": 1808
-      },
-      {
-        "word": "for",
-        "startFrame": 1808,
-        "endFrame": 1811
-      },
-      {
-        "word": "the",
-        "startFrame": 1811,
-        "endFrame": 1813
-      },
-      {
-        "word": "exit,",
-        "startFrame": 1814,
-        "endFrame": 1826
-      },
-      {
-        "word": "you",
-        "startFrame": 1838,
-        "endFrame": 1841
-      },
-      {
-        "word": "seal",
-        "startFrame": 1841,
-        "endFrame": 1849
-      },
-      {
-        "word": "the",
-        "startFrame": 1849,
-        "endFrame": 1852
-      },
-      {
-        "word": "entrance",
-        "startFrame": 1852,
-        "endFrame": 1863
-      },
-      {
-        "word": "with",
-        "startFrame": 1863,
-        "endFrame": 1865
-      },
-      {
-        "word": "a",
-        "startFrame": 1865,
-        "endFrame": 1866
-      },
-      {
-        "word": "steel",
-        "startFrame": 1866,
-        "endFrame": 1876
-      },
-      {
-        "word": "blast",
-        "startFrame": 1876,
-        "endFrame": 1887
-      },
-      {
-        "word": "door,",
-        "startFrame": 1887,
-        "endFrame": 1896
-      },
-      {
-        "word": "and",
-        "startFrame": 1907,
-        "endFrame": 1910
-      },
-      {
-        "word": "curve",
-        "startFrame": 1910,
-        "endFrame": 1919
-      },
-      {
-        "word": "the",
-        "startFrame": 1919,
-        "endFrame": 1921
-      },
-      {
-        "word": "floor",
-        "startFrame": 1921,
-        "endFrame": 1934
-      },
-      {
-        "word": "into",
-        "startFrame": 1934,
-        "endFrame": 1940
-      },
-      {
-        "word": "a",
-        "startFrame": 1940,
+        "startFrame": 1926,
         "endFrame": 1941
       },
       {
+        "word": "for",
+        "startFrame": 1947,
+        "endFrame": 1950
+      },
+      {
+        "word": "parties",
+        "startFrame": 1950,
+        "endFrame": 1965
+      },
+      {
+        "word": "that",
+        "startFrame": 1965,
+        "endFrame": 1971
+      },
+      {
+        "word": "turn",
+        "startFrame": 1971,
+        "endFrame": 1986
+      },
+      {
+        "word": "and",
+        "startFrame": 1986,
+        "endFrame": 1992
+      },
+      {
+        "word": "run",
+        "startFrame": 1992,
+        "endFrame": 2004
+      },
+      {
+        "word": "for",
+        "startFrame": 2004,
+        "endFrame": 2007
+      },
+      {
+        "word": "the",
+        "startFrame": 2007,
+        "endFrame": 2013
+      },
+      {
+        "word": "exit,",
+        "startFrame": 2013,
+        "endFrame": 2025
+      },
+      {
+        "word": "you",
+        "startFrame": 2031,
+        "endFrame": 2037
+      },
+      {
+        "word": "seal",
+        "startFrame": 2037,
+        "endFrame": 2052
+      },
+      {
+        "word": "the",
+        "startFrame": 2052,
+        "endFrame": 2058
+      },
+      {
+        "word": "entrance",
+        "startFrame": 2058,
+        "endFrame": 2073
+      },
+      {
+        "word": "with",
+        "startFrame": 2073,
+        "endFrame": 2076
+      },
+      {
+        "word": "a",
+        "startFrame": 2076,
+        "endFrame": 2077
+      },
+      {
+        "word": "steel",
+        "startFrame": 2076,
+        "endFrame": 2097
+      },
+      {
+        "word": "blast",
+        "startFrame": 2097,
+        "endFrame": 2115
+      },
+      {
+        "word": "door,",
+        "startFrame": 2115,
+        "endFrame": 2130
+      },
+      {
+        "word": "and",
+        "startFrame": 2133,
+        "endFrame": 2139
+      },
+      {
+        "word": "curve",
+        "startFrame": 2139,
+        "endFrame": 2151
+      },
+      {
+        "word": "the",
+        "startFrame": 2151,
+        "endFrame": 2154
+      },
+      {
+        "word": "floor",
+        "startFrame": 2154,
+        "endFrame": 2169
+      },
+      {
+        "word": "into",
+        "startFrame": 2169,
+        "endFrame": 2175
+      },
+      {
+        "word": "a",
+        "startFrame": 2175,
+        "endFrame": 2178
+      },
+      {
         "word": "half-pipe.",
-        "startFrame": 1941,
-        "endFrame": 1962
+        "startFrame": 2178,
+        "endFrame": 2199
       }
     ]
   },
   {
-    "startFrame": 1978,
-    "endFrame": 2173,
+    "startFrame": 2217,
+    "endFrame": 2400,
     "text": "The boulder chases them up the ramp, and launches everyone straight into the Gelatinous Cube hanging from your ceiling.",
     "words": [
       {
         "word": "The",
-        "startFrame": 1978,
-        "endFrame": 1981
+        "startFrame": 2217,
+        "endFrame": 2220
       },
       {
         "word": "boulder",
-        "startFrame": 1981,
-        "endFrame": 1997
+        "startFrame": 2220,
+        "endFrame": 2232
       },
       {
         "word": "chases",
-        "startFrame": 2001,
-        "endFrame": 2013
+        "startFrame": 2232,
+        "endFrame": 2244
       },
       {
         "word": "them",
-        "startFrame": 2013,
-        "endFrame": 2016
+        "startFrame": 2244,
+        "endFrame": 2247
       },
       {
         "word": "up",
-        "startFrame": 2016,
-        "endFrame": 2019
+        "startFrame": 2247,
+        "endFrame": 2250
       },
       {
         "word": "the",
-        "startFrame": 2019,
-        "endFrame": 2021
+        "startFrame": 2250,
+        "endFrame": 2253
       },
       {
         "word": "ramp,",
-        "startFrame": 2021,
-        "endFrame": 2032
+        "startFrame": 2253,
+        "endFrame": 2271
       },
       {
         "word": "and",
-        "startFrame": 2044,
-        "endFrame": 2048
+        "startFrame": 2271,
+        "endFrame": 2274
       },
       {
         "word": "launches",
-        "startFrame": 2048,
-        "endFrame": 2066
+        "startFrame": 2274,
+        "endFrame": 2289
       },
       {
         "word": "everyone",
-        "startFrame": 2066,
-        "endFrame": 2080
+        "startFrame": 2289,
+        "endFrame": 2304
       },
       {
         "word": "straight",
-        "startFrame": 2081,
-        "endFrame": 2096
+        "startFrame": 2304,
+        "endFrame": 2322
       },
       {
         "word": "into",
-        "startFrame": 2099,
-        "endFrame": 2103
+        "startFrame": 2322,
+        "endFrame": 2328
       },
       {
         "word": "the",
-        "startFrame": 2103,
-        "endFrame": 2106
+        "startFrame": 2328,
+        "endFrame": 2331
       },
       {
         "word": "Gelatinous",
-        "startFrame": 2106,
-        "endFrame": 2125
+        "startFrame": 2331,
+        "endFrame": 2346
       },
       {
         "word": "Cube",
-        "startFrame": 2125,
-        "endFrame": 2137
+        "startFrame": 2346,
+        "endFrame": 2361
       },
       {
         "word": "hanging",
-        "startFrame": 2142,
-        "endFrame": 2153
+        "startFrame": 2361,
+        "endFrame": 2370
       },
       {
         "word": "from",
-        "startFrame": 2153,
-        "endFrame": 2157
+        "startFrame": 2370,
+        "endFrame": 2376
       },
       {
         "word": "your",
-        "startFrame": 2157,
-        "endFrame": 2160
+        "startFrame": 2376,
+        "endFrame": 2382
       },
       {
         "word": "ceiling.",
-        "startFrame": 2160,
-        "endFrame": 2173
+        "startFrame": 2382,
+        "endFrame": 2400
       }
     ]
   },
   {
-    "startFrame": 2196,
-    "endFrame": 2301,
+    "startFrame": 2423,
+    "endFrame": 2567,
     "text": "Congratulations, your hallway is now unbeatable.",
     "words": [
       {
         "word": "Congratulations,",
-        "startFrame": 2196,
-        "endFrame": 2226
+        "startFrame": 2423,
+        "endFrame": 2465
       },
       {
         "word": "your",
-        "startFrame": 2238,
-        "endFrame": 2242
+        "startFrame": 2471,
+        "endFrame": 2480
       },
       {
         "word": "hallway",
-        "startFrame": 2242,
-        "endFrame": 2256
+        "startFrame": 2480,
+        "endFrame": 2501
       },
       {
         "word": "is",
-        "startFrame": 2257,
-        "endFrame": 2261
+        "startFrame": 2501,
+        "endFrame": 2507
       },
       {
         "word": "now",
-        "startFrame": 2261,
-        "endFrame": 2275
+        "startFrame": 2507,
+        "endFrame": 2525
       },
       {
         "word": "unbeatable.",
-        "startFrame": 2279,
-        "endFrame": 2301
+        "startFrame": 2531,
+        "endFrame": 2567
       }
     ]
   }

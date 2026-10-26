@@ -171,7 +171,7 @@ const rogueActor = (frame: number): Actor | null => {
     return { pose: "cower", position: [landX, 0, Z], yaw: FACE_RIGHT, scale: 1 };
   }
   // Fist pump to the camera, then waits around for the next trap.
-  if (frame < leapB + 28) return { pose: "cast", position: [landX, 0, Z], yaw: 0.35 };
+  if (frame < leapB + 28) return { pose: "cast", position: [landX, 0, Z], yaw: 0.2, expression: "smug" };
   const slimeLook = BEATS.slimePour[0] - 10;
   if (frame < boulderById("d1").spawn + 4) return { pose: "idle", position: [landX, 0, Z], yaw: 0.35 };
   if (frame < slimeLook) return { pose: "idle", position: [landX, 0, Z], yaw: FACE_RIGHT - 0.3 };
@@ -208,7 +208,7 @@ const rogueActor = (frame: number): Actor | null => {
 // Levels 2-3: the paladin stomps through, smashes D2, then gets magnetised.
 // ---------------------------------------------------------------------------
 const PALADIN_ENTER = enterAfter("d1");
-const STOMP_START = 728;
+const STOMP_START = Math.round(lerp(PALADIN_ENTER, BEATS.paladinStomp, 0.6));
 
 const paladinActor = (frame: number): Actor | null => {
   if (frame < PALADIN_ENTER || frame >= BEATS.skewer) return null;
@@ -228,7 +228,7 @@ const paladinActor = (frame: number): Actor | null => {
   if (frame < BEATS.smash + 16) return { pose: "smash", position: [PALADIN_X, 0, Z], yaw: FACE_RIGHT };
   if (frame < BEATS.smash + 40) return { pose: "idle", position: [PALADIN_X, 0, Z], yaw: FACE_RIGHT };
   // Smug pose to camera through the Level 3 install.
-  if (frame < boulderById("s1").spawn + 6) return { pose: "idle", position: [PALADIN_X, 0, Z], yaw: 0.45 };
+  if (frame < boulderById("s1").spawn + 6) return { pose: "idle", position: [PALADIN_X, 0, Z], yaw: 0.3, expression: "smug" };
   if (frame < BEATS.paladin3Brace) return { pose: "idle", position: [PALADIN_X, 0, Z], yaw: FACE_RIGHT - 0.35 };
   if (frame < BEATS.yank) return { pose: "windup", position: [PALADIN_X, 0, Z], yaw: FACE_RIGHT };
   // Yanked by his armour onto the magnet plate.
@@ -488,8 +488,8 @@ export const Scene: React.FC = () => {
       {slimeSplash(BEATS.rogue2Slip + 18, [ROGUE2_LIE_X, 0.05, Z], "slip-land", 1.4)}
       {dust(BEATS.rogue2Hit, [ROGUE2_LIE_X, 0.4, Z], "rogue2-squash", 1.2)}
       {slimeSplash(BEATS.rogue2Hit, [ROGUE2_LIE_X + 0.4, 0.05, Z + 0.4], "rogue2-slime", 1.6)}
-      {[0, 1, 2, 3, 4].map((i) => {
-        const at = STOMP_START + 6 + i * 10;
+      {[0, 1, 2, 3].map((i) => {
+        const at = Math.round(lerp(STOMP_START, BEATS.paladinStomp, (i + 0.5) / 4));
         const x = lerp(SLIME_RANGE[0] - 0.6, PALADIN_X, progress(at, [STOMP_START, BEATS.paladinStomp]));
         return x > SLIME_RANGE[0] && x < SLIME_RANGE[1] ? slimeSplash(at, [x, 0.05, Z], `stomp-${i}`, 0.9) : null;
       })}

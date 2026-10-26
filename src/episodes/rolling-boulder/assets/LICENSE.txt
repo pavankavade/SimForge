@@ -1,0 +1,5 @@
+Sound: drop_002.wav (used as pop sound effect for stage badges)
+Source: Kenney Interface Sounds (https://kenney.nl/assets/interface-sounds)
+Creator: Kenney (Asset Forge / Kenney Vleugels)
+License: Creative Commons Zero (CC0 1.0 Universal - Public Domain Dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
