@@ -1,6 +1,7 @@
 import React from "react";
 import { Composition } from "remotion";
 import { EPISODES } from "./episodes/registry";
+import { SHELTER_PRODUCTIONS } from "./shelter/registry";
 import { DungeonTrapThumbnail } from "./episodes/dungeon-trap/Thumbnail";
 import { DURATION as DUNGEON_DURATION } from "./episodes/dungeon-trap/timeline";
 import { RollingBoulderThumbnail } from "./episodes/rolling-boulder/Thumbnail";
@@ -13,6 +14,7 @@ import { DURATION as TOON_TEST_DURATION } from "./episodes/toon-test/timeline";
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* SimForge Dungeon Episodes */}
       {EPISODES.map((episode) => (
         <Composition
           key={episode.config.id}
@@ -23,6 +25,19 @@ export const RemotionRoot: React.FC = () => {
           width={episode.config.width}
           height={episode.config.height}
           defaultProps={{ beats: episode.beats }}
+        />
+      ))}
+      {/* SimForge Shelter & Bushcraft Engineering Series */}
+      {SHELTER_PRODUCTIONS.map((prod) => (
+        <Composition
+          key={prod.config.id}
+          id={prod.config.id}
+          component={prod.Video}
+          durationInFrames={prod.config.durationInFrames}
+          fps={prod.config.fps}
+          width={prod.config.width}
+          height={prod.config.height}
+          defaultProps={{ beats: prod.beats }}
         />
       ))}
       <Composition

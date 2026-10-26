@@ -1,0 +1,187 @@
+{
+  "ballista_cock": {
+    "batch_seed": 3498776462,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "ballista_fire": {
+    "batch_seed": 4289663096,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "bank": {
+    "batch_seed": 2416884724,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "boom": {
+    "batch_seed": 2449306188,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "burp": {
+    "batch_seed": 3370899433,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "chain": {
+    "batch_seed": 1557621539,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "chomp": {
+    "batch_seed": 4237599861,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "clang": {
+    "batch_seed": 3412399387,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "clank": {
+    "batch_seed": 3314758738,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "click": {
+    "batch_seed": 3288977180,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "coil_charge": {
+    "batch_seed": 2983281005,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "coil_fire": {
+    "batch_seed": 3123394613,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "creak": {
+    "batch_seed": 1189835702,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "dart_fire": {
+    "batch_seed": 2036409050,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "dart_hit": {
+    "batch_seed": 3915154450,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "gatling": {
+    "batch_seed": 1737537536,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "gears": {
+    "batch_seed": 1541871160,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "harpoon_hit": {
+    "batch_seed": 1944035095,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "hydraulic": {
+    "batch_seed": 962275594,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "launch": {
+    "batch_seed": 2873654872,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "magic": {
+    "batch_seed": 2626953169,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "pop": {
+    "batch_seed": 14002520,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "ram": {
+    "batch_seed": 592141213,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "ratchet": {
+    "batch_seed": 1140692191,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "roll": {
+    "batch_seed": 2555896519,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "slam": {
+    "batch_seed": 1797902339,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "sparkle": {
+    "batch_seed": 59979533,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "splinter": {
+    "batch_seed": 4135839767,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "stamp": {
+    "batch_seed": 3756046772,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "thud": {
+    "batch_seed": 2748741877,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "tink": {
+    "batch_seed": 1340389400,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "trap_open": {
+    "batch_seed": 4238993755,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "whoosh": {
+    "batch_seed": 897830104,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "whoosh_big": {
+    "batch_seed": 1948975867,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "winch": {
+    "batch_seed": 2505302986,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "wind": {
+    "batch_seed": 1375700386,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "zap": {
+    "batch_seed": 757067944,
+    "model": "small-sfx",
+    "take": 1
+  }
+}

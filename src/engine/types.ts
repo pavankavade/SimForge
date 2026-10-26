@@ -140,6 +140,8 @@ export interface SfxCue {
   durationInFrames?: number;
   /** Fade-out at the end of a trimmed clip (frames). */
   fadeOutFrames?: number;
+  /** Repeat the clip until durationInFrames (beds shorter than their cue). */
+  loop?: boolean;
 }
 
 export interface SubtitleConfig {
@@ -149,6 +151,10 @@ export interface SubtitleConfig {
   activeColor?: string;
   textColor?: string;
   fontFamily?: string;
+  /** "chunks" (default): 4-5 word lines at the bottom. "word": one big word at a time. */
+  mode?: "chunks" | "word";
+  /** Word mode: distance of the word's centre from the top of the frame (px). */
+  wordTop?: number;
 }
 
 export interface PostFXConfig {
@@ -186,6 +192,19 @@ export interface EpisodeConfig {
   subtitles?: SubtitleConfig;
   overlays?: OverlayConfig;
   OverlayComponent?: React.FC;
+}
+
+/**
+ * A production whose picture is pre-rendered footage (e.g. a Blender image
+ * sequence encoded to mp4) instead of a live three.js scene. Audio, SFX,
+ * subtitles and the HUD work exactly like an EpisodeConfig.
+ */
+export interface FootageConfig extends Omit<EpisodeConfig, "camera" | "environment"> {
+  footage: {
+    src: string;
+    /** Last frame present in the file; later frames hold on it. */
+    lastFrame: number;
+  };
 }
 
 /** Story beats by name (frame, or list of frames). Exposed for review tooling. */

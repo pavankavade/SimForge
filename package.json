@@ -45,8 +45,17 @@
     "render:starter": "remotion render StarterTopic out/starter.mp4 --concurrency=8 --crf=20",
     "render:dungeon": "remotion render DungeonTrap out/dungeon-trap.raw.mp4 --concurrency=8 --crf=18 --audio-bitrate=192k && ffmpeg -y -hide_banner -loglevel error -i out/dungeon-trap.raw.mp4 -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k out/dungeon-trap.mp4",
     "still:dungeon": "remotion still DungeonTrap out/dungeon-still.png --frame=500",
-    "render:boulder": "remotion render RollingBoulder out/rolling-boulder.raw.mp4 --concurrency=8 --crf=18 --audio-bitrate=192k && ffmpeg -y -hide_banner -loglevel error -i out/rolling-boulder.raw.mp4 -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k out/rolling-boulder.mp4",
-    "still:boulder": "remotion still RollingBoulder out/boulder-still.png --frame=840"
+    "render:boulder": "remotion render RollingBoulder out/rolling-boulder.raw.mp4 --concurrency=8 --crf=18 --audio-bitrate=192k && ffmpeg -y -hide_banner -loglevel error -i out/rolling-boulder.raw.mp4 -c:v copy -af loudnorm=I=-14:TP=-2.0:LRA=11 -ar 48000 -c:a aac -b:a 192k out/rolling-boulder.mp4",
+    "still:boulder": "remotion still RollingBoulder out/boulder-still.png --frame=840",
+    "render:crushing-walls": "node scripts/render-safe.mjs CrushingWalls crushing-walls",
+    "render:safe": "node scripts/render-safe.mjs",
+    "still:crushing-walls": "remotion still CrushingWalls out/crushing-walls-still.png --frame=280",
+    "render:cave-home": "remotion render CaveHome out/cave-home.raw.mp4 --concurrency=8 --crf=18 --audio-bitrate=192k && ffmpeg -y -hide_banner -loglevel error -i out/cave-home.raw.mp4 -c:v copy -af loudnorm=I=-14:TP=-2.0:LRA=11 -ar 48000 -c:a aac -b:a 192k out/cave-home.mp4",
+    "still:cave-home": "remotion still CaveHome out/cave-home-still.png --frame=300",
+    "render:nuclear-bunker": "remotion render NuclearBunker out/nuclear-bunker.raw.mp4 --concurrency=4 --offthreadvideo-cache-size-in-bytes=1073741824 --crf=18 --audio-bitrate=192k && ffmpeg -y -hide_banner -loglevel error -i out/nuclear-bunker.raw.mp4 -c:v copy -af loudnorm=I=-14:TP=-2.0:LRA=11 -ar 48000 -c:a aac -b:a 192k out/nuclear-bunker.mp4",
+    "still:nuclear-bunker": "remotion still NuclearBunker out/nuclear-bunker-still.png --frame=700",
+    "render:dart-trap": "remotion render DartTrap out/dart-trap.raw.mp4 --concurrency=8 --crf=18 --audio-bitrate=192k && ffmpeg -y -hide_banner -loglevel error -i out/dart-trap.raw.mp4 -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k out/dart-trap.mp4",
+    "still:dart-trap": "remotion still DartTrap out/dart-trap-still.png --frame=280"
   },
   "allowScripts": {
     "esbuild": false

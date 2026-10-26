@@ -35,7 +35,7 @@ export interface TrapHUDOptions {
   stages: TrapStage[];
   stageLabel?: string;
   badgeFrames?: number;
-  end: { label: string; stamp: string; at: number; color?: string };
+  end: { label: string; stamp: string; at: number; color?: string; top?: number; fontSize?: number };
 }
 
 export const createTrapHUD = ({
@@ -130,28 +130,33 @@ export const createTrapHUD = ({
     const age = frame - end.at;
     if (age < -14) return null;
     const color = end.color ?? "#e8322a";
+    const top = end.top ?? 190;
     const labelIn = interpolate(age, [-14, -4], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
     const slam = interpolate(age, [0, 5], [1.75, 1], { ...clamp, easing: Easing.in(Easing.cubic) });
     const settle = age >= 5 ? 1 + 0.06 * Math.sin((age - 5) * 0.9) * Math.exp(-(age - 5) / 6) : slam;
+    const stampFontSize = end.fontSize ?? (end.stamp.length > 13 ? 64 : end.stamp.length >= 10 ? 82 : 104);
     return (
-      <div style={{ position: "absolute", top: 250, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: FONT }}>
-        <div style={{ fontSize: 46, color: "#ffffff", letterSpacing: 8, textShadow: STROKE, opacity: labelIn, transform: `translateY(${(1 - labelIn) * 20}px)` }}>
+      <div style={{ position: "absolute", top, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: FONT }}>
+        <div style={{ fontSize: 44, color: "#ffffff", letterSpacing: 8, textShadow: STROKE, opacity: labelIn, transform: `translateY(${(1 - labelIn) * 20}px)` }}>
           {end.label}
         </div>
         {age >= 0 ? (
           <div
             style={{
-              marginTop: 26,
-              padding: "10px 34px",
-              border: `10px solid ${color}`,
-              borderRadius: 18,
+              marginTop: 22,
+              padding: "10px 36px",
+              border: `8px solid ${color}`,
+              outline: `3px solid ${color}`,
+              outlineOffset: "-12px",
+              borderRadius: 14,
               color,
-              fontSize: end.stamp.length > 10 ? 88 : 110,
-              letterSpacing: 4,
-              background: "rgba(20,8,8,0.35)",
-              textShadow: "0 0 2px #000, 0 4px 14px rgba(0,0,0,0.7)",
-              boxShadow: "0 0 0 4px rgba(0,0,0,0.6), inset 0 0 0 4px rgba(0,0,0,0.45)",
-              transform: `rotate(-7deg) scale(${settle})`,
+              fontSize: stampFontSize,
+              fontWeight: 900,
+              letterSpacing: 6,
+              background: "rgba(18, 6, 6, 0.45)",
+              textShadow: "0 0 12px rgba(232, 50, 42, 0.4), 0 4px 14px rgba(0,0,0,0.85)",
+              boxShadow: "0 0 24px rgba(232, 50, 42, 0.25), 0 8px 24px rgba(0,0,0,0.7), inset 0 0 12px rgba(232, 50, 42, 0.15)",
+              transform: `rotate(-6deg) scale(${settle})`,
               opacity: interpolate(age, [0, 2], [0.3, 1], clamp),
             }}
           >

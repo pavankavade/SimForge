@@ -8,6 +8,7 @@ step by step. When a rule here and your instinct disagree, follow the rule.
 ## 0. TL;DR workflow
 
 ```pwsh
+$env:GEMINI_API_KEY = "<your-key>"                            # required for Gemini TTS voicing (see §9)
 npm run new:episode -- <slug> "<Trap Name>" --theme dungeon   # scaffold (see §2)
 # 1. write the 5-level script in scripts/<slug>-audio.py (LINES)
 python scripts/<slug>-audio.py narration                      # voice it -> exact word cues
@@ -64,8 +65,9 @@ This creates and wires everything:
 | `src/episodes/registry.ts` | registration |
 
 The composition id is the PascalCase slug (`ceiling-crusher` → `CeilingCrusher`). The scaffolder
-runs the audio script. If edge-tts is offline it still builds the score and SFX, writes a silent
-narration and **estimated** cues so the episode renders. Re-run the audio script before the final
+runs the audio script. Voicing fresh lines requires `$env:GEMINI_API_KEY` (see §9). If no key is set or
+TTS is offline, it still builds the score and SFX, writes a silent narration placeholder and
+**estimated** cues so the episode renders immediately. Re-run the audio script before the final
 review. While you rewrite `LINES` without voicing, `npm run cues:estimate -- <slug>` refreshes the
 estimated cues.
 
@@ -145,10 +147,10 @@ The template ships with level 1 (ceiling crusher: goblin pancaked, rogue waits i
 | Module | Use |
 | --- | --- |
 | `cues` | `createCues(json)` → `w`, `wEnd`, `lineStart`, `lineEnd`, `DURATION` |
-| `motion` | `lerp`, `progress(frame, [a,b])`, `easeInOut`, `easeOutCubic`, `easeOutBack`, `arc(t,h)`, `bezier`, `wobble`, `bump`, `walkX` |
+| `motion` | `lerp`, `progress(frame, [a,b])`, `easeInOut`, `easeOutCubic`, `easeOutBack`, `arc(t,h)`, `bezier`, `bezier3`, `wobble`, `bump`, `walkX` |
 | `actors` | `Actor`, `ActorView`, `lying()`, `Splat`, `lieHeight`, `CHAR_SCALE`, `FACE_RIGHT/LEFT/CAMERA`, `HIP` |
 | `fx` | `dust`, `sparks`, `slimeSplash`, `jellySplash`, `flamePuff`, `magic` (each returns a keyed `<Burst>`) |
-| `camera` | `shot(x, y, d, {rise, lead, z})`, `followTrack`, `walkTrack`, `holdTrack`, `frameSize`, `distForWidth`, `distForHeight` |
+| `camera` | `shot(x, y, d, {rise, lead, z})`, `followTrack`, `walkTrack`, `holdTrack`, `chainTracks`, `frameSize`, `distForWidth`, `distForHeight` |
 | `sfx` | `sfxFor(slug)(name, frame, volume, extra)`, `loopCue` |
 | `TrapHUD` | `createTrapHUD({ title, stages, end })` |
 
@@ -199,7 +201,8 @@ Never use plain `meshStandardMaterial` boxes for people. Never fork the rig.
 - **Poses:**
   - `idle`, `walk`, `run`, `jump`, `fall`, `launch`, `float`;
   - `cast`, `shield`, `shieldWalk`, `windup`, `smash`;
-  - `sprawl`, `slip`, `cower`, `cheer`, `point`.
+  - `sprawl`, `slip`, `cower`, `cheer`, `point`;
+  - `matrix` (bullet-time dodge: knees bent, torso arched far back; projectiles pass over it at y ≥ ~1.3).
 - **Expressions:** `neutral`, `happy`, `smug`, `focus`, `angry`, `yell`, `scared`, `shock`, `pain`,
   `dazed`, `dead`. Each pose has a default face. Override it for story beats:
   - `scared` just before impact;
@@ -320,12 +323,30 @@ The audio script (copied from `templates/audio.py`) imports the Ep1 and Ep2 tool
 (`dungeon-audio.py` as `da`, `boulder-audio.py` as `ba`). Never copy them.
 
 - **Narration:**
-  - voice `en-US-AndrewMultilingualNeural` at about +6%;
-  - one TTS call per line, with silence trimmed;
-  - lines laid end to end with their pauses, never overlapping;
-  - compressed and normalised to about **-16 LUFS**;
-  - a 0.66 s lead-in for the title card.
-  The script writes the exact `narrationCues.json` and `wordTimestamps.json`.
+  - **TTS Engine & Voice:** Synthesized using the Gemini TTS endpoint with the custom series voice:
+    - Model: `gemini-3.8-flash-tts` (`generateContent` with `responseModalities: ["AUDIO"]`);
+    - Voice ID: `VOICE_ID = "voice_ax8s6hqwv0of"` configured in `speechConfig.voiceConfig.voice`;
+    - Generated 24 kHz audio is trimmed of lead/tail silence (`tight_trim`) so pauses measure from actual speech.
+  - **Word Timestamps:** Transcribed via `gemini-3.5-transcribe` with `AudioTranscriptionConfig(word_timestamp=True)` using the Google GenAI SDK (`google-genai`). `attach_punctuation` maps the words to frame numbers and writes `data/narrationCues.json` and `data/wordTimestamps.json`. Falls back to proportional spacing if transcription is unavailable.
+  - **API Key & Environment Variable:**
+    - Key is read from `GEMINI_API_KEY` (`os.getenv("GEMINI_API_KEY")`).
+    - Set in pwsh:
+      ```pwsh
+      $env:GEMINI_API_KEY = "your_gemini_api_key"
+      ```
+    - Set in bash/zsh:
+      ```bash
+      export GEMINI_API_KEY="your_gemini_api_key"
+      ```
+    - **Caching:** The pipeline caches audio (`.wav`) and word timestamps (`.json`) per line in `out/audio-tmp-<slug>/`. If valid cache files exist, the audio script runs **without** requiring `GEMINI_API_KEY` or making network calls.
+    - If unvoiced lines need synthesis and `GEMINI_API_KEY` is missing, the script halts with a clear `ValueError`.
+  - **Legacy / Offline Fallback:**
+    - Offline fallback uses `edge-tts` with voice `en-US-AndrewMultilingualNeural` at +6% rate (Ep1 & Ep2 default).
+    - `npm run cues:estimate -- <slug>` generates estimated word cues without running TTS while rewriting `LINES`.
+  - **Mastering:**
+    - Lines laid end to end with their pauses, never overlapping;
+    - Compressed and normalised to about **-16 LUFS**;
+    - A 0.25–0.66 s lead-in before the first word for the title card.
 - **Score:** the series theme, looped and normalised to about **-27 LUFS**. In the config, set
   `audio.volume` and `music.volume` to **1**. Do the mix in the pipeline, not with config volumes.
 - **SFX:** procedural `.wav` files. The built-in list is in the audio script's comment block
@@ -334,9 +355,24 @@ The audio script (copied from `templates/audio.py`) imports the Ep1 and Ep2 tool
   primitives.
   - Use `const sfx = sfxFor("<slug>")`, then `sfx("slam", BEATS.crush, 0.55)`.
   - Every cue keys to a `BEATS` value or kinematics constant, never a literal frame.
-  - Trim loops with `durationInFrames` and `fadeOutFrames` (or use `loopCue`).
+  - Trim loops with `durationInFrames` and `fadeOutFrames` (or use `loopCue`). A cue only repeats
+    its clip when it sets `loop: true` (`loopCue` does); otherwise it stops when the file ends.
   - Every visible impact gets a sound; most also get a shake.
   - Title `stamp` at frame 6, a `pop` per stage badge, and `stamp` plus `boom` on the end stamp.
+- **AI SFX (optional):** `scripts/gen-sfx.py` generates takes locally with Stable Audio 3 Small SFX
+  (needs a CUDA GPU; Ep4 used an RTX 3060 12 GB).
+  - One-time setup: clone `Stability-AI/stable-audio-3` next to the repo, create its venv with
+    `uv venv --python 3.10`, install `torch==2.7.1 torchaudio==2.7.1` from the cu126 index, then
+    `uv sync --inexact --no-install-package torch --no-install-package torchaudio`. Accept the
+    model licence on Hugging Face and run `hf auth login`.
+  - Prompts live in `scripts/sfx-prompts/<slug>.json`. Generate with the stable-audio-3 venv python
+    (`HF_HUB_CACHE=D:/hf-cache/hub` keeps the model off a full C: drive), audition
+    `out/sfx-gen/<slug>/index.html`, then `python scripts/gen-sfx.py <slug> --pick name=take ...`.
+  - Picks go to `public/episodes/<slug>/sfx_ai/` and `<slug>.picks.json` (seeds recorded); the
+    episode audio script lays `sfx_ai/` over its procedural sfx, so re-running it keeps them.
+  - The model returns pure static for fractional durations (1.2/1.6/1.8 s); the script always asks
+    for whole seconds and flags any take whose spectral flatness looks like noise.
+  - New clips change the mix: re-render and re-run `check:video` after picking.
 - **Subtitles** are 4–5-word chunks, with the active word in `#ffd84d`.
 
 ## 10. HUD (`TrapHUD.tsx`)
@@ -359,6 +395,10 @@ The audio script (copied from `templates/audio.py`) imports the Ep1 and Ep2 tool
    - **Open and look at every sheet.**
    - `--beats --around` renders each beat at −6, 0 and +12.
    - Add ranges such as `300:420:6` around every track start and end, and every entry.
+   - Heavy scenes can crash the GPU (WebGL `VALIDATE_STATUS false`, then `reading 'trim'`) at the
+     default 4 parallel stills; pass `--concurrency 2`.
+   - Back-to-back camera tracks blend out before the next blends in, which leaves a few frames
+     of waypoint drift between cuts; wrap the track list in `chainTracks([...])`.
    - The bundler cache is disabled because it lagged one edit behind. If you call
      `npx remotion still` yourself, delete the old PNG first (it skips existing files) and pass
      `--bundle-cache=false`.

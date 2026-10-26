@@ -1,7 +1,8 @@
 import type { SfxCue } from "../engine/types";
 
 /**
- * SFX cue factory for one episode's `public/episodes/<slug>/sfx/*.wav`.
+ * SFX cue factory for one episode's `public/<root>/<slug>/sfx/*.wav`
+ * (root defaults to "episodes"; the shelter series uses "shelter").
  *
  *   const sfx = sfxFor("rolling-boulder");
  *   sfx("squash", BEATS.goblinHit, 0.5)
@@ -10,17 +11,18 @@ import type { SfxCue } from "../engine/types";
  * Key every cue to a BEATS value or a kinematics helper, never a literal frame.
  */
 export const sfxFor =
-  (slug: string) =>
+  (slug: string, root = "episodes") =>
   (name: string, frame: number, volume = 1, extra: Partial<SfxCue> = {}): SfxCue => ({
-    src: `episodes/${slug}/sfx/${name}.wav`,
+    src: `${root}/${slug}/sfx/${name}.wav`,
     frame: Math.round(frame),
     volume,
     ...extra,
   });
 
-/** A looping bed (rolling, gears, rumble) trimmed to [start, end] with a fade-out. */
+/** A looping bed (rolling, gears, rumble) repeated and trimmed to [start, end] with a fade-out. */
 export const loopCue = (cue: SfxCue, end: number, fadeOutFrames = 8): SfxCue => ({
   ...cue,
+  loop: true,
   durationInFrames: Math.max(4, Math.round(end) - cue.frame),
   fadeOutFrames,
 });

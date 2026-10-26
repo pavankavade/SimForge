@@ -49,6 +49,7 @@ const POSE_EXPRESSION: Record<AdventurerPose, Expression> = {
   cower: "scared",
   cheer: "happy",
   point: "smug",
+  matrix: "focus",
 };
 
 export interface AdventurerUnitProps {

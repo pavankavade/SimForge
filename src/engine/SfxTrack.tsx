@@ -21,6 +21,7 @@ export const SfxTrack: React.FC<SfxTrackProps> = ({ cues }) => (
         >
           <Audio
             src={staticFile(cue.src)}
+            loop={cue.loop}
             volume={
               duration !== undefined && fade > 0
                 ? (f) =>

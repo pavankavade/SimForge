@@ -6,6 +6,7 @@ import type { Vec3 } from "../engine/types";
  */
 
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+export const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const lerp3 = (a: Vec3, b: Vec3, t: number): Vec3 => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 /** 0..1 progress of `frame` through the window [a, b] (clamped). */
@@ -24,6 +25,13 @@ export const arc = (t: number, h: number) => h * 4 * t * (1 - t);
 /** Quadratic bezier between a and b through control c (flights, tosses). */
 export const bezier = (a: Vec3, c: Vec3, b: Vec3, t: number): Vec3 => {
   const q = (i: 0 | 1 | 2) => (1 - t) ** 2 * a[i] + 2 * (1 - t) * t * c[i] + t * t * b[i];
+  return [q(0), q(1), q(2)];
+};
+
+/** Cubic bezier a -> b with controls c1, c2 (loops, U-turns, homing paths). */
+export const bezier3 = (a: Vec3, c1: Vec3, c2: Vec3, b: Vec3, t: number): Vec3 => {
+  const u = 1 - t;
+  const q = (i: 0 | 1 | 2) => u * u * u * a[i] + 3 * u * u * t * c1[i] + 3 * u * t * t * c2[i] + t * t * t * b[i];
   return [q(0), q(1), q(2)];
 };
 

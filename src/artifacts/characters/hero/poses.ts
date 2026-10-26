@@ -18,6 +18,7 @@ export const POSES = [
   "cower",
   "cheer",
   "point",
+  "matrix",
 ] as const;
 export type AdventurerPose = (typeof POSES)[number];
 
@@ -171,6 +172,23 @@ export const solvePose = (pose: AdventurerPose, f: number): RigPose => {
       p.kneeR = 1.05;
       p.lean = 0.1;
       p.head = [-0.2, flail * 0.08];
+      break;
+    }
+    case "matrix": {
+      // Bullet-time dodge: knees bent forward, torso arched far back, arms
+      // flung wide. Feet stay planted (thigh/knee solved for the bob).
+      const sway = Math.sin(f * 0.06);
+      p.armL = [-0.35 + sway * 0.12, 0, 1.15];
+      p.armR = [0.55 - sway * 0.12, 0, -1.05];
+      p.elbowL = -0.45;
+      p.elbowR = -0.6;
+      p.legL = [-1.05, 0, 0.14];
+      p.legR = [-0.92, 0, -0.14];
+      p.kneeL = 2.0;
+      p.kneeR = 1.88;
+      p.bob = -0.27;
+      p.lean = -1.05 + sway * 0.03;
+      p.head = [-0.35, 0];
       break;
     }
     case "slip":

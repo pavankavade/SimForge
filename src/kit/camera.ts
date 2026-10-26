@@ -32,6 +32,15 @@ export const shot = (x: number, y: number, dist: number, { z = -0.6, rise = 1.3,
   lookAt: [x + lead, y, z],
 });
 
+/**
+ * Like `shot`, but orbits the camera around (x, y) by `yaw` radians.
+ * yaw < 0 swings the camera to the left, showing the RIGHT wall's inner face; yaw > 0 the left.
+ */
+export const orbitShot = (x: number, y: number, dist: number, yaw: number, { z = -0.6, rise = 1.0 } = {}): CameraPose => ({
+  position: [x + Math.sin(yaw) * dist, y + rise, z + Math.cos(yaw) * dist],
+  lookAt: [x, y, z],
+});
+
 /** Holds a fixed pose between start and end (hard cut in and out by default). */
 export const holdTrack = (start: number, end: number, pose: CameraPose, blend = 1): CameraTrack => ({
   start,
@@ -79,6 +88,19 @@ export const followTrack = ({
     return { position: [x + lead, y + height, z + dist], lookAt: [x + lead * 1.3, y, z] };
   },
 });
+
+/**
+ * Tracks blend in AND out over `blend` frames, so two back-to-back tracks leave
+ * a few frames of waypoint drift between them. For each track that the next
+ * one picks up from (next.start within 2 frames of this end), keep this one
+ * alive until the next has fully blended in. Pass tracks in timeline order.
+ */
+export const chainTracks = (tracks: CameraTrack[]): CameraTrack[] =>
+  tracks.map((t, i) => {
+    const next = tracks[i + 1];
+    if (!next || next.start > t.end + 2 || next.start < t.start) return t;
+    return { ...t, end: Math.max(t.end, next.start + (next.blend ?? 15) + (t.blend ?? 15)) };
+  });
 
 /** Follows a newcomer walking in linearly from x0 to x1 over [start, end] (Ep2 entries). */
 export const walkTrack = (start: number, end: number, x0: number, x1: number, dist = 9, blend = 8, z = -0.6): CameraTrack => ({

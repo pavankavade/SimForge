@@ -1,6 +1,8 @@
 export { AudioTrack } from "./AudioTrack";
 export { CameraRig } from "./CameraRig";
 export { EpisodeVideo } from "./EpisodeVideo";
+export { FootageVideo, defineFootage } from "./FootageVideo";
+export type { FootageDefinition } from "./FootageVideo";
 export { EnvironmentScene } from "./EnvironmentScene";
 export { FadeOverlay, Vignette } from "./Overlays";
 export { Subtitles } from "./Subtitles";
@@ -18,6 +20,7 @@ export type {
   EnvironmentConfig,
   EpisodeConfig,
   EpisodeDefinition,
+  FootageConfig,
   GroundTextureConfig,
   HillDefinition,
   OverlayConfig,

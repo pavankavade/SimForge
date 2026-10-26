@@ -41,6 +41,8 @@ export interface Actor {
   weapon?: Weapon;
   /** World-y squash about the floor (0.15 = pancaked by a crusher). Default 1. */
   squash?: number;
+  /** World-x squash (0.15 = squeezed between walls). Default 1. Bulges a little in z. */
+  squashX?: number;
 }
 
 export const ActorView: React.FC<{
@@ -54,8 +56,10 @@ export const ActorView: React.FC<{
   const pivot = actor.pivot ?? 0;
   const [x, y, z] = actor.position;
   const squash = actor.squash ?? 1;
+  const squashX = actor.squashX ?? 1;
+  const spread = 1 + (1 - squash) * 0.6;
   return (
-    <group position={[x, 0, z]} scale={[1 + (1 - squash) * 0.6, squash, 1 + (1 - squash) * 0.6]}>
+    <group position={[x, 0, z]} scale={[spread * squashX, squash, spread * (1 + (1 - squashX) * 0.5)]}>
       <group position={[0, y + pivot, 0]} rotation={[0, 0, actor.tilt ?? 0]}>
         <AdventurerUnit
           classType={classType}
