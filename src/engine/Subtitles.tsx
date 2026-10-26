@@ -121,7 +121,63 @@ const buildChunks = (words: SubtitleWord[]) => {
   );
 };
 
-export const Subtitles: React.FC<SubtitleConfig> = ({
+/** One big word at a time, popping in on its spoken frame (Shorts explainer style). */
+const WordCaption: React.FC<SubtitleConfig> = ({
+  segments,
+  wordTop = 700,
+  textColor = "#FFFFFF",
+  fontFamily = DEFAULT_FONT_STACK,
+}) => {
+  const frame = useCurrentFrame();
+  let word: SubtitleWord | null = null;
+  for (const segment of segments) {
+    if (frame < segment.startFrame) break;
+    if (frame > segment.endFrame + 4) continue;
+    for (const w of segment.words) {
+      if (frame >= w.startFrame) word = w;
+    }
+  }
+  if (!word) return null;
+
+  const text = word.word.replace(/[.,!?;:…"]+$/g, "").replace(/^["']+/, "");
+  const label = text.charAt(0).toUpperCase() + text.slice(1);
+  const age = frame - word.startFrame;
+  const pop = interpolate(age, [0, 3, 6], [0.6, 1.12, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const fontSize = Math.min(128, MAX_LINE_WIDTH / Math.max(1, label.length * CHAR_WIDTH_EM));
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        top: wordTop,
+        transform: `translateY(-50%) scale(${pop})`,
+        textAlign: "center",
+        pointerEvents: "none",
+        zIndex: 100,
+        fontFamily,
+        fontSize,
+        fontWeight: 900,
+        color: textColor,
+        letterSpacing: "-0.5px",
+        WebkitTextStroke: "10px rgba(0, 0, 0, 0.96)",
+        paintOrder: "stroke fill",
+        textShadow: "0 6px 18px rgba(0, 0, 0, 0.55)",
+      }}
+    >
+      {label}
+    </div>
+  );
+};
+
+export const Subtitles: React.FC<SubtitleConfig> = (props) =>
+  props.mode === "word" ? <WordCaption {...props} /> : <ChunkCaption {...props} />;
+
+const ChunkCaption: React.FC<SubtitleConfig> = ({
   title,
   segments,
   bottomOffset = 250,

@@ -1,0 +1,1496 @@
+[
+  {
+    "startFrame": 16,
+    "endFrame": 151,
+    "text": "If you find a cave and hide inside it from the rain, you have a home,",
+    "words": [
+      {
+        "word": "If",
+        "startFrame": 16,
+        "endFrame": 19
+      },
+      {
+        "word": "you",
+        "startFrame": 19,
+        "endFrame": 22
+      },
+      {
+        "word": "find",
+        "startFrame": 22,
+        "endFrame": 28
+      },
+      {
+        "word": "a",
+        "startFrame": 28,
+        "endFrame": 31
+      },
+      {
+        "word": "cave",
+        "startFrame": 31,
+        "endFrame": 52
+      },
+      {
+        "word": "and",
+        "startFrame": 52,
+        "endFrame": 58
+      },
+      {
+        "word": "hide",
+        "startFrame": 58,
+        "endFrame": 73
+      },
+      {
+        "word": "inside",
+        "startFrame": 73,
+        "endFrame": 88
+      },
+      {
+        "word": "it",
+        "startFrame": 88,
+        "endFrame": 91
+      },
+      {
+        "word": "from",
+        "startFrame": 91,
+        "endFrame": 97
+      },
+      {
+        "word": "the",
+        "startFrame": 97,
+        "endFrame": 100
+      },
+      {
+        "word": "rain,",
+        "startFrame": 100,
+        "endFrame": 112
+      },
+      {
+        "word": "you",
+        "startFrame": 127,
+        "endFrame": 130
+      },
+      {
+        "word": "have",
+        "startFrame": 130,
+        "endFrame": 136
+      },
+      {
+        "word": "a",
+        "startFrame": 136,
+        "endFrame": 139
+      },
+      {
+        "word": "home,",
+        "startFrame": 139,
+        "endFrame": 151
+      }
+    ]
+  },
+  {
+    "startFrame": 164,
+    "endFrame": 260,
+    "text": "but it is pitch black and freezing.",
+    "words": [
+      {
+        "word": "but",
+        "startFrame": 164,
+        "endFrame": 167
+      },
+      {
+        "word": "it",
+        "startFrame": 167,
+        "endFrame": 170
+      },
+      {
+        "word": "is",
+        "startFrame": 170,
+        "endFrame": 179
+      },
+      {
+        "word": "pitch",
+        "startFrame": 179,
+        "endFrame": 203
+      },
+      {
+        "word": "black",
+        "startFrame": 203,
+        "endFrame": 221
+      },
+      {
+        "word": "and",
+        "startFrame": 224,
+        "endFrame": 230
+      },
+      {
+        "word": "freezing.",
+        "startFrame": 230,
+        "endFrame": 260
+      }
+    ]
+  },
+  {
+    "startFrame": 286,
+    "endFrame": 358,
+    "text": "So, you build a fire in the middle of the cave,",
+    "words": [
+      {
+        "word": "So,",
+        "startFrame": 286,
+        "endFrame": 298
+      },
+      {
+        "word": "you",
+        "startFrame": 301,
+        "endFrame": 307
+      },
+      {
+        "word": "build",
+        "startFrame": 307,
+        "endFrame": 313
+      },
+      {
+        "word": "a",
+        "startFrame": 313,
+        "endFrame": 316
+      },
+      {
+        "word": "fire",
+        "startFrame": 316,
+        "endFrame": 328
+      },
+      {
+        "word": "in",
+        "startFrame": 328,
+        "endFrame": 331
+      },
+      {
+        "word": "the",
+        "startFrame": 331,
+        "endFrame": 332
+      },
+      {
+        "word": "middle",
+        "startFrame": 331,
+        "endFrame": 337
+      },
+      {
+        "word": "of",
+        "startFrame": 337,
+        "endFrame": 340
+      },
+      {
+        "word": "the",
+        "startFrame": 340,
+        "endFrame": 343
+      },
+      {
+        "word": "cave,",
+        "startFrame": 343,
+        "endFrame": 358
+      }
+    ]
+  },
+  {
+    "startFrame": 371,
+    "endFrame": 470,
+    "text": "but the smoke fills the whole cave in seconds.",
+    "words": [
+      {
+        "word": "but",
+        "startFrame": 371,
+        "endFrame": 374
+      },
+      {
+        "word": "the",
+        "startFrame": 374,
+        "endFrame": 377
+      },
+      {
+        "word": "smoke",
+        "startFrame": 377,
+        "endFrame": 398
+      },
+      {
+        "word": "fills",
+        "startFrame": 398,
+        "endFrame": 416
+      },
+      {
+        "word": "the",
+        "startFrame": 416,
+        "endFrame": 417
+      },
+      {
+        "word": "whole",
+        "startFrame": 416,
+        "endFrame": 428
+      },
+      {
+        "word": "cave",
+        "startFrame": 428,
+        "endFrame": 443
+      },
+      {
+        "word": "in",
+        "startFrame": 443,
+        "endFrame": 446
+      },
+      {
+        "word": "seconds.",
+        "startFrame": 446,
+        "endFrame": 470
+      }
+    ]
+  },
+  {
+    "startFrame": 496,
+    "endFrame": 628,
+    "text": "So, you move the fire close to the entrance, where the smoke can drift out,",
+    "words": [
+      {
+        "word": "So,",
+        "startFrame": 496,
+        "endFrame": 502
+      },
+      {
+        "word": "you",
+        "startFrame": 517,
+        "endFrame": 520
+      },
+      {
+        "word": "move",
+        "startFrame": 520,
+        "endFrame": 526
+      },
+      {
+        "word": "the",
+        "startFrame": 526,
+        "endFrame": 529
+      },
+      {
+        "word": "fire",
+        "startFrame": 529,
+        "endFrame": 547
+      },
+      {
+        "word": "close",
+        "startFrame": 547,
+        "endFrame": 559
+      },
+      {
+        "word": "to",
+        "startFrame": 559,
+        "endFrame": 562
+      },
+      {
+        "word": "the",
+        "startFrame": 562,
+        "endFrame": 568
+      },
+      {
+        "word": "entrance,",
+        "startFrame": 568,
+        "endFrame": 586
+      },
+      {
+        "word": "where",
+        "startFrame": 586,
+        "endFrame": 589
+      },
+      {
+        "word": "the",
+        "startFrame": 589,
+        "endFrame": 592
+      },
+      {
+        "word": "smoke",
+        "startFrame": 592,
+        "endFrame": 601
+      },
+      {
+        "word": "can",
+        "startFrame": 601,
+        "endFrame": 607
+      },
+      {
+        "word": "drift",
+        "startFrame": 607,
+        "endFrame": 616
+      },
+      {
+        "word": "out,",
+        "startFrame": 619,
+        "endFrame": 628
+      }
+    ]
+  },
+  {
+    "startFrame": 643,
+    "endFrame": 784,
+    "text": "but now the cold wind blows straight in and the fire keeps going out.",
+    "words": [
+      {
+        "word": "but",
+        "startFrame": 643,
+        "endFrame": 646
+      },
+      {
+        "word": "now",
+        "startFrame": 646,
+        "endFrame": 661
+      },
+      {
+        "word": "the",
+        "startFrame": 670,
+        "endFrame": 673
+      },
+      {
+        "word": "cold",
+        "startFrame": 673,
+        "endFrame": 682
+      },
+      {
+        "word": "wind",
+        "startFrame": 682,
+        "endFrame": 691
+      },
+      {
+        "word": "blows",
+        "startFrame": 691,
+        "endFrame": 703
+      },
+      {
+        "word": "straight",
+        "startFrame": 703,
+        "endFrame": 715
+      },
+      {
+        "word": "in",
+        "startFrame": 715,
+        "endFrame": 721
+      },
+      {
+        "word": "and",
+        "startFrame": 742,
+        "endFrame": 743
+      },
+      {
+        "word": "the",
+        "startFrame": 742,
+        "endFrame": 745
+      },
+      {
+        "word": "fire",
+        "startFrame": 745,
+        "endFrame": 760
+      },
+      {
+        "word": "keeps",
+        "startFrame": 760,
+        "endFrame": 766
+      },
+      {
+        "word": "going",
+        "startFrame": 766,
+        "endFrame": 775
+      },
+      {
+        "word": "out.",
+        "startFrame": 775,
+        "endFrame": 784
+      }
+    ]
+  },
+  {
+    "startFrame": 812,
+    "endFrame": 953,
+    "text": "So, you stack stones across the entrance into a wall with a small door.",
+    "words": [
+      {
+        "word": "So,",
+        "startFrame": 812,
+        "endFrame": 824
+      },
+      {
+        "word": "you",
+        "startFrame": 833,
+        "endFrame": 839
+      },
+      {
+        "word": "stack",
+        "startFrame": 839,
+        "endFrame": 851
+      },
+      {
+        "word": "stones",
+        "startFrame": 851,
+        "endFrame": 866
+      },
+      {
+        "word": "across",
+        "startFrame": 866,
+        "endFrame": 878
+      },
+      {
+        "word": "the",
+        "startFrame": 878,
+        "endFrame": 881
+      },
+      {
+        "word": "entrance",
+        "startFrame": 881,
+        "endFrame": 896
+      },
+      {
+        "word": "into",
+        "startFrame": 896,
+        "endFrame": 902
+      },
+      {
+        "word": "a",
+        "startFrame": 902,
+        "endFrame": 905
+      },
+      {
+        "word": "wall",
+        "startFrame": 905,
+        "endFrame": 917
+      },
+      {
+        "word": "with",
+        "startFrame": 917,
+        "endFrame": 920
+      },
+      {
+        "word": "a",
+        "startFrame": 920,
+        "endFrame": 923
+      },
+      {
+        "word": "small",
+        "startFrame": 923,
+        "endFrame": 938
+      },
+      {
+        "word": "door.",
+        "startFrame": 938,
+        "endFrame": 953
+      }
+    ]
+  },
+  {
+    "startFrame": 968,
+    "endFrame": 1019,
+    "text": "This is a wind wall.",
+    "words": [
+      {
+        "word": "This",
+        "startFrame": 968,
+        "endFrame": 983
+      },
+      {
+        "word": "is",
+        "startFrame": 983,
+        "endFrame": 986
+      },
+      {
+        "word": "a",
+        "startFrame": 986,
+        "endFrame": 989
+      },
+      {
+        "word": "wind",
+        "startFrame": 989,
+        "endFrame": 1004
+      },
+      {
+        "word": "wall.",
+        "startFrame": 1004,
+        "endFrame": 1019
+      }
+    ]
+  },
+  {
+    "startFrame": 1043,
+    "endFrame": 1166,
+    "text": "But now the smoke is trapped again and the cave fills up.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 1043,
+        "endFrame": 1046
+      },
+      {
+        "word": "now",
+        "startFrame": 1064,
+        "endFrame": 1067
+      },
+      {
+        "word": "the",
+        "startFrame": 1067,
+        "endFrame": 1070
+      },
+      {
+        "word": "smoke",
+        "startFrame": 1070,
+        "endFrame": 1079
+      },
+      {
+        "word": "is",
+        "startFrame": 1079,
+        "endFrame": 1085
+      },
+      {
+        "word": "trapped",
+        "startFrame": 1085,
+        "endFrame": 1097
+      },
+      {
+        "word": "again",
+        "startFrame": 1097,
+        "endFrame": 1106
+      },
+      {
+        "word": "and",
+        "startFrame": 1124,
+        "endFrame": 1127
+      },
+      {
+        "word": "the",
+        "startFrame": 1127,
+        "endFrame": 1130
+      },
+      {
+        "word": "cave",
+        "startFrame": 1130,
+        "endFrame": 1148
+      },
+      {
+        "word": "fills",
+        "startFrame": 1151,
+        "endFrame": 1160
+      },
+      {
+        "word": "up.",
+        "startFrame": 1160,
+        "endFrame": 1166
+      }
+    ]
+  },
+  {
+    "startFrame": 1183,
+    "endFrame": 1321,
+    "text": "So, you leave a gap at the very top of the wall. This is a smoke vent.",
+    "words": [
+      {
+        "word": "So,",
+        "startFrame": 1183,
+        "endFrame": 1189
+      },
+      {
+        "word": "you",
+        "startFrame": 1201,
+        "endFrame": 1207
+      },
+      {
+        "word": "leave",
+        "startFrame": 1207,
+        "endFrame": 1213
+      },
+      {
+        "word": "a",
+        "startFrame": 1213,
+        "endFrame": 1216
+      },
+      {
+        "word": "gap",
+        "startFrame": 1216,
+        "endFrame": 1228
+      },
+      {
+        "word": "at",
+        "startFrame": 1228,
+        "endFrame": 1231
+      },
+      {
+        "word": "the",
+        "startFrame": 1231,
+        "endFrame": 1234
+      },
+      {
+        "word": "very",
+        "startFrame": 1234,
+        "endFrame": 1243
+      },
+      {
+        "word": "top",
+        "startFrame": 1243,
+        "endFrame": 1255
+      },
+      {
+        "word": "of",
+        "startFrame": 1255,
+        "endFrame": 1258
+      },
+      {
+        "word": "the",
+        "startFrame": 1258,
+        "endFrame": 1261
+      },
+      {
+        "word": "wall.",
+        "startFrame": 1261,
+        "endFrame": 1273
+      },
+      {
+        "word": "This",
+        "startFrame": 1285,
+        "endFrame": 1294
+      },
+      {
+        "word": "is",
+        "startFrame": 1294,
+        "endFrame": 1300
+      },
+      {
+        "word": "a",
+        "startFrame": 1300,
+        "endFrame": 1301
+      },
+      {
+        "word": "smoke",
+        "startFrame": 1300,
+        "endFrame": 1312
+      },
+      {
+        "word": "vent.",
+        "startFrame": 1312,
+        "endFrame": 1321
+      }
+    ]
+  },
+  {
+    "startFrame": 1350,
+    "endFrame": 1473,
+    "text": "But water drips from the ceiling right onto the floor where you sleep.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 1350,
+        "endFrame": 1356
+      },
+      {
+        "word": "water",
+        "startFrame": 1356,
+        "endFrame": 1371
+      },
+      {
+        "word": "drips",
+        "startFrame": 1371,
+        "endFrame": 1383
+      },
+      {
+        "word": "from",
+        "startFrame": 1383,
+        "endFrame": 1386
+      },
+      {
+        "word": "the",
+        "startFrame": 1386,
+        "endFrame": 1389
+      },
+      {
+        "word": "ceiling",
+        "startFrame": 1389,
+        "endFrame": 1413
+      },
+      {
+        "word": "right",
+        "startFrame": 1419,
+        "endFrame": 1425
+      },
+      {
+        "word": "onto",
+        "startFrame": 1425,
+        "endFrame": 1431
+      },
+      {
+        "word": "the",
+        "startFrame": 1431,
+        "endFrame": 1434
+      },
+      {
+        "word": "floor",
+        "startFrame": 1434,
+        "endFrame": 1449
+      },
+      {
+        "word": "where",
+        "startFrame": 1449,
+        "endFrame": 1452
+      },
+      {
+        "word": "you",
+        "startFrame": 1452,
+        "endFrame": 1458
+      },
+      {
+        "word": "sleep.",
+        "startFrame": 1458,
+        "endFrame": 1473
+      }
+    ]
+  },
+  {
+    "startFrame": 1490,
+    "endFrame": 1694,
+    "text": "So, you dig a little channel in the floor that leads the water out of the cave. This is a drain.",
+    "words": [
+      {
+        "word": "So,",
+        "startFrame": 1490,
+        "endFrame": 1502
+      },
+      {
+        "word": "you",
+        "startFrame": 1508,
+        "endFrame": 1514
+      },
+      {
+        "word": "dig",
+        "startFrame": 1514,
+        "endFrame": 1526
+      },
+      {
+        "word": "a",
+        "startFrame": 1526,
+        "endFrame": 1527
+      },
+      {
+        "word": "little",
+        "startFrame": 1526,
+        "endFrame": 1535
+      },
+      {
+        "word": "channel",
+        "startFrame": 1535,
+        "endFrame": 1550
+      },
+      {
+        "word": "in",
+        "startFrame": 1550,
+        "endFrame": 1553
+      },
+      {
+        "word": "the",
+        "startFrame": 1553,
+        "endFrame": 1556
+      },
+      {
+        "word": "floor",
+        "startFrame": 1556,
+        "endFrame": 1574
+      },
+      {
+        "word": "that",
+        "startFrame": 1574,
+        "endFrame": 1580
+      },
+      {
+        "word": "leads",
+        "startFrame": 1580,
+        "endFrame": 1589
+      },
+      {
+        "word": "the",
+        "startFrame": 1589,
+        "endFrame": 1592
+      },
+      {
+        "word": "water",
+        "startFrame": 1592,
+        "endFrame": 1610
+      },
+      {
+        "word": "out",
+        "startFrame": 1613,
+        "endFrame": 1619
+      },
+      {
+        "word": "of",
+        "startFrame": 1619,
+        "endFrame": 1622
+      },
+      {
+        "word": "the",
+        "startFrame": 1622,
+        "endFrame": 1625
+      },
+      {
+        "word": "cave.",
+        "startFrame": 1625,
+        "endFrame": 1643
+      },
+      {
+        "word": "This",
+        "startFrame": 1649,
+        "endFrame": 1667
+      },
+      {
+        "word": "is",
+        "startFrame": 1670,
+        "endFrame": 1673
+      },
+      {
+        "word": "a",
+        "startFrame": 1673,
+        "endFrame": 1674
+      },
+      {
+        "word": "drain.",
+        "startFrame": 1673,
+        "endFrame": 1694
+      }
+    ]
+  },
+  {
+    "startFrame": 1723,
+    "endFrame": 1825,
+    "text": "But the floor is still cold, wet rock.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 1723,
+        "endFrame": 1726
+      },
+      {
+        "word": "the",
+        "startFrame": 1726,
+        "endFrame": 1729
+      },
+      {
+        "word": "floor",
+        "startFrame": 1729,
+        "endFrame": 1750
+      },
+      {
+        "word": "is",
+        "startFrame": 1750,
+        "endFrame": 1753
+      },
+      {
+        "word": "still",
+        "startFrame": 1753,
+        "endFrame": 1768
+      },
+      {
+        "word": "cold,",
+        "startFrame": 1768,
+        "endFrame": 1795
+      },
+      {
+        "word": "wet",
+        "startFrame": 1795,
+        "endFrame": 1807
+      },
+      {
+        "word": "rock.",
+        "startFrame": 1810,
+        "endFrame": 1825
+      }
+    ]
+  },
+  {
+    "startFrame": 1839,
+    "endFrame": 1980,
+    "text": "So, you build a bed of logs off the ground and cover it with dry grass.",
+    "words": [
+      {
+        "word": "So,",
+        "startFrame": 1839,
+        "endFrame": 1848
+      },
+      {
+        "word": "you",
+        "startFrame": 1851,
+        "endFrame": 1854
+      },
+      {
+        "word": "build",
+        "startFrame": 1854,
+        "endFrame": 1866
+      },
+      {
+        "word": "a",
+        "startFrame": 1866,
+        "endFrame": 1867
+      },
+      {
+        "word": "bed",
+        "startFrame": 1866,
+        "endFrame": 1875
+      },
+      {
+        "word": "of",
+        "startFrame": 1875,
+        "endFrame": 1878
+      },
+      {
+        "word": "logs",
+        "startFrame": 1878,
+        "endFrame": 1893
+      },
+      {
+        "word": "off",
+        "startFrame": 1893,
+        "endFrame": 1899
+      },
+      {
+        "word": "the",
+        "startFrame": 1899,
+        "endFrame": 1902
+      },
+      {
+        "word": "ground",
+        "startFrame": 1902,
+        "endFrame": 1914
+      },
+      {
+        "word": "and",
+        "startFrame": 1917,
+        "endFrame": 1923
+      },
+      {
+        "word": "cover",
+        "startFrame": 1923,
+        "endFrame": 1932
+      },
+      {
+        "word": "it",
+        "startFrame": 1932,
+        "endFrame": 1935
+      },
+      {
+        "word": "with",
+        "startFrame": 1935,
+        "endFrame": 1944
+      },
+      {
+        "word": "dry",
+        "startFrame": 1950,
+        "endFrame": 1962
+      },
+      {
+        "word": "grass.",
+        "startFrame": 1962,
+        "endFrame": 1980
+      }
+    ]
+  },
+  {
+    "startFrame": 2008,
+    "endFrame": 2119,
+    "text": "But at night, animals come sniffing at the door.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 2008,
+        "endFrame": 2011
+      },
+      {
+        "word": "at",
+        "startFrame": 2011,
+        "endFrame": 2017
+      },
+      {
+        "word": "night,",
+        "startFrame": 2017,
+        "endFrame": 2035
+      },
+      {
+        "word": "animals",
+        "startFrame": 2053,
+        "endFrame": 2071
+      },
+      {
+        "word": "come",
+        "startFrame": 2071,
+        "endFrame": 2077
+      },
+      {
+        "word": "sniffing",
+        "startFrame": 2077,
+        "endFrame": 2095
+      },
+      {
+        "word": "at",
+        "startFrame": 2095,
+        "endFrame": 2098
+      },
+      {
+        "word": "the",
+        "startFrame": 2098,
+        "endFrame": 2101
+      },
+      {
+        "word": "door.",
+        "startFrame": 2101,
+        "endFrame": 2119
+      }
+    ]
+  },
+  {
+    "startFrame": 2134,
+    "endFrame": 2251,
+    "text": "So, you make a door of tied sticks that you can close from the inside.",
+    "words": [
+      {
+        "word": "So,",
+        "startFrame": 2134,
+        "endFrame": 2143
+      },
+      {
+        "word": "you",
+        "startFrame": 2146,
+        "endFrame": 2152
+      },
+      {
+        "word": "make",
+        "startFrame": 2158,
+        "endFrame": 2164
+      },
+      {
+        "word": "a",
+        "startFrame": 2164,
+        "endFrame": 2165
+      },
+      {
+        "word": "door",
+        "startFrame": 2164,
+        "endFrame": 2173
+      },
+      {
+        "word": "of",
+        "startFrame": 2173,
+        "endFrame": 2179
+      },
+      {
+        "word": "tied",
+        "startFrame": 2179,
+        "endFrame": 2191
+      },
+      {
+        "word": "sticks",
+        "startFrame": 2191,
+        "endFrame": 2206
+      },
+      {
+        "word": "that",
+        "startFrame": 2206,
+        "endFrame": 2209
+      },
+      {
+        "word": "you",
+        "startFrame": 2209,
+        "endFrame": 2212
+      },
+      {
+        "word": "can",
+        "startFrame": 2212,
+        "endFrame": 2215
+      },
+      {
+        "word": "close",
+        "startFrame": 2215,
+        "endFrame": 2227
+      },
+      {
+        "word": "from",
+        "startFrame": 2227,
+        "endFrame": 2230
+      },
+      {
+        "word": "the",
+        "startFrame": 2230,
+        "endFrame": 2233
+      },
+      {
+        "word": "inside.",
+        "startFrame": 2233,
+        "endFrame": 2251
+      }
+    ]
+  },
+  {
+    "startFrame": 2279,
+    "endFrame": 2378,
+    "text": "And that gap at the top of the wall is not a mistake.",
+    "words": [
+      {
+        "word": "And",
+        "startFrame": 2279,
+        "endFrame": 2285
+      },
+      {
+        "word": "that",
+        "startFrame": 2285,
+        "endFrame": 2294
+      },
+      {
+        "word": "gap",
+        "startFrame": 2294,
+        "endFrame": 2306
+      },
+      {
+        "word": "at",
+        "startFrame": 2306,
+        "endFrame": 2307
+      },
+      {
+        "word": "the",
+        "startFrame": 2306,
+        "endFrame": 2309
+      },
+      {
+        "word": "top",
+        "startFrame": 2309,
+        "endFrame": 2318
+      },
+      {
+        "word": "of",
+        "startFrame": 2318,
+        "endFrame": 2321
+      },
+      {
+        "word": "the",
+        "startFrame": 2321,
+        "endFrame": 2324
+      },
+      {
+        "word": "wall",
+        "startFrame": 2324,
+        "endFrame": 2333
+      },
+      {
+        "word": "is",
+        "startFrame": 2333,
+        "endFrame": 2339
+      },
+      {
+        "word": "not",
+        "startFrame": 2339,
+        "endFrame": 2357
+      },
+      {
+        "word": "a",
+        "startFrame": 2360,
+        "endFrame": 2363
+      },
+      {
+        "word": "mistake.",
+        "startFrame": 2363,
+        "endFrame": 2378
+      }
+    ]
+  },
+  {
+    "startFrame": 2396,
+    "endFrame": 2579,
+    "text": "Smoke rises and flows out along the ceiling, while fresh air comes in along the floor.",
+    "words": [
+      {
+        "word": "Smoke",
+        "startFrame": 2396,
+        "endFrame": 2414
+      },
+      {
+        "word": "rises",
+        "startFrame": 2414,
+        "endFrame": 2441
+      },
+      {
+        "word": "and",
+        "startFrame": 2441,
+        "endFrame": 2447
+      },
+      {
+        "word": "flows",
+        "startFrame": 2447,
+        "endFrame": 2462
+      },
+      {
+        "word": "out",
+        "startFrame": 2462,
+        "endFrame": 2471
+      },
+      {
+        "word": "along",
+        "startFrame": 2471,
+        "endFrame": 2483
+      },
+      {
+        "word": "the",
+        "startFrame": 2483,
+        "endFrame": 2486
+      },
+      {
+        "word": "ceiling,",
+        "startFrame": 2486,
+        "endFrame": 2501
+      },
+      {
+        "word": "while",
+        "startFrame": 2507,
+        "endFrame": 2513
+      },
+      {
+        "word": "fresh",
+        "startFrame": 2513,
+        "endFrame": 2522
+      },
+      {
+        "word": "air",
+        "startFrame": 2522,
+        "endFrame": 2537
+      },
+      {
+        "word": "comes",
+        "startFrame": 2537,
+        "endFrame": 2546
+      },
+      {
+        "word": "in",
+        "startFrame": 2546,
+        "endFrame": 2552
+      },
+      {
+        "word": "along",
+        "startFrame": 2552,
+        "endFrame": 2564
+      },
+      {
+        "word": "the",
+        "startFrame": 2564,
+        "endFrame": 2567
+      },
+      {
+        "word": "floor.",
+        "startFrame": 2567,
+        "endFrame": 2579
+      }
+    ]
+  },
+  {
+    "startFrame": 2597,
+    "endFrame": 2705,
+    "text": "Close it and the fire would fill the cave with smoke.",
+    "words": [
+      {
+        "word": "Close",
+        "startFrame": 2597,
+        "endFrame": 2606
+      },
+      {
+        "word": "it",
+        "startFrame": 2606,
+        "endFrame": 2615
+      },
+      {
+        "word": "and",
+        "startFrame": 2621,
+        "endFrame": 2624
+      },
+      {
+        "word": "the",
+        "startFrame": 2624,
+        "endFrame": 2627
+      },
+      {
+        "word": "fire",
+        "startFrame": 2627,
+        "endFrame": 2642
+      },
+      {
+        "word": "would",
+        "startFrame": 2642,
+        "endFrame": 2651
+      },
+      {
+        "word": "fill",
+        "startFrame": 2651,
+        "endFrame": 2663
+      },
+      {
+        "word": "the",
+        "startFrame": 2663,
+        "endFrame": 2669
+      },
+      {
+        "word": "cave",
+        "startFrame": 2669,
+        "endFrame": 2681
+      },
+      {
+        "word": "with",
+        "startFrame": 2681,
+        "endFrame": 2687
+      },
+      {
+        "word": "smoke.",
+        "startFrame": 2687,
+        "endFrame": 2705
+      }
+    ]
+  },
+  {
+    "startFrame": 2733,
+    "endFrame": 2844,
+    "text": "Add a torch on the wall, a painting of a mammoth,",
+    "words": [
+      {
+        "word": "Add",
+        "startFrame": 2733,
+        "endFrame": 2739
+      },
+      {
+        "word": "a",
+        "startFrame": 2739,
+        "endFrame": 2742
+      },
+      {
+        "word": "torch",
+        "startFrame": 2742,
+        "endFrame": 2760
+      },
+      {
+        "word": "on",
+        "startFrame": 2760,
+        "endFrame": 2761
+      },
+      {
+        "word": "the",
+        "startFrame": 2760,
+        "endFrame": 2766
+      },
+      {
+        "word": "wall,",
+        "startFrame": 2766,
+        "endFrame": 2778
+      },
+      {
+        "word": "a",
+        "startFrame": 2799,
+        "endFrame": 2802
+      },
+      {
+        "word": "painting",
+        "startFrame": 2802,
+        "endFrame": 2817
+      },
+      {
+        "word": "of",
+        "startFrame": 2817,
+        "endFrame": 2820
+      },
+      {
+        "word": "a",
+        "startFrame": 2820,
+        "endFrame": 2823
+      },
+      {
+        "word": "mammoth,",
+        "startFrame": 2823,
+        "endFrame": 2844
+      }
+    ]
+  },
+  {
+    "startFrame": 2857,
+    "endFrame": 2929,
+    "text": "and a bat who refuses to move out.",
+    "words": [
+      {
+        "word": "and",
+        "startFrame": 2857,
+        "endFrame": 2860
+      },
+      {
+        "word": "a",
+        "startFrame": 2860,
+        "endFrame": 2863
+      },
+      {
+        "word": "bat",
+        "startFrame": 2863,
+        "endFrame": 2881
+      },
+      {
+        "word": "who",
+        "startFrame": 2881,
+        "endFrame": 2884
+      },
+      {
+        "word": "refuses",
+        "startFrame": 2884,
+        "endFrame": 2908
+      },
+      {
+        "word": "to",
+        "startFrame": 2908,
+        "endFrame": 2911
+      },
+      {
+        "word": "move",
+        "startFrame": 2911,
+        "endFrame": 2920
+      },
+      {
+        "word": "out.",
+        "startFrame": 2920,
+        "endFrame": 2929
+      }
+    ]
+  },
+  {
+    "startFrame": 2959,
+    "endFrame": 3082,
+    "text": "Congratulations, you have built a cave home.",
+    "words": [
+      {
+        "word": "Congratulations,",
+        "startFrame": 2959,
+        "endFrame": 3001
+      },
+      {
+        "word": "you",
+        "startFrame": 3007,
+        "endFrame": 3019
+      },
+      {
+        "word": "have",
+        "startFrame": 3019,
+        "endFrame": 3028
+      },
+      {
+        "word": "built",
+        "startFrame": 3028,
+        "endFrame": 3043
+      },
+      {
+        "word": "a",
+        "startFrame": 3046,
+        "endFrame": 3049
+      },
+      {
+        "word": "cave",
+        "startFrame": 3055,
+        "endFrame": 3067
+      },
+      {
+        "word": "home.",
+        "startFrame": 3067,
+        "endFrame": 3082
+      }
+    ]
+  }
+]
