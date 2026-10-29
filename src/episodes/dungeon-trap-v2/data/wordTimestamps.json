@@ -1,0 +1,987 @@
+[
+  {
+    "startFrame": 21,
+    "endFrame": 255,
+    "text": "It starts small. A simple spike pit at the front door, and the Guild's first recruit, a low-level goblin, walks right in.",
+    "words": [
+      {
+        "word": "It",
+        "startFrame": 21,
+        "endFrame": 24
+      },
+      {
+        "word": "starts",
+        "startFrame": 24,
+        "endFrame": 45
+      },
+      {
+        "word": "small.",
+        "startFrame": 48,
+        "endFrame": 66
+      },
+      {
+        "word": "A",
+        "startFrame": 75,
+        "endFrame": 78
+      },
+      {
+        "word": "simple",
+        "startFrame": 78,
+        "endFrame": 87
+      },
+      {
+        "word": "spike",
+        "startFrame": 93,
+        "endFrame": 105
+      },
+      {
+        "word": "pit",
+        "startFrame": 105,
+        "endFrame": 114
+      },
+      {
+        "word": "at",
+        "startFrame": 114,
+        "endFrame": 117
+      },
+      {
+        "word": "the",
+        "startFrame": 117,
+        "endFrame": 120
+      },
+      {
+        "word": "front",
+        "startFrame": 120,
+        "endFrame": 126
+      },
+      {
+        "word": "door,",
+        "startFrame": 126,
+        "endFrame": 135
+      },
+      {
+        "word": "and",
+        "startFrame": 144,
+        "endFrame": 147
+      },
+      {
+        "word": "the",
+        "startFrame": 147,
+        "endFrame": 150
+      },
+      {
+        "word": "Guild's",
+        "startFrame": 150,
+        "endFrame": 162
+      },
+      {
+        "word": "first",
+        "startFrame": 162,
+        "endFrame": 171
+      },
+      {
+        "word": "recruit,",
+        "startFrame": 171,
+        "endFrame": 189
+      },
+      {
+        "word": "a",
+        "startFrame": 192,
+        "endFrame": 193
+      },
+      {
+        "word": "low-level",
+        "startFrame": 192,
+        "endFrame": 204
+      },
+      {
+        "word": "goblin,",
+        "startFrame": 204,
+        "endFrame": 219
+      },
+      {
+        "word": "walks",
+        "startFrame": 222,
+        "endFrame": 237
+      },
+      {
+        "word": "right",
+        "startFrame": 237,
+        "endFrame": 246
+      },
+      {
+        "word": "in.",
+        "startFrame": 246,
+        "endFrame": 255
+      }
+    ]
+  },
+  {
+    "startFrame": 285,
+    "endFrame": 435,
+    "text": "The Guild sends a Rogue next. She spots the gap, and leaps right over it.",
+    "words": [
+      {
+        "word": "The",
+        "startFrame": 285,
+        "endFrame": 288
+      },
+      {
+        "word": "Guild",
+        "startFrame": 288,
+        "endFrame": 303
+      },
+      {
+        "word": "sends",
+        "startFrame": 303,
+        "endFrame": 312
+      },
+      {
+        "word": "a",
+        "startFrame": 312,
+        "endFrame": 315
+      },
+      {
+        "word": "Rogue",
+        "startFrame": 315,
+        "endFrame": 330
+      },
+      {
+        "word": "next.",
+        "startFrame": 330,
+        "endFrame": 345
+      },
+      {
+        "word": "She",
+        "startFrame": 357,
+        "endFrame": 363
+      },
+      {
+        "word": "spots",
+        "startFrame": 363,
+        "endFrame": 372
+      },
+      {
+        "word": "the",
+        "startFrame": 372,
+        "endFrame": 375
+      },
+      {
+        "word": "gap,",
+        "startFrame": 375,
+        "endFrame": 390
+      },
+      {
+        "word": "and",
+        "startFrame": 393,
+        "endFrame": 399
+      },
+      {
+        "word": "leaps",
+        "startFrame": 399,
+        "endFrame": 411
+      },
+      {
+        "word": "right",
+        "startFrame": 411,
+        "endFrame": 423
+      },
+      {
+        "word": "over",
+        "startFrame": 423,
+        "endFrame": 429
+      },
+      {
+        "word": "it.",
+        "startFrame": 429,
+        "endFrame": 435
+      }
+    ]
+  },
+  {
+    "startFrame": 452,
+    "endFrame": 755,
+    "text": "So you cover the pit with a hinged false floor, and hang a glowing chest just out of reach. She jumps for it, and lands on the hidden pressure plate.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 452,
+        "endFrame": 458
+      },
+      {
+        "word": "you",
+        "startFrame": 461,
+        "endFrame": 464
+      },
+      {
+        "word": "cover",
+        "startFrame": 464,
+        "endFrame": 473
+      },
+      {
+        "word": "the",
+        "startFrame": 473,
+        "endFrame": 476
+      },
+      {
+        "word": "pit",
+        "startFrame": 476,
+        "endFrame": 491
+      },
+      {
+        "word": "with",
+        "startFrame": 494,
+        "endFrame": 495
+      },
+      {
+        "word": "a",
+        "startFrame": 494,
+        "endFrame": 497
+      },
+      {
+        "word": "hinged",
+        "startFrame": 497,
+        "endFrame": 518
+      },
+      {
+        "word": "false",
+        "startFrame": 521,
+        "endFrame": 536
+      },
+      {
+        "word": "floor,",
+        "startFrame": 536,
+        "endFrame": 554
+      },
+      {
+        "word": "and",
+        "startFrame": 557,
+        "endFrame": 560
+      },
+      {
+        "word": "hang",
+        "startFrame": 560,
+        "endFrame": 566
+      },
+      {
+        "word": "a",
+        "startFrame": 566,
+        "endFrame": 569
+      },
+      {
+        "word": "glowing",
+        "startFrame": 575,
+        "endFrame": 593
+      },
+      {
+        "word": "chest",
+        "startFrame": 593,
+        "endFrame": 614
+      },
+      {
+        "word": "just",
+        "startFrame": 614,
+        "endFrame": 626
+      },
+      {
+        "word": "out",
+        "startFrame": 626,
+        "endFrame": 629
+      },
+      {
+        "word": "of",
+        "startFrame": 629,
+        "endFrame": 632
+      },
+      {
+        "word": "reach.",
+        "startFrame": 632,
+        "endFrame": 644
+      },
+      {
+        "word": "She",
+        "startFrame": 656,
+        "endFrame": 662
+      },
+      {
+        "word": "jumps",
+        "startFrame": 662,
+        "endFrame": 671
+      },
+      {
+        "word": "for",
+        "startFrame": 671,
+        "endFrame": 677
+      },
+      {
+        "word": "it,",
+        "startFrame": 677,
+        "endFrame": 686
+      },
+      {
+        "word": "and",
+        "startFrame": 686,
+        "endFrame": 692
+      },
+      {
+        "word": "lands",
+        "startFrame": 692,
+        "endFrame": 713
+      },
+      {
+        "word": "on",
+        "startFrame": 713,
+        "endFrame": 716
+      },
+      {
+        "word": "the",
+        "startFrame": 716,
+        "endFrame": 719
+      },
+      {
+        "word": "hidden",
+        "startFrame": 719,
+        "endFrame": 731
+      },
+      {
+        "word": "pressure",
+        "startFrame": 731,
+        "endFrame": 743
+      },
+      {
+        "word": "plate.",
+        "startFrame": 743,
+        "endFrame": 755
+      }
+    ]
+  },
+  {
+    "startFrame": 785,
+    "endFrame": 902,
+    "text": "Word gets back. Their Mage arrives and freezes the trapdoor solid.",
+    "words": [
+      {
+        "word": "Word",
+        "startFrame": 785,
+        "endFrame": 791
+      },
+      {
+        "word": "gets",
+        "startFrame": 791,
+        "endFrame": 797
+      },
+      {
+        "word": "back.",
+        "startFrame": 797,
+        "endFrame": 809
+      },
+      {
+        "word": "Their",
+        "startFrame": 818,
+        "endFrame": 824
+      },
+      {
+        "word": "Mage",
+        "startFrame": 824,
+        "endFrame": 833
+      },
+      {
+        "word": "arrives",
+        "startFrame": 833,
+        "endFrame": 848
+      },
+      {
+        "word": "and",
+        "startFrame": 848,
+        "endFrame": 851
+      },
+      {
+        "word": "freezes",
+        "startFrame": 851,
+        "endFrame": 869
+      },
+      {
+        "word": "the",
+        "startFrame": 869,
+        "endFrame": 872
+      },
+      {
+        "word": "trapdoor",
+        "startFrame": 872,
+        "endFrame": 884
+      },
+      {
+        "word": "solid.",
+        "startFrame": 884,
+        "endFrame": 902
+      }
+    ]
+  },
+  {
+    "startFrame": 917,
+    "endFrame": 1130,
+    "text": "So you run copper pipes along the walls, fed by a pressurized oil tank, and the ice becomes a frying pan.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 917,
+        "endFrame": 920
+      },
+      {
+        "word": "you",
+        "startFrame": 920,
+        "endFrame": 926
+      },
+      {
+        "word": "run",
+        "startFrame": 926,
+        "endFrame": 935
+      },
+      {
+        "word": "copper",
+        "startFrame": 935,
+        "endFrame": 947
+      },
+      {
+        "word": "pipes",
+        "startFrame": 947,
+        "endFrame": 962
+      },
+      {
+        "word": "along",
+        "startFrame": 962,
+        "endFrame": 971
+      },
+      {
+        "word": "the",
+        "startFrame": 971,
+        "endFrame": 974
+      },
+      {
+        "word": "walls,",
+        "startFrame": 974,
+        "endFrame": 995
+      },
+      {
+        "word": "fed",
+        "startFrame": 998,
+        "endFrame": 1004
+      },
+      {
+        "word": "by",
+        "startFrame": 1004,
+        "endFrame": 1010
+      },
+      {
+        "word": "a",
+        "startFrame": 1010,
+        "endFrame": 1013
+      },
+      {
+        "word": "pressurized",
+        "startFrame": 1013,
+        "endFrame": 1034
+      },
+      {
+        "word": "oil",
+        "startFrame": 1034,
+        "endFrame": 1043
+      },
+      {
+        "word": "tank,",
+        "startFrame": 1043,
+        "endFrame": 1061
+      },
+      {
+        "word": "and",
+        "startFrame": 1067,
+        "endFrame": 1070
+      },
+      {
+        "word": "the",
+        "startFrame": 1070,
+        "endFrame": 1073
+      },
+      {
+        "word": "ice",
+        "startFrame": 1073,
+        "endFrame": 1082
+      },
+      {
+        "word": "becomes",
+        "startFrame": 1082,
+        "endFrame": 1094
+      },
+      {
+        "word": "a",
+        "startFrame": 1094,
+        "endFrame": 1097
+      },
+      {
+        "word": "frying",
+        "startFrame": 1097,
+        "endFrame": 1112
+      },
+      {
+        "word": "pan.",
+        "startFrame": 1112,
+        "endFrame": 1130
+      }
+    ]
+  },
+  {
+    "startFrame": 1160,
+    "endFrame": 1298,
+    "text": "Then comes the Paladin, pushing through the flames behind a tower shield.",
+    "words": [
+      {
+        "word": "Then",
+        "startFrame": 1160,
+        "endFrame": 1174
+      },
+      {
+        "word": "comes",
+        "startFrame": 1174,
+        "endFrame": 1190
+      },
+      {
+        "word": "the",
+        "startFrame": 1190,
+        "endFrame": 1192
+      },
+      {
+        "word": "Paladin,",
+        "startFrame": 1192,
+        "endFrame": 1213
+      },
+      {
+        "word": "pushing",
+        "startFrame": 1220,
+        "endFrame": 1228
+      },
+      {
+        "word": "through",
+        "startFrame": 1228,
+        "endFrame": 1234
+      },
+      {
+        "word": "the",
+        "startFrame": 1234,
+        "endFrame": 1238
+      },
+      {
+        "word": "flames",
+        "startFrame": 1238,
+        "endFrame": 1252
+      },
+      {
+        "word": "behind",
+        "startFrame": 1252,
+        "endFrame": 1262
+      },
+      {
+        "word": "a",
+        "startFrame": 1262,
+        "endFrame": 1264
+      },
+      {
+        "word": "tower",
+        "startFrame": 1264,
+        "endFrame": 1280
+      },
+      {
+        "word": "shield.",
+        "startFrame": 1280,
+        "endFrame": 1298
+      }
+    ]
+  },
+  {
+    "startFrame": 1312,
+    "endFrame": 1537,
+    "text": "So you hang a gear-driven pendulum blade, timed to sweep the exact spot where a shield-bearer has to stand.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1312,
+        "endFrame": 1318
+      },
+      {
+        "word": "you",
+        "startFrame": 1330,
+        "endFrame": 1333
+      },
+      {
+        "word": "hang",
+        "startFrame": 1333,
+        "endFrame": 1339
+      },
+      {
+        "word": "a",
+        "startFrame": 1339,
+        "endFrame": 1342
+      },
+      {
+        "word": "gear-driven",
+        "startFrame": 1342,
+        "endFrame": 1369
+      },
+      {
+        "word": "pendulum",
+        "startFrame": 1369,
+        "endFrame": 1390
+      },
+      {
+        "word": "blade,",
+        "startFrame": 1390,
+        "endFrame": 1408
+      },
+      {
+        "word": "timed",
+        "startFrame": 1411,
+        "endFrame": 1423
+      },
+      {
+        "word": "to",
+        "startFrame": 1423,
+        "endFrame": 1426
+      },
+      {
+        "word": "sweep",
+        "startFrame": 1426,
+        "endFrame": 1441
+      },
+      {
+        "word": "the",
+        "startFrame": 1441,
+        "endFrame": 1447
+      },
+      {
+        "word": "exact",
+        "startFrame": 1447,
+        "endFrame": 1465
+      },
+      {
+        "word": "spot",
+        "startFrame": 1465,
+        "endFrame": 1480
+      },
+      {
+        "word": "where",
+        "startFrame": 1483,
+        "endFrame": 1486
+      },
+      {
+        "word": "a",
+        "startFrame": 1486,
+        "endFrame": 1487
+      },
+      {
+        "word": "shield-bearer",
+        "startFrame": 1486,
+        "endFrame": 1510
+      },
+      {
+        "word": "has",
+        "startFrame": 1510,
+        "endFrame": 1519
+      },
+      {
+        "word": "to",
+        "startFrame": 1519,
+        "endFrame": 1522
+      },
+      {
+        "word": "stand.",
+        "startFrame": 1522,
+        "endFrame": 1537
+      }
+    ]
+  },
+  {
+    "startFrame": 1567,
+    "endFrame": 1966,
+    "text": "The last party refuses to take a single step. So you put a counterweight catapult under the whole entrance, and the moment they huddle to plan, the floor throws them down the chute, straight into your pet Mimic.",
+    "words": [
+      {
+        "word": "The",
+        "startFrame": 1567,
+        "endFrame": 1570
+      },
+      {
+        "word": "last",
+        "startFrame": 1570,
+        "endFrame": 1582
+      },
+      {
+        "word": "party",
+        "startFrame": 1582,
+        "endFrame": 1594
+      },
+      {
+        "word": "refuses",
+        "startFrame": 1594,
+        "endFrame": 1612
+      },
+      {
+        "word": "to",
+        "startFrame": 1612,
+        "endFrame": 1615
+      },
+      {
+        "word": "take",
+        "startFrame": 1615,
+        "endFrame": 1624
+      },
+      {
+        "word": "a",
+        "startFrame": 1624,
+        "endFrame": 1627
+      },
+      {
+        "word": "single",
+        "startFrame": 1627,
+        "endFrame": 1648
+      },
+      {
+        "word": "step.",
+        "startFrame": 1648,
+        "endFrame": 1666
+      },
+      {
+        "word": "So",
+        "startFrame": 1678,
+        "endFrame": 1684
+      },
+      {
+        "word": "you",
+        "startFrame": 1684,
+        "endFrame": 1687
+      },
+      {
+        "word": "put",
+        "startFrame": 1687,
+        "endFrame": 1693
+      },
+      {
+        "word": "a",
+        "startFrame": 1693,
+        "endFrame": 1694
+      },
+      {
+        "word": "counterweight",
+        "startFrame": 1693,
+        "endFrame": 1717
+      },
+      {
+        "word": "catapult",
+        "startFrame": 1717,
+        "endFrame": 1735
+      },
+      {
+        "word": "under",
+        "startFrame": 1735,
+        "endFrame": 1741
+      },
+      {
+        "word": "the",
+        "startFrame": 1741,
+        "endFrame": 1744
+      },
+      {
+        "word": "whole",
+        "startFrame": 1744,
+        "endFrame": 1756
+      },
+      {
+        "word": "entrance,",
+        "startFrame": 1756,
+        "endFrame": 1774
+      },
+      {
+        "word": "and",
+        "startFrame": 1783,
+        "endFrame": 1786
+      },
+      {
+        "word": "the",
+        "startFrame": 1786,
+        "endFrame": 1787
+      },
+      {
+        "word": "moment",
+        "startFrame": 1786,
+        "endFrame": 1798
+      },
+      {
+        "word": "they",
+        "startFrame": 1798,
+        "endFrame": 1804
+      },
+      {
+        "word": "huddle",
+        "startFrame": 1804,
+        "endFrame": 1816
+      },
+      {
+        "word": "to",
+        "startFrame": 1816,
+        "endFrame": 1819
+      },
+      {
+        "word": "plan,",
+        "startFrame": 1819,
+        "endFrame": 1837
+      },
+      {
+        "word": "the",
+        "startFrame": 1840,
+        "endFrame": 1843
+      },
+      {
+        "word": "floor",
+        "startFrame": 1843,
+        "endFrame": 1858
+      },
+      {
+        "word": "throws",
+        "startFrame": 1858,
+        "endFrame": 1873
+      },
+      {
+        "word": "them",
+        "startFrame": 1873,
+        "endFrame": 1879
+      },
+      {
+        "word": "down",
+        "startFrame": 1879,
+        "endFrame": 1888
+      },
+      {
+        "word": "the",
+        "startFrame": 1888,
+        "endFrame": 1891
+      },
+      {
+        "word": "chute,",
+        "startFrame": 1891,
+        "endFrame": 1906
+      },
+      {
+        "word": "straight",
+        "startFrame": 1909,
+        "endFrame": 1924
+      },
+      {
+        "word": "into",
+        "startFrame": 1924,
+        "endFrame": 1930
+      },
+      {
+        "word": "your",
+        "startFrame": 1930,
+        "endFrame": 1936
+      },
+      {
+        "word": "pet",
+        "startFrame": 1936,
+        "endFrame": 1948
+      },
+      {
+        "word": "Mimic.",
+        "startFrame": 1951,
+        "endFrame": 1966
+      }
+    ]
+  },
+  {
+    "startFrame": 2002,
+    "endFrame": 2128,
+    "text": "Congratulations, your dungeon is now unbeatable.",
+    "words": [
+      {
+        "word": "Congratulations,",
+        "startFrame": 2002,
+        "endFrame": 2041
+      },
+      {
+        "word": "your",
+        "startFrame": 2044,
+        "endFrame": 2050
+      },
+      {
+        "word": "dungeon",
+        "startFrame": 2050,
+        "endFrame": 2065
+      },
+      {
+        "word": "is",
+        "startFrame": 2065,
+        "endFrame": 2071
+      },
+      {
+        "word": "now",
+        "startFrame": 2071,
+        "endFrame": 2086
+      },
+      {
+        "word": "unbeatable.",
+        "startFrame": 2104,
+        "endFrame": 2128
+      }
+    ]
+  },
+  {
+    "startFrame": 2141,
+    "endFrame": 2201,
+    "text": "Unless you can prove us wrong in the comments.",
+    "words": [
+      {
+        "word": "Unless",
+        "startFrame": 2141,
+        "endFrame": 2150
+      },
+      {
+        "word": "you",
+        "startFrame": 2150,
+        "endFrame": 2153
+      },
+      {
+        "word": "can",
+        "startFrame": 2153,
+        "endFrame": 2159
+      },
+      {
+        "word": "prove",
+        "startFrame": 2159,
+        "endFrame": 2168
+      },
+      {
+        "word": "us",
+        "startFrame": 2168,
+        "endFrame": 2171
+      },
+      {
+        "word": "wrong",
+        "startFrame": 2171,
+        "endFrame": 2183
+      },
+      {
+        "word": "in",
+        "startFrame": 2183,
+        "endFrame": 2186
+      },
+      {
+        "word": "the",
+        "startFrame": 2186,
+        "endFrame": 2187
+      },
+      {
+        "word": "comments.",
+        "startFrame": 2186,
+        "endFrame": 2201
+      }
+    ]
+  }
+]

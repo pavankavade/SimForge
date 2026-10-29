@@ -1,0 +1,1215 @@
+{
+  "slug": "lighthouse",
+  "version": 1,
+  "sampleRate": 48000,
+  "fps": 30,
+  "totalSamples": 4210078,
+  "durationSeconds": 87.71,
+  "durationFrames": 2632,
+  "lines": {
+    "l1a": {
+      "startFrame": 15,
+      "endFrame": 201,
+      "words": [
+        {
+          "word": "To",
+          "startFrame": 15,
+          "endFrame": 18
+        },
+        {
+          "word": "keep",
+          "startFrame": 18,
+          "endFrame": 27
+        },
+        {
+          "word": "ships",
+          "startFrame": 27,
+          "endFrame": 36
+        },
+        {
+          "word": "off",
+          "startFrame": 36,
+          "endFrame": 39
+        },
+        {
+          "word": "the",
+          "startFrame": 39,
+          "endFrame": 45
+        },
+        {
+          "word": "rocks",
+          "startFrame": 45,
+          "endFrame": 57
+        },
+        {
+          "word": "at",
+          "startFrame": 57,
+          "endFrame": 60
+        },
+        {
+          "word": "night,",
+          "startFrame": 60,
+          "endFrame": 75
+        },
+        {
+          "word": "a",
+          "startFrame": 81,
+          "endFrame": 84
+        },
+        {
+          "word": "candle",
+          "startFrame": 84,
+          "endFrame": 99
+        },
+        {
+          "word": "won't",
+          "startFrame": 99,
+          "endFrame": 108
+        },
+        {
+          "word": "do.",
+          "startFrame": 108,
+          "endFrame": 120
+        },
+        {
+          "word": "So",
+          "startFrame": 129,
+          "endFrame": 135
+        },
+        {
+          "word": "you",
+          "startFrame": 135,
+          "endFrame": 138
+        },
+        {
+          "word": "light",
+          "startFrame": 138,
+          "endFrame": 144
+        },
+        {
+          "word": "a",
+          "startFrame": 144,
+          "endFrame": 147
+        },
+        {
+          "word": "big",
+          "startFrame": 147,
+          "endFrame": 162
+        },
+        {
+          "word": "fire",
+          "startFrame": 162,
+          "endFrame": 180
+        },
+        {
+          "word": "on",
+          "startFrame": 180,
+          "endFrame": 183
+        },
+        {
+          "word": "the",
+          "startFrame": 183,
+          "endFrame": 186
+        },
+        {
+          "word": "beach.",
+          "startFrame": 186,
+          "endFrame": 201
+        }
+      ]
+    },
+    "l1b": {
+      "startFrame": 212,
+      "endFrame": 413,
+      "words": [
+        {
+          "word": "But",
+          "startFrame": 212,
+          "endFrame": 215
+        },
+        {
+          "word": "a",
+          "startFrame": 215,
+          "endFrame": 218
+        },
+        {
+          "word": "fire",
+          "startFrame": 218,
+          "endFrame": 236
+        },
+        {
+          "word": "on",
+          "startFrame": 236,
+          "endFrame": 239
+        },
+        {
+          "word": "the",
+          "startFrame": 239,
+          "endFrame": 242
+        },
+        {
+          "word": "sand",
+          "startFrame": 242,
+          "endFrame": 260
+        },
+        {
+          "word": "can't",
+          "startFrame": 260,
+          "endFrame": 269
+        },
+        {
+          "word": "be",
+          "startFrame": 269,
+          "endFrame": 275
+        },
+        {
+          "word": "seen",
+          "startFrame": 275,
+          "endFrame": 290
+        },
+        {
+          "word": "from",
+          "startFrame": 290,
+          "endFrame": 296
+        },
+        {
+          "word": "far",
+          "startFrame": 296,
+          "endFrame": 305
+        },
+        {
+          "word": "away,",
+          "startFrame": 305,
+          "endFrame": 320
+        },
+        {
+          "word": "and",
+          "startFrame": 332,
+          "endFrame": 338
+        },
+        {
+          "word": "a",
+          "startFrame": 338,
+          "endFrame": 339
+        },
+        {
+          "word": "ship",
+          "startFrame": 338,
+          "endFrame": 350
+        },
+        {
+          "word": "sails",
+          "startFrame": 350,
+          "endFrame": 362
+        },
+        {
+          "word": "straight",
+          "startFrame": 362,
+          "endFrame": 380
+        },
+        {
+          "word": "onto",
+          "startFrame": 380,
+          "endFrame": 389
+        },
+        {
+          "word": "the",
+          "startFrame": 389,
+          "endFrame": 395
+        },
+        {
+          "word": "rocks.",
+          "startFrame": 395,
+          "endFrame": 413
+        }
+      ]
+    },
+    "l2a": {
+      "startFrame": 446,
+      "endFrame": 584,
+      "words": [
+        {
+          "word": "So",
+          "startFrame": 446,
+          "endFrame": 452
+        },
+        {
+          "word": "you",
+          "startFrame": 455,
+          "endFrame": 458
+        },
+        {
+          "word": "build",
+          "startFrame": 458,
+          "endFrame": 470
+        },
+        {
+          "word": "a",
+          "startFrame": 470,
+          "endFrame": 471
+        },
+        {
+          "word": "tall",
+          "startFrame": 470,
+          "endFrame": 491
+        },
+        {
+          "word": "stone",
+          "startFrame": 494,
+          "endFrame": 512
+        },
+        {
+          "word": "tower,",
+          "startFrame": 512,
+          "endFrame": 524
+        },
+        {
+          "word": "and",
+          "startFrame": 536,
+          "endFrame": 542
+        },
+        {
+          "word": "put",
+          "startFrame": 542,
+          "endFrame": 545
+        },
+        {
+          "word": "the",
+          "startFrame": 545,
+          "endFrame": 548
+        },
+        {
+          "word": "fire",
+          "startFrame": 548,
+          "endFrame": 566
+        },
+        {
+          "word": "on",
+          "startFrame": 569,
+          "endFrame": 575
+        },
+        {
+          "word": "top.",
+          "startFrame": 575,
+          "endFrame": 584
+        }
+      ]
+    },
+    "l2b": {
+      "startFrame": 596,
+      "endFrame": 758,
+      "words": [
+        {
+          "word": "Now",
+          "startFrame": 596,
+          "endFrame": 605
+        },
+        {
+          "word": "ships",
+          "startFrame": 605,
+          "endFrame": 611
+        },
+        {
+          "word": "can",
+          "startFrame": 611,
+          "endFrame": 617
+        },
+        {
+          "word": "see",
+          "startFrame": 617,
+          "endFrame": 623
+        },
+        {
+          "word": "it",
+          "startFrame": 623,
+          "endFrame": 626
+        },
+        {
+          "word": "from",
+          "startFrame": 626,
+          "endFrame": 632
+        },
+        {
+          "word": "miles.",
+          "startFrame": 632,
+          "endFrame": 650
+        },
+        {
+          "word": "But",
+          "startFrame": 665,
+          "endFrame": 671
+        },
+        {
+          "word": "up",
+          "startFrame": 671,
+          "endFrame": 674
+        },
+        {
+          "word": "there,",
+          "startFrame": 674,
+          "endFrame": 686
+        },
+        {
+          "word": "the",
+          "startFrame": 692,
+          "endFrame": 695
+        },
+        {
+          "word": "wind",
+          "startFrame": 695,
+          "endFrame": 707
+        },
+        {
+          "word": "blows",
+          "startFrame": 707,
+          "endFrame": 722
+        },
+        {
+          "word": "the",
+          "startFrame": 722,
+          "endFrame": 725
+        },
+        {
+          "word": "flame",
+          "startFrame": 725,
+          "endFrame": 740
+        },
+        {
+          "word": "right",
+          "startFrame": 740,
+          "endFrame": 752
+        },
+        {
+          "word": "out.",
+          "startFrame": 752,
+          "endFrame": 758
+        }
+      ]
+    },
+    "l3a": {
+      "startFrame": 788,
+      "endFrame": 950,
+      "words": [
+        {
+          "word": "So",
+          "startFrame": 788,
+          "endFrame": 796
+        },
+        {
+          "word": "you",
+          "startFrame": 802,
+          "endFrame": 805
+        },
+        {
+          "word": "seal",
+          "startFrame": 805,
+          "endFrame": 820
+        },
+        {
+          "word": "the",
+          "startFrame": 820,
+          "endFrame": 824
+        },
+        {
+          "word": "flame",
+          "startFrame": 824,
+          "endFrame": 838
+        },
+        {
+          "word": "inside",
+          "startFrame": 838,
+          "endFrame": 850
+        },
+        {
+          "word": "a",
+          "startFrame": 850,
+          "endFrame": 854
+        },
+        {
+          "word": "room",
+          "startFrame": 854,
+          "endFrame": 865
+        },
+        {
+          "word": "made",
+          "startFrame": 865,
+          "endFrame": 872
+        },
+        {
+          "word": "of",
+          "startFrame": 872,
+          "endFrame": 878
+        },
+        {
+          "word": "glass.",
+          "startFrame": 878,
+          "endFrame": 898
+        },
+        {
+          "word": "This",
+          "startFrame": 901,
+          "endFrame": 914
+        },
+        {
+          "word": "is",
+          "startFrame": 916,
+          "endFrame": 920
+        },
+        {
+          "word": "the",
+          "startFrame": 920,
+          "endFrame": 922
+        },
+        {
+          "word": "lantern",
+          "startFrame": 922,
+          "endFrame": 938
+        },
+        {
+          "word": "room.",
+          "startFrame": 938,
+          "endFrame": 950
+        }
+      ]
+    },
+    "l3b": {
+      "startFrame": 979,
+      "endFrame": 1171,
+      "words": [
+        {
+          "word": "But",
+          "startFrame": 979,
+          "endFrame": 985
+        },
+        {
+          "word": "a",
+          "startFrame": 985,
+          "endFrame": 988
+        },
+        {
+          "word": "bare",
+          "startFrame": 988,
+          "endFrame": 1003
+        },
+        {
+          "word": "flame",
+          "startFrame": 1003,
+          "endFrame": 1024
+        },
+        {
+          "word": "shines",
+          "startFrame": 1024,
+          "endFrame": 1045
+        },
+        {
+          "word": "everywhere.",
+          "startFrame": 1045,
+          "endFrame": 1066
+        },
+        {
+          "word": "Most",
+          "startFrame": 1081,
+          "endFrame": 1090
+        },
+        {
+          "word": "of",
+          "startFrame": 1090,
+          "endFrame": 1093
+        },
+        {
+          "word": "the",
+          "startFrame": 1093,
+          "endFrame": 1094
+        },
+        {
+          "word": "light",
+          "startFrame": 1093,
+          "endFrame": 1099
+        },
+        {
+          "word": "goes",
+          "startFrame": 1099,
+          "endFrame": 1105
+        },
+        {
+          "word": "up",
+          "startFrame": 1105,
+          "endFrame": 1108
+        },
+        {
+          "word": "into",
+          "startFrame": 1108,
+          "endFrame": 1114
+        },
+        {
+          "word": "the",
+          "startFrame": 1114,
+          "endFrame": 1117
+        },
+        {
+          "word": "sky,",
+          "startFrame": 1117,
+          "endFrame": 1132
+        },
+        {
+          "word": "or",
+          "startFrame": 1132,
+          "endFrame": 1135
+        },
+        {
+          "word": "down",
+          "startFrame": 1141,
+          "endFrame": 1150
+        },
+        {
+          "word": "into",
+          "startFrame": 1150,
+          "endFrame": 1156
+        },
+        {
+          "word": "the",
+          "startFrame": 1156,
+          "endFrame": 1159
+        },
+        {
+          "word": "ground.",
+          "startFrame": 1159,
+          "endFrame": 1171
+        }
+      ]
+    },
+    "l4a": {
+      "startFrame": 1201,
+      "endFrame": 1342,
+      "words": [
+        {
+          "word": "So",
+          "startFrame": 1201,
+          "endFrame": 1207
+        },
+        {
+          "word": "you",
+          "startFrame": 1207,
+          "endFrame": 1210
+        },
+        {
+          "word": "put",
+          "startFrame": 1210,
+          "endFrame": 1219
+        },
+        {
+          "word": "curved",
+          "startFrame": 1219,
+          "endFrame": 1237
+        },
+        {
+          "word": "mirrors",
+          "startFrame": 1237,
+          "endFrame": 1252
+        },
+        {
+          "word": "behind",
+          "startFrame": 1252,
+          "endFrame": 1264
+        },
+        {
+          "word": "it,",
+          "startFrame": 1264,
+          "endFrame": 1270
+        },
+        {
+          "word": "to",
+          "startFrame": 1273,
+          "endFrame": 1279
+        },
+        {
+          "word": "bounce",
+          "startFrame": 1279,
+          "endFrame": 1291
+        },
+        {
+          "word": "that",
+          "startFrame": 1291,
+          "endFrame": 1297
+        },
+        {
+          "word": "light",
+          "startFrame": 1297,
+          "endFrame": 1312
+        },
+        {
+          "word": "back",
+          "startFrame": 1312,
+          "endFrame": 1321
+        },
+        {
+          "word": "out",
+          "startFrame": 1321,
+          "endFrame": 1327
+        },
+        {
+          "word": "to",
+          "startFrame": 1327,
+          "endFrame": 1330
+        },
+        {
+          "word": "sea.",
+          "startFrame": 1330,
+          "endFrame": 1342
+        }
+      ]
+    },
+    "l4b": {
+      "startFrame": 1354,
+      "endFrame": 1600,
+      "words": [
+        {
+          "word": "Then",
+          "startFrame": 1354,
+          "endFrame": 1366
+        },
+        {
+          "word": "you",
+          "startFrame": 1369,
+          "endFrame": 1372
+        },
+        {
+          "word": "swap",
+          "startFrame": 1372,
+          "endFrame": 1387
+        },
+        {
+          "word": "the",
+          "startFrame": 1387,
+          "endFrame": 1390
+        },
+        {
+          "word": "mirrors",
+          "startFrame": 1390,
+          "endFrame": 1411
+        },
+        {
+          "word": "for",
+          "startFrame": 1411,
+          "endFrame": 1414
+        },
+        {
+          "word": "a",
+          "startFrame": 1414,
+          "endFrame": 1417
+        },
+        {
+          "word": "Fresnel",
+          "startFrame": 1417,
+          "endFrame": 1438
+        },
+        {
+          "word": "lens.",
+          "startFrame": 1438,
+          "endFrame": 1453
+        },
+        {
+          "word": "Rings",
+          "startFrame": 1465,
+          "endFrame": 1477
+        },
+        {
+          "word": "of",
+          "startFrame": 1477,
+          "endFrame": 1480
+        },
+        {
+          "word": "glass",
+          "startFrame": 1480,
+          "endFrame": 1498
+        },
+        {
+          "word": "bend",
+          "startFrame": 1498,
+          "endFrame": 1519
+        },
+        {
+          "word": "all",
+          "startFrame": 1519,
+          "endFrame": 1528
+        },
+        {
+          "word": "the",
+          "startFrame": 1528,
+          "endFrame": 1531
+        },
+        {
+          "word": "light",
+          "startFrame": 1531,
+          "endFrame": 1543
+        },
+        {
+          "word": "into",
+          "startFrame": 1543,
+          "endFrame": 1552
+        },
+        {
+          "word": "one",
+          "startFrame": 1552,
+          "endFrame": 1567
+        },
+        {
+          "word": "bright",
+          "startFrame": 1567,
+          "endFrame": 1582
+        },
+        {
+          "word": "beam.",
+          "startFrame": 1582,
+          "endFrame": 1600
+        }
+      ]
+    },
+    "l5a": {
+      "startFrame": 1629,
+      "endFrame": 1797,
+      "words": [
+        {
+          "word": "But",
+          "startFrame": 1629,
+          "endFrame": 1635
+        },
+        {
+          "word": "every",
+          "startFrame": 1635,
+          "endFrame": 1650
+        },
+        {
+          "word": "lighthouse",
+          "startFrame": 1650,
+          "endFrame": 1665
+        },
+        {
+          "word": "on",
+          "startFrame": 1665,
+          "endFrame": 1668
+        },
+        {
+          "word": "the",
+          "startFrame": 1668,
+          "endFrame": 1671
+        },
+        {
+          "word": "coast",
+          "startFrame": 1671,
+          "endFrame": 1683
+        },
+        {
+          "word": "now",
+          "startFrame": 1683,
+          "endFrame": 1689
+        },
+        {
+          "word": "looks",
+          "startFrame": 1689,
+          "endFrame": 1698
+        },
+        {
+          "word": "the",
+          "startFrame": 1698,
+          "endFrame": 1701
+        },
+        {
+          "word": "same,",
+          "startFrame": 1701,
+          "endFrame": 1713
+        },
+        {
+          "word": "and",
+          "startFrame": 1725,
+          "endFrame": 1728
+        },
+        {
+          "word": "captains",
+          "startFrame": 1728,
+          "endFrame": 1743
+        },
+        {
+          "word": "can't",
+          "startFrame": 1743,
+          "endFrame": 1752
+        },
+        {
+          "word": "tell",
+          "startFrame": 1752,
+          "endFrame": 1761
+        },
+        {
+          "word": "which",
+          "startFrame": 1761,
+          "endFrame": 1770
+        },
+        {
+          "word": "one",
+          "startFrame": 1770,
+          "endFrame": 1779
+        },
+        {
+          "word": "they're",
+          "startFrame": 1779,
+          "endFrame": 1782
+        },
+        {
+          "word": "seeing.",
+          "startFrame": 1782,
+          "endFrame": 1797
+        }
+      ]
+    },
+    "l5b": {
+      "startFrame": 1827,
+      "endFrame": 1989,
+      "words": [
+        {
+          "word": "So",
+          "startFrame": 1827,
+          "endFrame": 1836
+        },
+        {
+          "word": "you",
+          "startFrame": 1836,
+          "endFrame": 1842
+        },
+        {
+          "word": "make",
+          "startFrame": 1842,
+          "endFrame": 1848
+        },
+        {
+          "word": "the",
+          "startFrame": 1848,
+          "endFrame": 1851
+        },
+        {
+          "word": "lens",
+          "startFrame": 1851,
+          "endFrame": 1863
+        },
+        {
+          "word": "turn,",
+          "startFrame": 1863,
+          "endFrame": 1878
+        },
+        {
+          "word": "with",
+          "startFrame": 1878,
+          "endFrame": 1884
+        },
+        {
+          "word": "its",
+          "startFrame": 1884,
+          "endFrame": 1890
+        },
+        {
+          "word": "own",
+          "startFrame": 1890,
+          "endFrame": 1896
+        },
+        {
+          "word": "flash",
+          "startFrame": 1896,
+          "endFrame": 1908
+        },
+        {
+          "word": "pattern.",
+          "startFrame": 1908,
+          "endFrame": 1920
+        },
+        {
+          "word": "Two",
+          "startFrame": 1932,
+          "endFrame": 1938
+        },
+        {
+          "word": "quick",
+          "startFrame": 1938,
+          "endFrame": 1947
+        },
+        {
+          "word": "flashes",
+          "startFrame": 1947,
+          "endFrame": 1959
+        },
+        {
+          "word": "every",
+          "startFrame": 1959,
+          "endFrame": 1968
+        },
+        {
+          "word": "ten",
+          "startFrame": 1968,
+          "endFrame": 1974
+        },
+        {
+          "word": "seconds.",
+          "startFrame": 1974,
+          "endFrame": 1989
+        }
+      ]
+    },
+    "l5c": {
+      "startFrame": 2001,
+      "endFrame": 2103,
+      "words": [
+        {
+          "word": "Captains",
+          "startFrame": 2001,
+          "endFrame": 2019
+        },
+        {
+          "word": "look",
+          "startFrame": 2019,
+          "endFrame": 2022
+        },
+        {
+          "word": "it",
+          "startFrame": 2022,
+          "endFrame": 2025
+        },
+        {
+          "word": "up",
+          "startFrame": 2025,
+          "endFrame": 2028
+        },
+        {
+          "word": "on",
+          "startFrame": 2028,
+          "endFrame": 2031
+        },
+        {
+          "word": "their",
+          "startFrame": 2031,
+          "endFrame": 2034
+        },
+        {
+          "word": "charts,",
+          "startFrame": 2034,
+          "endFrame": 2058
+        },
+        {
+          "word": "and",
+          "startFrame": 2061,
+          "endFrame": 2064
+        },
+        {
+          "word": "know",
+          "startFrame": 2064,
+          "endFrame": 2065
+        },
+        {
+          "word": "exactly",
+          "startFrame": 2064,
+          "endFrame": 2079
+        },
+        {
+          "word": "where",
+          "startFrame": 2079,
+          "endFrame": 2082
+        },
+        {
+          "word": "they",
+          "startFrame": 2082,
+          "endFrame": 2088
+        },
+        {
+          "word": "are.",
+          "startFrame": 2088,
+          "endFrame": 2103
+        }
+      ]
+    },
+    "l6a": {
+      "startFrame": 2132,
+      "endFrame": 2246,
+      "words": [
+        {
+          "word": "Then",
+          "startFrame": 2132,
+          "endFrame": 2141
+        },
+        {
+          "word": "the",
+          "startFrame": 2141,
+          "endFrame": 2144
+        },
+        {
+          "word": "fog",
+          "startFrame": 2144,
+          "endFrame": 2162
+        },
+        {
+          "word": "rolls",
+          "startFrame": 2162,
+          "endFrame": 2174
+        },
+        {
+          "word": "in,",
+          "startFrame": 2174,
+          "endFrame": 2189
+        },
+        {
+          "word": "and",
+          "startFrame": 2195,
+          "endFrame": 2201
+        },
+        {
+          "word": "no",
+          "startFrame": 2201,
+          "endFrame": 2210
+        },
+        {
+          "word": "light",
+          "startFrame": 2210,
+          "endFrame": 2219
+        },
+        {
+          "word": "can",
+          "startFrame": 2219,
+          "endFrame": 2225
+        },
+        {
+          "word": "get",
+          "startFrame": 2225,
+          "endFrame": 2231
+        },
+        {
+          "word": "through",
+          "startFrame": 2231,
+          "endFrame": 2240
+        },
+        {
+          "word": "it.",
+          "startFrame": 2240,
+          "endFrame": 2246
+        }
+      ]
+    },
+    "l6b": {
+      "startFrame": 2258,
+      "endFrame": 2444,
+      "words": [
+        {
+          "word": "So",
+          "startFrame": 2258,
+          "endFrame": 2261
+        },
+        {
+          "word": "you",
+          "startFrame": 2261,
+          "endFrame": 2267
+        },
+        {
+          "word": "add",
+          "startFrame": 2267,
+          "endFrame": 2276
+        },
+        {
+          "word": "a",
+          "startFrame": 2276,
+          "endFrame": 2279
+        },
+        {
+          "word": "horn",
+          "startFrame": 2279,
+          "endFrame": 2300
+        },
+        {
+          "word": "that",
+          "startFrame": 2300,
+          "endFrame": 2306
+        },
+        {
+          "word": "blasts",
+          "startFrame": 2306,
+          "endFrame": 2327
+        },
+        {
+          "word": "every",
+          "startFrame": 2327,
+          "endFrame": 2336
+        },
+        {
+          "word": "thirty",
+          "startFrame": 2336,
+          "endFrame": 2351
+        },
+        {
+          "word": "seconds.",
+          "startFrame": 2351,
+          "endFrame": 2372
+        },
+        {
+          "word": "This",
+          "startFrame": 2393,
+          "endFrame": 2396
+        },
+        {
+          "word": "is",
+          "startFrame": 2396,
+          "endFrame": 2399
+        },
+        {
+          "word": "a",
+          "startFrame": 2399,
+          "endFrame": 2402
+        },
+        {
+          "word": "foghorn.",
+          "startFrame": 2402,
+          "endFrame": 2444
+        }
+      ]
+    },
+    "end": {
+      "startFrame": 2477,
+      "endFrame": 2582,
+      "words": [
+        {
+          "word": "Congratulations.",
+          "startFrame": 2477,
+          "endFrame": 2510
+        },
+        {
+          "word": "Your",
+          "startFrame": 2513,
+          "endFrame": 2519
+        },
+        {
+          "word": "little",
+          "startFrame": 2519,
+          "endFrame": 2528
+        },
+        {
+          "word": "candle",
+          "startFrame": 2528,
+          "endFrame": 2546
+        },
+        {
+          "word": "is",
+          "startFrame": 2546,
+          "endFrame": 2552
+        },
+        {
+          "word": "now",
+          "startFrame": 2552,
+          "endFrame": 2558
+        },
+        {
+          "word": "a",
+          "startFrame": 2558,
+          "endFrame": 2561
+        },
+        {
+          "word": "lighthouse.",
+          "startFrame": 2561,
+          "endFrame": 2582
+        }
+      ]
+    }
+  }
+}

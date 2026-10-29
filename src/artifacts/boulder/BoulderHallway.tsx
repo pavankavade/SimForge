@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useSurface } from "../../engine/materials";
 import { makeFlagstone, makeMasonry, makeWood } from "../../engine/textures";
 import { DustMotes, GlowSprite } from "../dungeon/Fx";
+import { EntryDoorway } from "../sets/EntryDoorway";
 
 /**
  * Cut-away boulder hallway in the Ep1 diorama style: light brick back wall,
@@ -19,6 +20,8 @@ export interface BoulderHallwayProps {
   /** x of the electromagnet niche cut into the foundation. */
   magnetX: number;
   ceilingY?: number;
+  /** "daylight" (the short) or "door": a torch-lit crypt doorway at the left end. */
+  exitStyle?: "daylight" | "door";
 }
 
 const HALL_Z = -0.6;
@@ -35,6 +38,7 @@ export const BoulderHallway: React.FC<BoulderHallwayProps> = ({
   pipeRange,
   magnetX,
   ceilingY = 5.9,
+  exitStyle = "daylight",
 }) => {
   const frame = useCurrentFrame();
   const flicker = Math.sin(frame * 0.3) * 0.12 + Math.cos(frame * 0.77) * 0.08;
@@ -366,27 +370,33 @@ export const BoulderHallway: React.FC<BoulderHallwayProps> = ({
         <meshStandardMaterial color="#b98d3c" metalness={0.6} roughness={0.4} />
       </mesh>
 
-      {/* Exit: open archway onto daylight at the left end */}
-      <mesh position={[LEFT - 2.0, 2.9, -2.6]}>
-        <planeGeometry args={[4.2, 6.2]} />
-        <meshBasicMaterial color="#cfe6ff" toneMapped={false} />
-      </mesh>
-      <mesh position={[LEFT - 2.0, 0.005, HALL_Z]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[4.2, HALL_DEPTH]} />
-        <meshStandardMaterial color="#9aa8b8" roughness={0.9} />
-      </mesh>
-      {[-2.15, 0.95].map((z) => (
-        <mesh key={`jamb-${z}`} position={[LEFT - 0.25, 2.95, z]} castShadow>
-          <boxGeometry args={[0.55, 5.9, 0.35]} />
-          {stoneMat(pillarStone, "#a3a8b6")}
-        </mesh>
-      ))}
-      <mesh position={[LEFT - 0.25, ceilingY - 0.3, HALL_Z]}>
-        <boxGeometry args={[0.6, 0.6, HALL_DEPTH + 0.1]} />
-        {stoneMat(pillarStone, "#b4b9c6", 0.8)}
-      </mesh>
-      <GlowSprite position={[LEFT - 1.2, 2.4, -0.6]} color="#bfe0ff" size={5.5} opacity={0.35} />
-      <pointLight position={[LEFT - 0.6, 3.0, 0.2]} color="#cfe6ff" intensity={4} distance={9} decay={2} />
+      {/* Exit: open archway onto daylight at the left end (or a crypt doorway) */}
+      {exitStyle === "door" ? (
+        <EntryDoorway x={LEFT} z={HALL_Z} depth={HALL_DEPTH} ceilingY={ceilingY} side="left" />
+      ) : (
+        <>
+          <mesh position={[LEFT - 2.0, 2.9, -2.6]}>
+            <planeGeometry args={[4.2, 6.2]} />
+            <meshBasicMaterial color="#cfe6ff" toneMapped={false} />
+          </mesh>
+          <mesh position={[LEFT - 2.0, 0.005, HALL_Z]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[4.2, HALL_DEPTH]} />
+            <meshStandardMaterial color="#9aa8b8" roughness={0.9} />
+          </mesh>
+          {[-2.15, 0.95].map((z) => (
+            <mesh key={`jamb-${z}`} position={[LEFT - 0.25, 2.95, z]} castShadow>
+              <boxGeometry args={[0.55, 5.9, 0.35]} />
+              {stoneMat(pillarStone, "#a3a8b6")}
+            </mesh>
+          ))}
+          <mesh position={[LEFT - 0.25, ceilingY - 0.3, HALL_Z]}>
+            <boxGeometry args={[0.6, 0.6, HALL_DEPTH + 0.1]} />
+            {stoneMat(pillarStone, "#b4b9c6", 0.8)}
+          </mesh>
+          <GlowSprite position={[LEFT - 1.2, 2.4, -0.6]} color="#bfe0ff" size={5.5} opacity={0.35} />
+          <pointLight position={[LEFT - 0.6, 3.0, 0.2]} color="#cfe6ff" intensity={4} distance={9} decay={2} />
+        </>
+      )}
 
       {floorCracks.map((c) => (
         <mesh key={c.key} position={[c.x, 0.032, c.z]} rotation={[-Math.PI / 2, 0, c.angle]}>

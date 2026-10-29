@@ -1,0 +1,17 @@
+{
+  "_style": "cartoon dungeon foley, crisp close-mic, punchy, no music, no voices",
+  "punch": { "prompt": "huge fist smashing through a stone ceiling, rock cracking and rubble crashing down", "seconds": 2.0 },
+  "thud": { "prompt": "heavy body landing on a stone floor, deep cartoon thud", "seconds": 1.0 },
+  "lava_bubble": { "prompt": "thick molten lava bubbling and blorping, slow gloopy pops, steady loop", "seconds": 6.0, "loop": true },
+  "lava_splash": { "prompt": "heavy object plopping into thick molten lava, gloopy splash then sizzling hiss", "seconds": 2.0 },
+  "crumble": { "prompt": "stone bridge slab cracking and breaking away, rocks crumbling and falling", "seconds": 1.0 },
+  "grind": { "prompt": "heavy stone blocks grinding and rising into place, deep rumble", "seconds": 1.0 },
+  "geyser": { "prompt": "lava geyser erupting, pressure hiss building into a roaring molten blast", "seconds": 2.0 },
+  "lava_flow": { "prompt": "rushing river of molten lava, low roaring flow, steady loop", "seconds": 6.0, "loop": true },
+  "freeze": { "prompt": "magic frost spell sweeping across, ice crackling and crystallizing quickly", "seconds": 2.0 },
+  "coins": { "prompt": "person diving into a big pile of gold coins, coins jingling and splashing", "seconds": 1.0 },
+  "crack": { "prompt": "thick ice cracking loudly under someone's feet, sharp splitting", "seconds": 1.0 },
+  "gate": { "prompt": "heavy iron hatches sliding open in a stone wall, metal scraping", "seconds": 1.0 },
+  "wave": { "prompt": "huge wave of molten lava rushing in and crashing, roaring flood", "seconds": 3.0 },
+  "lute_sad": { "prompt": "single lute playing three slow sad descending notes, sad trombone feeling, solo", "seconds": 3.0 }
+}

@@ -3,7 +3,7 @@ import type * as THREE from "three";
 import type { Vec3 } from "../../../engine/types";
 import type { Expression, FaceKit } from "./Face";
 import { HeaterShield } from "./gear";
-import { G, INK_THIN, glow, vinyl } from "./ink";
+import { G, INK_THIN, flat, glow, vinyl } from "./ink";
 import { Part } from "./Part";
 import type { AdventurerPose, RigPose } from "./poses";
 
@@ -18,8 +18,22 @@ import type { AdventurerPose, RigPose } from "./poses";
  *  - Cuff         : wrist at the origin, hand below it along -y.
  */
 
-export type AdventurerClass = "goblin" | "rogue" | "mage" | "paladin";
-export type Weapon = "sword" | "warhammer" | "club" | "dagger" | "daggers" | "staff" | "none";
+export type AdventurerClass = "goblin" | "rogue" | "mage" | "paladin" | "barbarian" | "bard" | CivilianClass | SilhouetteClass;
+/** "What if" series cast (round skin-tone heads, decal faces). */
+export type SilhouetteClass = "flyKit" | "grandpaTeo" | "sisterTess";
+/** Modern civilians for the shelter series (no weapons, everyday clothes). */
+export type CivilianClass =
+  | "dad"
+  | "mom"
+  | "kid"
+  | "grandma"
+  | "neighborA"
+  | "neighborB"
+  | "neighborC"
+  | "neighborD"
+  | "neighborE"
+  | "neighborF";
+export type Weapon = "sword" | "warhammer" | "club" | "dagger" | "daggers" | "staff" | "cane" | "greataxe" | "lute" | "none";
 
 export interface KitCtx {
   frame: number;
@@ -53,6 +67,13 @@ export interface ClassKit {
   Cuff?: React.FC<{ side: -1 | 1 }>;
   /** Per-pose overrides of the default expression table. */
   expression?: Partial<Record<AdventurerPose, Expression>>;
+  /** Outline colour (silhouette kits use a warm light rim instead of dark ink). */
+  inkColor?: string;
+  /**
+   * Proportions on top of the shared rig: `leg` stretches thigh and shin (the
+   * body rises to keep feet on the floor), `limb` thins arms and legs.
+   */
+  build?: { leg?: number; limb?: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -609,12 +630,573 @@ const paladin: ClassKit = {
   expression: { idle: "smug" },
 };
 
-export const KITS: Record<AdventurerClass, ClassKit> = { goblin, rogue, mage, paladin };
+// ---------------------------------------------------------------------------
+// Barbarian: half-orc brute. Olive skin, tusks, black topknot, bare chest,
+// fur kilt and pauldron, a greataxe twice his good sense.
+// ---------------------------------------------------------------------------
+
+const ORC_SKIN = "#86a866";
+const ORC_SKIN_DARK = "#6b8c50";
+const FUR = "#c9b48e";
+const FUR_DARK = "#8a6a48";
+const ORC_HAIR = "#1f1a1c";
+
+const barbarian: ClassKit = {
+  scale: 1.2,
+  headR: 0.27,
+  blinkSeed: 13,
+  defaultWeapon: "greataxe",
+  build: { limb: 1.3 },
+  face: {
+    r: 0.27,
+    skin: ORC_SKIN,
+    eyeYaw: 0.34,
+    eyePitch: 0.08,
+    eyeR: 0.05,
+    sclera: "#fff6d8",
+    iris: "#d99a1c",
+    brow: ORC_HAIR,
+    browSize: 1.5,
+    mouth: true,
+    mouthPitch: 0.46,
+    mouthWidth: 1.25,
+    tusks: true,
+  },
+  limbs: {
+    upperArm: vinyl(ORC_SKIN, "skin"),
+    forearm: vinyl(ORC_SKIN, "skin"),
+    hand: vinyl(ORC_SKIN, "skin"),
+    thigh: vinyl("#4f3726", "leather"),
+    shin: vinyl("#4f3726", "leather"),
+    foot: vinyl(FUR_DARK, "hair"),
+  },
+  Torso: ({ rig }) => (
+    <>
+      <Torso
+        mat={vinyl(ORC_SKIN, "skin")}
+        breathe={rig.breathe}
+        id="orc-torso"
+        profile={[
+          [0, 0.56],
+          [0.19, 0.58],
+          [0.22, 0.68],
+          [0.225, 0.8],
+          [0.27, 0.95],
+          [0.26, 1.06],
+          [0.16, 1.15],
+          [0, 1.17],
+        ]}
+      />
+      {/* Pecs */}
+      {[-1, 1].map((s) => (
+        <Part key={s} geo={G.sphere(0.12)} mat={vinyl(ORC_SKIN_DARK, "skin")} position={[s * 0.1, 0.96, 0.12]} scale={[1, 0.7, 0.55]} ink={INK_THIN} />
+      ))}
+      {/* Fur kilt over leather, a fat belt with a bone buckle */}
+      <Part
+        geo={G.lathe("orc-kilt", [
+          [0.3, 0.45],
+          [0.275, 0.53],
+          [0.245, 0.62],
+          [0.228, 0.7],
+        ])}
+        mat={vinyl("#6b4a30", "hair")}
+        scale={[1, 1, 0.84]}
+      />
+      <Part geo={G.torus(0.295, 0.035)} mat={vinyl(FUR, "hair")} position={[0, 0.46, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.84, 1]} ink={INK_THIN} />
+      <Belt color="#3a2618" buckle="#efe4c8" y={0.7} r={0.236} />
+      {/* Bandolier across the chest */}
+      <Part geo={G.box(0.07, 0.66, 0.44, 0.02)} mat={vinyl(LEATHER, "leather")} position={[0, 0.9, 0]} rotation={[0, 0, -0.62]} ink={INK_THIN} />
+    </>
+  ),
+  Head: () => {
+    const r = 0.27;
+    return (
+      <>
+        {/* Short pointed ears swept back */}
+        {([-1, 1] as const).map((s) => (
+          <group key={s} position={[s * r * 0.95, 0.0, -0.03]} rotation={[0.2, -s * 0.5, -s * (Math.PI / 2 - 0.2)]}>
+            <Part geo={G.cone(0.065, 0.17, 12)} mat={vinyl(ORC_SKIN, "skin")} position={[0, 0.07, 0]} scale={[1, 1, 0.45]} ink={INK_THIN} />
+          </group>
+        ))}
+        {/* Heavy brow ridge and a broad flat nose */}
+        <Part geo={G.capsule(0.05, 0.3)} mat={vinyl(ORC_SKIN_DARK, "skin")} position={onSphere(r - 0.02, 0, -0.05)} rotation={[0, 0, Math.PI / 2]} scale={[1, 1, 0.6]} ink={INK_THIN} />
+        <Part geo={G.sphere(0.06)} mat={vinyl(ORC_SKIN_DARK, "skin")} position={onSphere(r - 0.015, 0, 0.26)} scale={[1.35, 0.8, 0.8]} ink={INK_THIN} />
+        {/* Shaved sides, black topknot */}
+        <Part geo={G.sphere(r + 0.012, 0, Math.PI * 0.2)} mat={vinyl(ORC_HAIR, "hair")} position={[0, 0.005, -0.03]} />
+        <group position={[0, r + 0.02, -0.08]} rotation={[-0.5, 0, 0]}>
+          <Part geo={G.sphere(0.08)} mat={vinyl(ORC_HAIR, "hair")} />
+          <Part geo={G.cyl(0.05, 0.05, 0.05, 12)} mat={vinyl("#c43a36", "leather")} position={[0, 0.03, -0.06]} rotation={[-1.1, 0, 0]} ink={INK_THIN} />
+          <Part geo={G.capsule(0.05, 0.3)} mat={vinyl(ORC_HAIR, "hair")} position={[0, -0.02, -0.2]} rotation={[-1.9, 0, 0]} />
+        </group>
+      </>
+    );
+  },
+  Shoulder: ({ side }) =>
+    side === 1 ? (
+      <group rotation={[0, 0, -0.25]}>
+        <Part geo={G.sphere(0.15)} mat={vinyl(FUR, "hair")} position={[0.03, 0.0, 0]} scale={[1.1, 0.8, 1.05]} />
+        <Part geo={G.cone(0.04, 0.12, 8)} mat={vinyl("#efe4c8", "bone")} position={[0.06, 0.13, 0]} rotation={[0, 0, -0.4]} ink={INK_THIN} />
+      </group>
+    ) : null,
+  Cuff: () => <Part geo={G.cyl(0.085, 0.09, 0.12, 14)} mat={vinyl(LEATHER, "leather")} ink={INK_THIN} />,
+  expression: { idle: "smug", walk: "smug", run: "yell" },
+};
+
+// ---------------------------------------------------------------------------
+// Bard: raspberry doublet with gold trim, long copper hair, a feathered cap
+// and a lute slung on her back (played across the chest in the "play" pose).
+// ---------------------------------------------------------------------------
+
+const BARD_SKIN = "#f0c4a0";
+const DOUBLET = "#c2366e";
+const DOUBLET_DARK = "#8e2550";
+const BARD_HAIR = "#b5502a";
+const BLOUSE = "#f3e3c3";
+
+/** Lute: pear body along -y, neck up +y, pegbox bent back. Body space, facing +z. */
+export const Lute: React.FC = () => (
+  <group>
+    <Part geo={G.sphere(0.17)} mat={vinyl("#c98a44", "wood")} position={[0, -0.12, 0]} scale={[1, 1.25, 0.5]} />
+    <mesh geometry={G.disc(0.05)} material={flat("#2a1a12")} position={[0, -0.06, 0.087]} />
+    <mesh geometry={G.box(0.07, 0.025, 0.012, 0.005)} material={flat("#5a3a24")} position={[0, -0.24, 0.085]} />
+    <Part geo={G.box(0.06, 0.42, 0.04, 0.012)} mat={vinyl("#6b4226", "wood")} position={[0, 0.25, 0.02]} ink={INK_THIN} />
+    <group position={[0, 0.46, 0.02]} rotation={[-0.9, 0, 0]}>
+      <Part geo={G.box(0.07, 0.14, 0.035, 0.012)} mat={vinyl("#6b4226", "wood")} position={[0, 0.06, 0]} ink={INK_THIN} />
+    </group>
+    {[-0.015, 0.015].map((x) => (
+      <mesh key={x} geometry={G.box(0.004, 0.62, 0.004, 0.001)} material={flat("#f3e3c3")} position={[x, 0.08, 0.05]} />
+    ))}
+  </group>
+);
+
+const bard: ClassKit = {
+  scale: 0.96,
+  headR: 0.25,
+  blinkSeed: 47,
+  defaultWeapon: "lute",
+  face: {
+    r: 0.25,
+    skin: BARD_SKIN,
+    eyeYaw: 0.33,
+    eyePitch: 0.05,
+    eyeR: 0.06,
+    sclera: "#fbf7ee",
+    iris: "#3fa86a",
+    brow: "#7a3418",
+    mouth: true,
+    mouthPitch: 0.44,
+    mouthWidth: 0.9,
+    lashes: true,
+  },
+  limbs: {
+    upperArm: vinyl(BLOUSE, "cloth"),
+    forearm: vinyl(BLOUSE, "cloth"),
+    hand: vinyl(BARD_SKIN, "skin"),
+    thigh: vinyl("#3a2a3a", "cloth"),
+    shin: vinyl("#3a2a3a", "cloth"),
+    foot: vinyl("#6a3f2a", "leather"),
+  },
+  Torso: ({ rig }) => (
+    <>
+      <Torso mat={vinyl(DOUBLET, "cloth")} breathe={rig.breathe} />
+      {/* Layered skirt with a gold hem */}
+      <Part
+        geo={G.lathe("bard-skirt", [
+          [0.32, 0.34],
+          [0.285, 0.46],
+          [0.24, 0.58],
+          [0.214, 0.7],
+        ])}
+        mat={vinyl(DOUBLET_DARK, "cloth")}
+        scale={[1, 1, 0.84]}
+      />
+      <Part geo={G.torus(0.315, 0.02)} mat={vinyl(GOLD, "gloss")} position={[0, 0.35, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.84, 1]} ink={INK_THIN} />
+      <Belt color={GOLD} buckle={GOLD} y={0.7} r={0.216} />
+      {/* Laced front and a cream collar */}
+      {[0.8, 0.88, 0.96].map((y) => (
+        <mesh key={y} geometry={G.box(0.09, 0.012, 0.01, 0.004)} material={vinyl(GOLD, "gloss")} position={[0, y, 0.17 + (y - 0.8) * 0.15]} rotation={[0, 0, (y * 40) % 2 > 1 ? 0.35 : -0.35]} />
+      ))}
+      <Part geo={G.torus(0.14, 0.04)} mat={vinyl(BLOUSE, "cloth")} position={[0, 1.12, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.85, 1]} ink={INK_THIN} />
+    </>
+  ),
+  Back: ({ weapon, pose }) =>
+    weapon === "lute" && pose !== "play" ? (
+      <group position={[0.02, 0.86, -0.24]} rotation={[0.12, Math.PI, 0.5]}>
+        <Lute />
+      </group>
+    ) : null,
+  Head: ({ sway }) => {
+    const r = 0.25;
+    const hair = vinyl(BARD_HAIR, "hair");
+    return (
+      <>
+        <HumanEars r={r} skin={BARD_SKIN} />
+        <Nose r={r} skin="#e8b090" size={0.038} pitch={0.24} />
+        {/* Long hair: shell round the face, a fall down the back, a side-swept fringe */}
+        <OpenShell r={r + 0.025} browTheta={Math.PI * 0.3} thetaMax={Math.PI * 0.78} gap={2.0} mat={hair} rimTube={0.024} position={[0, 0.02, -0.012]} />
+        <group position={[0, -0.02, -0.16]} rotation={[0.12 + sway * 0.4, 0, 0]}>
+          <Part geo={G.capsule(0.15, 0.36)} mat={hair} position={[0, -0.2, 0]} scale={[1.25, 1, 0.6]} />
+        </group>
+        <Part geo={G.capsule(0.05, 0.22)} mat={hair} position={onSphere(r + 0.02, 0.25, -0.5)} rotation={[0.2, 0, 1.1]} ink={INK_THIN} />
+        {/* Feathered cap, tipped to one side */}
+        <group position={[0.05, 0.25, -0.03]} rotation={[-0.2, 0, -0.3]}>
+          <Part geo={G.sphere(0.25)} mat={vinyl(DOUBLET_DARK, "cloth")} scale={[1, 0.38, 1]} />
+          <Part geo={G.torus(0.2, 0.025)} mat={vinyl(GOLD, "gloss")} position={[0, -0.05, 0]} rotation={[Math.PI / 2, 0, 0]} ink={INK_THIN} />
+          <group position={[0.17, 0.03, -0.08]} rotation={[-0.9 - sway * 0.3, 0, -0.5]}>
+            <Part geo={G.sphere(0.06)} mat={vinyl("#fff4e0", "cloth")} position={[0, 0.12, 0]} scale={[0.45, 2.1, 0.25]} ink={INK_THIN} />
+          </group>
+        </group>
+      </>
+    );
+  },
+  Cuff: () => <Part geo={G.cyl(0.075, 0.1, 0.08, 18)} mat={vinyl(BLOUSE, "cloth")} ink={INK_THIN} />,
+  expression: { idle: "happy", walk: "happy" },
+};
+
+// ---------------------------------------------------------------------------
+// Civilians: one factory, many looks. Shirt, trousers or skirt, shoes, a hair
+// style and an optional cap; real faces from the shared rig.
+// ---------------------------------------------------------------------------
+
+type HairStyle = "short" | "bob" | "bun" | "pony" | "cap";
+
+interface CivilianLook {
+  scale: number;
+  skin: string;
+  shirt: string;
+  /** Short sleeves show skin on the forearm. */
+  shortSleeves?: boolean;
+  pants: string;
+  /** A knee-length skirt over the pants colour. */
+  skirt?: string;
+  shoes: string;
+  hair: string;
+  style: HairStyle;
+  iris?: string;
+  blinkSeed: number;
+}
+
+const civilian = ({ scale, skin, shirt, shortSleeves, pants, skirt, shoes, hair, style, iris = "#5a3a22", blinkSeed }: CivilianLook): ClassKit => {
+  const r = 0.25;
+  const hairMat = vinyl(hair, "hair");
+  return {
+    scale,
+    headR: r,
+    blinkSeed,
+    defaultWeapon: "none",
+    face: {
+      r,
+      skin,
+      eyeYaw: 0.32,
+      eyePitch: 0.05,
+      eyeR: 0.056,
+      sclera: "#fbf7ee",
+      iris,
+      brow: hair,
+      mouth: true,
+      mouthPitch: 0.43,
+    },
+    limbs: {
+      upperArm: vinyl(shirt, "cloth"),
+      forearm: vinyl(shortSleeves ? skin : shirt, shortSleeves ? "skin" : "cloth"),
+      hand: vinyl(skin, "skin"),
+      thigh: vinyl(skirt ? skin : pants, skirt ? "skin" : "cloth"),
+      shin: vinyl(skirt ? skin : pants, skirt ? "skin" : "cloth"),
+      foot: vinyl(shoes, "leather"),
+    },
+    Torso: ({ rig }) => (
+      <>
+        <Torso mat={vinyl(shirt, "cloth")} breathe={rig.breathe} />
+        {skirt ? (
+          <Part
+            geo={G.lathe("civ-skirt", [
+              [0.3, 0.36],
+              [0.27, 0.46],
+              [0.235, 0.58],
+              [0.212, 0.7],
+            ])}
+            mat={vinyl(skirt, "cloth")}
+            scale={[1, 1, 0.84]}
+          />
+        ) : (
+          <Belt color="#3a2a20" buckle="#c9c9c9" y={0.66} r={0.214} />
+        )}
+        {/* Collar */}
+        <Part geo={G.torus(0.13, 0.035)} mat={vinyl(shirt, "cloth")} position={[0, 1.12, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.85, 1]} ink={INK_THIN} />
+      </>
+    ),
+    Head: () => (
+      <>
+        <HumanEars r={r} skin={skin} />
+        <Nose r={r} skin={skin} size={0.042} pitch={0.24} />
+        {/* Hair as an open shell: crown, sides and back, face left clear */}
+        <OpenShell
+          r={r + 0.025}
+          browTheta={Math.PI * 0.3}
+          thetaMax={style === "bob" ? Math.PI * 0.74 : Math.PI * 0.58}
+          gap={style === "bob" ? 2.1 : 2.3}
+          mat={hairMat}
+          rimTube={0.022}
+          position={[0, 0.02, -0.012]}
+        />
+        {style === "bun" ? <Part geo={G.sphere(0.1)} mat={hairMat} position={[0, 0.2, -0.2]} /> : null}
+        {style === "pony" ? (
+          <group position={[0, 0.06, -0.26]} rotation={[0.45, 0, 0]}>
+            <Part geo={G.capsule(0.06, 0.26)} mat={hairMat} position={[0, -0.12, 0]} />
+          </group>
+        ) : null}
+        {style === "cap" ? (
+          <group position={[0, 0.04, 0]}>
+            <Part geo={G.sphere(r + 0.04, 0, Math.PI * 0.44)} inkGeo={G.sphere(r + 0.04, 0, Math.PI * 0.44)} mat={vinyl(shirt, "cloth")} />
+            <Part geo={G.box(0.3, 0.025, 0.2, 0.01)} mat={vinyl(shirt, "cloth")} position={[0, 0.06, 0.27]} rotation={[0.12, 0, 0]} ink={INK_THIN} />
+          </group>
+        ) : null}
+      </>
+    ),
+    expression: { idle: "neutral", walk: "neutral" },
+  };
+};
+
+const CIVILIANS: Record<CivilianClass, ClassKit> = {
+  dad: civilian({ scale: 1, skin: "#e8b48c", shirt: "#3f78c4", pants: "#3b4a63", shoes: "#4a3324", hair: "#5a3a22", style: "short", blinkSeed: 5 }),
+  mom: civilian({ scale: 0.96, skin: "#f0c39e", shirt: "#d9534f", pants: "#46506b", skirt: "#46506b", shoes: "#2e2a2a", hair: "#8a4a26", style: "bob", blinkSeed: 17 }),
+  kid: civilian({ scale: 0.74, skin: "#eab88e", shirt: "#f2c14e", shortSleeves: true, pants: "#4f7dc4", shoes: "#e8e8e8", hair: "#3a2516", style: "pony", blinkSeed: 29 }),
+  grandma: civilian({ scale: 0.92, skin: "#e9bd9a", shirt: "#8e6fb8", pants: "#5b5568", skirt: "#5b5568", shoes: "#4a3324", hair: "#d9d9e0", style: "bun", iris: "#4a7ab8", blinkSeed: 41 }),
+  neighborA: civilian({ scale: 1.02, skin: "#a8714a", shirt: "#3aa67c", pants: "#2e3442", shoes: "#2b2b2b", hair: "#1e1612", style: "cap", blinkSeed: 53 }),
+  neighborB: civilian({ scale: 1, skin: "#7a4e33", shirt: "#f08a3c", shortSleeves: true, pants: "#3b4a63", shoes: "#2b2b2b", hair: "#140e0b", style: "short", blinkSeed: 67 }),
+  neighborC: civilian({ scale: 0.95, skin: "#f2c7a5", shirt: "#6d8f3a", pants: "#6b5640", shoes: "#4a3324", hair: "#d8a04a", style: "bob", iris: "#4a8a5a", blinkSeed: 71 }),
+  neighborD: civilian({ scale: 0.96, skin: "#c98b62", shirt: "#c44a7a", pants: "#2e3442", skirt: "#2e3442", shoes: "#2b2b2b", hair: "#2a1a10", style: "bun", blinkSeed: 79 }),
+  neighborE: civilian({ scale: 1.04, skin: "#e3ad84", shirt: "#5b6470", pants: "#33302c", shoes: "#2b2b2b", hair: "#6b6b70", style: "cap", blinkSeed: 83 }),
+  neighborF: civilian({ scale: 0.82, skin: "#8f5a3a", shirt: "#2fa8c4", shortSleeves: true, pants: "#3b4a63", shoes: "#e8e8e8", hair: "#1a120c", style: "short", blinkSeed: 97 }),
+};
+
+// ---------------------------------------------------------------------------
+// "What if" cast: smooth round heads in natural skin tones, a warm dark-brown
+// outline, flat decal faces (dark eyes with a white glint), long thin legs.
+// No ears or noses; identity comes from clothes and props.
+// ---------------------------------------------------------------------------
+
+const SIL_INK = "#3b2a26";
+const SIL_DECAL = "#2b2230";
+/** Black tights and similar dark cloth. */
+const SIL_DARK = "#1b1b21";
+/** Kit and Tess are siblings and share a tone; Grandpa Teo is a shade deeper. */
+const SKIN_KIDS = "#c98f66";
+const SKIN_TEO = "#b77a52";
+
+const silFace = (r: number, skin: string, extra?: Partial<FaceKit>): FaceKit => ({
+  r,
+  skin,
+  eyeYaw: 0.3,
+  eyePitch: 0.02,
+  eyeR: 0.05,
+  sclera: "#fbf6ea",
+  iris: "#1a1220",
+  brow: SIL_DECAL,
+  mouth: true,
+  mouthPitch: 0.36,
+  decal: true,
+  decalInk: SIL_DECAL,
+  decalPupil: "#ffffff",
+  ...extra,
+});
+
+/** Places children on the head sphere at (yaw, pitch), facing outward; pitch < 0 is above the equator. */
+const OnSkull: React.FC<{ r: number; yaw?: number; pitch: number; children: React.ReactNode }> = ({ r, yaw = 0, pitch, children }) => (
+  <group rotation={[0, yaw, 0]}>
+    <group rotation={[pitch, 0, 0]}>
+      <group position={[0, 0, r]}>{children}</group>
+    </group>
+  </group>
+);
+
+const silLimbs = (skin: string, sleeve: string, pants: string, shoes: string) => ({
+  upperArm: vinyl(sleeve, "cloth"),
+  forearm: vinyl(sleeve, "cloth"),
+  hand: vinyl(skin, "skin"),
+  thigh: vinyl(pants, "cloth"),
+  shin: vinyl(pants, "cloth"),
+  foot: vinyl(shoes, "leather"),
+});
+
+/** Kit, 13: tangerine windbreaker with a reflective band, teal beanie, old aviator goggles. */
+const KIT_JACKET = "#f27a2e";
+const KIT_JACKET_DARK = "#cf5f1c";
+const KIT_TEAL = "#1fa3a0";
+const flyKit: ClassKit = {
+  scale: 0.9,
+  headR: 0.26,
+  blinkSeed: 13,
+  defaultWeapon: "none",
+  inkColor: SIL_INK,
+  build: { leg: 1.42, limb: 0.6 },
+  face: silFace(0.26, SKIN_KIDS),
+  limbs: silLimbs(SKIN_KIDS, KIT_JACKET, "#2b2f3b", "#f4f1e8"),
+  Torso: ({ rig }) => (
+    <>
+      <Torso mat={vinyl(KIT_JACKET, "cloth")} breathe={rig.breathe} />
+      {/* Reflective chest band and elastic hem */}
+      <Part geo={G.cyl(0.236, 0.236, 0.05, 28)} mat={vinyl("#e6edf2", "gloss")} position={[0, 0.9, 0]} scale={[1, 1, 0.8]} ink={INK_THIN} />
+      <Part geo={G.cyl(0.21, 0.21, 0.06, 28)} mat={vinyl(KIT_JACKET_DARK, "cloth")} position={[0, 0.6, 0]} scale={[1, 1, 0.8]} ink={INK_THIN} />
+      {/* Zip */}
+      <mesh geometry={G.box(0.016, 0.5, 0.01, 0.004)} material={flat("#3a2a20")} position={[0, 0.84, 0.172]} rotation={[-0.08, 0, 0]} />
+      {/* Rolled hood behind the neck */}
+      <Part geo={G.torus(0.14, 0.055)} mat={vinyl(KIT_JACKET_DARK, "cloth")} position={[0, 1.12, -0.03]} rotation={[Math.PI / 2 - 0.25, 0, 0]} scale={[1, 0.9, 1]} />
+    </>
+  ),
+  Head: () => {
+    const r = 0.26;
+    return (
+      <>
+        {/* Beanie: crown, folded cuff, pom */}
+        <Part geo={G.sphere(r + 0.02, 0, Math.PI * 0.4)} inkGeo={G.sphere(r + 0.02, 0, Math.PI * 0.4)} mat={vinyl(KIT_TEAL, "cloth")} position={[0, 0.01, 0]} />
+        <Part geo={G.cyl(r * 0.84, r * 0.86, 0.075, 28)} mat={vinyl("#178a87", "cloth")} position={[0, r * 0.72 - 0.03, 0]} ink={INK_THIN} />
+        <Part geo={G.sphere(0.06)} mat={vinyl("#e9f6f4", "cloth")} position={[0, r + 0.07, 0]} ink={INK_THIN} />
+        {/* Aviator goggles pushed up on the beanie */}
+        <Part geo={G.cyl(r * 0.88, r * 0.88, 0.035, 28)} mat={vinyl("#6b4a2e", "leather")} position={[0, r * 0.72 + 0.03, 0]} ink={false} />
+        {([-1, 1] as const).map((s) => (
+          <OnSkull key={s} r={r + 0.035} yaw={s * 0.27} pitch={-0.82}>
+            <group rotation={[Math.PI / 2, 0, 0]}>
+              <Part geo={G.cyl(0.058, 0.064, 0.05, 20)} mat={vinyl("#8c96a8", "metal")} ink={INK_THIN} />
+              <mesh geometry={G.cyl(0.046, 0.046, 0.052, 20)} material={glow("#ffb347", 0.6)} />
+            </group>
+          </OnSkull>
+        ))}
+      </>
+    );
+  },
+  Cuff: () => <Part geo={G.cyl(0.058, 0.06, 0.05, 14)} mat={vinyl(KIT_JACKET_DARK, "cloth")} ink={INK_THIN} />,
+  expression: { idle: "happy", walk: "neutral" },
+};
+
+/** Grandpa Teo, 71: navy flight jacket with shearling collar, flat cap, handlebar moustache, round glasses, cane. */
+const TEO_NAVY = "#2d3f69";
+const TEO_SHEEP = "#efe1c3";
+const grandpaTeo: ClassKit = {
+  scale: 1,
+  headR: 0.25,
+  blinkSeed: 37,
+  defaultWeapon: "cane",
+  inkColor: SIL_INK,
+  build: { leg: 1.36, limb: 0.66 },
+  // Bushy white brows to match the moustache.
+  face: silFace(0.25, SKIN_TEO, { eyeR: 0.044, mouthPitch: 0.42, browSize: 1.25, brow: "#f4f0e6" }),
+  limbs: silLimbs(SKIN_TEO, TEO_NAVY, "#b49c6c", "#5b3b26"),
+  Torso: ({ rig }) => (
+    <>
+      <Torso mat={vinyl(TEO_NAVY, "leather")} breathe={rig.breathe} />
+      {/* Ribbed waistband */}
+      <Part geo={G.cyl(0.214, 0.21, 0.08, 28)} mat={vinyl("#22314f", "cloth")} position={[0, 0.62, 0]} scale={[1, 1, 0.8]} ink={INK_THIN} />
+      {/* Shearling collar */}
+      <Part geo={G.torus(0.15, 0.06)} mat={vinyl(TEO_SHEEP, "hair")} position={[0, 1.1, 0]} rotation={[Math.PI / 2 - 0.15, 0, 0]} scale={[1.05, 0.9, 1]} />
+      {/* Round wing patch on the left chest */}
+      <group position={[0.1, 0.95, 0.19]} rotation={[-0.15, 0.4, 0]}>
+        <Part geo={G.cyl(0.042, 0.042, 0.012, 20)} mat={vinyl("#f2c14e", "gloss")} rotation={[Math.PI / 2, 0, 0]} ink={INK_THIN} />
+        {([-1, 1] as const).map((s) => (
+          <mesh key={s} geometry={G.box(0.07, 0.022, 0.01, 0.005)} material={flat("#f7e7c6")} position={[s * 0.06, 0.004, 0.004]} rotation={[0, 0, s * -0.25]} />
+        ))}
+      </group>
+      {/* Zip */}
+      <mesh geometry={G.box(0.016, 0.42, 0.01, 0.004)} material={flat("#151d33")} position={[0, 0.82, 0.172]} rotation={[-0.08, 0, 0]} />
+    </>
+  ),
+  Head: () => {
+    const r = 0.25;
+    const tweed = vinyl("#7b5e43", "cloth");
+    return (
+      <>
+        {/* Flat cap: low crown pulled forward, short peak */}
+        <Part geo={G.sphere(r + 0.02, 0, Math.PI * 0.5)} inkGeo={G.sphere(r + 0.02, 0, Math.PI * 0.5)} mat={tweed} position={[0, r * 0.4, 0.03]} scale={[1.02, 0.5, 1.1]} rotation={[0.12, 0, 0]} />
+        <Part geo={G.sphere(0.2, 0, Math.PI * 0.5)} inkGeo={G.sphere(0.2, 0, Math.PI * 0.5)} mat={tweed} position={[0, r * 0.36, r * 0.82]} scale={[0.95, 0.16, 0.6]} rotation={[0.2, 0, 0]} />
+        <Part geo={G.sphere(0.022)} mat={tweed} position={[0, r * 0.4 + 0.13, 0.05]} ink={INK_THIN} />
+        {/* Handlebar moustache */}
+        <OnSkull r={r + 0.006} pitch={0.26}>
+          {([-1, 1] as const).map((s) => (
+            <group key={s} position={[s * 0.055, 0, 0]}>
+              <Part geo={G.capsule(0.024, 0.11)} mat={vinyl("#f4f0e6", "hair")} rotation={[0, 0, s * 1.2]} ink={INK_THIN} />
+              <Part geo={G.sphere(0.022)} mat={vinyl("#f4f0e6", "hair")} position={[s * 0.06, 0.02, 0]} ink={INK_THIN} />
+            </group>
+          ))}
+        </OnSkull>
+        {/* Round amber glasses */}
+        {([-1, 1] as const).map((s) => (
+          <OnSkull key={s} r={r + 0.012} yaw={s * 0.3} pitch={0.02}>
+            <mesh geometry={G.torus(0.06, 0.01)} material={vinyl("#d99a3c", "gloss")} />
+          </OnSkull>
+        ))}
+        <OnSkull r={r + 0.016} pitch={0}>
+          <mesh geometry={G.capsule(0.009, 0.045)} material={vinyl("#d99a3c", "gloss")} rotation={[0, 0, Math.PI / 2]} />
+        </OnSkull>
+      </>
+    );
+  },
+  Cuff: () => <Part geo={G.cyl(0.07, 0.072, 0.06, 14)} mat={vinyl(TEO_SHEEP, "hair")} ink={INK_THIN} />,
+  expression: { idle: "smug", walk: "neutral" },
+};
+
+/** Tess, 8: sunflower costume. Her face is the flower's centre, framed by petals. */
+const TESS_LEAF = "#5daa45";
+const sisterTess: ClassKit = {
+  scale: 0.66,
+  headR: 0.28,
+  blinkSeed: 59,
+  defaultWeapon: "none",
+  inkColor: SIL_INK,
+  build: { leg: 1.15, limb: 0.66 },
+  face: silFace(0.28, SKIN_KIDS, { eyeR: 0.058, eyeYaw: 0.32 }),
+  limbs: silLimbs(SKIN_KIDS, TESS_LEAF, SIL_DARK, "#d8413a"),
+  Torso: ({ rig }) => (
+    <>
+      <Torso mat={vinyl(TESS_LEAF, "cloth")} breathe={rig.breathe} />
+      {/* Flared stem dress */}
+      <Part
+        geo={G.lathe("tess-dress", [
+          [0.34, 0.4],
+          [0.3, 0.5],
+          [0.25, 0.62],
+          [0.215, 0.74],
+        ])}
+        mat={vinyl("#4f9a3a", "cloth")}
+        scale={[1, 1, 0.86]}
+      />
+    </>
+  ),
+  Head: () => {
+    const r = 0.28;
+    const petal = vinyl("#ffcb2e", "cloth");
+    const petalDeep = vinyl("#ffb81c", "cloth");
+    return (
+      <group position={[0, 0, -0.06]}>
+        {Array.from({ length: 14 }, (_, i) => {
+          const a = (i / 14) * Math.PI * 2;
+          const d = r + 0.07;
+          return (
+            <Part
+              key={i}
+              geo={G.sphere(0.08)}
+              mat={i % 2 ? petal : petalDeep}
+              position={[Math.cos(a) * d, Math.sin(a) * d, i % 2 ? -0.02 : 0]}
+              rotation={[0, 0, a - Math.PI / 2]}
+              scale={[0.62, 1.25, 0.28]}
+              ink={INK_THIN}
+            />
+          );
+        })}
+      </group>
+    );
+  },
+  Shoulder: ({ side }) => (
+    <Part geo={G.sphere(0.09)} mat={vinyl("#73bf55", "cloth")} position={[side * 0.08, -0.04, 0]} rotation={[0, 0, side * -0.9]} scale={[0.5, 1.2, 0.25]} ink={INK_THIN} />
+  ),
+  expression: { idle: "happy" },
+};
+
+const SILHOUETTES: Record<SilhouetteClass, ClassKit> = { flyKit, grandpaTeo, sisterTess };
+
+export const KITS: Record<AdventurerClass, ClassKit> = { goblin, rogue, mage, paladin, barbarian, bard, ...CIVILIANS, ...SILHOUETTES };
 
 /** Overall size multiplier per class (feet stay at y=0). */
-export const CLASS_SCALE: Record<AdventurerClass, number> = {
-  goblin: goblin.scale,
-  rogue: rogue.scale,
-  mage: mage.scale,
-  paladin: paladin.scale,
-};
+export const CLASS_SCALE = Object.keys(KITS).reduce(
+  (acc, k) => ({ ...acc, [k]: KITS[k as AdventurerClass].scale }),
+  {} as Record<AdventurerClass, number>,
+);

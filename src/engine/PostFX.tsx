@@ -32,7 +32,19 @@ export interface PostFXConfig {
   exposure?: number;
   /** Film grain amount. 0 disables. */
   grain?: number;
+  /**
+   * Tone mapper. "aces" (default) is the series look: contrasty, warm torch
+   * light. "neutral" keeps authored toy colours truer in bright daylight
+   * scenes. "agx" is softest (washes out the dungeon; rarely right).
+   */
+  toneMapping?: "aces" | "neutral" | "agx";
 }
+
+const TONE_MAPPING = {
+  aces: ToneMappingMode.ACES_FILMIC,
+  neutral: ToneMappingMode.NEUTRAL,
+  agx: ToneMappingMode.AGX,
+} as const;
 
 const DEFAULTS: Required<Omit<PostFXConfig, "enabled">> = {
   bloomIntensity: 0.34,
@@ -42,6 +54,7 @@ const DEFAULTS: Required<Omit<PostFXConfig, "enabled">> = {
   aoRadius: 0.09,
   exposure: 1.02,
   grain: 0.009,
+  toneMapping: "aces",
 };
 
 /**
@@ -60,6 +73,7 @@ export const PostFX: React.FC<PostFXConfig> = (props) => {
     aoRadius: props.aoRadius ?? DEFAULTS.aoRadius,
     exposure: props.exposure ?? DEFAULTS.exposure,
     grain: props.grain ?? DEFAULTS.grain,
+    toneMapping: props.toneMapping ?? DEFAULTS.toneMapping,
   };
 
   const composer = useMemo(() => {
@@ -141,7 +155,7 @@ export const PostFX: React.FC<PostFXConfig> = (props) => {
     // Filmic response.
     effects.push(
       new ToneMappingEffect({
-        mode: ToneMappingMode.ACES_FILMIC,
+        mode: TONE_MAPPING[cfg.toneMapping],
         resolution: 256,
         whitePoint: 4.0,
         middleGrey: 0.42,
@@ -167,7 +181,7 @@ export const PostFX: React.FC<PostFXConfig> = (props) => {
     instance.addPass(new EffectPass(camera, new SMAAEffect()));
 
     return instance;
-  }, [gl, scene, camera, cfg.aoIntensity, cfg.aoRadius, cfg.bloomIntensity, cfg.bloomThreshold, cfg.bloomRadius, cfg.grain]);
+  }, [gl, scene, camera, cfg.aoIntensity, cfg.aoRadius, cfg.bloomIntensity, cfg.bloomThreshold, cfg.bloomRadius, cfg.grain, cfg.toneMapping]);
 
   // Exposure is applied on the renderer so it feeds the HDR buffer.
   useEffect(() => {

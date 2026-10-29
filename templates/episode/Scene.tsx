@@ -24,6 +24,10 @@ import {
  * What is on screen. One `xxxActor(frame): Actor | null` per character:
  * null before they enter and never again after they leave. Dead characters
  * stay dead (corpse, splat, pancake, skeleton) for the rest of the episode.
+ *
+ * Hand ActorView the FUNCTION (`actor={goblinActor}`): it eases every pose
+ * switch and turn (no popping limbs) and squashes landings. Switch poses
+ * freely between segments; `blend: 0` snaps when a cut hides the change.
  */
 
 // ---------------------------------------------------------------------------
@@ -80,8 +84,8 @@ export const Scene: React.FC = () => {
         z={Z}
       />
 
-      <ActorView classType="goblin" actor={goblinActor(frame)} frame={frame} />
-      <ActorView classType="rogue" actor={rogueActor(frame)} frame={frame} />
+      <ActorView classType="goblin" actor={goblinActor} frame={frame} />
+      <ActorView classType="rogue" actor={rogueActor} frame={frame} />
 
       {/* Every contact gets a burst, keyed to the same beat as its SFX. */}
       {dust(BEATS.install + 14, [CRUSHER_X, CEILING_Y - 0.6, Z + 0.4], "install-dust", 0.7)}

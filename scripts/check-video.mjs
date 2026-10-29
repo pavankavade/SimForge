@@ -5,8 +5,9 @@
  *   npm run check:video -- out/file.mp4
  *
  * Writes out/review/<slug>-video-sheet-N.png (every 40th frame, 10x6 tiles,
- * frame numbers burned in) and prints integrated loudness (target -14 LUFS,
- * accept -15..-13) and true peak (must be <= -1 dBTP).
+ * frame numbers burned in; landscape videos get 16:9 tiles) and prints
+ * integrated loudness (target -14 LUFS, accept -15..-13) and true peak (must
+ * be <= -1 dBTP).
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
@@ -34,13 +35,17 @@ mkdirSync(outDir, { recursive: true });
 const ffmpeg = (args) => spawnSync("ffmpeg", ["-hide_banner", "-y", ...args], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 
 const STEP = 40;
+// Tile shape follows the video: 9:16 shorts, 16:9 long-form.
+const probe = spawnSync("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", video], { encoding: "utf8" });
+const [vw, vh] = probe.stdout.trim().split(",").map(Number);
+const tile = vw > vh ? "320:180" : "180:320";
 const font = process.platform === "win32" ? "fontfile='C\\:/Windows/Fonts/arial.ttf':" : "";
 const label = `drawtext=${font}text='%{eif\\:n*${STEP}\\:d}':x=6:y=6:fontsize=22:fontcolor=white:box=1:boxcolor=black@0.6`;
 const sheetPattern = path.join(outDir, `${name}-video-sheet-%d.png`);
 
 const sheet = ffmpeg([
   "-i", video,
-  "-vf", `select='not(mod(n\\,${STEP}))',scale=180:320,setpts=N/TB,${label},tile=10x6`,
+  "-vf", `select='not(mod(n\\,${STEP}))',scale=${tile},setpts=N/TB,${label},tile=10x6`,
   "-vsync", "vfr",
   sheetPattern,
 ]);

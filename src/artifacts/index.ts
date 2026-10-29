@@ -12,3 +12,6 @@ export * from "./boulder";
 export * from "./crusher";
 export * from "./dart";
 export * from "./sets";
+export * from "./campaign";
+export * from "./lava";
+export * from "./mimic";

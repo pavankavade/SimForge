@@ -26,6 +26,8 @@ import type { CameraWaypoint, EpisodeConfig, Vec3 } from "../engine/types";
  */
 
 const CLASSES: AdventurerClass[] = ["goblin", "rogue", "mage", "paladin"];
+/** Season 2 cast, checked on their own pages (appended after the originals). */
+const SEASON2: AdventurerClass[] = ["barbarian", "bard"];
 const PAGE = 30;
 const Z = -0.6;
 const ROW_H = 2.25;
@@ -80,8 +82,8 @@ const LabBackdrop: React.FC = () => {
   );
 };
 
-const exprRow = (names: Expression[]): Cell[][] =>
-  CLASSES.map((c) => names.map((e) => ({ classType: c, expression: e, yaw: 0.25, label: e })));
+const exprRow = (names: Expression[], classes = CLASSES): Cell[][] =>
+  classes.map((c) => names.map((e) => ({ classType: c, expression: e, yaw: 0.25, label: e })));
 
 /** Poses for one class, 3x3 per page. */
 const poseSheets = (c: AdventurerClass): Cell[][][] => {
@@ -148,6 +150,26 @@ const SkeletonPage: React.FC<{ frame: number }> = ({ frame }) => (
         </group>
       );
     })}
+  </>
+);
+
+/** Season 2 next to the originals at episode scale. */
+const Lineup2Page: React.FC<{ frame: number }> = ({ frame }) => (
+  <>
+    {CLASSES.concat(SEASON2).map((c, i) => (
+      <AdventurerUnit
+        key={c}
+        classType={c}
+        pose={c === "bard" ? "play" : i % 2 ? "walk" : "idle"}
+        position={[-2.9 + i * 1.16, 0, Z]}
+        rotation={[0, i % 2 ? 0.9 : 0.35, 0]}
+        scale={1.12}
+        animFrame={openEyes(c, frame)}
+      />
+    ))}
+    {SEASON2.map((c, i) => (
+      <Skeleton key={c} variant={c} position={[-0.6 + i * 1.3, 0, Z - 0.9]} rotation={[0, 0.4, 0]} scale={1.12} animFrame={frame} />
+    ))}
   </>
 );
 
@@ -222,6 +244,44 @@ const PAGES: Page[] = [
     ],
     dx: 1.3,
     dist: 6.2,
+    lookY: 0.4,
+  })),
+  {
+    title: "Season 2 turnaround",
+    rows: SEASON2.map((c) => [0, 0.7, Math.PI / 2, Math.PI].map((yaw) => ({ classType: c, yaw }))),
+    dx: 1.35,
+    dist: 9,
+  },
+  { title: "Season 2 expressions A", rows: exprRow(EXPRESSION_NAMES.slice(0, 6), SEASON2), dx: 1.2, dist: 11 },
+  { title: "Season 2 expressions B", rows: exprRow(EXPRESSION_NAMES.slice(6), SEASON2), dx: 1.2, dist: 11 },
+  ...([] as Page[]).concat(
+    ...SEASON2.map((c) =>
+      poseSheets(c).map((rows, i) => ({ title: `Poses: ${c} ${i + 1}`, rows, dx: 1.6, dist: 13, lookY: 0.3 }))
+    )
+  ),
+  {
+    title: "Season 2 lineup + skeletons",
+    rows: [],
+    dx: 0,
+    dist: 0,
+    hallway: true,
+    Custom: Lineup2Page,
+    camera: { position: [0, 2.2, Z + 17], lookAt: [0, 1.2, Z] },
+  },
+  ...SEASON2.map((c) => ({
+    title: `Close-up: ${c}`,
+    rows: [
+      [
+        { classType: c, yaw: 0.45, expression: "neutral" as Expression },
+        { classType: c, yaw: -0.3, expression: "happy" as Expression },
+      ],
+      [
+        { classType: c, yaw: 0.2, expression: "angry" as Expression },
+        { classType: c, yaw: -0.5, expression: "sad" as Expression },
+      ],
+    ],
+    dx: 1.4,
+    dist: 6.8,
     lookY: 0.4,
   })),
 ];

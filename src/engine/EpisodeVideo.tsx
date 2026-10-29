@@ -10,6 +10,7 @@ import { SceneEnvironment } from "./SceneEnvironment";
 import { SfxTrack } from "./SfxTrack";
 import { Subtitles } from "./Subtitles";
 import type { EpisodeConfig } from "./types";
+import { OUTPUT_HEIGHT } from "./viewport";
 
 interface EpisodeVideoProps {
   config: EpisodeConfig;
@@ -17,9 +18,7 @@ interface EpisodeVideoProps {
 }
 
 export const EpisodeVideo: React.FC<EpisodeVideoProps> = ({ config, Scene }) => {
-  const { width, height } = useVideoConfig();
   const overlays = config.overlays ?? {};
-  const fog = config.environment?.fog;
 
   return (
     <AbsoluteFill
@@ -29,35 +28,7 @@ export const EpisodeVideo: React.FC<EpisodeVideoProps> = ({ config, Scene }) => 
       {config.music ? <AudioTrack config={config.music} /> : null}
       {config.sfx ? <SfxTrack cues={config.sfx} /> : null}
 
-      <AbsoluteFill style={{ filter: overlays.grade ?? "saturate(1.06) contrast(1.03)" }}>
-        <ThreeCanvas
-          width={width}
-          height={height}
-          camera={{
-            fov: config.camera.fov ?? 46,
-            near: config.camera.near ?? 0.2,
-            far: config.camera.far ?? 400,
-            position: config.camera.initialPosition,
-          }}
-          shadows
-        >
-          {fog ? <fog attach="fog" args={[fog.color, fog.near, fog.far]} /> : null}
-
-          <CameraRig config={config.camera} />
-
-          <SceneEnvironment intensity={0.4} />
-
-          {config.environment ? (
-            <EnvironmentScene preset={config.environment} />
-          ) : null}
-
-          <Scene />
-
-          {overlays.postfx?.enabled !== false ? (
-            <PostFX {...overlays.postfx} />
-          ) : null}
-        </ThreeCanvas>
-      </AbsoluteFill>
+      <EpisodeCanvas config={config} Scene={Scene} />
 
       <Vignette background={overlays.vignette ?? true} />
 
@@ -69,6 +40,50 @@ export const EpisodeVideo: React.FC<EpisodeVideoProps> = ({ config, Scene }) => 
         fadeInFrames={overlays.fadeInFrames ?? 8}
         fadeOutFrames={overlays.fadeOutFrames ?? 14}
       />
+    </AbsoluteFill>
+  );
+};
+
+/**
+ * The graded 3D layer of an episode (camera, environment, Scene, post FX)
+ * without audio or overlays. Long-form videos stack one per act inside
+ * <Sequence>s and play the audio and HUD once at the top level.
+ */
+export const EpisodeCanvas: React.FC<EpisodeVideoProps> = ({ config, Scene }) => {
+  const { width, height } = useVideoConfig();
+  const overlays = config.overlays ?? {};
+  const fog = config.environment?.fog;
+  // Pixel-sized shader details (minimum outline width) follow this video's height.
+  OUTPUT_HEIGHT.value = height;
+  return (
+    <AbsoluteFill style={{ filter: overlays.grade ?? "saturate(1.06) contrast(1.03)" }}>
+      <ThreeCanvas
+        width={width}
+        height={height}
+        camera={{
+          fov: config.camera.fov ?? 46,
+          near: config.camera.near ?? 0.2,
+          far: config.camera.far ?? 400,
+          position: config.camera.initialPosition,
+        }}
+        shadows
+      >
+        {fog ? <fog attach="fog" args={[fog.color, fog.near, fog.far]} /> : null}
+
+        <CameraRig config={config.camera} />
+
+        <SceneEnvironment intensity={0.4} />
+
+        {config.environment ? (
+          <EnvironmentScene preset={config.environment} />
+        ) : null}
+
+        <Scene />
+
+        {overlays.postfx?.enabled !== false ? (
+          <PostFX {...overlays.postfx} />
+        ) : null}
+      </ThreeCanvas>
     </AbsoluteFill>
   );
 };

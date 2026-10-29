@@ -7,7 +7,7 @@
 Outputs:
   public/episodes/__SLUG__/narration_vN.mp3  voiced line by line with edge-tts,
       laid end to end (never overlapping), compressed, about -16 LUFS
-  public/episodes/__SLUG__/score_vN.mp3      series score, about -27 LUFS
+  public/episodes/__SLUG__/score_vN.mp3      series score, about -34 LUFS
   public/episodes/__SLUG__/sfx/*.wav         procedural sound effects
   src/episodes/__SLUG__/data/wordTimestamps.json  subtitle segments
   src/episodes/__SLUG__/data/narrationCues.json   per-line word frames that
@@ -125,21 +125,11 @@ def build_narration():
 
 
 def build_score():
-    # Series theme (Ep1 score), looped to cover the episode and normalised so it
-    # sits under the voice at config volume 1. Mix here, not with config volumes.
-    looped = TMP / "score_loop.wav"
-    src = ROOT / "public" / "episodes" / "dungeon-trap" / "score.mp3"
-    da.run(
-        [
-            "ffmpeg", "-y", "-hide_banner",
-            "-i", str(src), "-i", str(src),
-            "-filter_complex", "[0:a][1:a]acrossfade=d=4:c1=qsin:c2=qsin,atrim=0:96",
-            str(looped),
-        ]
-    )
-    out = EP / f"score_v{VERSION}.mp3"
-    da.loudnorm(looped, out, -27, tp=-6)
-    print(out.name, da.measure_lufs(out), "LUFS")
+    # Series theme (public/music/series-theme.mp3), looped past the narration
+    # and normalised so it sits under the voice at config volume 1. Mix here,
+    # not with config volumes.
+    cues = json.loads((DATA / "narrationCues.json").read_text())
+    da.series_score(EP / f"score_v{VERSION}.mp3", cues["durationFrames"] / FPS + 4, TMP)
 
 
 # SFX -----------------------------------------------------------------------

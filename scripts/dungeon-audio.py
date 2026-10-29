@@ -14,6 +14,7 @@ Requires ffmpeg on PATH plus numpy, scipy and edge-tts.
 import asyncio
 import json
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -131,6 +132,37 @@ def build_narration():
     )
     loudnorm(comp, EP / "narration_v2.mp3", -16, tp=-1.5)
     print("narration_v2.mp3", measure_lufs(EP / "narration_v2.mp3"), "LUFS")
+
+
+# Series theme: drop a licensed track at public/music/series-theme.mp3 (credit
+# it in public/music/CREDITS.md). Every episode's score is built from it.
+SERIES_THEME = ROOT / "public" / "music" / "series-theme.mp3"
+LEGACY_THEME = ROOT / "public" / "episodes" / "dungeon-trap" / "score.mp3"
+
+
+def series_score(dst, seconds, tmp, lufs=-34, fade=3.0, xfade=3.0):
+    """Loops the series theme (crossfading each repeat) to cover `seconds`,
+    fades out the tail and normalises it to sit under the voice."""
+    src = SERIES_THEME if SERIES_THEME.exists() else LEGACY_THEME
+    if src == LEGACY_THEME:
+        print("No public/music/series-theme.mp3 yet: using the legacy Ep1 drone.")
+    length = float(subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(src)],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip())
+    copies = max(1, int(np.ceil((seconds + xfade) / max(1.0, length - xfade))))
+    inputs = []
+    for _ in range(copies):
+        inputs += ["-i", str(src)]
+    chain, last = [], "[0:a]"
+    for k in range(1, copies):
+        chain.append(f"{last}[{k}:a]acrossfade=d={xfade}:c1=qsin:c2=qsin[x{k}]")
+        last = f"[x{k}]"
+    chain.append(f"{last}atrim=0:{seconds},afade=t=out:st={max(0, seconds - fade)}:d={fade}[out]")
+    looped = Path(tmp) / "score_loop.wav"
+    run(["ffmpeg", "-y", "-hide_banner", *inputs, "-filter_complex", ";".join(chain), "-map", "[out]", str(looped)])
+    loudnorm(looped, dst, lufs, tp=-6)
+    print(f"{Path(dst).name} <- {src.name} -> {measure_lufs(dst):.1f} LUFS")
 
 
 def build_score():
@@ -516,6 +548,12 @@ def build_sfx():
     for name, build in SFX_BUILDERS.items():
         write_wav(SFX / f"{name}.wav", build())
     print(f"{len(SFX_BUILDERS)} sfx written to {SFX}")
+    # AI takes picked with scripts/gen-sfx.py replace their procedural versions.
+    ai = sorted((SFX.parent / "sfx_ai").glob("*.wav"))
+    for wav in ai:
+        shutil.copyfile(wav, SFX / wav.name)
+    if ai:
+        print(f"{len(ai)} AI sfx laid over from {SFX.parent / 'sfx_ai'}")
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { useSurface } from "../../engine/materials";
 import { makeFlagstone, makeMasonry, makeWood } from "../../engine/textures";
 import { DustMotes, GlowSprite } from "../dungeon/Fx";
+import { EntryDoorway } from "./EntryDoorway";
 
 /**
  * Generic cut-away dungeon hall in the series diorama style (Ep2's hallway
@@ -20,6 +21,8 @@ export interface DioramaHallProps {
   ceilingY?: number;
   /** Which end opens onto daylight (newcomers enter/exit there). */
   exit?: "left" | "right" | "none";
+  /** "daylight" (the shorts) or "door": a torch-lit crypt doorway with an open door. */
+  exitStyle?: "daylight" | "door";
   pillarXs?: number[];
   torchXs?: number[];
   /** Centre of the bannered arch on the back wall (null for none). */
@@ -40,6 +43,7 @@ export const DioramaHall: React.FC<DioramaHallProps> = ({
   right = 10.6,
   ceilingY = 5.9,
   exit = "left",
+  exitStyle = "daylight",
   pillarXs = [-8, -4, 4, 8],
   torchXs = [-6.1, -2.2, 2.2, 6.1],
   archX = 0,
@@ -285,8 +289,12 @@ export const DioramaHall: React.FC<DioramaHallProps> = ({
         <meshStandardMaterial color="#b98d3c" metalness={0.6} roughness={0.4} />
       </mesh>
 
+      {exit !== "none" && exitStyle === "door" ? (
+        <EntryDoorway x={exitX} z={z} depth={depth} ceilingY={ceilingY} side={exit} />
+      ) : null}
+
       {/* Exit: open archway onto daylight */}
-      {exit !== "none" ? (
+      {exit !== "none" && exitStyle === "daylight" ? (
         <>
           <mesh position={[exitX + out * 2.0, 2.9, z - 2.0]}>
             <planeGeometry args={[4.2, 6.2]} />

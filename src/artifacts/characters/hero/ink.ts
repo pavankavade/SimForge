@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { OUTPUT_HEIGHT } from "../../../engine/viewport";
 
 /**
  * SimForge character look ("ink & vinyl"):
@@ -18,6 +19,11 @@ export const INK = "#1a1216";
 /** Outline width in world units (view-space extrusion, independent of scale). */
 export const INK_WIDTH = 0.013;
 export const INK_THIN = 0.008;
+/**
+ * Outlines never get thinner than this many pixels (scaled down for thin ink),
+ * so wide shots and 16:9 frames keep the inked look instead of fading to hairlines.
+ */
+export const INK_MIN_PX = 2.2;
 
 const geoCache = new Map<string, THREE.BufferGeometry>();
 const memoGeo = (key: string, make: () => THREE.BufferGeometry) => {
@@ -209,21 +215,28 @@ export const flat = (color: string) => {
   return m;
 };
 
-/** Inverted-hull outline pushed out along view-space normals by `width` world units. */
-export const inkMaterial = (width = INK_WIDTH) => {
-  const key = `ink:${width}`;
+/**
+ * Inverted-hull outline pushed out along view-space normals by `width` world
+ * units, or by INK_MIN_PX pixels where that is wider (far from the camera).
+ */
+export const inkMaterial = (width = INK_WIDTH, color = INK) => {
+  const key = `ink:${width}:${color}`;
   let m = matCache.get(key);
   if (!m) {
-    const mat = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
+    const mat = new THREE.MeshBasicMaterial({ color, side: THREE.BackSide });
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.inkWidth = { value: width };
+      shader.uniforms.inkMinPx = { value: (INK_MIN_PX * width) / INK_WIDTH };
+      shader.uniforms.inkViewport = OUTPUT_HEIGHT;
       shader.vertexShader = shader.vertexShader
-        .replace("#include <common>", "#include <common>\nuniform float inkWidth;")
+        .replace("#include <common>", "#include <common>\nuniform float inkWidth;\nuniform float inkMinPx;\nuniform float inkViewport;")
         .replace(
           "#include <project_vertex>",
           [
             "vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );",
-            "mvPosition.xyz += normalize( normalMatrix * normal ) * inkWidth;",
+            // World size of one output pixel at this depth (perspective camera).
+            "float inkPixel = 2.0 * max( -mvPosition.z, 0.0 ) / ( projectionMatrix[1][1] * inkViewport );",
+            "mvPosition.xyz += normalize( normalMatrix * normal ) * max( inkWidth, inkMinPx * inkPixel );",
             "gl_Position = projectionMatrix * mvPosition;",
           ].join("\n")
         );

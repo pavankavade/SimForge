@@ -1,7 +1,11 @@
 import type React from "react";
+import { createContext, useContext } from "react";
 import type * as THREE from "three";
 import type { Vec3 } from "../../../engine/types";
-import { inkGeometry, inkMaterial, INK_WIDTH } from "./ink";
+import { INK, inkGeometry, inkMaterial, INK_WIDTH } from "./ink";
+
+/** Outline colour for every Part below it (silhouette kits draw a light rim instead of ink). */
+export const InkColor = createContext(INK);
 
 export interface PartProps {
   geo: THREE.BufferGeometry;
@@ -28,12 +32,15 @@ export const Part: React.FC<PartProps> = ({
   inkGeo,
   shadow = true,
   children,
-}) => (
-  <group position={position} rotation={rotation} scale={scale}>
-    <mesh geometry={geo} material={mat} castShadow={shadow} receiveShadow dispose={null} />
-    {ink !== false ? (
-      <mesh geometry={inkGeometry(inkGeo ?? geo)} material={inkMaterial(ink)} dispose={null} />
-    ) : null}
-    {children}
-  </group>
-);
+}) => {
+  const inkColor = useContext(InkColor);
+  return (
+    <group position={position} rotation={rotation} scale={scale}>
+      <mesh geometry={geo} material={mat} castShadow={shadow} receiveShadow dispose={null} />
+      {ink !== false ? (
+        <mesh geometry={inkGeometry(inkGeo ?? geo)} material={inkMaterial(ink, inkColor)} dispose={null} />
+      ) : null}
+      {children}
+    </group>
+  );
+};

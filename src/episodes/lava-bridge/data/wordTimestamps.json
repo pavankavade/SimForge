@@ -1,0 +1,1080 @@
+[
+  {
+    "startFrame": 21,
+    "endFrame": 165,
+    "text": "Your dungeon was unbeatable, so the Guild sent a barbarian to punch straight through the floor.",
+    "words": [
+      {
+        "word": "Your",
+        "startFrame": 21,
+        "endFrame": 27
+      },
+      {
+        "word": "dungeon",
+        "startFrame": 27,
+        "endFrame": 42
+      },
+      {
+        "word": "was",
+        "startFrame": 42,
+        "endFrame": 48
+      },
+      {
+        "word": "unbeatable,",
+        "startFrame": 48,
+        "endFrame": 72
+      },
+      {
+        "word": "so",
+        "startFrame": 75,
+        "endFrame": 81
+      },
+      {
+        "word": "the",
+        "startFrame": 81,
+        "endFrame": 84
+      },
+      {
+        "word": "Guild",
+        "startFrame": 84,
+        "endFrame": 93
+      },
+      {
+        "word": "sent",
+        "startFrame": 93,
+        "endFrame": 96
+      },
+      {
+        "word": "a",
+        "startFrame": 96,
+        "endFrame": 99
+      },
+      {
+        "word": "barbarian",
+        "startFrame": 99,
+        "endFrame": 120
+      },
+      {
+        "word": "to",
+        "startFrame": 120,
+        "endFrame": 123
+      },
+      {
+        "word": "punch",
+        "startFrame": 123,
+        "endFrame": 129
+      },
+      {
+        "word": "straight",
+        "startFrame": 129,
+        "endFrame": 138
+      },
+      {
+        "word": "through",
+        "startFrame": 138,
+        "endFrame": 144
+      },
+      {
+        "word": "the",
+        "startFrame": 144,
+        "endFrame": 150
+      },
+      {
+        "word": "floor.",
+        "startFrame": 150,
+        "endFrame": 165
+      }
+    ]
+  },
+  {
+    "startFrame": 178,
+    "endFrame": 388,
+    "text": "Welcome to floor two: a lake of lava, and a stone bridge that crumbles the moment you step on it.",
+    "words": [
+      {
+        "word": "Welcome",
+        "startFrame": 178,
+        "endFrame": 193
+      },
+      {
+        "word": "to",
+        "startFrame": 193,
+        "endFrame": 196
+      },
+      {
+        "word": "floor",
+        "startFrame": 196,
+        "endFrame": 214
+      },
+      {
+        "word": "two:",
+        "startFrame": 214,
+        "endFrame": 229
+      },
+      {
+        "word": "a",
+        "startFrame": 238,
+        "endFrame": 241
+      },
+      {
+        "word": "lake",
+        "startFrame": 241,
+        "endFrame": 256
+      },
+      {
+        "word": "of",
+        "startFrame": 256,
+        "endFrame": 262
+      },
+      {
+        "word": "lava,",
+        "startFrame": 262,
+        "endFrame": 280
+      },
+      {
+        "word": "and",
+        "startFrame": 283,
+        "endFrame": 286
+      },
+      {
+        "word": "a",
+        "startFrame": 286,
+        "endFrame": 289
+      },
+      {
+        "word": "stone",
+        "startFrame": 289,
+        "endFrame": 304
+      },
+      {
+        "word": "bridge",
+        "startFrame": 304,
+        "endFrame": 319
+      },
+      {
+        "word": "that",
+        "startFrame": 319,
+        "endFrame": 325
+      },
+      {
+        "word": "crumbles",
+        "startFrame": 325,
+        "endFrame": 346
+      },
+      {
+        "word": "the",
+        "startFrame": 346,
+        "endFrame": 349
+      },
+      {
+        "word": "moment",
+        "startFrame": 349,
+        "endFrame": 364
+      },
+      {
+        "word": "you",
+        "startFrame": 364,
+        "endFrame": 367
+      },
+      {
+        "word": "step",
+        "startFrame": 367,
+        "endFrame": 379
+      },
+      {
+        "word": "on",
+        "startFrame": 379,
+        "endFrame": 382
+      },
+      {
+        "word": "it.",
+        "startFrame": 382,
+        "endFrame": 388
+      }
+    ]
+  },
+  {
+    "startFrame": 400,
+    "endFrame": 523,
+    "text": "The barbarian stomps right on, and drops straight into the lava.",
+    "words": [
+      {
+        "word": "The",
+        "startFrame": 400,
+        "endFrame": 403
+      },
+      {
+        "word": "barbarian",
+        "startFrame": 403,
+        "endFrame": 424
+      },
+      {
+        "word": "stomps",
+        "startFrame": 424,
+        "endFrame": 436
+      },
+      {
+        "word": "right",
+        "startFrame": 436,
+        "endFrame": 448
+      },
+      {
+        "word": "on,",
+        "startFrame": 448,
+        "endFrame": 460
+      },
+      {
+        "word": "and",
+        "startFrame": 460,
+        "endFrame": 463
+      },
+      {
+        "word": "drops",
+        "startFrame": 463,
+        "endFrame": 478
+      },
+      {
+        "word": "straight",
+        "startFrame": 478,
+        "endFrame": 499
+      },
+      {
+        "word": "into",
+        "startFrame": 499,
+        "endFrame": 505
+      },
+      {
+        "word": "the",
+        "startFrame": 505,
+        "endFrame": 508
+      },
+      {
+        "word": "lava.",
+        "startFrame": 508,
+        "endFrame": 523
+      }
+    ]
+  },
+  {
+    "startFrame": 556,
+    "endFrame": 745,
+    "text": "But a show-off rogue sprints across faster than it falls, backflips over the last gap, and dives into the gold.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 556,
+        "endFrame": 559
+      },
+      {
+        "word": "a",
+        "startFrame": 559,
+        "endFrame": 562
+      },
+      {
+        "word": "show-off",
+        "startFrame": 562,
+        "endFrame": 577
+      },
+      {
+        "word": "rogue",
+        "startFrame": 577,
+        "endFrame": 592
+      },
+      {
+        "word": "sprints",
+        "startFrame": 592,
+        "endFrame": 607
+      },
+      {
+        "word": "across",
+        "startFrame": 607,
+        "endFrame": 622
+      },
+      {
+        "word": "faster",
+        "startFrame": 622,
+        "endFrame": 634
+      },
+      {
+        "word": "than",
+        "startFrame": 634,
+        "endFrame": 637
+      },
+      {
+        "word": "it",
+        "startFrame": 637,
+        "endFrame": 640
+      },
+      {
+        "word": "falls,",
+        "startFrame": 640,
+        "endFrame": 655
+      },
+      {
+        "word": "backflips",
+        "startFrame": 661,
+        "endFrame": 676
+      },
+      {
+        "word": "over",
+        "startFrame": 676,
+        "endFrame": 682
+      },
+      {
+        "word": "the",
+        "startFrame": 682,
+        "endFrame": 685
+      },
+      {
+        "word": "last",
+        "startFrame": 685,
+        "endFrame": 694
+      },
+      {
+        "word": "gap,",
+        "startFrame": 694,
+        "endFrame": 703
+      },
+      {
+        "word": "and",
+        "startFrame": 703,
+        "endFrame": 712
+      },
+      {
+        "word": "dives",
+        "startFrame": 712,
+        "endFrame": 724
+      },
+      {
+        "word": "into",
+        "startFrame": 724,
+        "endFrame": 730
+      },
+      {
+        "word": "the",
+        "startFrame": 730,
+        "endFrame": 733
+      },
+      {
+        "word": "gold.",
+        "startFrame": 733,
+        "endFrame": 745
+      }
+    ]
+  },
+  {
+    "startFrame": 777,
+    "endFrame": 1017,
+    "text": "So you make the bridge collapse from both ends at once. The next rogue is stranded in the middle, and sinks.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 777,
+        "endFrame": 783
+      },
+      {
+        "word": "you",
+        "startFrame": 783,
+        "endFrame": 789
+      },
+      {
+        "word": "make",
+        "startFrame": 789,
+        "endFrame": 798
+      },
+      {
+        "word": "the",
+        "startFrame": 798,
+        "endFrame": 801
+      },
+      {
+        "word": "bridge",
+        "startFrame": 801,
+        "endFrame": 816
+      },
+      {
+        "word": "collapse",
+        "startFrame": 816,
+        "endFrame": 834
+      },
+      {
+        "word": "from",
+        "startFrame": 834,
+        "endFrame": 840
+      },
+      {
+        "word": "both",
+        "startFrame": 840,
+        "endFrame": 852
+      },
+      {
+        "word": "ends",
+        "startFrame": 852,
+        "endFrame": 861
+      },
+      {
+        "word": "at",
+        "startFrame": 861,
+        "endFrame": 867
+      },
+      {
+        "word": "once.",
+        "startFrame": 867,
+        "endFrame": 885
+      },
+      {
+        "word": "The",
+        "startFrame": 894,
+        "endFrame": 897
+      },
+      {
+        "word": "next",
+        "startFrame": 897,
+        "endFrame": 909
+      },
+      {
+        "word": "rogue",
+        "startFrame": 909,
+        "endFrame": 924
+      },
+      {
+        "word": "is",
+        "startFrame": 924,
+        "endFrame": 927
+      },
+      {
+        "word": "stranded",
+        "startFrame": 927,
+        "endFrame": 948
+      },
+      {
+        "word": "in",
+        "startFrame": 948,
+        "endFrame": 951
+      },
+      {
+        "word": "the",
+        "startFrame": 951,
+        "endFrame": 954
+      },
+      {
+        "word": "middle,",
+        "startFrame": 954,
+        "endFrame": 963
+      },
+      {
+        "word": "and",
+        "startFrame": 978,
+        "endFrame": 987
+      },
+      {
+        "word": "sinks.",
+        "startFrame": 1002,
+        "endFrame": 1017
+      }
+    ]
+  },
+  {
+    "startFrame": 1050,
+    "endFrame": 1146,
+    "text": "But a mage simply floats over the whole lake.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 1050,
+        "endFrame": 1053
+      },
+      {
+        "word": "a",
+        "startFrame": 1053,
+        "endFrame": 1056
+      },
+      {
+        "word": "mage",
+        "startFrame": 1056,
+        "endFrame": 1077
+      },
+      {
+        "word": "simply",
+        "startFrame": 1077,
+        "endFrame": 1086
+      },
+      {
+        "word": "floats",
+        "startFrame": 1086,
+        "endFrame": 1107
+      },
+      {
+        "word": "over",
+        "startFrame": 1107,
+        "endFrame": 1113
+      },
+      {
+        "word": "the",
+        "startFrame": 1113,
+        "endFrame": 1116
+      },
+      {
+        "word": "whole",
+        "startFrame": 1116,
+        "endFrame": 1128
+      },
+      {
+        "word": "lake.",
+        "startFrame": 1128,
+        "endFrame": 1146
+      }
+    ]
+  },
+  {
+    "startFrame": 1161,
+    "endFrame": 1308,
+    "text": "So you install lava geysers, and one launches him sky-high.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1161,
+        "endFrame": 1170
+      },
+      {
+        "word": "you",
+        "startFrame": 1176,
+        "endFrame": 1179
+      },
+      {
+        "word": "install",
+        "startFrame": 1179,
+        "endFrame": 1197
+      },
+      {
+        "word": "lava",
+        "startFrame": 1197,
+        "endFrame": 1209
+      },
+      {
+        "word": "geysers,",
+        "startFrame": 1209,
+        "endFrame": 1233
+      },
+      {
+        "word": "and",
+        "startFrame": 1239,
+        "endFrame": 1242
+      },
+      {
+        "word": "one",
+        "startFrame": 1242,
+        "endFrame": 1251
+      },
+      {
+        "word": "launches",
+        "startFrame": 1251,
+        "endFrame": 1269
+      },
+      {
+        "word": "him",
+        "startFrame": 1269,
+        "endFrame": 1275
+      },
+      {
+        "word": "sky-high.",
+        "startFrame": 1275,
+        "endFrame": 1308
+      }
+    ]
+  },
+  {
+    "startFrame": 1340,
+    "endFrame": 1490,
+    "text": "But a paladin surfs across on his shield, and rides every geyser like a wave.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 1340,
+        "endFrame": 1346
+      },
+      {
+        "word": "a",
+        "startFrame": 1346,
+        "endFrame": 1349
+      },
+      {
+        "word": "paladin",
+        "startFrame": 1349,
+        "endFrame": 1364
+      },
+      {
+        "word": "surfs",
+        "startFrame": 1364,
+        "endFrame": 1379
+      },
+      {
+        "word": "across",
+        "startFrame": 1379,
+        "endFrame": 1391
+      },
+      {
+        "word": "on",
+        "startFrame": 1391,
+        "endFrame": 1394
+      },
+      {
+        "word": "his",
+        "startFrame": 1394,
+        "endFrame": 1400
+      },
+      {
+        "word": "shield,",
+        "startFrame": 1400,
+        "endFrame": 1418
+      },
+      {
+        "word": "and",
+        "startFrame": 1424,
+        "endFrame": 1427
+      },
+      {
+        "word": "rides",
+        "startFrame": 1427,
+        "endFrame": 1439
+      },
+      {
+        "word": "every",
+        "startFrame": 1439,
+        "endFrame": 1445
+      },
+      {
+        "word": "geyser",
+        "startFrame": 1445,
+        "endFrame": 1460
+      },
+      {
+        "word": "like",
+        "startFrame": 1460,
+        "endFrame": 1466
+      },
+      {
+        "word": "a",
+        "startFrame": 1466,
+        "endFrame": 1467
+      },
+      {
+        "word": "wave.",
+        "startFrame": 1466,
+        "endFrame": 1490
+      }
+    ]
+  },
+  {
+    "startFrame": 1505,
+    "endFrame": 1640,
+    "text": "So you add a current, and it carries him straight over a lava waterfall.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1505,
+        "endFrame": 1508
+      },
+      {
+        "word": "you",
+        "startFrame": 1508,
+        "endFrame": 1514
+      },
+      {
+        "word": "add",
+        "startFrame": 1514,
+        "endFrame": 1523
+      },
+      {
+        "word": "a",
+        "startFrame": 1523,
+        "endFrame": 1526
+      },
+      {
+        "word": "current,",
+        "startFrame": 1526,
+        "endFrame": 1547
+      },
+      {
+        "word": "and",
+        "startFrame": 1550,
+        "endFrame": 1553
+      },
+      {
+        "word": "it",
+        "startFrame": 1553,
+        "endFrame": 1556
+      },
+      {
+        "word": "carries",
+        "startFrame": 1556,
+        "endFrame": 1568
+      },
+      {
+        "word": "him",
+        "startFrame": 1568,
+        "endFrame": 1571
+      },
+      {
+        "word": "straight",
+        "startFrame": 1571,
+        "endFrame": 1589
+      },
+      {
+        "word": "over",
+        "startFrame": 1592,
+        "endFrame": 1598
+      },
+      {
+        "word": "a",
+        "startFrame": 1598,
+        "endFrame": 1601
+      },
+      {
+        "word": "lava",
+        "startFrame": 1601,
+        "endFrame": 1619
+      },
+      {
+        "word": "waterfall.",
+        "startFrame": 1619,
+        "endFrame": 1640
+      }
+    ]
+  },
+  {
+    "startFrame": 1673,
+    "endFrame": 1844,
+    "text": "But the next mage brings his whole party, freezes the lake solid, and they all stroll across.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 1673,
+        "endFrame": 1676
+      },
+      {
+        "word": "the",
+        "startFrame": 1676,
+        "endFrame": 1679
+      },
+      {
+        "word": "next",
+        "startFrame": 1679,
+        "endFrame": 1685
+      },
+      {
+        "word": "mage",
+        "startFrame": 1685,
+        "endFrame": 1697
+      },
+      {
+        "word": "brings",
+        "startFrame": 1700,
+        "endFrame": 1709
+      },
+      {
+        "word": "his",
+        "startFrame": 1709,
+        "endFrame": 1712
+      },
+      {
+        "word": "whole",
+        "startFrame": 1712,
+        "endFrame": 1718
+      },
+      {
+        "word": "party,",
+        "startFrame": 1718,
+        "endFrame": 1739
+      },
+      {
+        "word": "freezes",
+        "startFrame": 1751,
+        "endFrame": 1760
+      },
+      {
+        "word": "the",
+        "startFrame": 1760,
+        "endFrame": 1763
+      },
+      {
+        "word": "lake",
+        "startFrame": 1763,
+        "endFrame": 1772
+      },
+      {
+        "word": "solid,",
+        "startFrame": 1772,
+        "endFrame": 1787
+      },
+      {
+        "word": "and",
+        "startFrame": 1790,
+        "endFrame": 1793
+      },
+      {
+        "word": "they",
+        "startFrame": 1793,
+        "endFrame": 1796
+      },
+      {
+        "word": "all",
+        "startFrame": 1796,
+        "endFrame": 1802
+      },
+      {
+        "word": "stroll",
+        "startFrame": 1802,
+        "endFrame": 1823
+      },
+      {
+        "word": "across.",
+        "startFrame": 1823,
+        "endFrame": 1844
+      }
+    ]
+  },
+  {
+    "startFrame": 1858,
+    "endFrame": 2056,
+    "text": "So the stone cracks, the walls open, and a wave of lava floods the entire chamber.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1858,
+        "endFrame": 1870
+      },
+      {
+        "word": "the",
+        "startFrame": 1873,
+        "endFrame": 1876
+      },
+      {
+        "word": "stone",
+        "startFrame": 1876,
+        "endFrame": 1891
+      },
+      {
+        "word": "cracks,",
+        "startFrame": 1891,
+        "endFrame": 1915
+      },
+      {
+        "word": "the",
+        "startFrame": 1918,
+        "endFrame": 1921
+      },
+      {
+        "word": "walls",
+        "startFrame": 1921,
+        "endFrame": 1939
+      },
+      {
+        "word": "open,",
+        "startFrame": 1939,
+        "endFrame": 1951
+      },
+      {
+        "word": "and",
+        "startFrame": 1954,
+        "endFrame": 1960
+      },
+      {
+        "word": "a",
+        "startFrame": 1960,
+        "endFrame": 1961
+      },
+      {
+        "word": "wave",
+        "startFrame": 1960,
+        "endFrame": 1981
+      },
+      {
+        "word": "of",
+        "startFrame": 1981,
+        "endFrame": 1984
+      },
+      {
+        "word": "lava",
+        "startFrame": 1984,
+        "endFrame": 2002
+      },
+      {
+        "word": "floods",
+        "startFrame": 2002,
+        "endFrame": 2014
+      },
+      {
+        "word": "the",
+        "startFrame": 2014,
+        "endFrame": 2020
+      },
+      {
+        "word": "entire",
+        "startFrame": 2020,
+        "endFrame": 2038
+      },
+      {
+        "word": "chamber.",
+        "startFrame": 2038,
+        "endFrame": 2056
+      }
+    ]
+  },
+  {
+    "startFrame": 2089,
+    "endFrame": 2212,
+    "text": "A bard peeks in, plays one sad note, and backs away.",
+    "words": [
+      {
+        "word": "A",
+        "startFrame": 2089,
+        "endFrame": 2090
+      },
+      {
+        "word": "bard",
+        "startFrame": 2089,
+        "endFrame": 2104
+      },
+      {
+        "word": "peeks",
+        "startFrame": 2104,
+        "endFrame": 2113
+      },
+      {
+        "word": "in,",
+        "startFrame": 2113,
+        "endFrame": 2125
+      },
+      {
+        "word": "plays",
+        "startFrame": 2125,
+        "endFrame": 2137
+      },
+      {
+        "word": "one",
+        "startFrame": 2137,
+        "endFrame": 2149
+      },
+      {
+        "word": "sad",
+        "startFrame": 2149,
+        "endFrame": 2164
+      },
+      {
+        "word": "note,",
+        "startFrame": 2164,
+        "endFrame": 2182
+      },
+      {
+        "word": "and",
+        "startFrame": 2185,
+        "endFrame": 2191
+      },
+      {
+        "word": "backs",
+        "startFrame": 2191,
+        "endFrame": 2200
+      },
+      {
+        "word": "away.",
+        "startFrame": 2200,
+        "endFrame": 2212
+      }
+    ]
+  },
+  {
+    "startFrame": 2233,
+    "endFrame": 2362,
+    "text": "Congratulations, your second floor is now unbeatable.",
+    "words": [
+      {
+        "word": "Congratulations,",
+        "startFrame": 2233,
+        "endFrame": 2281
+      },
+      {
+        "word": "your",
+        "startFrame": 2284,
+        "endFrame": 2290
+      },
+      {
+        "word": "second",
+        "startFrame": 2290,
+        "endFrame": 2302
+      },
+      {
+        "word": "floor",
+        "startFrame": 2302,
+        "endFrame": 2311
+      },
+      {
+        "word": "is",
+        "startFrame": 2311,
+        "endFrame": 2317
+      },
+      {
+        "word": "now",
+        "startFrame": 2317,
+        "endFrame": 2329
+      },
+      {
+        "word": "unbeatable.",
+        "startFrame": 2332,
+        "endFrame": 2362
+      }
+    ]
+  },
+  {
+    "startFrame": 2375,
+    "endFrame": 2435,
+    "text": "Unless you can prove us wrong in the comments.",
+    "words": [
+      {
+        "word": "Unless",
+        "startFrame": 2375,
+        "endFrame": 2384
+      },
+      {
+        "word": "you",
+        "startFrame": 2384,
+        "endFrame": 2387
+      },
+      {
+        "word": "can",
+        "startFrame": 2387,
+        "endFrame": 2390
+      },
+      {
+        "word": "prove",
+        "startFrame": 2390,
+        "endFrame": 2396
+      },
+      {
+        "word": "us",
+        "startFrame": 2396,
+        "endFrame": 2402
+      },
+      {
+        "word": "wrong",
+        "startFrame": 2402,
+        "endFrame": 2414
+      },
+      {
+        "word": "in",
+        "startFrame": 2414,
+        "endFrame": 2417
+      },
+      {
+        "word": "the",
+        "startFrame": 2417,
+        "endFrame": 2420
+      },
+      {
+        "word": "comments.",
+        "startFrame": 2420,
+        "endFrame": 2435
+      }
+    ]
+  }
+]

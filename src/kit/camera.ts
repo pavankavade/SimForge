@@ -1,9 +1,11 @@
 import type { CameraPose, CameraTrack, Vec3 } from "../engine/types";
 
 /**
- * Camera helpers for the 9:16 portrait frame at fov 40.
+ * Camera helpers for the 9:16 portrait frame at fov 40 (pass `WIDE` as the
+ * aspect for 16:9 long-form).
  *
- * At distance d the frame shows about 0.41·d wide and 0.73·d tall. Keep the
+ * At distance d the portrait frame shows about 0.41·d wide and 0.73·d tall;
+ * the 16:9 frame about 1.30·d wide and 0.73·d tall (same height). Keep the
  * subject inside the middle ~80% of the width, above the subtitle band
  * (bottom ~20% of the frame).
  *
@@ -14,22 +16,53 @@ import type { CameraPose, CameraTrack, Vec3 } from "../engine/types";
 
 export const FRAME_W_PER_D = 0.41;
 export const FRAME_H_PER_D = 0.73;
+/** Aspect ratios (width / height) for the frame helpers. */
+export const TALL = 9 / 16;
+export const WIDE = 16 / 9;
 
 /** Visible width/height of the frame at camera distance d. */
-export const frameSize = (d: number) => ({ width: FRAME_W_PER_D * d, height: FRAME_H_PER_D * d });
+export const frameSize = (d: number, aspect = TALL) => ({ width: FRAME_H_PER_D * aspect * d, height: FRAME_H_PER_D * d });
 /** Camera distance that fits `width` world units inside 80% of the frame width. */
-export const distForWidth = (width: number) => width / (FRAME_W_PER_D * 0.8);
-/** Camera distance that fits `height` world units inside the top ~70% of the frame (subtitles below). */
-export const distForHeight = (height: number) => height / (FRAME_H_PER_D * 0.7);
+export const distForWidth = (width: number, aspect = TALL) => width / (FRAME_H_PER_D * aspect * 0.8);
+/**
+ * Camera distance that fits `height` world units inside `band` of the frame
+ * height (portrait: top ~70%, subtitles below; 16:9 long-form: ~80%).
+ */
+export const distForHeight = (height: number, band = 0.7) => height / (FRAME_H_PER_D * band);
 
 /**
  * A standard side-on shot of the action plane z = `z`, looking at (x, y).
  * `rise` lifts the camera above the look target for a slight downward angle;
  * `lead` shifts the look target sideways (look into the direction of motion).
  */
-export const shot = (x: number, y: number, dist: number, { z = -0.6, rise = 1.3, lead = 0 } = {}): CameraPose => ({
+export const shot = (
+  x: number,
+  y: number,
+  dist: number,
+  { z = -0.6, rise = 1.3, lead = 0, fov, roll }: { z?: number; rise?: number; lead?: number; fov?: number; roll?: number } = {}
+): CameraPose => ({
   position: [x, y + rise, z + dist],
   lookAt: [x + lead, y, z],
+  ...(fov === undefined ? {} : { fov }),
+  ...(roll === undefined ? {} : { roll }),
+});
+
+/** Field of view that magnifies the picture `zoom` times from `fov` (degrees) without moving the camera. */
+export const zoomFov = (fov: number, zoom: number) => (2 * Math.atan(Math.tan((fov * Math.PI) / 360) / zoom) * 180) / Math.PI;
+
+/**
+ * Crash zoom: hard cut to `pose` at `start`, then the lens snaps in `zoom`x
+ * over `len` frames (no dolly) and holds until `end`. The comedy punch-in on a
+ * reaction ("...and then he sees the boulder"). Aim `pose.lookAt` at the face.
+ */
+export const crashZoom = (start: number, end: number, pose: CameraPose, { zoom = 2.2, len = 5, fov = 40 } = {}): CameraTrack => ({
+  start,
+  end,
+  blend: 1,
+  fn: (f) => {
+    const t = Math.min(1, Math.max(0, (f - start) / len));
+    return { ...pose, fov: fov + (zoomFov(fov, zoom) - fov) * (1 - (1 - t) ** 3) };
+  },
 });
 
 /**

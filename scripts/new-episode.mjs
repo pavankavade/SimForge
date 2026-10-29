@@ -147,10 +147,9 @@ const pkgPath = path.join(root, "package.json");
 const pkgText = await readFile(pkgPath, "utf8");
 const pkg = JSON.parse(pkgText);
 const pkgEol = pkgText.includes("\r\n") ? "\r\n" : "\n";
-pkg.scripts[`render:${slug}`] =
-  `remotion render ${compositionId} out/${slug}.raw.mp4 --concurrency=8 --crf=18 --audio-bitrate=192k && ` +
-  `ffmpeg -y -hide_banner -loglevel error -i out/${slug}.raw.mp4 -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k out/${slug}.mp4`;
-pkg.scripts[`still:${slug}`] = `remotion still ${compositionId} out/${slug}-still.png --frame=${Math.round(est.durationFrames / 2)}`;
+// Render, two-pass loudness master and check in one go (scripts/render.mjs).
+pkg.scripts[`render:${slug}`] = `node scripts/render.mjs ${compositionId} ${slug}`;
+pkg.scripts[`still:${slug}`] = `node scripts/solo.mjs still ${compositionId} out/${slug}-still.png --frame=${Math.round(est.durationFrames / 2)}`;
 await writeFile(pkgPath, (JSON.stringify(pkg, null, 2) + "\n").replace(/\n/g, pkgEol), "utf8");
 
 console.log(`Created src/episodes/${slug} (composition: ${compositionId})`);
@@ -189,5 +188,6 @@ console.log("Next (see AGENTS.md > New episode workflow):");
 console.log(`  1. Write the 5-level script in scripts/${slug}-audio.py (LINES), then: python scripts/${slug}-audio.py narration`);
 console.log(`  2. Build levels in src/episodes/${slug}/timeline.ts -> Scene.tsx -> config.ts (beats only via w())`);
 console.log("  3. npm run lint");
-console.log(`  4. node scripts/review.mjs ${compositionId} --beats   (look at every sheet)`);
-console.log(`  5. npm run render:${slug} && npm run check:video -- ${slug}`);
+console.log(`  4. npm run audit -- ${compositionId}   (fix every audit problem), then`);
+console.log(`     npm run review -- ${compositionId} --beats --around   (look at every sheet)`);
+console.log(`  5. npm run render:${slug}   (renders, masters the loudness and runs check:video)`);

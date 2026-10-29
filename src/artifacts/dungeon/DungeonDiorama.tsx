@@ -663,18 +663,19 @@ export const DungeonDiorama: React.FC<DungeonDioramaProps> = ({
           />
         </group>
       ) : (
-        <mesh position={[-6, -3.2, -0.6]} receiveShadow>
-          <boxGeometry args={[8, 5.4, 3.4]} />
+        <mesh position={[-6.1, -3.2, -0.6]} receiveShadow>
+          <boxGeometry args={[7.8, 5.4, 3.4]} />
           {earthMat}
         </mesh>
       )}
-      <mesh position={[6, -3.2, -0.6]} receiveShadow>
-        <boxGeometry args={[8, 5.4, 3.4]} />
+      {/* Earth stops at the pit walls (x = ±2.2), never inside them: shared faces z-fight */}
+      <mesh position={[6.1, -3.2, -0.6]} receiveShadow>
+        <boxGeometry args={[7.8, 5.4, 3.4]} />
         {earthMat}
       </mesh>
       {/* Deep bedrock so wide shots never show empty space below the set */}
-      <mesh position={[0, -10.1, -0.6]} receiveShadow>
-        <boxGeometry args={[26, 12, 3.4]} />
+      <mesh position={[0, -10.1, -0.65]} receiveShadow>
+        <boxGeometry args={[26, 12, 3.3]} />
         {earthDarkMat}
       </mesh>
 
@@ -747,8 +748,8 @@ export const DungeonDiorama: React.FC<DungeonDioramaProps> = ({
         <boxGeometry args={[0.2, 5.4, 3.4]} />
         <meshStandardMaterial color="#45444e" roughness={0.9} />
       </mesh>
-      <mesh position={[0, -4.2, -0.6]} receiveShadow>
-        <boxGeometry args={[4.2, 0.4, 3.4]} />
+      <mesh position={[0, -4.2, -0.62]} receiveShadow>
+        <boxGeometry args={[4.0, 0.4, 3.36]} />
         <meshStandardMaterial color="#2a2b32" roughness={0.9} />
       </mesh>
 

@@ -1,1586 +1,1703 @@
 [
   {
-    "startFrame": 14,
-    "endFrame": 90,
+    "startFrame": 15,
+    "endFrame": 102,
     "text": "Dig a hole in your yard, and climb in when the bomb drops.",
     "words": [
       {
         "word": "Dig",
-        "startFrame": 14,
-        "endFrame": 20
+        "startFrame": 15,
+        "endFrame": 18
       },
       {
         "word": "a",
-        "startFrame": 20,
-        "endFrame": 22
+        "startFrame": 18,
+        "endFrame": 21
       },
       {
         "word": "hole",
-        "startFrame": 22,
+        "startFrame": 21,
         "endFrame": 27
       },
       {
         "word": "in",
         "startFrame": 27,
-        "endFrame": 31
+        "endFrame": 30
       },
       {
         "word": "your",
-        "startFrame": 31,
+        "startFrame": 30,
         "endFrame": 33
       },
       {
         "word": "yard,",
         "startFrame": 33,
-        "endFrame": 45
+        "endFrame": 51
       },
       {
         "word": "and",
-        "startFrame": 45,
-        "endFrame": 58
+        "startFrame": 57,
+        "endFrame": 60
       },
       {
         "word": "climb",
-        "startFrame": 58,
-        "endFrame": 64
+        "startFrame": 60,
+        "endFrame": 69
       },
       {
         "word": "in",
-        "startFrame": 64,
-        "endFrame": 71
+        "startFrame": 69,
+        "endFrame": 75
       },
       {
         "word": "when",
-        "startFrame": 71,
-        "endFrame": 74
+        "startFrame": 75,
+        "endFrame": 78
       },
       {
         "word": "the",
-        "startFrame": 74,
-        "endFrame": 76
-      },
-      {
-        "word": "bomb",
-        "startFrame": 76,
+        "startFrame": 78,
         "endFrame": 81
       },
       {
-        "word": "drops.",
+        "word": "bomb",
         "startFrame": 81,
         "endFrame": 90
+      },
+      {
+        "word": "drops.",
+        "startFrame": 90,
+        "endFrame": 102
       }
     ]
   },
   {
-    "startFrame": 100,
-    "endFrame": 218,
+    "startFrame": 113,
+    "endFrame": 248,
     "text": "You have a bunker. But the blast wave caves the walls in on top of you.",
     "words": [
       {
         "word": "You",
-        "startFrame": 100,
-        "endFrame": 106
+        "startFrame": 113,
+        "endFrame": 116
       },
       {
         "word": "have",
-        "startFrame": 106,
-        "endFrame": 109
+        "startFrame": 116,
+        "endFrame": 119
       },
       {
         "word": "a",
-        "startFrame": 109,
-        "endFrame": 110
+        "startFrame": 119,
+        "endFrame": 122
       },
       {
         "word": "bunker.",
-        "startFrame": 110,
-        "endFrame": 117
-      },
-      {
-        "word": "But",
-        "startFrame": 132,
-        "endFrame": 137
-      },
-      {
-        "word": "the",
-        "startFrame": 137,
+        "startFrame": 122,
         "endFrame": 140
       },
       {
-        "word": "blast",
-        "startFrame": 140,
-        "endFrame": 147
-      },
-      {
-        "word": "wave",
-        "startFrame": 147,
-        "endFrame": 160
-      },
-      {
-        "word": "caves",
-        "startFrame": 160,
-        "endFrame": 175
+        "word": "But",
+        "startFrame": 152,
+        "endFrame": 155
       },
       {
         "word": "the",
-        "startFrame": 175,
-        "endFrame": 184
+        "startFrame": 155,
+        "endFrame": 158
+      },
+      {
+        "word": "blast",
+        "startFrame": 158,
+        "endFrame": 170
+      },
+      {
+        "word": "wave",
+        "startFrame": 170,
+        "endFrame": 179
+      },
+      {
+        "word": "caves",
+        "startFrame": 179,
+        "endFrame": 197
+      },
+      {
+        "word": "the",
+        "startFrame": 197,
+        "endFrame": 200
       },
       {
         "word": "walls",
-        "startFrame": 184,
-        "endFrame": 191
+        "startFrame": 200,
+        "endFrame": 215
       },
       {
         "word": "in",
-        "startFrame": 191,
-        "endFrame": 199
+        "startFrame": 215,
+        "endFrame": 224
       },
       {
         "word": "on",
-        "startFrame": 199,
-        "endFrame": 203
+        "startFrame": 224,
+        "endFrame": 227
       },
       {
         "word": "top",
-        "startFrame": 203,
-        "endFrame": 209
+        "startFrame": 227,
+        "endFrame": 236
       },
       {
         "word": "of",
-        "startFrame": 209,
-        "endFrame": 213
+        "startFrame": 236,
+        "endFrame": 239
       },
       {
         "word": "you.",
-        "startFrame": 213,
-        "endFrame": 218
+        "startFrame": 239,
+        "endFrame": 248
       }
     ]
   },
   {
-    "startFrame": 246,
-    "endFrame": 349,
+    "startFrame": 278,
+    "endFrame": 392,
     "text": "So you drop in a steel pipe, and bury it under three feet of dirt.",
     "words": [
       {
         "word": "So",
-        "startFrame": 246,
-        "endFrame": 252
+        "startFrame": 278,
+        "endFrame": 284
       },
       {
         "word": "you",
-        "startFrame": 252,
-        "endFrame": 255
+        "startFrame": 284,
+        "endFrame": 290
       },
       {
         "word": "drop",
-        "startFrame": 255,
-        "endFrame": 260
+        "startFrame": 290,
+        "endFrame": 299
       },
       {
         "word": "in",
-        "startFrame": 260,
-        "endFrame": 265
+        "startFrame": 299,
+        "endFrame": 302
       },
       {
         "word": "a",
-        "startFrame": 265,
-        "endFrame": 266
-      },
-      {
-        "word": "steel",
-        "startFrame": 266,
-        "endFrame": 273
-      },
-      {
-        "word": "pipe,",
-        "startFrame": 273,
-        "endFrame": 282
-      },
-      {
-        "word": "and",
-        "startFrame": 282,
-        "endFrame": 297
-      },
-      {
-        "word": "bury",
-        "startFrame": 297,
+        "startFrame": 302,
         "endFrame": 305
       },
       {
-        "word": "it",
+        "word": "steel",
         "startFrame": 305,
-        "endFrame": 314
+        "endFrame": 311
+      },
+      {
+        "word": "pipe,",
+        "startFrame": 311,
+        "endFrame": 329
+      },
+      {
+        "word": "and",
+        "startFrame": 332,
+        "endFrame": 338
+      },
+      {
+        "word": "bury",
+        "startFrame": 338,
+        "endFrame": 347
+      },
+      {
+        "word": "it",
+        "startFrame": 347,
+        "endFrame": 350
       },
       {
         "word": "under",
-        "startFrame": 314,
-        "endFrame": 319
+        "startFrame": 350,
+        "endFrame": 356
       },
       {
         "word": "three",
-        "startFrame": 319,
-        "endFrame": 330
+        "startFrame": 356,
+        "endFrame": 365
       },
       {
         "word": "feet",
-        "startFrame": 330,
-        "endFrame": 341
+        "startFrame": 365,
+        "endFrame": 374
       },
       {
         "word": "of",
-        "startFrame": 341,
-        "endFrame": 344
+        "startFrame": 374,
+        "endFrame": 377
       },
       {
         "word": "dirt.",
-        "startFrame": 344,
-        "endFrame": 349
+        "startFrame": 377,
+        "endFrame": 392
       }
     ]
   },
   {
-    "startFrame": 359,
-    "endFrame": 542,
+    "startFrame": 404,
+    "endFrame": 614,
     "text": "The explosion still sucks dirt into the sky, and it rains back down radioactive. This is fallout.",
     "words": [
       {
         "word": "The",
-        "startFrame": 359,
-        "endFrame": 365
+        "startFrame": 404,
+        "endFrame": 407
       },
       {
         "word": "explosion",
-        "startFrame": 365,
-        "endFrame": 371
+        "startFrame": 407,
+        "endFrame": 425
       },
       {
         "word": "still",
-        "startFrame": 371,
-        "endFrame": 396
+        "startFrame": 425,
+        "endFrame": 434
       },
       {
         "word": "sucks",
-        "startFrame": 396,
-        "endFrame": 412
+        "startFrame": 434,
+        "endFrame": 449
       },
       {
         "word": "dirt",
-        "startFrame": 412,
-        "endFrame": 420
+        "startFrame": 449,
+        "endFrame": 464
       },
       {
         "word": "into",
-        "startFrame": 420,
-        "endFrame": 430
+        "startFrame": 464,
+        "endFrame": 467
       },
       {
         "word": "the",
-        "startFrame": 430,
-        "endFrame": 433
+        "startFrame": 467,
+        "endFrame": 473
       },
       {
         "word": "sky,",
-        "startFrame": 433,
-        "endFrame": 440
+        "startFrame": 473,
+        "endFrame": 491
       },
       {
         "word": "and",
-        "startFrame": 460,
-        "endFrame": 463
+        "startFrame": 494,
+        "endFrame": 497
       },
       {
         "word": "it",
-        "startFrame": 463,
-        "endFrame": 465
+        "startFrame": 497,
+        "endFrame": 500
       },
       {
         "word": "rains",
-        "startFrame": 465,
-        "endFrame": 471
+        "startFrame": 500,
+        "endFrame": 512
       },
       {
         "word": "back",
-        "startFrame": 471,
-        "endFrame": 480
+        "startFrame": 512,
+        "endFrame": 518
       },
       {
         "word": "down",
-        "startFrame": 480,
-        "endFrame": 488
-      },
-      {
-        "word": "radioactive.",
-        "startFrame": 488,
-        "endFrame": 495
-      },
-      {
-        "word": "This",
-        "startFrame": 525,
+        "startFrame": 518,
         "endFrame": 530
       },
       {
-        "word": "is",
+        "word": "radioactive.",
         "startFrame": 530,
-        "endFrame": 533
+        "endFrame": 557
+      },
+      {
+        "word": "This",
+        "startFrame": 578,
+        "endFrame": 590
+      },
+      {
+        "word": "is",
+        "startFrame": 590,
+        "endFrame": 596
       },
       {
         "word": "fallout.",
-        "startFrame": 533,
-        "endFrame": 542
+        "startFrame": 596,
+        "endFrame": 614
       }
     ]
   },
   {
-    "startFrame": 573,
-    "endFrame": 752,
-    "text": "Every three and a half inches of dirt cuts the radiation in half. Three feet stops almost all of it.",
+    "startFrame": 646,
+    "endFrame": 842,
+    "text": "Every three and a half inches of dirt cuts the radiation in half, so three feet stops ninety-nine point nine percent of it.",
     "words": [
       {
         "word": "Every",
-        "startFrame": 573,
-        "endFrame": 581
-      },
-      {
-        "word": "three",
-        "startFrame": 581,
-        "endFrame": 592
-      },
-      {
-        "word": "and",
-        "startFrame": 592,
-        "endFrame": 595
-      },
-      {
-        "word": "a",
-        "startFrame": 595,
-        "endFrame": 597
-      },
-      {
-        "word": "half",
-        "startFrame": 597,
-        "endFrame": 604
-      },
-      {
-        "word": "inches",
-        "startFrame": 604,
-        "endFrame": 611
-      },
-      {
-        "word": "of",
-        "startFrame": 611,
-        "endFrame": 618
-      },
-      {
-        "word": "dirt",
-        "startFrame": 618,
-        "endFrame": 625
-      },
-      {
-        "word": "cuts",
-        "startFrame": 625,
-        "endFrame": 639
-      },
-      {
-        "word": "the",
-        "startFrame": 639,
-        "endFrame": 645
-      },
-      {
-        "word": "radiation",
-        "startFrame": 645,
+        "startFrame": 646,
         "endFrame": 656
       },
       {
-        "word": "in",
+        "word": "three",
         "startFrame": 656,
-        "endFrame": 669
+        "endFrame": 660
       },
       {
-        "word": "half.",
-        "startFrame": 669,
-        "endFrame": 676
+        "word": "and",
+        "startFrame": 660,
+        "endFrame": 665
       },
       {
-        "word": "Three",
-        "startFrame": 704,
-        "endFrame": 705
+        "word": "a",
+        "startFrame": 665,
+        "endFrame": 670
       },
       {
-        "word": "feet",
-        "startFrame": 704,
-        "endFrame": 711
+        "word": "half",
+        "startFrame": 670,
+        "endFrame": 675
       },
       {
-        "word": "stops",
-        "startFrame": 711,
-        "endFrame": 726
-      },
-      {
-        "word": "almost",
-        "startFrame": 726,
-        "endFrame": 738
-      },
-      {
-        "word": "all",
-        "startFrame": 738,
-        "endFrame": 744
+        "word": "inches",
+        "startFrame": 675,
+        "endFrame": 680
       },
       {
         "word": "of",
-        "startFrame": 744,
-        "endFrame": 748
+        "startFrame": 680,
+        "endFrame": 686
+      },
+      {
+        "word": "dirt",
+        "startFrame": 686,
+        "endFrame": 695
+      },
+      {
+        "word": "cuts",
+        "startFrame": 695,
+        "endFrame": 700
+      },
+      {
+        "word": "the",
+        "startFrame": 700,
+        "endFrame": 704
+      },
+      {
+        "word": "radiation",
+        "startFrame": 704,
+        "endFrame": 719
+      },
+      {
+        "word": "in",
+        "startFrame": 719,
+        "endFrame": 722
+      },
+      {
+        "word": "half,",
+        "startFrame": 722,
+        "endFrame": 740
+      },
+      {
+        "word": "so",
+        "startFrame": 742,
+        "endFrame": 749
+      },
+      {
+        "word": "three",
+        "startFrame": 749,
+        "endFrame": 760
+      },
+      {
+        "word": "feet",
+        "startFrame": 760,
+        "endFrame": 772
+      },
+      {
+        "word": "stops",
+        "startFrame": 772,
+        "endFrame": 782
+      },
+      {
+        "word": "99.9%",
+        "startFrame": 782,
+        "endFrame": 836
+      },
+      {
+        "word": "of",
+        "startFrame": 836,
+        "endFrame": 839
       },
       {
         "word": "it.",
-        "startFrame": 748,
-        "endFrame": 752
+        "startFrame": 839,
+        "endFrame": 842
       }
     ]
   },
   {
-    "startFrame": 762,
-    "endFrame": 860,
+    "startFrame": 853,
+    "endFrame": 976,
     "text": "But radiation travels in straight lines, right down your doorway.",
     "words": [
       {
         "word": "But",
-        "startFrame": 762,
-        "endFrame": 768
+        "startFrame": 853,
+        "endFrame": 856
       },
       {
         "word": "radiation",
-        "startFrame": 768,
-        "endFrame": 778
+        "startFrame": 856,
+        "endFrame": 877
       },
       {
         "word": "travels",
-        "startFrame": 778,
-        "endFrame": 796
+        "startFrame": 877,
+        "endFrame": 889
       },
       {
         "word": "in",
-        "startFrame": 796,
-        "endFrame": 803
+        "startFrame": 889,
+        "endFrame": 892
       },
       {
         "word": "straight",
-        "startFrame": 803,
-        "endFrame": 812
+        "startFrame": 892,
+        "endFrame": 904
       },
       {
         "word": "lines,",
-        "startFrame": 812,
-        "endFrame": 826
+        "startFrame": 904,
+        "endFrame": 925
       },
       {
         "word": "right",
-        "startFrame": 838,
-        "endFrame": 842
+        "startFrame": 931,
+        "endFrame": 943
       },
       {
         "word": "down",
-        "startFrame": 842,
-        "endFrame": 848
+        "startFrame": 943,
+        "endFrame": 952
       },
       {
         "word": "your",
-        "startFrame": 848,
-        "endFrame": 852
+        "startFrame": 952,
+        "endFrame": 958
       },
       {
         "word": "doorway.",
-        "startFrame": 852,
-        "endFrame": 860
+        "startFrame": 958,
+        "endFrame": 976
       }
     ]
   },
   {
-    "startFrame": 888,
-    "endFrame": 1006,
+    "startFrame": 1006,
+    "endFrame": 1159,
     "text": "So you bend the tunnel once, and then again. The rays hit dirt instead of you.",
     "words": [
       {
         "word": "So",
-        "startFrame": 888,
-        "endFrame": 895
+        "startFrame": 1006,
+        "endFrame": 1015
       },
       {
         "word": "you",
-        "startFrame": 895,
-        "endFrame": 898
+        "startFrame": 1021,
+        "endFrame": 1024
       },
       {
         "word": "bend",
-        "startFrame": 898,
-        "endFrame": 903
+        "startFrame": 1024,
+        "endFrame": 1036
       },
       {
         "word": "the",
-        "startFrame": 903,
-        "endFrame": 907
+        "startFrame": 1036,
+        "endFrame": 1039
       },
       {
         "word": "tunnel",
-        "startFrame": 907,
-        "endFrame": 912
+        "startFrame": 1039,
+        "endFrame": 1051
       },
       {
         "word": "once,",
-        "startFrame": 912,
-        "endFrame": 924
+        "startFrame": 1051,
+        "endFrame": 1063
       },
       {
         "word": "and",
-        "startFrame": 924,
-        "endFrame": 934
+        "startFrame": 1063,
+        "endFrame": 1069
       },
       {
         "word": "then",
-        "startFrame": 934,
-        "endFrame": 937
+        "startFrame": 1069,
+        "endFrame": 1078
       },
       {
         "word": "again.",
-        "startFrame": 937,
-        "endFrame": 946
+        "startFrame": 1078,
+        "endFrame": 1096
       },
       {
         "word": "The",
-        "startFrame": 959,
-        "endFrame": 961
+        "startFrame": 1105,
+        "endFrame": 1108
       },
       {
         "word": "rays",
-        "startFrame": 961,
-        "endFrame": 966
+        "startFrame": 1108,
+        "endFrame": 1120
       },
       {
         "word": "hit",
-        "startFrame": 966,
-        "endFrame": 973
+        "startFrame": 1120,
+        "endFrame": 1129
       },
       {
         "word": "dirt",
-        "startFrame": 973,
-        "endFrame": 981
+        "startFrame": 1129,
+        "endFrame": 1141
       },
       {
         "word": "instead",
-        "startFrame": 981,
-        "endFrame": 994
+        "startFrame": 1141,
+        "endFrame": 1150
       },
       {
         "word": "of",
-        "startFrame": 994,
-        "endFrame": 1002
+        "startFrame": 1150,
+        "endFrame": 1153
       },
       {
         "word": "you.",
-        "startFrame": 1002,
-        "endFrame": 1006
+        "startFrame": 1153,
+        "endFrame": 1159
       }
     ]
   },
   {
-    "startFrame": 1016,
-    "endFrame": 1118,
+    "startFrame": 1171,
+    "endFrame": 1318,
     "text": "But ten people turn the sealed air hot and stale in hours.",
     "words": [
       {
         "word": "But",
-        "startFrame": 1016,
-        "endFrame": 1022
+        "startFrame": 1171,
+        "endFrame": 1180
       },
       {
         "word": "ten",
-        "startFrame": 1022,
-        "endFrame": 1029
+        "startFrame": 1186,
+        "endFrame": 1195
       },
       {
         "word": "people",
-        "startFrame": 1029,
-        "endFrame": 1038
+        "startFrame": 1195,
+        "endFrame": 1210
       },
       {
         "word": "turn",
-        "startFrame": 1038,
-        "endFrame": 1047
+        "startFrame": 1210,
+        "endFrame": 1219
       },
       {
         "word": "the",
-        "startFrame": 1047,
-        "endFrame": 1052
+        "startFrame": 1219,
+        "endFrame": 1222
       },
       {
         "word": "sealed",
-        "startFrame": 1052,
-        "endFrame": 1059
+        "startFrame": 1222,
+        "endFrame": 1237
       },
       {
         "word": "air",
-        "startFrame": 1059,
-        "endFrame": 1067
+        "startFrame": 1237,
+        "endFrame": 1246
       },
       {
         "word": "hot",
-        "startFrame": 1067,
-        "endFrame": 1078
+        "startFrame": 1246,
+        "endFrame": 1258
       },
       {
         "word": "and",
-        "startFrame": 1078,
-        "endFrame": 1092
+        "startFrame": 1258,
+        "endFrame": 1264
       },
       {
         "word": "stale",
-        "startFrame": 1092,
-        "endFrame": 1102
+        "startFrame": 1273,
+        "endFrame": 1291
       },
       {
         "word": "in",
-        "startFrame": 1102,
-        "endFrame": 1109
+        "startFrame": 1291,
+        "endFrame": 1294
       },
       {
         "word": "hours.",
-        "startFrame": 1109,
-        "endFrame": 1118
+        "startFrame": 1300,
+        "endFrame": 1318
       }
     ]
   },
   {
-    "startFrame": 1146,
-    "endFrame": 1268,
+    "startFrame": 1347,
+    "endFrame": 1500,
     "text": "So you run an air pipe to the surface, with a dust filter and a hand cranked fan.",
     "words": [
       {
         "word": "So",
-        "startFrame": 1146,
-        "endFrame": 1153
+        "startFrame": 1347,
+        "endFrame": 1350
       },
       {
         "word": "you",
-        "startFrame": 1153,
-        "endFrame": 1156
+        "startFrame": 1350,
+        "endFrame": 1353
       },
       {
         "word": "run",
-        "startFrame": 1156,
-        "endFrame": 1161
+        "startFrame": 1353,
+        "endFrame": 1359
       },
       {
         "word": "an",
-        "startFrame": 1161,
-        "endFrame": 1164
+        "startFrame": 1359,
+        "endFrame": 1362
       },
       {
         "word": "air",
-        "startFrame": 1164,
-        "endFrame": 1168
+        "startFrame": 1365,
+        "endFrame": 1374
       },
       {
         "word": "pipe",
-        "startFrame": 1168,
-        "endFrame": 1177
-      },
-      {
-        "word": "to",
-        "startFrame": 1177,
-        "endFrame": 1188
-      },
-      {
-        "word": "the",
-        "startFrame": 1188,
-        "endFrame": 1191
-      },
-      {
-        "word": "surface,",
-        "startFrame": 1191,
-        "endFrame": 1200
-      },
-      {
-        "word": "with",
-        "startFrame": 1200,
-        "endFrame": 1213
-      },
-      {
-        "word": "a",
-        "startFrame": 1213,
-        "endFrame": 1215
-      },
-      {
-        "word": "dust",
-        "startFrame": 1215,
-        "endFrame": 1221
-      },
-      {
-        "word": "filter",
-        "startFrame": 1221,
-        "endFrame": 1230
-      },
-      {
-        "word": "and",
-        "startFrame": 1230,
-        "endFrame": 1242
-      },
-      {
-        "word": "a",
-        "startFrame": 1242,
-        "endFrame": 1245
-      },
-      {
-        "word": "hand",
-        "startFrame": 1245,
-        "endFrame": 1251
-      },
-      {
-        "word": "cranked",
-        "startFrame": 1251,
-        "endFrame": 1258
-      },
-      {
-        "word": "fan.",
-        "startFrame": 1258,
-        "endFrame": 1268
-      }
-    ]
-  },
-  {
-    "startFrame": 1279,
-    "endFrame": 1348,
-    "text": "The next shockwave shoots straight down that pipe.",
-    "words": [
-      {
-        "word": "The",
-        "startFrame": 1279,
-        "endFrame": 1284
-      },
-      {
-        "word": "next",
-        "startFrame": 1284,
-        "endFrame": 1286
-      },
-      {
-        "word": "shockwave",
-        "startFrame": 1286,
-        "endFrame": 1301
-      },
-      {
-        "word": "shoots",
-        "startFrame": 1301,
-        "endFrame": 1315
-      },
-      {
-        "word": "straight",
-        "startFrame": 1315,
-        "endFrame": 1329
-      },
-      {
-        "word": "down",
-        "startFrame": 1329,
-        "endFrame": 1337
-      },
-      {
-        "word": "that",
-        "startFrame": 1337,
-        "endFrame": 1342
-      },
-      {
-        "word": "pipe.",
-        "startFrame": 1342,
-        "endFrame": 1348
-      }
-    ]
-  },
-  {
-    "startFrame": 1376,
-    "endFrame": 1520,
-    "text": "So you add a valve that slams shut in a few thousandths of a second. This is a blast valve.",
-    "words": [
-      {
-        "word": "So",
-        "startFrame": 1376,
+        "startFrame": 1374,
         "endFrame": 1383
       },
       {
-        "word": "you",
+        "word": "to",
         "startFrame": 1383,
         "endFrame": 1386
       },
       {
-        "word": "add",
+        "word": "the",
         "startFrame": 1386,
-        "endFrame": 1390
+        "endFrame": 1389
+      },
+      {
+        "word": "surface,",
+        "startFrame": 1389,
+        "endFrame": 1413
+      },
+      {
+        "word": "with",
+        "startFrame": 1416,
+        "endFrame": 1419
       },
       {
         "word": "a",
-        "startFrame": 1390,
-        "endFrame": 1392
+        "startFrame": 1419,
+        "endFrame": 1422
       },
       {
-        "word": "valve",
-        "startFrame": 1392,
-        "endFrame": 1402
+        "word": "dust",
+        "startFrame": 1422,
+        "endFrame": 1434
       },
       {
-        "word": "that",
-        "startFrame": 1402,
-        "endFrame": 1408
-      },
-      {
-        "word": "slams",
-        "startFrame": 1408,
-        "endFrame": 1416
-      },
-      {
-        "word": "shut",
-        "startFrame": 1418,
-        "endFrame": 1438
-      },
-      {
-        "word": "in",
-        "startFrame": 1443,
-        "endFrame": 1444
-      },
-      {
-        "word": "a",
-        "startFrame": 1444,
-        "endFrame": 1445
-      },
-      {
-        "word": "few",
-        "startFrame": 1444,
+        "word": "filter",
+        "startFrame": 1434,
         "endFrame": 1446
       },
       {
-        "word": "thousandths",
+        "word": "and",
         "startFrame": 1446,
+        "endFrame": 1452
+      },
+      {
+        "word": "a",
+        "startFrame": 1452,
         "endFrame": 1455
       },
       {
-        "word": "of",
-        "startFrame": 1455,
-        "endFrame": 1466
+        "word": "hand-cranked",
+        "startFrame": 1464,
+        "endFrame": 1485
       },
       {
-        "word": "a",
-        "startFrame": 1466,
-        "endFrame": 1474
-      },
-      {
-        "word": "second.",
-        "startFrame": 1474,
-        "endFrame": 1482
-      },
-      {
-        "word": "This",
-        "startFrame": 1497,
+        "word": "fan.",
+        "startFrame": 1485,
         "endFrame": 1500
-      },
-      {
-        "word": "is",
-        "startFrame": 1500,
-        "endFrame": 1503
-      },
-      {
-        "word": "a",
-        "startFrame": 1503,
-        "endFrame": 1504
-      },
-      {
-        "word": "blast",
-        "startFrame": 1504,
-        "endFrame": 1510
-      },
-      {
-        "word": "valve.",
-        "startFrame": 1510,
-        "endFrame": 1520
       }
     ]
   },
   {
-    "startFrame": 1549,
-    "endFrame": 1693,
-    "text": "But the blast hits your door like a truck, so you hang it to open outward. This is a blast door.",
+    "startFrame": 1512,
+    "endFrame": 1575,
+    "text": "The next shockwave shoots straight down that pipe.",
     "words": [
       {
-        "word": "But",
-        "startFrame": 1549,
-        "endFrame": 1553
+        "word": "The",
+        "startFrame": 1512,
+        "endFrame": 1515
       },
       {
-        "word": "the",
-        "startFrame": 1553,
-        "endFrame": 1556
+        "word": "next",
+        "startFrame": 1515,
+        "endFrame": 1521
       },
       {
-        "word": "blast",
-        "startFrame": 1556,
-        "endFrame": 1564
+        "word": "shockwave",
+        "startFrame": 1521,
+        "endFrame": 1536
       },
       {
-        "word": "hits",
-        "startFrame": 1564,
-        "endFrame": 1570
+        "word": "shoots",
+        "startFrame": 1536,
+        "endFrame": 1545
       },
       {
-        "word": "your",
-        "startFrame": 1570,
-        "endFrame": 1574
+        "word": "straight",
+        "startFrame": 1545,
+        "endFrame": 1554
       },
       {
-        "word": "door",
-        "startFrame": 1574,
-        "endFrame": 1581
+        "word": "down",
+        "startFrame": 1554,
+        "endFrame": 1560
       },
       {
-        "word": "like",
-        "startFrame": 1581,
-        "endFrame": 1589
+        "word": "that",
+        "startFrame": 1560,
+        "endFrame": 1566
       },
       {
-        "word": "a",
-        "startFrame": 1589,
-        "endFrame": 1592
-      },
+        "word": "pipe.",
+        "startFrame": 1566,
+        "endFrame": 1575
+      }
+    ]
+  },
+  {
+    "startFrame": 1605,
+    "endFrame": 1794,
+    "text": "So you add a valve that slams shut in a few thousandths of a second. This is a blast valve.",
+    "words": [
       {
-        "word": "truck,",
-        "startFrame": 1592,
-        "endFrame": 1600
-      },
-      {
-        "word": "so",
-        "startFrame": 1613,
-        "endFrame": 1619
+        "word": "So",
+        "startFrame": 1605,
+        "endFrame": 1614
       },
       {
         "word": "you",
-        "startFrame": 1619,
-        "endFrame": 1622
+        "startFrame": 1617,
+        "endFrame": 1620
       },
       {
-        "word": "hang",
-        "startFrame": 1622,
-        "endFrame": 1628
+        "word": "add",
+        "startFrame": 1620,
+        "endFrame": 1623
       },
       {
-        "word": "it",
-        "startFrame": 1628,
-        "endFrame": 1633
+        "word": "a",
+        "startFrame": 1623,
+        "endFrame": 1624
       },
       {
-        "word": "to",
-        "startFrame": 1633,
-        "endFrame": 1636
+        "word": "valve",
+        "startFrame": 1623,
+        "endFrame": 1635
       },
       {
-        "word": "open",
-        "startFrame": 1636,
-        "endFrame": 1643
+        "word": "that",
+        "startFrame": 1635,
+        "endFrame": 1641
       },
       {
-        "word": "outward.",
-        "startFrame": 1643,
-        "endFrame": 1653
+        "word": "slams",
+        "startFrame": 1641,
+        "endFrame": 1659
       },
       {
-        "word": "This",
+        "word": "shut",
+        "startFrame": 1659,
+        "endFrame": 1668
+      },
+      {
+        "word": "in",
         "startFrame": 1668,
         "endFrame": 1671
       },
       {
-        "word": "is",
+        "word": "a",
         "startFrame": 1671,
-        "endFrame": 1673
+        "endFrame": 1674
+      },
+      {
+        "word": "few",
+        "startFrame": 1674,
+        "endFrame": 1680
+      },
+      {
+        "word": "thousandths",
+        "startFrame": 1680,
+        "endFrame": 1701
+      },
+      {
+        "word": "of",
+        "startFrame": 1701,
+        "endFrame": 1704
       },
       {
         "word": "a",
-        "startFrame": 1673,
-        "endFrame": 1675
+        "startFrame": 1704,
+        "endFrame": 1705
+      },
+      {
+        "word": "second.",
+        "startFrame": 1704,
+        "endFrame": 1716
+      },
+      {
+        "word": "This",
+        "startFrame": 1734,
+        "endFrame": 1752
+      },
+      {
+        "word": "is",
+        "startFrame": 1755,
+        "endFrame": 1758
+      },
+      {
+        "word": "a",
+        "startFrame": 1758,
+        "endFrame": 1761
       },
       {
         "word": "blast",
-        "startFrame": 1675,
-        "endFrame": 1682
+        "startFrame": 1761,
+        "endFrame": 1782
       },
       {
-        "word": "door.",
-        "startFrame": 1682,
-        "endFrame": 1693
+        "word": "valve.",
+        "startFrame": 1782,
+        "endFrame": 1794
       }
     ]
   },
   {
-    "startFrame": 1722,
-    "endFrame": 1796,
+    "startFrame": 1823,
+    "endFrame": 2123,
+    "text": "But the blast hits your door like a truck, so you hang it to open outward, and the blast only slams it tighter into its frame. This is a blast door.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 1823,
+        "endFrame": 1826
+      },
+      {
+        "word": "the",
+        "startFrame": 1826,
+        "endFrame": 1829
+      },
+      {
+        "word": "blast",
+        "startFrame": 1829,
+        "endFrame": 1844
+      },
+      {
+        "word": "hits",
+        "startFrame": 1844,
+        "endFrame": 1853
+      },
+      {
+        "word": "your",
+        "startFrame": 1853,
+        "endFrame": 1856
+      },
+      {
+        "word": "door",
+        "startFrame": 1856,
+        "endFrame": 1865
+      },
+      {
+        "word": "like",
+        "startFrame": 1865,
+        "endFrame": 1871
+      },
+      {
+        "word": "a",
+        "startFrame": 1871,
+        "endFrame": 1874
+      },
+      {
+        "word": "truck,",
+        "startFrame": 1874,
+        "endFrame": 1895
+      },
+      {
+        "word": "so",
+        "startFrame": 1898,
+        "endFrame": 1901
+      },
+      {
+        "word": "you",
+        "startFrame": 1901,
+        "endFrame": 1907
+      },
+      {
+        "word": "hang",
+        "startFrame": 1907,
+        "endFrame": 1916
+      },
+      {
+        "word": "it",
+        "startFrame": 1916,
+        "endFrame": 1922
+      },
+      {
+        "word": "to",
+        "startFrame": 1925,
+        "endFrame": 1928
+      },
+      {
+        "word": "open",
+        "startFrame": 1928,
+        "endFrame": 1940
+      },
+      {
+        "word": "outward,",
+        "startFrame": 1940,
+        "endFrame": 1958
+      },
+      {
+        "word": "and",
+        "startFrame": 1964,
+        "endFrame": 1967
+      },
+      {
+        "word": "the",
+        "startFrame": 1967,
+        "endFrame": 1968
+      },
+      {
+        "word": "blast",
+        "startFrame": 1967,
+        "endFrame": 1982
+      },
+      {
+        "word": "only",
+        "startFrame": 1982,
+        "endFrame": 1991
+      },
+      {
+        "word": "slams",
+        "startFrame": 1991,
+        "endFrame": 2003
+      },
+      {
+        "word": "it",
+        "startFrame": 2003,
+        "endFrame": 2009
+      },
+      {
+        "word": "tighter",
+        "startFrame": 2009,
+        "endFrame": 2021
+      },
+      {
+        "word": "into",
+        "startFrame": 2021,
+        "endFrame": 2030
+      },
+      {
+        "word": "its",
+        "startFrame": 2030,
+        "endFrame": 2033
+      },
+      {
+        "word": "frame.",
+        "startFrame": 2033,
+        "endFrame": 2048
+      },
+      {
+        "word": "This",
+        "startFrame": 2063,
+        "endFrame": 2072
+      },
+      {
+        "word": "is",
+        "startFrame": 2075,
+        "endFrame": 2081
+      },
+      {
+        "word": "a",
+        "startFrame": 2081,
+        "endFrame": 2084
+      },
+      {
+        "word": "blast",
+        "startFrame": 2084,
+        "endFrame": 2105
+      },
+      {
+        "word": "door.",
+        "startFrame": 2105,
+        "endFrame": 2123
+      }
+    ]
+  },
+  {
+    "startFrame": 2153,
+    "endFrame": 2261,
     "text": "Rubble piles up against it, and now you are trapped.",
     "words": [
       {
         "word": "Rubble",
-        "startFrame": 1722,
-        "endFrame": 1731
+        "startFrame": 2153,
+        "endFrame": 2168
       },
       {
         "word": "piles",
-        "startFrame": 1731,
-        "endFrame": 1737
-      },
-      {
-        "word": "up",
-        "startFrame": 1737,
-        "endFrame": 1745
-      },
-      {
-        "word": "against",
-        "startFrame": 1745,
-        "endFrame": 1752
-      },
-      {
-        "word": "it,",
-        "startFrame": 1752,
-        "endFrame": 1753
-      },
-      {
-        "word": "and",
-        "startFrame": 1752,
-        "endFrame": 1760
-      },
-      {
-        "word": "now",
-        "startFrame": 1766,
-        "endFrame": 1771
-      },
-      {
-        "word": "you",
-        "startFrame": 1771,
-        "endFrame": 1777
-      },
-      {
-        "word": "are",
-        "startFrame": 1777,
-        "endFrame": 1785
-      },
-      {
-        "word": "trapped.",
-        "startFrame": 1785,
-        "endFrame": 1796
-      }
-    ]
-  },
-  {
-    "startFrame": 1825,
-    "endFrame": 1903,
-    "text": "So you dig a second tunnel, up to a hatch in the yard.",
-    "words": [
-      {
-        "word": "So",
-        "startFrame": 1825,
-        "endFrame": 1830
-      },
-      {
-        "word": "you",
-        "startFrame": 1830,
-        "endFrame": 1833
-      },
-      {
-        "word": "dig",
-        "startFrame": 1833,
-        "endFrame": 1837
-      },
-      {
-        "word": "a",
-        "startFrame": 1837,
-        "endFrame": 1840
-      },
-      {
-        "word": "second",
-        "startFrame": 1840,
-        "endFrame": 1847
-      },
-      {
-        "word": "tunnel,",
-        "startFrame": 1847,
-        "endFrame": 1856
-      },
-      {
-        "word": "up",
-        "startFrame": 1856,
-        "endFrame": 1874
-      },
-      {
-        "word": "to",
-        "startFrame": 1874,
-        "endFrame": 1880
-      },
-      {
-        "word": "a",
-        "startFrame": 1880,
-        "endFrame": 1883
-      },
-      {
-        "word": "hatch",
-        "startFrame": 1883,
-        "endFrame": 1889
-      },
-      {
-        "word": "in",
-        "startFrame": 1889,
-        "endFrame": 1895
-      },
-      {
-        "word": "the",
-        "startFrame": 1895,
-        "endFrame": 1897
-      },
-      {
-        "word": "yard.",
-        "startFrame": 1897,
-        "endFrame": 1903
-      }
-    ]
-  },
-  {
-    "startFrame": 1913,
-    "endFrame": 2023,
-    "text": "But you cannot see radiation. You never know when it is safe to come out.",
-    "words": [
-      {
-        "word": "But",
-        "startFrame": 1913,
-        "endFrame": 1918
-      },
-      {
-        "word": "you",
-        "startFrame": 1918,
-        "endFrame": 1920
-      },
-      {
-        "word": "cannot",
-        "startFrame": 1920,
-        "endFrame": 1926
-      },
-      {
-        "word": "see",
-        "startFrame": 1926,
-        "endFrame": 1936
-      },
-      {
-        "word": "radiation.",
-        "startFrame": 1936,
-        "endFrame": 1952
-      },
-      {
-        "word": "You",
-        "startFrame": 1971,
-        "endFrame": 1973
-      },
-      {
-        "word": "never",
-        "startFrame": 1973,
-        "endFrame": 1977
-      },
-      {
-        "word": "know",
-        "startFrame": 1977,
-        "endFrame": 1986
-      },
-      {
-        "word": "when",
-        "startFrame": 1986,
-        "endFrame": 1993
-      },
-      {
-        "word": "it",
-        "startFrame": 1993,
-        "endFrame": 1995
-      },
-      {
-        "word": "is",
-        "startFrame": 1995,
-        "endFrame": 1998
-      },
-      {
-        "word": "safe",
-        "startFrame": 1998,
-        "endFrame": 2007
-      },
-      {
-        "word": "to",
-        "startFrame": 2007,
-        "endFrame": 2014
-      },
-      {
-        "word": "come",
-        "startFrame": 2014,
-        "endFrame": 2018
-      },
-      {
-        "word": "out.",
-        "startFrame": 2018,
-        "endFrame": 2023
-      }
-    ]
-  },
-  {
-    "startFrame": 2052,
-    "endFrame": 2206,
-    "text": "You hang a counter by the ladder, that clicks every time a particle hits it. This is a Geiger counter.",
-    "words": [
-      {
-        "word": "You",
-        "startFrame": 2052,
-        "endFrame": 2057
-      },
-      {
-        "word": "hang",
-        "startFrame": 2057,
-        "endFrame": 2061
-      },
-      {
-        "word": "a",
-        "startFrame": 2061,
-        "endFrame": 2063
-      },
-      {
-        "word": "counter",
-        "startFrame": 2063,
-        "endFrame": 2074
-      },
-      {
-        "word": "by",
-        "startFrame": 2074,
-        "endFrame": 2080
-      },
-      {
-        "word": "the",
-        "startFrame": 2080,
-        "endFrame": 2083
-      },
-      {
-        "word": "ladder,",
-        "startFrame": 2083,
-        "endFrame": 2090
-      },
-      {
-        "word": "that",
-        "startFrame": 2108,
-        "endFrame": 2111
-      },
-      {
-        "word": "clicks",
-        "startFrame": 2111,
-        "endFrame": 2117
-      },
-      {
-        "word": "every",
-        "startFrame": 2117,
-        "endFrame": 2129
-      },
-      {
-        "word": "time",
-        "startFrame": 2129,
-        "endFrame": 2139
-      },
-      {
-        "word": "a",
-        "startFrame": 2139,
-        "endFrame": 2142
-      },
-      {
-        "word": "particle",
-        "startFrame": 2142,
-        "endFrame": 2149
-      },
-      {
-        "word": "hits",
-        "startFrame": 2149,
-        "endFrame": 2159
-      },
-      {
-        "word": "it.",
-        "startFrame": 2159,
-        "endFrame": 2165
-      },
-      {
-        "word": "This",
-        "startFrame": 2179,
+        "startFrame": 2168,
         "endFrame": 2183
       },
       {
-        "word": "is",
+        "word": "up",
         "startFrame": 2183,
         "endFrame": 2186
       },
       {
-        "word": "a",
+        "word": "against",
         "startFrame": 2186,
-        "endFrame": 2188
-      },
-      {
-        "word": "Geiger",
-        "startFrame": 2188,
         "endFrame": 2198
       },
       {
-        "word": "counter.",
+        "word": "it,",
         "startFrame": 2198,
-        "endFrame": 2206
+        "endFrame": 2204
+      },
+      {
+        "word": "and",
+        "startFrame": 2213,
+        "endFrame": 2216
+      },
+      {
+        "word": "now",
+        "startFrame": 2216,
+        "endFrame": 2231
+      },
+      {
+        "word": "you",
+        "startFrame": 2237,
+        "endFrame": 2243
+      },
+      {
+        "word": "are",
+        "startFrame": 2243,
+        "endFrame": 2246
+      },
+      {
+        "word": "trapped.",
+        "startFrame": 2246,
+        "endFrame": 2261
       }
     ]
   },
   {
-    "startFrame": 2238,
-    "endFrame": 2395,
+    "startFrame": 2291,
+    "endFrame": 2378,
+    "text": "So you dig a second tunnel, up to a hatch in the yard.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 2291,
+        "endFrame": 2297
+      },
+      {
+        "word": "you",
+        "startFrame": 2297,
+        "endFrame": 2303
+      },
+      {
+        "word": "dig",
+        "startFrame": 2303,
+        "endFrame": 2306
+      },
+      {
+        "word": "a",
+        "startFrame": 2306,
+        "endFrame": 2309
+      },
+      {
+        "word": "second",
+        "startFrame": 2309,
+        "endFrame": 2321
+      },
+      {
+        "word": "tunnel,",
+        "startFrame": 2321,
+        "endFrame": 2333
+      },
+      {
+        "word": "up",
+        "startFrame": 2336,
+        "endFrame": 2342
+      },
+      {
+        "word": "to",
+        "startFrame": 2342,
+        "endFrame": 2345
+      },
+      {
+        "word": "a",
+        "startFrame": 2345,
+        "endFrame": 2348
+      },
+      {
+        "word": "hatch",
+        "startFrame": 2348,
+        "endFrame": 2360
+      },
+      {
+        "word": "in",
+        "startFrame": 2360,
+        "endFrame": 2361
+      },
+      {
+        "word": "the",
+        "startFrame": 2360,
+        "endFrame": 2363
+      },
+      {
+        "word": "yard.",
+        "startFrame": 2363,
+        "endFrame": 2378
+      }
+    ]
+  },
+  {
+    "startFrame": 2389,
+    "endFrame": 2542,
+    "text": "But you cannot see radiation. You never know when it is safe to come out.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 2389,
+        "endFrame": 2395
+      },
+      {
+        "word": "you",
+        "startFrame": 2395,
+        "endFrame": 2401
+      },
+      {
+        "word": "cannot",
+        "startFrame": 2401,
+        "endFrame": 2419
+      },
+      {
+        "word": "see",
+        "startFrame": 2419,
+        "endFrame": 2437
+      },
+      {
+        "word": "radiation.",
+        "startFrame": 2440,
+        "endFrame": 2464
+      },
+      {
+        "word": "You",
+        "startFrame": 2479,
+        "endFrame": 2482
+      },
+      {
+        "word": "never",
+        "startFrame": 2482,
+        "endFrame": 2488
+      },
+      {
+        "word": "know",
+        "startFrame": 2488,
+        "endFrame": 2497
+      },
+      {
+        "word": "when",
+        "startFrame": 2497,
+        "endFrame": 2503
+      },
+      {
+        "word": "it",
+        "startFrame": 2503,
+        "endFrame": 2506
+      },
+      {
+        "word": "is",
+        "startFrame": 2506,
+        "endFrame": 2512
+      },
+      {
+        "word": "safe",
+        "startFrame": 2512,
+        "endFrame": 2524
+      },
+      {
+        "word": "to",
+        "startFrame": 2524,
+        "endFrame": 2527
+      },
+      {
+        "word": "come",
+        "startFrame": 2527,
+        "endFrame": 2533
+      },
+      {
+        "word": "out.",
+        "startFrame": 2533,
+        "endFrame": 2542
+      }
+    ]
+  },
+  {
+    "startFrame": 2572,
+    "endFrame": 2743,
+    "text": "You hang a counter by the ladder, that clicks every time a particle hits it. This is a Geiger counter.",
+    "words": [
+      {
+        "word": "You",
+        "startFrame": 2572,
+        "endFrame": 2575
+      },
+      {
+        "word": "hang",
+        "startFrame": 2575,
+        "endFrame": 2581
+      },
+      {
+        "word": "a",
+        "startFrame": 2581,
+        "endFrame": 2584
+      },
+      {
+        "word": "counter",
+        "startFrame": 2584,
+        "endFrame": 2602
+      },
+      {
+        "word": "by",
+        "startFrame": 2602,
+        "endFrame": 2605
+      },
+      {
+        "word": "the",
+        "startFrame": 2605,
+        "endFrame": 2608
+      },
+      {
+        "word": "ladder,",
+        "startFrame": 2608,
+        "endFrame": 2620
+      },
+      {
+        "word": "that",
+        "startFrame": 2620,
+        "endFrame": 2626
+      },
+      {
+        "word": "clicks",
+        "startFrame": 2626,
+        "endFrame": 2641
+      },
+      {
+        "word": "every",
+        "startFrame": 2641,
+        "endFrame": 2647
+      },
+      {
+        "word": "time",
+        "startFrame": 2647,
+        "endFrame": 2656
+      },
+      {
+        "word": "a",
+        "startFrame": 2656,
+        "endFrame": 2659
+      },
+      {
+        "word": "particle",
+        "startFrame": 2659,
+        "endFrame": 2671
+      },
+      {
+        "word": "hits",
+        "startFrame": 2671,
+        "endFrame": 2680
+      },
+      {
+        "word": "it.",
+        "startFrame": 2680,
+        "endFrame": 2683
+      },
+      {
+        "word": "This",
+        "startFrame": 2701,
+        "endFrame": 2710
+      },
+      {
+        "word": "is",
+        "startFrame": 2710,
+        "endFrame": 2713
+      },
+      {
+        "word": "a",
+        "startFrame": 2713,
+        "endFrame": 2716
+      },
+      {
+        "word": "Geiger",
+        "startFrame": 2716,
+        "endFrame": 2731
+      },
+      {
+        "word": "counter.",
+        "startFrame": 2731,
+        "endFrame": 2743
+      }
+    ]
+  },
+  {
+    "startFrame": 2776,
+    "endFrame": 2890,
+    "text": "You might think you'd be stuck down there for years. Not even close.",
+    "words": [
+      {
+        "word": "You",
+        "startFrame": 2776,
+        "endFrame": 2779
+      },
+      {
+        "word": "might",
+        "startFrame": 2779,
+        "endFrame": 2785
+      },
+      {
+        "word": "think",
+        "startFrame": 2785,
+        "endFrame": 2797
+      },
+      {
+        "word": "you'd",
+        "startFrame": 2797,
+        "endFrame": 2800
+      },
+      {
+        "word": "be",
+        "startFrame": 2800,
+        "endFrame": 2803
+      },
+      {
+        "word": "stuck",
+        "startFrame": 2803,
+        "endFrame": 2815
+      },
+      {
+        "word": "down",
+        "startFrame": 2815,
+        "endFrame": 2821
+      },
+      {
+        "word": "there",
+        "startFrame": 2821,
+        "endFrame": 2830
+      },
+      {
+        "word": "for",
+        "startFrame": 2830,
+        "endFrame": 2833
+      },
+      {
+        "word": "years.",
+        "startFrame": 2833,
+        "endFrame": 2851
+      },
+      {
+        "word": "Not",
+        "startFrame": 2863,
+        "endFrame": 2866
+      },
+      {
+        "word": "even",
+        "startFrame": 2866,
+        "endFrame": 2872
+      },
+      {
+        "word": "close.",
+        "startFrame": 2872,
+        "endFrame": 2890
+      }
+    ]
+  },
+  {
+    "startFrame": 2908,
+    "endFrame": 3067,
     "text": "Fallout is ten times weaker after seven hours, and a hundred times weaker after two days.",
     "words": [
       {
         "word": "Fallout",
-        "startFrame": 2238,
-        "endFrame": 2249
+        "startFrame": 2908,
+        "endFrame": 2923
       },
       {
         "word": "is",
-        "startFrame": 2249,
-        "endFrame": 2258
+        "startFrame": 2923,
+        "endFrame": 2929
       },
       {
         "word": "ten",
-        "startFrame": 2258,
-        "endFrame": 2266
+        "startFrame": 2929,
+        "endFrame": 2941
       },
       {
         "word": "times",
-        "startFrame": 2266,
-        "endFrame": 2278
+        "startFrame": 2941,
+        "endFrame": 2953
       },
       {
         "word": "weaker",
-        "startFrame": 2278,
-        "endFrame": 2288
+        "startFrame": 2953,
+        "endFrame": 2965
       },
       {
         "word": "after",
-        "startFrame": 2288,
-        "endFrame": 2300
+        "startFrame": 2965,
+        "endFrame": 2971
       },
       {
         "word": "seven",
-        "startFrame": 2300,
-        "endFrame": 2310
+        "startFrame": 2971,
+        "endFrame": 2980
       },
       {
         "word": "hours,",
-        "startFrame": 2310,
-        "endFrame": 2311
+        "startFrame": 2980,
+        "endFrame": 2995
       },
       {
         "word": "and",
-        "startFrame": 2310,
-        "endFrame": 2320
+        "startFrame": 2998,
+        "endFrame": 3001
       },
       {
         "word": "a",
-        "startFrame": 2320,
-        "endFrame": 2336
+        "startFrame": 3001,
+        "endFrame": 3002
       },
       {
         "word": "hundred",
-        "startFrame": 2336,
-        "endFrame": 2341
+        "startFrame": 3001,
+        "endFrame": 3022
       },
       {
         "word": "times",
-        "startFrame": 2341,
-        "endFrame": 2352
+        "startFrame": 3022,
+        "endFrame": 3031
       },
       {
         "word": "weaker",
-        "startFrame": 2352,
-        "endFrame": 2362
+        "startFrame": 3031,
+        "endFrame": 3040
       },
       {
         "word": "after",
-        "startFrame": 2362,
-        "endFrame": 2380
+        "startFrame": 3040,
+        "endFrame": 3046
       },
       {
         "word": "two",
-        "startFrame": 2380,
-        "endFrame": 2388
+        "startFrame": 3046,
+        "endFrame": 3052
       },
       {
         "word": "days.",
-        "startFrame": 2388,
-        "endFrame": 2395
+        "startFrame": 3052,
+        "endFrame": 3067
       }
     ]
   },
   {
-    "startFrame": 2406,
-    "endFrame": 2458,
+    "startFrame": 3078,
+    "endFrame": 3180,
     "text": "So you only need supplies for two weeks.",
     "words": [
       {
         "word": "So",
-        "startFrame": 2406,
-        "endFrame": 2413
+        "startFrame": 3078,
+        "endFrame": 3084
       },
       {
         "word": "you",
-        "startFrame": 2413,
-        "endFrame": 2415
+        "startFrame": 3087,
+        "endFrame": 3096
       },
       {
         "word": "only",
-        "startFrame": 2415,
-        "endFrame": 2419
+        "startFrame": 3096,
+        "endFrame": 3114
       },
       {
         "word": "need",
-        "startFrame": 2419,
-        "endFrame": 2426
+        "startFrame": 3114,
+        "endFrame": 3126
       },
       {
         "word": "supplies",
-        "startFrame": 2426,
-        "endFrame": 2432
+        "startFrame": 3126,
+        "endFrame": 3141
       },
       {
         "word": "for",
-        "startFrame": 2432,
-        "endFrame": 2446
+        "startFrame": 3141,
+        "endFrame": 3144
       },
       {
         "word": "two",
-        "startFrame": 2446,
-        "endFrame": 2450
+        "startFrame": 3153,
+        "endFrame": 3162
       },
       {
         "word": "weeks.",
-        "startFrame": 2450,
-        "endFrame": 2458
+        "startFrame": 3162,
+        "endFrame": 3180
       }
     ]
   },
   {
-    "startFrame": 2486,
-    "endFrame": 2627,
+    "startFrame": 3210,
+    "endFrame": 3366,
     "text": "Add bunk beds, canned food, a crank radio, and a very long board game.",
     "words": [
       {
         "word": "Add",
-        "startFrame": 2486,
-        "endFrame": 2494
+        "startFrame": 3210,
+        "endFrame": 3222
       },
       {
         "word": "bunk",
-        "startFrame": 2494,
-        "endFrame": 2503
+        "startFrame": 3222,
+        "endFrame": 3228
       },
       {
         "word": "beds,",
-        "startFrame": 2503,
-        "endFrame": 2512
+        "startFrame": 3228,
+        "endFrame": 3243
       },
       {
         "word": "canned",
-        "startFrame": 2528,
-        "endFrame": 2530
+        "startFrame": 3246,
+        "endFrame": 3258
       },
       {
         "word": "food,",
-        "startFrame": 2530,
-        "endFrame": 2542
+        "startFrame": 3258,
+        "endFrame": 3273
       },
       {
         "word": "a",
-        "startFrame": 2562,
-        "endFrame": 2563
+        "startFrame": 3276,
+        "endFrame": 3279
       },
       {
         "word": "crank",
-        "startFrame": 2562,
-        "endFrame": 2568
+        "startFrame": 3279,
+        "endFrame": 3291
       },
       {
         "word": "radio,",
-        "startFrame": 2568,
-        "endFrame": 2581
+        "startFrame": 3291,
+        "endFrame": 3306
       },
       {
         "word": "and",
-        "startFrame": 2593,
-        "endFrame": 2598
+        "startFrame": 3309,
+        "endFrame": 3312
       },
       {
         "word": "a",
-        "startFrame": 2598,
-        "endFrame": 2599
+        "startFrame": 3312,
+        "endFrame": 3313
       },
       {
         "word": "very",
-        "startFrame": 2599,
-        "endFrame": 2605
+        "startFrame": 3318,
+        "endFrame": 3327
       },
       {
         "word": "long",
-        "startFrame": 2605,
-        "endFrame": 2614
+        "startFrame": 3327,
+        "endFrame": 3342
       },
       {
         "word": "board",
-        "startFrame": 2614,
-        "endFrame": 2621
+        "startFrame": 3342,
+        "endFrame": 3351
       },
       {
         "word": "game.",
-        "startFrame": 2621,
-        "endFrame": 2627
+        "startFrame": 3351,
+        "endFrame": 3366
       }
     ]
   },
   {
-    "startFrame": 2638,
-    "endFrame": 2714,
+    "startFrame": 3378,
+    "endFrame": 3510,
     "text": "Congratulations. You have built a nuclear bunker.",
     "words": [
       {
         "word": "Congratulations.",
-        "startFrame": 2638,
-        "endFrame": 2654
+        "startFrame": 3378,
+        "endFrame": 3423
       },
       {
         "word": "You",
-        "startFrame": 2683,
-        "endFrame": 2686
+        "startFrame": 3429,
+        "endFrame": 3444
       },
       {
         "word": "have",
-        "startFrame": 2686,
-        "endFrame": 2688
+        "startFrame": 3444,
+        "endFrame": 3453
       },
       {
         "word": "built",
-        "startFrame": 2688,
-        "endFrame": 2693
+        "startFrame": 3453,
+        "endFrame": 3465
       },
       {
         "word": "a",
-        "startFrame": 2693,
-        "endFrame": 2696
+        "startFrame": 3465,
+        "endFrame": 3468
       },
       {
         "word": "nuclear",
-        "startFrame": 2696,
-        "endFrame": 2704
+        "startFrame": 3468,
+        "endFrame": 3495
       },
       {
         "word": "bunker.",
-        "startFrame": 2704,
-        "endFrame": 2714
+        "startFrame": 3495,
+        "endFrame": 3510
       }
     ]
   }

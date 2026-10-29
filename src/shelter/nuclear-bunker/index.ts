@@ -1,5 +1,6 @@
-import { defineFootage } from "../../engine/FootageVideo";
+import { defineEpisode } from "../../engine/defineEpisode";
 import { config } from "./config";
+import { Scene } from "./Scene";
 import { BEATS } from "./timeline";
 
-export const nuclearBunkerProduction = defineFootage({ config, beats: BEATS });
+export const nuclearBunkerProduction = defineEpisode({ config, Scene, beats: BEATS });

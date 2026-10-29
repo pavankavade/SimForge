@@ -1,6 +1,7 @@
 import type React from "react";
+import { auditEpisode } from "./audit";
 import { EpisodeVideo } from "./EpisodeVideo";
-import type { EpisodeBeats, EpisodeConfig, EpisodeDefinition } from "./types";
+import type { EpisodeAuditInfo, EpisodeBeats, EpisodeConfig, EpisodeDefinition } from "./types";
 
 interface EpisodeSource {
   config: EpisodeConfig;
@@ -10,7 +11,7 @@ interface EpisodeSource {
 }
 
 export const defineEpisode = ({ config, Scene, beats }: EpisodeSource): EpisodeDefinition => {
-  // `beats` arrives as a prop (defaultProps) but only review tooling reads it.
-  const Video: React.FC<{ beats?: EpisodeBeats }> = () => <EpisodeVideo config={config} Scene={Scene} />;
-  return { config, Scene, Video, beats };
+  // `beats` and `audit` arrive as props (defaultProps) but only review tooling reads them.
+  const Video: React.FC<{ beats?: EpisodeBeats; audit?: EpisodeAuditInfo }> = () => <EpisodeVideo config={config} Scene={Scene} />;
+  return { config, Scene, Video, beats, audit: auditEpisode(config, beats) };
 };

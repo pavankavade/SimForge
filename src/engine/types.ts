@@ -2,16 +2,32 @@ import type React from "react";
 
 export type Vec3 = [number, number, number];
 
+/**
+ * A key pose of the camera. Between waypoints the camera follows a monotone
+ * cubic: it glides through a waypoint that sits between two moves in the same
+ * direction and eases in and out of holds, turnarounds and the ends. Two
+ * waypoints on the same frame are a hard cut.
+ */
 export interface CameraWaypoint {
   frame: number;
   position: Vec3;
   lookAt: Vec3;
+  /** Field of view override (crash zooms); defaults to the config fov. */
+  fov?: number;
+  /** Dutch angle in radians (+ rolls the horizon counter-clockwise). */
+  roll?: number;
 }
 
+/**
+ * An impact: nothing before `at`, a jolt on it (the camera dips and punches
+ * in), then a smooth rattle that decays over about `spread` frames.
+ */
 export interface CameraShakeBurst {
   at: number;
   strength: number;
   spread?: number;
+  /** Zoom punch on the hit as a fraction of the fov (default strength * 0.1, max 0.05). 0 disables. */
+  punch?: number;
 }
 
 export interface CameraRumble {
@@ -23,6 +39,10 @@ export interface CameraRumble {
 export interface CameraPose {
   position: Vec3;
   lookAt: Vec3;
+  /** Field of view override (crash zooms); defaults to the config fov. */
+  fov?: number;
+  /** Dutch angle in radians. */
+  roll?: number;
 }
 
 /**
@@ -151,10 +171,6 @@ export interface SubtitleConfig {
   activeColor?: string;
   textColor?: string;
   fontFamily?: string;
-  /** "chunks" (default): 4-5 word lines at the bottom. "word": one big word at a time. */
-  mode?: "chunks" | "word";
-  /** Word mode: distance of the word's centre from the top of the frame (px). */
-  wordTop?: number;
 }
 
 export interface PostFXConfig {
@@ -166,6 +182,8 @@ export interface PostFXConfig {
   aoRadius?: number;
   exposure?: number;
   grain?: number;
+  /** "aces" (default series look), "neutral" (truer toy colours in daylight), "agx". */
+  toneMapping?: "aces" | "neutral" | "agx";
 }
 
 export interface OverlayConfig {
@@ -194,26 +212,22 @@ export interface EpisodeConfig {
   OverlayComponent?: React.FC;
 }
 
-/**
- * A production whose picture is pre-rendered footage (e.g. a Blender image
- * sequence encoded to mp4) instead of a live three.js scene. Audio, SFX,
- * subtitles and the HUD work exactly like an EpisodeConfig.
- */
-export interface FootageConfig extends Omit<EpisodeConfig, "camera" | "environment"> {
-  footage: {
-    src: string;
-    /** Last frame present in the file; later frames hold on it. */
-    lastFrame: number;
-  };
-}
-
 /** Story beats by name (frame, or list of frames). Exposed for review tooling. */
 export type EpisodeBeats = Record<string, number | readonly number[]>;
+
+/** Config problems and played assets (see engine/audit.ts); review prints them. */
+export interface EpisodeAuditInfo {
+  warnings: string[];
+  assets: string[];
+  narration?: string;
+}
 
 export interface EpisodeDefinition {
   config: EpisodeConfig;
   Scene: React.FC;
-  Video: React.FC<{ beats?: EpisodeBeats }>;
+  Video: React.FC<{ beats?: EpisodeBeats; audit?: EpisodeAuditInfo }>;
   /** Passed to the composition as defaultProps so `scripts/review.mjs --beats` can find them. */
   beats?: EpisodeBeats;
+  /** Passed to the composition as defaultProps so review / audit can print it. */
+  audit?: EpisodeAuditInfo;
 }

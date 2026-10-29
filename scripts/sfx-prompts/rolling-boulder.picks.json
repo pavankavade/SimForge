@@ -1,0 +1,162 @@
+{
+  "boom": {
+    "batch_seed": 2449306188,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "bubble": {
+    "batch_seed": 1667704332,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "chain": {
+    "batch_seed": 1557621539,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "clang": {
+    "batch_seed": 3412399387,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "clank": {
+    "batch_seed": 3314758738,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "crack": {
+    "batch_seed": 2553579661,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "gate": {
+    "batch_seed": 213142612,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "gears": {
+    "batch_seed": 1541871160,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "helmet": {
+    "batch_seed": 4221122226,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "hydraulic": {
+    "batch_seed": 962275594,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "jelly": {
+    "batch_seed": 3026704495,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "launch": {
+    "batch_seed": 2873654872,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "levitate": {
+    "batch_seed": 63692902,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "pop": {
+    "batch_seed": 14002520,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "ramp": {
+    "batch_seed": 3500312035,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "ratchet": {
+    "batch_seed": 1140692191,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "roll": {
+    "batch_seed": 2555896519,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "rumble": {
+    "batch_seed": 3167330335,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "sizzle": {
+    "batch_seed": 2400972272,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "skewer": {
+    "batch_seed": 843868174,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "slam": {
+    "batch_seed": 1797902339,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "slip": {
+    "batch_seed": 87515108,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "snap": {
+    "batch_seed": 2348022630,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "sparkle": {
+    "batch_seed": 59979533,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "squash": {
+    "batch_seed": 2762793413,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "squelch": {
+    "batch_seed": 3372395273,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "stamp": {
+    "batch_seed": 3756046772,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "thud": {
+    "batch_seed": 2748741877,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "twang": {
+    "batch_seed": 409323066,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "whoosh": {
+    "batch_seed": 897830104,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "whoosh_big": {
+    "batch_seed": 1948975867,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "zap": {
+    "batch_seed": 757067944,
+    "model": "small-sfx",
+    "take": 1
+  }
+}

@@ -55,6 +55,24 @@ export const Warhammer: React.FC = () => (
   </group>
 );
 
+/** Double-bitted greataxe: long haft through the fist, blades out front and back. */
+export const Greataxe: React.FC = () => (
+  <group rotation={[-0.2, 0, 0]}>
+    <Part geo={G.cyl(0.034, 0.04, 0.92, 10)} mat={vinyl(WOOD, "wood")} position={[0, -0.26, 0]} />
+    {[0.12, -0.1].map((y) => (
+      <Part key={y} geo={G.cyl(0.046, 0.046, 0.06, 10)} mat={vinyl(LEATHER, "leather")} position={[0, y, 0]} ink={INK_THIN} />
+    ))}
+    <Part geo={G.box(0.12, 0.18, 0.14, 0.03)} mat={vinyl("#5c6170", "gloss")} position={[0, -0.6, 0]} />
+    {[-1, 1].map((s) => (
+      <group key={s} position={[0, -0.6, s * 0.17]}>
+        <Part geo={G.sphere(0.21)} mat={vinyl("#c3cad6", "gloss")} scale={[0.16, 1, 0.6]} />
+        <mesh geometry={G.box(0.035, 0.32, 0.03, 0.01)} material={vinyl("#eef2f7", "gloss")} position={[0, 0, s * 0.115]} />
+      </group>
+    ))}
+    <Part geo={G.cone(0.035, 0.1, 8)} mat={vinyl("#c3cad6", "gloss")} position={[0, -0.75, 0]} rotation={[Math.PI, 0, 0]} />
+  </group>
+);
+
 export const SpikedClub: React.FC = () => (
   <group rotation={[-0.3, 0, 0]}>
     <Part geo={G.cyl(0.03, 0.035, 0.18, 8)} mat={vinyl("#4a3020", "leather")} position={[0, 0.05, 0]} ink={INK_THIN} />
@@ -116,5 +134,14 @@ export const HeaterShield: React.FC<{ color?: string; position?: Vec3; rotation?
     <mesh geometry={G.box(0.02, 0.46, 0.07, 0.01)} material={vinyl(GOLD, "gold")} position={[-0.045, -0.03, 0]} />
     <mesh geometry={G.box(0.02, 0.07, 0.34, 0.01)} material={vinyl(GOLD, "gold")} position={[-0.045, 0.08, 0]} />
     <Part geo={G.sphere(0.055)} mat={vinyl(GOLD, "gold")} position={[-0.05, 0.08, 0]} scale={[0.6, 1, 1]} ink={INK_THIN} />
+  </group>
+);
+
+/** Walking cane: crook over the fist, shaft down to the floor (`length` in body units). */
+export const Cane: React.FC<{ length?: number }> = ({ length = 0.8 }) => (
+  <group position={[0, 0, 0.03]}>
+    <Part geo={G.cyl(0.022, 0.026, length, 10)} mat={vinyl(WOOD, "wood")} position={[0, -length / 2 + 0.04, 0]} />
+    <Part geo={G.torus(0.06, 0.024, Math.PI)} mat={vinyl(WOOD, "wood")} position={[0, 0.04, 0.06]} rotation={[0, Math.PI / 2, 0]} ink={INK_THIN} />
+    <Part geo={G.cyl(0.03, 0.03, 0.03, 10)} mat={vinyl("#2b2b2b", "leather")} position={[0, -length + 0.055, 0]} ink={INK_THIN} />
   </group>
 );

@@ -1,0 +1,1023 @@
+{
+  "durationFrames": 2431,
+  "lines": {
+    "cold": {
+      "startFrame": 21,
+      "endFrame": 141,
+      "words": [
+        {
+          "word": "The",
+          "startFrame": 21,
+          "endFrame": 24
+        },
+        {
+          "word": "lava",
+          "startFrame": 24,
+          "endFrame": 36
+        },
+        {
+          "word": "hall",
+          "startFrame": 36,
+          "endFrame": 48
+        },
+        {
+          "word": "is",
+          "startFrame": 48,
+          "endFrame": 54
+        },
+        {
+          "word": "sealed,",
+          "startFrame": 54,
+          "endFrame": 75
+        },
+        {
+          "word": "so",
+          "startFrame": 81,
+          "endFrame": 87
+        },
+        {
+          "word": "the",
+          "startFrame": 87,
+          "endFrame": 90
+        },
+        {
+          "word": "Guild",
+          "startFrame": 90,
+          "endFrame": 102
+        },
+        {
+          "word": "picks",
+          "startFrame": 102,
+          "endFrame": 111
+        },
+        {
+          "word": "door",
+          "startFrame": 111,
+          "endFrame": 120
+        },
+        {
+          "word": "number",
+          "startFrame": 120,
+          "endFrame": 126
+        },
+        {
+          "word": "two.",
+          "startFrame": 126,
+          "endFrame": 141
+        }
+      ]
+    },
+    "l1a": {
+      "startFrame": 154,
+      "endFrame": 424,
+      "words": [
+        {
+          "word": "Remember",
+          "startFrame": 154,
+          "endFrame": 166
+        },
+        {
+          "word": "your",
+          "startFrame": 166,
+          "endFrame": 172
+        },
+        {
+          "word": "pet",
+          "startFrame": 172,
+          "endFrame": 184
+        },
+        {
+          "word": "Mimic?",
+          "startFrame": 184,
+          "endFrame": 202
+        },
+        {
+          "word": "It",
+          "startFrame": 217,
+          "endFrame": 220
+        },
+        {
+          "word": "outgrew",
+          "startFrame": 220,
+          "endFrame": 235
+        },
+        {
+          "word": "its",
+          "startFrame": 235,
+          "endFrame": 241
+        },
+        {
+          "word": "chest,",
+          "startFrame": 241,
+          "endFrame": 265
+        },
+        {
+          "word": "so",
+          "startFrame": 268,
+          "endFrame": 271
+        },
+        {
+          "word": "now",
+          "startFrame": 271,
+          "endFrame": 283
+        },
+        {
+          "word": "it",
+          "startFrame": 283,
+          "endFrame": 289
+        },
+        {
+          "word": "is",
+          "startFrame": 289,
+          "endFrame": 298
+        },
+        {
+          "word": "the",
+          "startFrame": 298,
+          "endFrame": 304
+        },
+        {
+          "word": "whole",
+          "startFrame": 304,
+          "endFrame": 316
+        },
+        {
+          "word": "vault.",
+          "startFrame": 316,
+          "endFrame": 334
+        },
+        {
+          "word": "The",
+          "startFrame": 349,
+          "endFrame": 352
+        },
+        {
+          "word": "barbarian",
+          "startFrame": 352,
+          "endFrame": 367
+        },
+        {
+          "word": "charges",
+          "startFrame": 367,
+          "endFrame": 382
+        },
+        {
+          "word": "in,",
+          "startFrame": 382,
+          "endFrame": 394
+        },
+        {
+          "word": "and",
+          "startFrame": 397,
+          "endFrame": 400
+        },
+        {
+          "word": "gets",
+          "startFrame": 400,
+          "endFrame": 406
+        },
+        {
+          "word": "chomped.",
+          "startFrame": 406,
+          "endFrame": 424
+        }
+      ]
+    },
+    "l1b": {
+      "startFrame": 457,
+      "endFrame": 613,
+      "words": [
+        {
+          "word": "But",
+          "startFrame": 457,
+          "endFrame": 460
+        },
+        {
+          "word": "a",
+          "startFrame": 460,
+          "endFrame": 463
+        },
+        {
+          "word": "show-off",
+          "startFrame": 463,
+          "endFrame": 481
+        },
+        {
+          "word": "rogue",
+          "startFrame": 481,
+          "endFrame": 499
+        },
+        {
+          "word": "times",
+          "startFrame": 502,
+          "endFrame": 514
+        },
+        {
+          "word": "the",
+          "startFrame": 514,
+          "endFrame": 517
+        },
+        {
+          "word": "bites,",
+          "startFrame": 517,
+          "endFrame": 532
+        },
+        {
+          "word": "darts",
+          "startFrame": 535,
+          "endFrame": 544
+        },
+        {
+          "word": "in,",
+          "startFrame": 544,
+          "endFrame": 553
+        },
+        {
+          "word": "grabs",
+          "startFrame": 556,
+          "endFrame": 568
+        },
+        {
+          "word": "the",
+          "startFrame": 568,
+          "endFrame": 571
+        },
+        {
+          "word": "gold,",
+          "startFrame": 571,
+          "endFrame": 586
+        },
+        {
+          "word": "and",
+          "startFrame": 592,
+          "endFrame": 595
+        },
+        {
+          "word": "takes",
+          "startFrame": 595,
+          "endFrame": 604
+        },
+        {
+          "word": "a",
+          "startFrame": 604,
+          "endFrame": 605
+        },
+        {
+          "word": "bow.",
+          "startFrame": 604,
+          "endFrame": 613
+        }
+      ]
+    },
+    "l2a": {
+      "startFrame": 643,
+      "endFrame": 838,
+      "words": [
+        {
+          "word": "So",
+          "startFrame": 643,
+          "endFrame": 646
+        },
+        {
+          "word": "you",
+          "startFrame": 646,
+          "endFrame": 652
+        },
+        {
+          "word": "make",
+          "startFrame": 652,
+          "endFrame": 658
+        },
+        {
+          "word": "it",
+          "startFrame": 658,
+          "endFrame": 661
+        },
+        {
+          "word": "chew",
+          "startFrame": 661,
+          "endFrame": 667
+        },
+        {
+          "word": "faster,",
+          "startFrame": 667,
+          "endFrame": 685
+        },
+        {
+          "word": "and",
+          "startFrame": 694,
+          "endFrame": 706
+        },
+        {
+          "word": "give",
+          "startFrame": 706,
+          "endFrame": 709
+        },
+        {
+          "word": "it",
+          "startFrame": 709,
+          "endFrame": 712
+        },
+        {
+          "word": "a",
+          "startFrame": 712,
+          "endFrame": 715
+        },
+        {
+          "word": "tongue.",
+          "startFrame": 715,
+          "endFrame": 727
+        },
+        {
+          "word": "The",
+          "startFrame": 757,
+          "endFrame": 760
+        },
+        {
+          "word": "next",
+          "startFrame": 760,
+          "endFrame": 766
+        },
+        {
+          "word": "rogue",
+          "startFrame": 766,
+          "endFrame": 778
+        },
+        {
+          "word": "gets",
+          "startFrame": 778,
+          "endFrame": 784
+        },
+        {
+          "word": "yanked",
+          "startFrame": 784,
+          "endFrame": 796
+        },
+        {
+          "word": "in,",
+          "startFrame": 796,
+          "endFrame": 802
+        },
+        {
+          "word": "halfway",
+          "startFrame": 802,
+          "endFrame": 814
+        },
+        {
+          "word": "through",
+          "startFrame": 814,
+          "endFrame": 820
+        },
+        {
+          "word": "his",
+          "startFrame": 820,
+          "endFrame": 826
+        },
+        {
+          "word": "bajo.",
+          "startFrame": 826,
+          "endFrame": 838
+        }
+      ]
+    },
+    "l2b": {
+      "startFrame": 870,
+      "endFrame": 1032,
+      "words": [
+        {
+          "word": "But",
+          "startFrame": 870,
+          "endFrame": 876
+        },
+        {
+          "word": "a",
+          "startFrame": 876,
+          "endFrame": 879
+        },
+        {
+          "word": "paladin",
+          "startFrame": 879,
+          "endFrame": 903
+        },
+        {
+          "word": "wedges",
+          "startFrame": 906,
+          "endFrame": 918
+        },
+        {
+          "word": "his",
+          "startFrame": 918,
+          "endFrame": 927
+        },
+        {
+          "word": "shield",
+          "startFrame": 927,
+          "endFrame": 942
+        },
+        {
+          "word": "between",
+          "startFrame": 942,
+          "endFrame": 954
+        },
+        {
+          "word": "the",
+          "startFrame": 954,
+          "endFrame": 957
+        },
+        {
+          "word": "jaws,",
+          "startFrame": 957,
+          "endFrame": 978
+        },
+        {
+          "word": "and",
+          "startFrame": 981,
+          "endFrame": 984
+        },
+        {
+          "word": "strolls",
+          "startFrame": 984,
+          "endFrame": 1008
+        },
+        {
+          "word": "right",
+          "startFrame": 1008,
+          "endFrame": 1020
+        },
+        {
+          "word": "in.",
+          "startFrame": 1020,
+          "endFrame": 1032
+        }
+      ]
+    },
+    "l3a": {
+      "startFrame": 1047,
+      "endFrame": 1200,
+      "words": [
+        {
+          "word": "So",
+          "startFrame": 1047,
+          "endFrame": 1053
+        },
+        {
+          "word": "the",
+          "startFrame": 1056,
+          "endFrame": 1059
+        },
+        {
+          "word": "floor",
+          "startFrame": 1059,
+          "endFrame": 1077
+        },
+        {
+          "word": "tips",
+          "startFrame": 1077,
+          "endFrame": 1089
+        },
+        {
+          "word": "into",
+          "startFrame": 1089,
+          "endFrame": 1098
+        },
+        {
+          "word": "a",
+          "startFrame": 1098,
+          "endFrame": 1101
+        },
+        {
+          "word": "throat,",
+          "startFrame": 1101,
+          "endFrame": 1122
+        },
+        {
+          "word": "and",
+          "startFrame": 1125,
+          "endFrame": 1128
+        },
+        {
+          "word": "the",
+          "startFrame": 1128,
+          "endFrame": 1129
+        },
+        {
+          "word": "paladin",
+          "startFrame": 1128,
+          "endFrame": 1149
+        },
+        {
+          "word": "slides",
+          "startFrame": 1149,
+          "endFrame": 1170
+        },
+        {
+          "word": "straight",
+          "startFrame": 1170,
+          "endFrame": 1188
+        },
+        {
+          "word": "down",
+          "startFrame": 1188,
+          "endFrame": 1194
+        },
+        {
+          "word": "it.",
+          "startFrame": 1194,
+          "endFrame": 1200
+        }
+      ]
+    },
+    "l3b": {
+      "startFrame": 1233,
+      "endFrame": 1386,
+      "words": [
+        {
+          "word": "But",
+          "startFrame": 1233,
+          "endFrame": 1236
+        },
+        {
+          "word": "a",
+          "startFrame": 1236,
+          "endFrame": 1237
+        },
+        {
+          "word": "mage",
+          "startFrame": 1236,
+          "endFrame": 1257
+        },
+        {
+          "word": "never",
+          "startFrame": 1257,
+          "endFrame": 1263
+        },
+        {
+          "word": "steps",
+          "startFrame": 1263,
+          "endFrame": 1278
+        },
+        {
+          "word": "inside.",
+          "startFrame": 1278,
+          "endFrame": 1308
+        },
+        {
+          "word": "He",
+          "startFrame": 1311,
+          "endFrame": 1314
+        },
+        {
+          "word": "levitates",
+          "startFrame": 1314,
+          "endFrame": 1329
+        },
+        {
+          "word": "the",
+          "startFrame": 1329,
+          "endFrame": 1332
+        },
+        {
+          "word": "gold",
+          "startFrame": 1332,
+          "endFrame": 1347
+        },
+        {
+          "word": "out",
+          "startFrame": 1347,
+          "endFrame": 1356
+        },
+        {
+          "word": "from",
+          "startFrame": 1356,
+          "endFrame": 1359
+        },
+        {
+          "word": "the",
+          "startFrame": 1359,
+          "endFrame": 1362
+        },
+        {
+          "word": "hallway.",
+          "startFrame": 1362,
+          "endFrame": 1386
+        }
+      ]
+    },
+    "l4a": {
+      "startFrame": 1400,
+      "endFrame": 1520,
+      "words": [
+        {
+          "word": "So",
+          "startFrame": 1400,
+          "endFrame": 1409
+        },
+        {
+          "word": "you",
+          "startFrame": 1415,
+          "endFrame": 1418
+        },
+        {
+          "word": "make",
+          "startFrame": 1418,
+          "endFrame": 1424
+        },
+        {
+          "word": "the",
+          "startFrame": 1424,
+          "endFrame": 1427
+        },
+        {
+          "word": "coins",
+          "startFrame": 1427,
+          "endFrame": 1439
+        },
+        {
+          "word": "bite.",
+          "startFrame": 1439,
+          "endFrame": 1454
+        },
+        {
+          "word": "The",
+          "startFrame": 1457,
+          "endFrame": 1460
+        },
+        {
+          "word": "floating",
+          "startFrame": 1460,
+          "endFrame": 1472
+        },
+        {
+          "word": "gold",
+          "startFrame": 1472,
+          "endFrame": 1487
+        },
+        {
+          "word": "eats",
+          "startFrame": 1490,
+          "endFrame": 1499
+        },
+        {
+          "word": "the",
+          "startFrame": 1499,
+          "endFrame": 1502
+        },
+        {
+          "word": "mage.",
+          "startFrame": 1502,
+          "endFrame": 1520
+        }
+      ]
+    },
+    "l4b": {
+      "startFrame": 1553,
+      "endFrame": 1751,
+      "words": [
+        {
+          "word": "But",
+          "startFrame": 1553,
+          "endFrame": 1556
+        },
+        {
+          "word": "a",
+          "startFrame": 1568,
+          "endFrame": 1571
+        },
+        {
+          "word": "bard",
+          "startFrame": 1571,
+          "endFrame": 1595
+        },
+        {
+          "word": "plays",
+          "startFrame": 1598,
+          "endFrame": 1607
+        },
+        {
+          "word": "a",
+          "startFrame": 1607,
+          "endFrame": 1610
+        },
+        {
+          "word": "lullaby,",
+          "startFrame": 1610,
+          "endFrame": 1634
+        },
+        {
+          "word": "the",
+          "startFrame": 1643,
+          "endFrame": 1646
+        },
+        {
+          "word": "whole",
+          "startFrame": 1646,
+          "endFrame": 1664
+        },
+        {
+          "word": "vault",
+          "startFrame": 1664,
+          "endFrame": 1679
+        },
+        {
+          "word": "falls",
+          "startFrame": 1679,
+          "endFrame": 1694
+        },
+        {
+          "word": "asleep,",
+          "startFrame": 1694,
+          "endFrame": 1712
+        },
+        {
+          "word": "and",
+          "startFrame": 1718,
+          "endFrame": 1721
+        },
+        {
+          "word": "she",
+          "startFrame": 1721,
+          "endFrame": 1727
+        },
+        {
+          "word": "tiptoes",
+          "startFrame": 1727,
+          "endFrame": 1742
+        },
+        {
+          "word": "in.",
+          "startFrame": 1742,
+          "endFrame": 1751
+        }
+      ]
+    },
+    "l5a": {
+      "startFrame": 1766,
+      "endFrame": 1901,
+      "words": [
+        {
+          "word": "So",
+          "startFrame": 1766,
+          "endFrame": 1769
+        },
+        {
+          "word": "the",
+          "startFrame": 1769,
+          "endFrame": 1772
+        },
+        {
+          "word": "vault",
+          "startFrame": 1772,
+          "endFrame": 1784
+        },
+        {
+          "word": "plugs",
+          "startFrame": 1784,
+          "endFrame": 1799
+        },
+        {
+          "word": "its",
+          "startFrame": 1799,
+          "endFrame": 1805
+        },
+        {
+          "word": "ears",
+          "startFrame": 1805,
+          "endFrame": 1823
+        },
+        {
+          "word": "with",
+          "startFrame": 1823,
+          "endFrame": 1829
+        },
+        {
+          "word": "gold,",
+          "startFrame": 1829,
+          "endFrame": 1859
+        },
+        {
+          "word": "and",
+          "startFrame": 1862,
+          "endFrame": 1865
+        },
+        {
+          "word": "pretends",
+          "startFrame": 1865,
+          "endFrame": 1883
+        },
+        {
+          "word": "to",
+          "startFrame": 1883,
+          "endFrame": 1886
+        },
+        {
+          "word": "sleep.",
+          "startFrame": 1886,
+          "endFrame": 1901
+        }
+      ]
+    },
+    "l5b": {
+      "startFrame": 1912,
+      "endFrame": 2137,
+      "words": [
+        {
+          "word": "The",
+          "startFrame": 1912,
+          "endFrame": 1915
+        },
+        {
+          "word": "bard",
+          "startFrame": 1915,
+          "endFrame": 1924
+        },
+        {
+          "word": "brings",
+          "startFrame": 1924,
+          "endFrame": 1933
+        },
+        {
+          "word": "a",
+          "startFrame": 1933,
+          "endFrame": 1934
+        },
+        {
+          "word": "whole",
+          "startFrame": 1933,
+          "endFrame": 1939
+        },
+        {
+          "word": "party,",
+          "startFrame": 1939,
+          "endFrame": 1954
+        },
+        {
+          "word": "it",
+          "startFrame": 1975,
+          "endFrame": 1981
+        },
+        {
+          "word": "swallows",
+          "startFrame": 1981,
+          "endFrame": 1996
+        },
+        {
+          "word": "them",
+          "startFrame": 1996,
+          "endFrame": 1999
+        },
+        {
+          "word": "in",
+          "startFrame": 1999,
+          "endFrame": 2002
+        },
+        {
+          "word": "one",
+          "startFrame": 2002,
+          "endFrame": 2017
+        },
+        {
+          "word": "gulp",
+          "startFrame": 2017,
+          "endFrame": 2029
+        },
+        {
+          "word": "and",
+          "startFrame": 2035,
+          "endFrame": 2041
+        },
+        {
+          "word": "burps",
+          "startFrame": 2041,
+          "endFrame": 2053
+        },
+        {
+          "word": "her",
+          "startFrame": 2053,
+          "endFrame": 2059
+        },
+        {
+          "word": "back",
+          "startFrame": 2059,
+          "endFrame": 2065
+        },
+        {
+          "word": "out",
+          "startFrame": 2065,
+          "endFrame": 2074
+        },
+        {
+          "word": "without",
+          "startFrame": 2101,
+          "endFrame": 2107
+        },
+        {
+          "word": "a",
+          "startFrame": 2107,
+          "endFrame": 2108
+        },
+        {
+          "word": "single",
+          "startFrame": 2107,
+          "endFrame": 2122
+        },
+        {
+          "word": "coin.",
+          "startFrame": 2122,
+          "endFrame": 2137
+        }
+      ]
+    },
+    "end": {
+      "startFrame": 2170,
+      "endFrame": 2308,
+      "words": [
+        {
+          "word": "Congratulations,",
+          "startFrame": 2170,
+          "endFrame": 2209
+        },
+        {
+          "word": "your",
+          "startFrame": 2212,
+          "endFrame": 2221
+        },
+        {
+          "word": "treasure",
+          "startFrame": 2221,
+          "endFrame": 2233
+        },
+        {
+          "word": "vault",
+          "startFrame": 2233,
+          "endFrame": 2245
+        },
+        {
+          "word": "is",
+          "startFrame": 2245,
+          "endFrame": 2251
+        },
+        {
+          "word": "now",
+          "startFrame": 2251,
+          "endFrame": 2266
+        },
+        {
+          "word": "unbeatable.",
+          "startFrame": 2275,
+          "endFrame": 2308
+        }
+      ]
+    },
+    "cta": {
+      "startFrame": 2321,
+      "endFrame": 2381,
+      "words": [
+        {
+          "word": "Unless",
+          "startFrame": 2321,
+          "endFrame": 2330
+        },
+        {
+          "word": "you",
+          "startFrame": 2330,
+          "endFrame": 2333
+        },
+        {
+          "word": "can",
+          "startFrame": 2333,
+          "endFrame": 2339
+        },
+        {
+          "word": "prove",
+          "startFrame": 2339,
+          "endFrame": 2348
+        },
+        {
+          "word": "us",
+          "startFrame": 2348,
+          "endFrame": 2351
+        },
+        {
+          "word": "wrong",
+          "startFrame": 2351,
+          "endFrame": 2363
+        },
+        {
+          "word": "in",
+          "startFrame": 2363,
+          "endFrame": 2366
+        },
+        {
+          "word": "the",
+          "startFrame": 2366,
+          "endFrame": 2367
+        },
+        {
+          "word": "comments.",
+          "startFrame": 2366,
+          "endFrame": 2381
+        }
+      ]
+    }
+  }
+}

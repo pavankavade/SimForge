@@ -10,6 +10,8 @@ import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
  *     title: "BOULDER HALLWAY",
  *     stages: [{ name: "TRIPWIRE BOULDER", color: "#ff9a3d", at: STAGE_STARTS[0] }, ...],
  *     end: { label: "HALLWAY STATUS", stamp: "UNBEATABLE", at: BEATS.stamp },
+ *     // optional comment hook: the stamp cracks, splits and is replaced by a dare
+ *     challenge: { text: "PROVE US WRONG", sub: "IN THE COMMENTS", crackAt: w("cta", "unless"), at: w("cta", "prove") },
  *   });
  *
  * Keep stage names under ~26 characters so they fit on one line at phone size
@@ -36,7 +38,16 @@ export interface TrapHUDOptions {
   stageLabel?: string;
   badgeFrames?: number;
   end: { label: string; stamp: string; at: number; color?: string; top?: number; fontSize?: number };
+  /** Comment hook: the stamp cracks at `crackAt`, splits at `at`, and `text` slams in. */
+  challenge?: { text: string; sub?: string; crackAt: number; at: number; color?: string };
 }
+
+// Jagged split line across the stamp (percent of its width, top to bottom).
+const CRACK = [[54, 0], [48, 22], [56, 41], [47, 63], [53, 82], [49, 100]];
+const half = (side: "left" | "right") =>
+  `polygon(${side === "left" ? "0% 0%, " : "100% 0%, "}${CRACK.map(([x, y]) => `${x}% ${y}%`).join(", ")}${
+    side === "left" ? ", 0% 100%" : ", 100% 100%"
+  })`;
 
 export const createTrapHUD = ({
   kicker = "EVOLUTION OF A",
@@ -46,6 +57,7 @@ export const createTrapHUD = ({
   stageLabel = "TRAP LEVEL",
   badgeFrames = 110,
   end,
+  challenge,
 }: TrapHUDOptions): React.FC => {
   const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
     if (frame > titleOut) return null;
@@ -126,6 +138,51 @@ export const createTrapHUD = ({
     );
   };
 
+  const Challenge: React.FC<{ frame: number }> = ({ frame }) => {
+    if (!challenge) return null;
+    const age = frame - challenge.at - 4; // halves start falling first
+    if (age < 0) return null;
+    const color = challenge.color ?? "#ffd84d";
+    const slam = interpolate(age, [0, 6], [1.35, 1], { ...clamp, easing: Easing.in(Easing.cubic) });
+    const settle = age >= 6 ? 1 + 0.07 * Math.sin((age - 6) * 0.9) * Math.exp(-(age - 6) / 6) : slam;
+    const subIn = interpolate(age, [8, 16], [0, 1], { ...clamp, easing: Easing.out(Easing.back(1.8)) });
+    const bob = Math.sin(age * 0.3) * 10;
+    return (
+      <div style={{ position: "absolute", top: 84, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div
+          style={{
+            fontSize: challenge.text.length > 12 ? 74 : 88,
+            color,
+            letterSpacing: 3,
+            textShadow: STROKE,
+            transform: `rotate(-4deg) scale(${settle})`,
+            opacity: interpolate(age, [0, 2], [0.3, 1], clamp),
+            whiteSpace: "nowrap",
+          }}
+        >
+          {challenge.text}
+        </div>
+        {challenge.sub ? (
+          <div style={{ marginTop: 18, display: "flex", flexDirection: "column", alignItems: "center", opacity: subIn, transform: `scale(${0.6 + subIn * 0.4})` }}>
+            <div style={{ fontSize: 48, color: "#ffffff", letterSpacing: 6, textShadow: STROKE }}>{challenge.sub}</div>
+            <div
+              style={{
+                marginTop: 14,
+                width: 0,
+                height: 0,
+                borderLeft: "34px solid transparent",
+                borderRight: "34px solid transparent",
+                borderTop: `40px solid ${color}`,
+                filter: "drop-shadow(0 0 3px #000) drop-shadow(0 4px 6px rgba(0,0,0,0.7))",
+                transform: `translateY(${bob}px)`,
+              }}
+            />
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   const EndCard: React.FC<{ frame: number }> = ({ frame }) => {
     const age = frame - end.at;
     if (age < -14) return null;
@@ -135,13 +192,18 @@ export const createTrapHUD = ({
     const slam = interpolate(age, [0, 5], [1.75, 1], { ...clamp, easing: Easing.in(Easing.cubic) });
     const settle = age >= 5 ? 1 + 0.06 * Math.sin((age - 5) * 0.9) * Math.exp(-(age - 5) / 6) : slam;
     const stampFontSize = end.fontSize ?? (end.stamp.length > 13 ? 64 : end.stamp.length >= 10 ? 82 : 104);
-    return (
-      <div style={{ position: "absolute", top, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: FONT }}>
-        <div style={{ fontSize: 44, color: "#ffffff", letterSpacing: 8, textShadow: STROKE, opacity: labelIn, transform: `translateY(${(1 - labelIn) * 20}px)` }}>
-          {end.label}
-        </div>
-        {age >= 0 ? (
+    // Crack: the halves jitter apart while the line asks, then fall away on the dare.
+    const crackAge = challenge ? frame - challenge.crackAt : -1;
+    const fallAge = challenge ? frame - challenge.at : -1;
+    const gap = crackAge >= 0 ? interpolate(crackAge, [0, 4, 24], [0, 8, 16], clamp) : 0;
+    const jitter = crackAge >= 0 && fallAge < 0 ? Math.sin(crackAge * 2.3) * 2 : 0;
+    const fall = fallAge >= 0 ? interpolate(fallAge, [0, 14], [0, 1], { ...clamp, easing: Easing.in(Easing.quad) }) : 0;
+    const leftT = ` translate(${-gap - fall * 120 + jitter}px, ${fall * 420}px) rotate(${-fall * 28}deg)`;
+    const rightT = ` translate(${gap + fall * 140 - jitter}px, ${fall * 460}px) rotate(${fall * 34}deg)`;
+    const pieceOpacity = 1 - interpolate(fallAge, [6, 14], [0, 1], clamp);
+    const stampPiece = (key: string, clip: string | undefined, extra: string) => (
           <div
+            key={key}
             style={{
               marginTop: 22,
               padding: "10px 36px",
@@ -156,13 +218,28 @@ export const createTrapHUD = ({
               background: "rgba(18, 6, 6, 0.45)",
               textShadow: "0 0 12px rgba(232, 50, 42, 0.4), 0 4px 14px rgba(0,0,0,0.85)",
               boxShadow: "0 0 24px rgba(232, 50, 42, 0.25), 0 8px 24px rgba(0,0,0,0.7), inset 0 0 12px rgba(232, 50, 42, 0.15)",
-              transform: `rotate(-6deg) scale(${settle})`,
-              opacity: interpolate(age, [0, 2], [0.3, 1], clamp),
+              transform: `rotate(-6deg) scale(${settle})${extra}`,
+              clipPath: clip,
+              opacity: interpolate(age, [0, 2], [0.3, 1], clamp) * pieceOpacity,
             }}
           >
             {end.stamp}
           </div>
+    );
+    return (
+      <div style={{ position: "absolute", top, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: FONT }}>
+        <div style={{ fontSize: 44, color: "#ffffff", letterSpacing: 8, textShadow: STROKE, opacity: labelIn, transform: `translateY(${(1 - labelIn) * 20}px)` }}>
+          {end.label}
+        </div>
+        {age >= 0 && !(challenge && frame >= challenge.at + 14) ? (
+          <div style={{ position: "relative", display: "flex" }}>
+            {stampPiece("whole", challenge && frame >= challenge.crackAt ? half("left") : undefined, leftT)}
+            {challenge && frame >= challenge.crackAt ? (
+              <div style={{ position: "absolute", inset: 0, display: "flex" }}>{stampPiece("right", half("right"), rightT)}</div>
+            ) : null}
+          </div>
         ) : null}
+        {challenge && frame >= challenge.at ? <Challenge frame={frame} /> : null}
       </div>
     );
   };

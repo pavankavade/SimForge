@@ -1,6 +1,6 @@
 import type React from "react";
 import type { Vec3 } from "../../engine/types";
-import { G, INK_THIN, Part, RIG, flat, onSphere, vinyl, type AdventurerClass } from "../characters/hero";
+import { CLASS_SCALE, G, INK_THIN, Part, RIG, flat, onSphere, vinyl, type AdventurerClass } from "../characters/hero";
 
 interface SkeletonProps {
   /** Keeps the victim's headgear so you can tell who it was. */
@@ -78,6 +78,20 @@ const Headgear: React.FC<{ variant: AdventurerClass; r: number; sway: number }> 
           </group>
         </group>
       );
+    case "barbarian":
+      return (
+        <group position={[0, r + 0.02, -0.08]} rotation={[-0.5 + sway, 0, 0]}>
+          <Part geo={G.sphere(0.08)} mat={vinyl("#1f1a1c", "hair")} />
+          <Part geo={G.capsule(0.05, 0.3)} mat={vinyl("#1f1a1c", "hair")} position={[0, -0.02, -0.2]} rotation={[-1.9, 0, 0]} />
+        </group>
+      );
+    case "bard":
+      return (
+        <group position={[0.03, 0.17, -0.02]} rotation={[-0.15, 0, -0.28]}>
+          <Part geo={G.cyl(0.2, 0.24, 0.1, 28)} mat={vinyl("#8e2550", "cloth")} />
+          <Part geo={G.capsule(0.035, 0.42)} mat={vinyl("#f2c14e", "cloth")} position={[0.16, 0.2, -0.04]} rotation={[-0.4, 0, -0.9]} scale={[1, 1, 0.4]} ink={INK_THIN} />
+        </group>
+      );
     case "paladin":
       return (
         <group position={[0, 0.02, -0.005]} rotation={[0.15, 0, -0.1]}>
@@ -103,7 +117,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({ variant, position = [0, 0, 0
   const sway = Math.sin(animFrame * 0.08) * 0.12;
   const jaw = 0.15 + 0.12 * Math.max(0, Math.sin(animFrame * 0.21));
   const r = 0.23;
-  const s = variant === "goblin" ? 0.82 : variant === "paladin" ? 1.06 : 1;
+  const s = CLASS_SCALE[variant];
   return (
     <group position={position} rotation={rotation} scale={scale * s}>
       {/* Pelvis + spine */}

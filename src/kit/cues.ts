@@ -45,3 +45,24 @@ export const createCues = <C extends NarrationCues>(cues: C) => {
   const lineEnd = (lineId: LineId) => line(lineId).endFrame;
   return { w, wEnd, lineStart, lineEnd, DURATION: cues.durationFrames + 10 };
 };
+
+/**
+ * One act's lines out of a long-form narration, re-based so `offset` (the act's
+ * first global frame) becomes frame 0. Each act then times itself in local
+ * frames exactly like a short:
+ *
+ *   export const { w, lineStart, DURATION } = createCues(sliceCues(cues, HALLWAY_LINES, ACTS.hallway.start));
+ */
+export const sliceCues = (cues: NarrationCues, lineIds: readonly string[], offset: number): NarrationCues => {
+  const lines: NarrationCues["lines"] = {};
+  for (const id of lineIds) {
+    const l = cues.lines[id];
+    if (!l) throw new Error(`Missing narration line ${id}`);
+    lines[id] = {
+      startFrame: l.startFrame - offset,
+      endFrame: l.endFrame - offset,
+      words: l.words.map((x) => ({ ...x, startFrame: x.startFrame - offset, endFrame: x.endFrame - offset })),
+    };
+  }
+  return { durationFrames: cues.durationFrames - offset, lines };
+};

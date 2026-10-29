@@ -19,6 +19,12 @@ export const POSES = [
   "cheer",
   "point",
   "matrix",
+  "fly",
+  "hover",
+  "carry",
+  "ride",
+  "surf",
+  "play",
 ] as const;
 export type AdventurerPose = (typeof POSES)[number];
 
@@ -45,6 +51,25 @@ export interface RigPose {
   /** Breathing / squash scale applied to the torso (1 = rest). */
   breathe: number;
 }
+
+const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+const mix3 = (a: Vec3, b: Vec3, t: number): Vec3 => [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
+
+/** Joint-wise blend from rig `a` (t = 0) to rig `b` (t = 1): eases one pose into the next. */
+export const blendRig = (a: RigPose, b: RigPose, t: number): RigPose => ({
+  armL: mix3(a.armL, b.armL, t),
+  armR: mix3(a.armR, b.armR, t),
+  elbowL: mix(a.elbowL, b.elbowL, t),
+  elbowR: mix(a.elbowR, b.elbowR, t),
+  legL: mix3(a.legL, b.legL, t),
+  legR: mix3(a.legR, b.legR, t),
+  kneeL: mix(a.kneeL, b.kneeL, t),
+  kneeR: mix(a.kneeR, b.kneeR, t),
+  bob: mix(a.bob, b.bob, t),
+  lean: mix(a.lean, b.lean, t),
+  head: [mix(a.head[0], b.head[0], t), mix(a.head[1], b.head[1], t)],
+  breathe: mix(a.breathe, b.breathe, t),
+});
 
 const base = (): RigPose => ({
   armL: [0.1, 0, 0.12],
@@ -282,6 +307,104 @@ export const solvePose = (pose: AdventurerPose, f: number): RigPose => {
       p.lean = -0.06;
       p.head = [-0.06, 0.12];
       break;
+    case "fly": {
+      // Superman glide, modelled upright: the scene tilts the body forward
+      // about the hips (~1.2 rad). Lead fist overhead, other arm trailing,
+      // legs together with a slow flutter; the head tips back to look ahead.
+      const k = Math.sin(f * 0.18);
+      p.armR = [-2.95, 0, -0.12];
+      p.armL = [0.35, 0, 0.22];
+      p.elbowR = -0.08;
+      p.elbowL = -0.15;
+      p.legL = [0.12 + k * 0.08, 0, 0.05];
+      p.legR = [0.22 - k * 0.08, 0, -0.05];
+      p.kneeL = 0.12;
+      p.kneeR = 0.4;
+      p.bob = k * 0.02;
+      p.head = [-0.75, 0];
+      break;
+    }
+    case "hover": {
+      // Upright, treading air: arms sculling out to the sides, legs pedalling.
+      const c = Math.sin(f * 0.2);
+      p.armL = [0.05, 0, -1.05 - c * 0.15];
+      p.armR = [0.05, 0, 1.05 + c * 0.15];
+      p.elbowL = -0.2;
+      p.elbowR = -0.2;
+      p.legL = [-0.2 + c * 0.22, 0, 0.06];
+      p.legR = [-0.2 - c * 0.22, 0, -0.06];
+      p.kneeL = 0.45 - c * 0.25;
+      p.kneeR = 0.45 + c * 0.25;
+      p.bob = Math.sin(f * 0.1) * 0.05;
+      p.head = [0.1, 0];
+      break;
+    }
+    case "carry": {
+      // Piggyback carrier: bent forward under the load, hands hooked back
+      // under the rider's knees at hip height.
+      const s = Math.sin(f * 0.09);
+      p.armL = [0.55, 0.9, 0.75];
+      p.armR = [0.55, -0.9, -0.75];
+      p.elbowL = -1.5;
+      p.elbowR = -1.5;
+      p.legL = [-0.12, 0, 0.06];
+      p.legR = [0.08, 0, -0.06];
+      p.kneeL = 0.22;
+      p.kneeR = 0.18;
+      p.lean = 0.32;
+      p.bob = -0.03 + s * 0.008;
+      p.head = [-0.3, 0];
+      p.breathe = 1 + s * 0.02;
+      break;
+    }
+    case "ride": {
+      // Piggyback rider: arms round the carrier's shoulders, thighs forward
+      // and spread round the carrier's waist, shins hanging.
+      const s = Math.sin(f * 0.09 + 0.6);
+      p.armL = [-1.35, 0, -0.32];
+      p.armR = [-1.35, 0, 0.32];
+      p.elbowL = -1.25;
+      p.elbowR = -1.25;
+      p.legL = [-1.3, 0, 0.5];
+      p.legR = [-1.3, 0, -0.5];
+      p.kneeL = 1.25 + s * 0.08;
+      p.kneeR = 1.25 - s * 0.08;
+      p.lean = 0.22;
+      p.head = [-0.1, 0.12];
+      break;
+    }
+    case "surf": {
+      // Side-on board stance facing the camera: feet wide, knees bent, arms
+      // out for balance with a slow rocking wobble.
+      const c = Math.sin(f * 0.14);
+      p.legL = [-0.12, 0, 0.42];
+      p.legR = [-0.12, 0, -0.42];
+      p.kneeL = 0.55;
+      p.kneeR = 0.55;
+      p.armL = [-0.25, 0, 1.25 + c * 0.2];
+      p.armR = [-0.25, 0, -1.25 + c * 0.2];
+      p.elbowL = -0.35;
+      p.elbowR = -0.35;
+      p.bob = -0.13;
+      p.lean = 0.12;
+      p.head = [-0.05, c * 0.1];
+      break;
+    }
+    case "play": {
+      // Lute across the chest: left hand on the neck, right hand strumming.
+      const strum = Math.sin(f * 0.5);
+      p.armL = [-1.0, 0.35, 0.55];
+      p.armR = [-0.55 + strum * 0.12, -0.25, -0.3];
+      p.elbowL = -1.05;
+      p.elbowR = -1.45;
+      p.legL = [-0.06, 0, 0.06];
+      p.legR = [0.08, 0, -0.06];
+      p.kneeL = 0.08;
+      p.kneeR = 0.12;
+      p.lean = -0.04;
+      p.head = [0.12, 0.18];
+      break;
+    }
     case "idle":
     default: {
       const s = Math.sin(f * 0.06);

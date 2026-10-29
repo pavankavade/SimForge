@@ -410,13 +410,13 @@ export const Scene: React.FC = () => {
       {sparks(BEATS.mimicBurp, [MIMIC_X - 0.4, 1.1, Z], "burp", "#ffd84d", 24)}
 
       {/* ----------------- Actors ----------------- */}
-      <ActorView classType="goblin" actor={goblinActor(frame)} frame={frame} />
-      <ActorView classType="rogue" actor={rogueActor(frame)} frame={frame} />
-      <ActorView classType="paladin" actor={paladinActor(frame)} frame={frame} />
-      <ActorView classType="mage" actor={mageActor(frame)} frame={frame} />
-      <ActorView classType="rogue" actor={partyActor(0)(frame)} frame={frame} />
-      <ActorView classType="paladin" actor={partyActor(1)(frame)} frame={frame} />
-      <ActorView classType="mage" actor={partyActor(2)(frame)} frame={frame} />
+      <ActorView classType="goblin" actor={goblinActor} frame={frame} />
+      <ActorView classType="rogue" actor={rogueActor} frame={frame} />
+      <ActorView classType="paladin" actor={paladinActor} frame={frame} />
+      <ActorView classType="mage" actor={mageActor} frame={frame} />
+      <ActorView classType="rogue" actor={partyActor(0)} frame={frame} />
+      <ActorView classType="paladin" actor={partyActor(1)} frame={frame} />
+      <ActorView classType="mage" actor={partyActor(2)} frame={frame} />
     </group>
   );
 };

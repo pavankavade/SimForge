@@ -1,24 +1,28 @@
-"""Builds the audio stems for NuclearBunker using the edge-tts Andrew voice.
+"""Builds the audio stems for NuclearBunker with the series' custom Gemini voice
+(same pipeline as cave-home / rolling-boulder: gemini-3.8-flash-tts, word
+timestamps from gemini-3.5-transcribe, per-line cache in out/audio-tmp-<slug>/gemini).
 
-  python scripts/nuclear-bunker-audio.py            # everything
-  python scripts/nuclear-bunker-audio.py narration  # only re-voice
-  python scripts/nuclear-bunker-audio.py sfx        # only rebuild the sound effects
-  python scripts/nuclear-bunker-audio.py score      # only rebuild the score
+  python scripts/nuclear-bunker-audio.py                  # everything
+  python scripts/nuclear-bunker-audio.py narration score  # any of narration, sfx, score
+
+Needs GEMINI_API_KEY (environment or .env) for lines that are not cached yet.
 
 Outputs:
-  public/shelter/nuclear-bunker/narration_v1.mp3
-  public/shelter/nuclear-bunker/score_v1.mp3
+  public/shelter/nuclear-bunker/narration_vN.mp3
+  public/shelter/nuclear-bunker/score_vN.mp3
   public/shelter/nuclear-bunker/sfx/*.wav
   src/shelter/nuclear-bunker/data/wordTimestamps.json
   src/shelter/nuclear-bunker/data/narrationCues.json
 """
 
-import asyncio
+import base64
 import importlib.util
 import json
+import os
 import re
-import subprocess
 import sys
+import time
+import urllib.request
 from pathlib import Path
 
 import numpy as np
@@ -28,9 +32,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SLUG = "nuclear-bunker"
-VERSION = 1
-VOICE = "en-US-AndrewMultilingualNeural"
-RATE = "+6%"
+VERSION = 2
+VOICE_ID = "voice_ax8s6hqwv0of"
 
 ROOT = Path(__file__).resolve().parent.parent
 EP = ROOT / "public" / "shelter" / SLUG
@@ -42,6 +45,8 @@ EP.mkdir(parents=True, exist_ok=True)
 SFX_DIR.mkdir(parents=True, exist_ok=True)
 DATA.mkdir(parents=True, exist_ok=True)
 TMP.mkdir(parents=True, exist_ok=True)
+VOICE_TMP = TMP / "gemini"
+VOICE_TMP.mkdir(parents=True, exist_ok=True)
 
 
 def _load(name, file):
@@ -69,18 +74,19 @@ LINES = [
     ("l1b", "You have a bunker. But the blast wave caves the walls in on top of you.", 0.90),
     ("l2a", "So you drop in a steel pipe, and bury it under three feet of dirt.", 0.30),
     ("l2b", "The explosion still sucks dirt into the sky, and it rains back down radioactive. This is fallout.", 1.00),
-    ("l3a", "Every three and a half inches of dirt cuts the radiation in half. Three feet stops almost all of it.", 0.30),
+    ("l3a", "Every three and a half inches of dirt cuts the radiation in half, so three feet stops ninety-nine point nine percent of it.", 0.30),
     ("l3b", "But radiation travels in straight lines, right down your doorway.", 0.90),
     ("l4a", "So you bend the tunnel once, and then again. The rays hit dirt instead of you.", 0.30),
     ("l4b", "But ten people turn the sealed air hot and stale in hours.", 0.90),
     ("l5a", "So you run an air pipe to the surface, with a dust filter and a hand cranked fan.", 0.30),
     ("l5b", "The next shockwave shoots straight down that pipe.", 0.90),
     ("l6a", "So you add a valve that slams shut in a few thousandths of a second. This is a blast valve.", 0.90),
-    ("l6b", "But the blast hits your door like a truck, so you hang it to open outward. This is a blast door.", 0.90),
+    ("l6b", "But the blast hits your door like a truck, so you hang it to open outward, and the blast only slams it tighter into its frame. This is a blast door.", 0.90),
     ("l7a", "Rubble piles up against it, and now you are trapped.", 0.90),
     ("l7b", "So you dig a second tunnel, up to a hatch in the yard.", 0.30),
     ("l8a", "But you cannot see radiation. You never know when it is safe to come out.", 0.90),
     ("l8b", "You hang a counter by the ladder, that clicks every time a particle hits it. This is a Geiger counter.", 1.00),
+    ("l8c", "You might think you'd be stuck down there for years. Not even close.", 0.50),
     ("l9a", "Fallout is ten times weaker after seven hours, and a hundred times weaker after two days.", 0.30),
     ("l9b", "So you only need supplies for two weeks.", 0.90),
     ("l10a", "Add bunk beds, canned food, a crank radio, and a very long board game.", 0.30),
@@ -92,74 +98,95 @@ LINES = [
 # Narration
 # ---------------------------------------------------------------------------
 
-def tts_line(text, dst_mp3):
-    import edge_tts
-
-    async def run():
-        communicate = edge_tts.Communicate(text, VOICE, rate=RATE)
-        await communicate.save(str(dst_mp3))
-
-    asyncio.run(run())
-
-
-def synth_wav(text, line_id):
-    mp3 = TMP / f"{line_id}.mp3"
-    wav = TMP / f"{line_id}.wav"
-    if not wav.exists():
-        tts_line(text, mp3)
-        da.run([
-            "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-            "-i", str(mp3), "-ac", "1", "-ar", str(SR), str(wav),
-        ])
-    return wav
+# The transcriber writes numbers as digits; captions and beat keys want the spoken words.
+WORD_FIXES = {
+    "l2a": [(["3", "ft"], "three feet")],
+    "l3a": [(["3", "and", "1/2", "in"], "three and a half inches"), (["3", "ft"], "three feet")],
+    "l4b": [(["10"], "ten"), (["turned"], "turn")],
+    "l9a": [(["10"], "ten")],
+    "l6a": [(["thousands"], "thousandths")],
+}
 
 
-def _norm(word):
-    return re.sub(r"[^a-z0-9']", "", word.lower())
+def _bare(w):
+    return re.sub(r"[^\w'-]", "", w).lower()
 
 
-def transcribe_words(wav_path, line_id, text):
-    cache = TMP / f"{line_id}.words.json"
-    if cache.exists():
-        return json.loads(cache.read_text())
+def fix_words(line_id, words):
+    out = list(words)
+    for old, new in WORD_FIXES.get(line_id, []):
+        n = len(old)
+        for i in range(len(out) - n + 1):
+            if [_bare(x[0]) for x in out[i:i + n]] == [_bare(o) for o in old]:
+                parts = new.split()
+                s, e = out[i][1], out[i + n - 1][2]
+                step = (e - s) / len(parts)
+                out[i:i + n] = [[p, s + k * step, s + (k + 1) * step] for k, p in enumerate(parts)]
+                break
+        else:
+            raise ValueError(f"{line_id}: word fix {old} not found")
+    return out
 
-    from faster_whisper import WhisperModel
 
-    global _WHISPER
-    if "_WHISPER" not in globals():
-        _WHISPER = WhisperModel("base.en", device="cpu", compute_type="int8")
-    segments, _info = _WHISPER.transcribe(
-        str(wav_path), beam_size=5, word_timestamps=True,
-        vad_filter=True, condition_on_previous_text=False,
-    )
+def tts_gemini_line(text, dst_wav):
+    """Voices one line with the custom Gemini voice, then word timestamps (both cached)."""
+    api_key = os.getenv("GEMINI_API_KEY")
+    json_cache = dst_wav.with_suffix(".json")
+    if dst_wav.exists() and dst_wav.stat().st_size > 1000 and json_cache.exists():
+        return json.loads(json_cache.read_text())
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY is not set and this line is not cached yet.")
+
+    if dst_wav.exists() and dst_wav.stat().st_size > 1000:
+        audio_bytes = dst_wav.read_bytes()
+    else:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": f"## Transcript:\n{text}\n"}]}],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {"voiceConfig": {"voice": VOICE_ID}},
+            },
+        }
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+        for attempt in range(4):
+            try:
+                with urllib.request.urlopen(req) as resp:
+                    res = json.loads(resp.read().decode())
+                audio_bytes = base64.b64decode(res["candidates"][0]["content"]["parts"][0]["inlineData"]["data"])
+                dst_wav.write_bytes(audio_bytes)
+                break
+            except Exception as e:
+                if attempt == 3:
+                    raise
+                print(f"TTS retry {attempt + 1}: {e}")
+                time.sleep(2)
+
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=api_key)
     words = []
-    for seg in segments:
-        if not seg.words:
-            continue
-        for w in seg.words:
-            token = w.word.strip()
-            if token:
-                words.append([token, float(w.start), float(w.end)])
+    try:
+        t_resp = client.models.generate_content(
+            model="gemini-3.5-transcribe",
+            contents=[types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")],
+            config=types.GenerateContentConfig(audio_transcription_config=types.AudioTranscriptionConfig(word_timestamp=True)),
+        )
+        t_part = t_resp.candidates[0].content.parts[0]
+        if getattr(t_part, "audio_transcription", None) and t_part.audio_transcription.words:
+            for w in t_part.audio_transcription.words:
+                words.append([w.word, float(w.start_offset.rstrip("s")), float(w.end_offset.rstrip("s"))])
+    except Exception as e:
+        print(f"Warning: transcription fallback for line: {e}")
 
-    # Align the recognised tokens with the written script so the caption text
-    # always matches the narration exactly.
-    tokens = text.split()
-    if words and len(words) == len(tokens):
-        for i, token in enumerate(tokens):
-            words[i][0] = token
-    elif words:
-        # Replace recognised text with script tokens by nearest ratio position.
-        aligned = []
-        for i, token in enumerate(tokens):
-            src = words[min(len(words) - 1, round(i * (len(words) - 1) / max(1, len(tokens) - 1)))]
-            aligned.append([token, src[1], src[2]])
-        words = aligned
     if not words:
-        total = 1.0
-        w_dur = total / max(1, len(tokens))
+        tokens = text.split()
+        total_sec = len(audio_bytes) / (24000 * 2)
+        w_dur = total_sec / max(1, len(tokens))
         words = [[t, i * w_dur, (i + 1) * w_dur] for i, t in enumerate(tokens)]
 
-    cache.write_text(json.dumps(words))
+    json_cache.write_text(json.dumps(words))
     return words
 
 
@@ -168,10 +195,10 @@ def build_narration():
     cues = {}
     segments = []
 
-    print(f"Voicing {len(LINES)} lines with {VOICE}...")
+    print(f"Voicing {len(LINES)} lines with the Gemini voice {VOICE_ID}...")
     for line_id, text, pause in LINES:
-        wav_file = synth_wav(text, line_id)
-        words = transcribe_words(wav_file, line_id, text)
+        wav_file = VOICE_TMP / f"{line_id}.wav"
+        words = fix_words(line_id, tts_gemini_line(text, wav_file))
         x = ba.decode_samples(wav_file)
 
         first_word_s = words[0][1]
@@ -345,11 +372,11 @@ def build_score():
 
 
 if __name__ == "__main__":
-    mode = sys.argv[1] if len(sys.argv) > 1 else "all"
-    if mode in ("all", "narration"):
+    modes = set(sys.argv[1:]) or {"narration", "sfx", "score"}
+    if "narration" in modes:
         build_narration()
-    if mode in ("all", "sfx"):
+    if "sfx" in modes:
         build_sfx()
-    if mode in ("all", "score"):
+    if "score" in modes:
         build_score()
     print("All audio stems ready.")

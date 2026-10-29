@@ -1,19 +1,19 @@
 import type React from "react";
 import { AbsoluteFill } from "remotion";
-import { AdventurerUnit, type AdventurerClass, type Expression } from "../artifacts/characters/hero";
+import { AdventurerUnit, type Expression } from "../artifacts/characters/hero";
 import { EpisodeVideo } from "../engine/EpisodeVideo";
 import { ENVIRONMENT_PRESETS } from "../engine/presets";
 import type { EpisodeConfig, Vec3 } from "../engine/types";
 import { GlowSprite } from "../artifacts/dungeon/Fx";
 
 interface AvatarProps {
-  classType?: AdventurerClass;
+  classType?: "goblin" | "rogue" | "mage" | "paladin";
   expression?: Expression;
   yaw?: number;
 }
 
 const AVATAR_PROFILES: Record<
-  AdventurerClass,
+  "goblin" | "rogue" | "mage" | "paladin",
   {
     scale: number;
     camPos: Vec3;

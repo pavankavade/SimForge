@@ -34,6 +34,7 @@ export const EXPRESSIONS = {
   pain: { eyes: "squint", lid: 0, lidTilt: 0, brow: 0.01, browTilt: -0.45, pupil: 1, look: [0, 0], mouth: "grit" },
   dazed: { eyes: "spiral", lid: 0, lidTilt: 0, brow: 0.02, browTilt: -0.2, pupil: 1, look: [0, 0], mouth: "wavy" },
   dead: { eyes: "x", lid: 0, lidTilt: 0, brow: 0, browTilt: 0, pupil: 1, look: [0, 0], mouth: "tongue" },
+  sad: { eyes: "open", lid: 0.36, lidTilt: -0.4, brow: 0.012, browTilt: -0.55, pupil: 1, look: [0, -0.45], mouth: "frown" },
 } satisfies Record<string, ExpressionSpec>;
 
 export type Expression = keyof typeof EXPRESSIONS;
@@ -60,6 +61,19 @@ export interface FaceKit {
   mouthWidth?: number;
   /** Goblin fangs poking out of the lower lip. */
   fangs?: boolean;
+  /** Half-orc tusks: big lower canines at the mouth corners, whatever the mouth does. */
+  tusks?: boolean;
+  /** Three lashes flicking out from the outer top of each open eye. */
+  lashes?: boolean;
+  /**
+   * Flat decal face for silhouette heads: white eyes with a dark pupil, white
+   * line work and mouth, lids in the head colour. No sclera bulge, no teeth.
+   */
+  decal?: boolean;
+  /** Decal line/eye/mouth colour (white on dark heads, dark on light heads). */
+  decalInk?: string;
+  /** Pupil colour inside a decal eye (a white glint when the eye itself is dark). */
+  decalPupil?: string;
 }
 
 const PUPIL = "#1a1220";
@@ -82,9 +96,34 @@ const OnHead: React.FC<{ r: number; yaw: number; pitch: number; lift?: number; c
   </group>
 );
 
+const DECAL = "#fbf6ea";
+
+/** Silhouette eye: a white oval on the head with a dark pupil and a head-coloured lid. */
+const DecalEye: React.FC<{ kit: FaceKit; side: -1 | 1; spec: ExpressionSpec; wide: boolean }> = ({ kit, side, spec, wide }) => {
+  const e = kit.eyeR * (wide ? 1.15 : 1);
+  const h = 1.3;
+  const lid = Math.min(1, spec.lid);
+  return (
+    <group>
+      <mesh geometry={G.disc(e)} material={flat(kit.decalInk ?? DECAL)} scale={[1, h, 1]} />
+      <mesh
+        geometry={G.disc(e * 0.5 * spec.pupil)}
+        material={flat(kit.decalPupil ?? PUPIL)}
+        scale={[1, 1.15, 1]}
+        position={[spec.look[0] * e * 0.35, spec.look[1] * e * 0.4 - e * 0.1, 0.0015]}
+      />
+      {lid > 0.01 ? (
+        <group rotation={[0, 0, side * spec.lidTilt]}>
+          <mesh geometry={G.disc(e * 1.7, 0, Math.PI)} material={flat(kit.skin)} position={[0, e * h * (1 - 2 * lid), 0.003]} />
+        </group>
+      ) : null}
+    </group>
+  );
+};
+
 const Eye: React.FC<{ kit: FaceKit; side: -1 | 1; spec: ExpressionSpec; blink: boolean }> = ({ kit, side, spec, blink }) => {
   const e = kit.eyeR;
-  const line = flat(PUPIL);
+  const line = flat(kit.decal ? kit.decalInk ?? DECAL : PUPIL);
   const shape = blink && (spec.eyes === "open" || spec.eyes === "wide") ? "closed" : spec.eyes;
 
   if (shape === "happy" || shape === "closed") {
@@ -120,6 +159,7 @@ const Eye: React.FC<{ kit: FaceKit; side: -1 | 1; spec: ExpressionSpec; blink: b
   }
 
   const wide = shape === "wide";
+  if (kit.decal && shape !== "spiral") return <DecalEye kit={kit} side={side} spec={spec} wide={wide} />;
   const lid = Math.min(1, spec.lid);
   const scl = wide ? 1.18 : 1;
   return (
@@ -152,8 +192,17 @@ const Eye: React.FC<{ kit: FaceKit; side: -1 | 1; spec: ExpressionSpec; blink: b
 
 const Mouth: React.FC<{ kit: FaceKit; shape: MouthShape }> = ({ kit, shape }) => {
   const w = kit.mouthWidth ?? 1;
-  const m = flat(MOUTH);
+  const m = flat(kit.decal ? kit.decalInk ?? DECAL : MOUTH);
   const t = 0.014;
+  if (kit.decal) {
+    // Flat white mouths: no teeth or tongue on a silhouette head.
+    if (shape === "grit") return <mesh geometry={G.capsule(t * 1.4, 0.1 * w)} material={m} rotation={[0, 0, Math.PI / 2]} />;
+    if (shape === "tongue") shape = "line";
+    if (shape === "grin" || shape === "yell") {
+      const tall = shape === "yell" ? 1.3 : 0.62;
+      return <mesh geometry={G.disc(0.06 * w, Math.PI, Math.PI)} material={m} scale={[1, tall, 1]} position={[0, 0.02, 0]} />;
+    }
+  }
   switch (shape) {
     case "line":
       return <mesh geometry={G.capsule(t, 0.08 * w)} material={m} rotation={[0, 0, Math.PI / 2]} />;
@@ -215,6 +264,17 @@ export const Face: React.FC<{ kit: FaceKit; expression: Expression; blink: boole
       {([-1, 1] as const).map((side) => (
         <OnHead key={`eye-${side}`} r={r} yaw={side * kit.eyeYaw} pitch={kit.eyePitch}>
           <Eye kit={kit} side={side} spec={spec} blink={blink} />
+          {kit.lashes && !blink && (spec.eyes === "open" || spec.eyes === "wide")
+            ? [0, 1, 2].map((i) => (
+                <mesh
+                  key={i}
+                  geometry={G.capsule(kit.eyeR * 0.11, kit.eyeR * 0.55)}
+                  material={flat(PUPIL)}
+                  position={[side * kit.eyeR * (0.55 + i * 0.25), kit.eyeR * (1.2 - i * 0.28), kit.eyeR * 0.05]}
+                  rotation={[0, 0, -side * (0.5 + i * 0.4)]}
+                />
+              ))
+            : null}
         </OnHead>
       ))}
       {kit.brow
@@ -241,6 +301,21 @@ export const Face: React.FC<{ kit: FaceKit; expression: Expression; blink: boole
             <group position={[0, spec.mouth === "grin" ? 0.012 : 0.002, 0.004]}>
               {[-1, 1].map((s) => (
                 <mesh key={s} geometry={G.cone(0.014, 0.04, 8)} material={vinyl(TEETH, "gloss")} position={[s * 0.035, 0.022, 0]} />
+              ))}
+            </group>
+          ) : null}
+          {kit.tusks ? (
+            <group position={[0, -0.006, 0.006]}>
+              {[-1, 1].map((s) => (
+                <Part
+                  key={s}
+                  geo={G.cone(0.022, 0.075, 10)}
+                  mat={vinyl("#f6eed6", "bone")}
+                  position={[s * 0.062 * (kit.mouthWidth ?? 1), 0.02, 0]}
+                  rotation={[0.25, 0, -s * 0.25]}
+                  ink={INK_THIN}
+                  shadow={false}
+                />
               ))}
             </group>
           ) : null}

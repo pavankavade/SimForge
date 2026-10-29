@@ -457,13 +457,13 @@ export const Scene: React.FC = () => {
       <Boulders frame={frame} />
       <BoulderShatter at={BEATS.smash} position={d2Hit} radius={R_DRUM} drumLength={DRUM_LENGTH} />
 
-      <ActorView classType="goblin" actor={goblinActor(frame)} frame={frame} />
-      <ActorView classType="rogue" actor={rogueActor(frame)} frame={frame} />
-      <ActorView classType="paladin" actor={paladinActor(frame)} frame={frame} weapon="warhammer" />
-      <ActorView classType="mage" actor={floaterActor("mage", frame)} frame={frame} />
-      <ActorView classType="rogue" actor={floaterActor("rogue", frame)} frame={frame} />
+      <ActorView classType="goblin" actor={goblinActor} frame={frame} />
+      <ActorView classType="rogue" actor={rogueActor} frame={frame} />
+      <ActorView classType="paladin" actor={paladinActor} frame={frame} weapon="warhammer" />
+      <ActorView classType="mage" actor={(f) => floaterActor("mage", f)} frame={frame} />
+      <ActorView classType="rogue" actor={(f) => floaterActor("rogue", f)} frame={frame} />
       {PARTY.map((m, i) => (
-        <ActorView key={m.classType} classType={m.classType} actor={partyActor(i, frame)} frame={frame} />
+        <ActorView key={m.classType} classType={m.classType} actor={(f) => partyActor(i, f)} frame={frame} />
       ))}
       {PARTY.map((m, i) => (
         <PartySkeleton key={`skel-${m.classType}`} index={i} frame={frame} />

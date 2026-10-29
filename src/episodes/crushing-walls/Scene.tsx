@@ -592,16 +592,16 @@ export const Scene: React.FC = () => {
         <PaladinCube appearAt={BEATS.cubeReopen} popAt={BEATS.cube} from={[0, 0, Z]} to={[CUBE.x, 0, CUBE.z]} size={CUBE.size} />
 
         {/* Characters in the room (corpses stay here and ride the lunge) */}
-        <ActorView classType="goblin" actor={goblinActor(frame)} frame={frame} />
-        <ActorView classType="rogue" actor={rogue1Actor(frame)} frame={frame} />
-        <ActorView classType="rogue" actor={rogue2Actor(frame)} frame={frame} />
+        <ActorView classType="goblin" actor={goblinActor} frame={frame} />
+        <ActorView classType="rogue" actor={rogue1Actor} frame={frame} />
+        <ActorView classType="rogue" actor={rogue2Actor} frame={frame} />
         {xray(frame) ? (
           <Skeleton variant="paladin" position={[0, 0, Z]} rotation={[0, FACE_CAMERA, 0]} scale={CHAR_SCALE * 1.06} animFrame={frame} />
         ) : (
           <ActorView classType="paladin" actor={pal} frame={frame} weapon="none" />
         )}
-        <ActorView classType="mage" actor={mage1Actor(frame)} frame={frame} />
-        <ActorView classType="mage" actor={mage2Actor(frame)} frame={frame} />
+        <ActorView classType="mage" actor={mage1Actor} frame={frame} />
+        <ActorView classType="mage" actor={mage2Actor} frame={frame} />
         {orbOn ? (
           <SpellOrb
             position={[orbX(frame), ORB_Y, Z]}
@@ -687,7 +687,7 @@ export const Scene: React.FC = () => {
 
       {/* The party and the pole live in the hall (world x) */}
       {PARTY.map((p, i) => (
-        <ActorView key={p.cls} classType={p.cls} actor={partyActor(frame, i)} frame={frame} weapon={p.cls === "paladin" ? "none" : undefined} />
+        <ActorView key={p.cls} classType={p.cls} actor={(f) => partyActor(f, i)} frame={frame} weapon={p.cls === "paladin" ? "none" : undefined} />
       ))}
       {pole ? <Pole hand={pole.hand} tip={pole.tip} length={3.2} /> : null}
       {POLE_TAPS.map((t, i) => dust(t.at, [t.x, 0.02, POLE_Z], `tap-${i}`, 0.25))}

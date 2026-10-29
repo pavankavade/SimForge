@@ -24,6 +24,7 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import sys
 import time
 import urllib.request
@@ -568,6 +569,12 @@ def build_sfx():
     for name, build in builders.items():
         da.write_wav(SFX_DIR / f"{name}.wav", build())
     print(f"{len(builders)} sfx written to {SFX_DIR}")
+    # AI takes picked with scripts/gen-sfx.py replace their procedural versions.
+    ai = sorted((SFX_DIR.parent / "sfx_ai").glob("*.wav"))
+    for wav in ai:
+        shutil.copyfile(wav, SFX_DIR / wav.name)
+    if ai:
+        print(f"{len(ai)} AI sfx laid over from {SFX_DIR.parent / 'sfx_ai'}")
 
 
 if __name__ == "__main__":

@@ -722,6 +722,103 @@ export const makeGranite = ({
   return finish(color.canvas, height.canvas, rough.canvas, [1, 1], 2.8);
 };
 
+/**
+ * Corrugated steel: soft light/dark ribs across the texture's v axis (tile v
+ * along a pipe's length), with fine scratches and a deep rib normal map.
+ */
+export const makeCorrugated = ({
+  size = 512,
+  base = "#b9bcc0",
+  ribs = 16,
+  seed = 23,
+}: {
+  size?: number;
+  base?: string;
+  ribs?: number;
+  seed?: number;
+}): SurfaceSet => {
+  const color = makeCanvas(size);
+  const height = makeCanvas(size);
+  if (!color || !height) {
+    return { map: null, normalMap: null, roughnessMap: null };
+  }
+  const rnd = mulberry32(seed);
+  const { ctx: c } = color;
+  const { ctx: h } = height;
+  c.fillStyle = base;
+  c.fillRect(0, 0, size, size);
+  for (let y = 0; y < size; y++) {
+    const s = Math.sin((y / size) * Math.PI * 2 * ribs);
+    h.fillStyle = `rgb(${Math.round(128 + s * 110)},0,0)`;
+    h.fillRect(0, y, size, 1);
+    // Light catches the crest, the trough goes dark.
+    c.fillStyle = s > 0 ? `rgba(255,255,255,${s * 0.22})` : `rgba(0,0,0,${-s * 0.28})`;
+    c.fillRect(0, y, size, 1);
+  }
+  for (let i = 0; i < 260; i++) {
+    const x = rnd() * size;
+    const y = rnd() * size;
+    c.strokeStyle = `rgba(${rnd() > 0.5 ? "255,255,255" : "0,0,0"},${0.04 + rnd() * 0.06})`;
+    c.lineWidth = 0.6 + rnd();
+    c.beginPath();
+    c.moveTo(x, y);
+    c.lineTo(x + (rnd() - 0.5) * 60, y + (rnd() - 0.5) * 6);
+    c.stroke();
+  }
+  speckle(c, size, rnd, 1200, 0.05);
+  return finish(color.canvas, height.canvas, null, [1, 1], 3.2);
+};
+
+/** Mown lawn: broad light/dark stripes along u plus fine blade speckle. */
+export const makeLawn = ({
+  size = 512,
+  light = "#6fbf4a",
+  dark = "#4f9e3a",
+  stripes = 4,
+  seed = 31,
+}: {
+  size?: number;
+  light?: string;
+  dark?: string;
+  stripes?: number;
+  seed?: number;
+}): SurfaceSet => {
+  const color = makeCanvas(size);
+  const height = makeCanvas(size);
+  if (!color || !height) {
+    return { map: null, normalMap: null, roughnessMap: null };
+  }
+  const rnd = mulberry32(seed);
+  const { ctx: c } = color;
+  const { ctx: h } = height;
+  const band = size / (stripes * 2);
+  for (let i = 0; i < stripes * 2; i++) {
+    c.fillStyle = i % 2 ? dark : light;
+    c.fillRect(i * band, 0, band, size);
+  }
+  h.fillStyle = "#808080";
+  h.fillRect(0, 0, size, size);
+  // Blades: short strokes, lighter tips.
+  for (let i = 0; i < 9000; i++) {
+    const x = rnd() * size;
+    const y = rnd() * size;
+    const len = 3 + rnd() * 6;
+    const l = rnd();
+    c.strokeStyle = l > 0.5 ? `rgba(190,240,120,${0.12 + l * 0.1})` : `rgba(20,60,20,${0.1 + l * 0.12})`;
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(x, y);
+    c.lineTo(x + (rnd() - 0.5) * 2, y - len);
+    c.stroke();
+    h.strokeStyle = `rgba(255,255,255,${0.2 + l * 0.3})`;
+    h.beginPath();
+    h.moveTo(x, y);
+    h.lineTo(x, y - len);
+    h.stroke();
+  }
+  return finish(color.canvas, height.canvas, null, [1, 1], 1.6);
+};
+
 /** Cache so multiple components share one baked texture set. */
 const cache = new Map<string, SurfaceSet>();
 
