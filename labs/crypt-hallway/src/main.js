@@ -269,7 +269,7 @@ if (CAM) {
     updateProps(props);
     updateTraps(props);
     updateFx(f);
-    drawHud(anim.hudAt(f));
+    if (!params.has("clean")) drawHud(anim.hudAt(f)); // ?clean=1: no captions/badges (thumbnail plates)
     const c = anim.CAMS[CAM](f);
     camera.fov = c.fov;
     camera.position.set(...c.pos);
