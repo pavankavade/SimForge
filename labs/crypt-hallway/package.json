@@ -5,7 +5,8 @@
   "description": "Standalone realism test on the latest three.js (WebGPURenderer + TSL). Not part of the Remotion episodes.",
   "scripts": {
     "dev": "vite --port 5190 --strictPort",
-    "build": "vite build"
+    "build": "vite build",
+    "deploy": "vite build && npx --yes wrangler@4 pages deploy dist --project-name simforge-game --branch main --commit-dirty=true"
   },
   "dependencies": {
     "@react-three/fiber": "^9.8.2",
