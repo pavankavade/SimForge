@@ -1,7 +1,7 @@
 import type React from "react";
 import { useCurrentFrame } from "remotion";
 import { AdventurerUnit, hipHeight, type AdventurerClass, type AdventurerPose, type Expression } from "../../artifacts/characters/hero";
-import { Cow, House, Moon, Piggyback, SkyRig, Tilted, YardFence } from "../../artifacts/sky";
+import { Cow, House, Moon, Piggyback, SkyRig, Tilted, YardFence, riderOffset } from "../../artifacts/sky";
 import {
   BALE_R,
   Balloons,
@@ -35,7 +35,7 @@ import {
   type GlobeArrow,
   type GlobePin,
 } from "../../artifacts/teleport";
-import { dust, jellySplash } from "../../kit";
+import { ActorView, CHAR_SCALE, dust, easeOutCubic, jellySplash, type Actor, type ActorTrack } from "../../kit";
 import {
   ARRIVE_X,
   BEATS,
@@ -64,15 +64,14 @@ type P3 = [number, number, number];
 const KIT: AdventurerClass = "flyKit";
 const TEO: AdventurerClass = "grandpaTeo";
 
-const Person: React.FC<{ who: AdventurerClass; pose?: AdventurerPose; at: P3; yaw?: number; expression?: Expression; frame: number; weapon?: "none" | "cane" }> = ({
-  who,
-  pose = "idle",
-  at,
-  yaw = 0,
-  expression,
-  frame,
-  weapon,
-}) => <AdventurerUnit classType={who} pose={pose} expression={expression} weapon={weapon ?? (who === TEO ? "none" : undefined)} position={at} rotation={[0, yaw, 0]} animFrame={frame} />;
+/** The what-if cast plays at class scale 1 (ActorView multiplies by CHAR_SCALE). */
+const UNIT = 1 / CHAR_SCALE;
+const act = (pose: AdventurerPose, at: P3, yaw: number, expression?: Expression, more: Partial<Actor> = {}): Actor => ({ pose, position: at, yaw, expression, scale: UNIT, ...more });
+
+/** One character's performance in a shot: ActorView eases every pose and facing switch. */
+const Cast: React.FC<{ who: AdventurerClass; track: ActorTrack; frame: number; weapon?: "none" | "cane" }> = ({ who, track, frame, weapon }) => (
+  <ActorView classType={who} actor={track} frame={frame} weapon={weapon ?? (who === TEO ? "none" : undefined)} />
+);
 
 /** Seated feet height so the hips rest on a surface at `top`. */
 const sitY = (who: AdventurerClass, top: number) => top + 0.1 - hipHeight(who);
@@ -126,9 +125,13 @@ const seatWorld = (frame: number): P3 => {
   return [SWING_X + s[2], s[1], Z - s[0]];
 };
 
+const yardKit: ActorTrack = (f) => {
+  const spot = SPOTS.filter((s) => f >= s.at).slice(-1)[0];
+  return act(spot.pose, spot.pos, spot.yaw, spot.expr);
+};
+
 const YardShot: React.FC<{ frame: number }> = ({ frame }) => {
   const onSwing = frame >= SIT_ON_SWING;
-  const spot = SPOTS.filter((s) => frame >= s.at).slice(-1)[0];
   const seat = seatWorld(frame);
   const hip = hipHeight(KIT);
   return (
@@ -139,7 +142,7 @@ const YardShot: React.FC<{ frame: number }> = ({ frame }) => {
           <AdventurerUnit classType={KIT} pose="ride" expression={frame >= BEATS.swing ? "happy" : "focus"} animFrame={frame} />
         </Tilted>
       ) : (
-        <Person who={KIT} pose={spot.pose} at={spot.pos} yaw={spot.yaw} expression={spot.expr} frame={frame} />
+        <Cast who={KIT} track={yardKit} frame={frame} />
       )}
       {SPOTS.slice(1).map((s, i) => (
         <Blink key={`o${i}`} frame={frame} at={s.at} position={SPOTS[i].pos} kind="out" seed={i} />
@@ -158,28 +161,37 @@ const YardShot: React.FC<{ frame: number }> = ({ frame }) => {
 // ---------------------------------------------------------------------------
 const kitPorchY = (x: number) => (x < PORCH_END ? PORCH_TOP : Math.max(0, PORCH_TOP - (x - PORCH_END) * 0.6));
 
+/** Stuck head-first in the hedge (tilt is a world roll: negative leans toward +x). */
+const STUCK: P3 = [HEDGE_X - 0.85, 0, Z];
+const STUCK_TILT = -1.25;
+const UP: P3 = [HEDGE_X - 1.6, 0, Z + 0.3];
+/** Pulling free of the hedge: a crouch back onto the feet, then dazed on "standing". */
+const GET_UP: [number, number] = [BEATS.standing - 26, BEATS.standing - 12];
+
+const porchKit: ActorTrack = (f) => {
+  if (f < BEATS.hedge) {
+    const x = kitRunX(f);
+    return act("run", [x, kitPorchY(x), Z], EAST, f >= BEATS.twelve + 20 ? "scared" : "shock", { tilt: -0.35, pivot: hipHeight(KIT), speed: 2.6 });
+  }
+  if (f < GET_UP[0]) return act("fall", STUCK, EAST, "dazed", { tilt: STUCK_TILT, pivot: 0.5 });
+  if (f < GET_UP[1]) {
+    const t = easeOutCubic(progress(f, GET_UP));
+    return act("cower", [lerp(STUCK[0], UP[0], t), 0, lerp(STUCK[2], UP[2], t)], EAST, "pain", { tilt: STUCK_TILT * (1 - t), pivot: 0.5 });
+  }
+  return act("idle", UP, -0.25, f >= BEATS.standing ? "dazed" : "pain");
+};
+
+const porchTeo: ActorTrack = (f) => act(f >= BEATS.hedge ? "point" : "idle", [HEDGE_X - 3.2, 0, Z - 1.6], 0.7, f >= BEATS.hedge ? "shock" : "neutral");
+
 const PorchShot: React.FC<{ frame: number }> = ({ frame }) => {
   const x = kitRunX(frame);
   const hit = progress(frame, [BEATS.hedge, BEATS.hedge + 24]);
-  const stuck = frame >= BEATS.hedge && frame < BEATS.standing - 20;
-  const up = frame >= BEATS.standing - 20;
   const v = runSpeed(frame);
   return (
     <>
       <BackyardSet frame={frame} hedgeHit={hit} />
-      {/* The empty swing still swinging back on the left */}
-      {!stuck && !up ? (
-        <Tilted position={[x, kitPorchY(x), Z]} yaw={EAST} pitch={0.35} pivot={hipHeight(KIT)}>
-          <AdventurerUnit classType={KIT} pose="run" expression={frame >= BEATS.twelve + 20 ? "scared" : "shock"} animFrame={frame * 2.6} />
-        </Tilted>
-      ) : null}
-      {stuck ? (
-        <Tilted position={[HEDGE_X - 0.85, 0, Z]} yaw={EAST} pitch={1.25} pivot={0.5}>
-          <AdventurerUnit classType={KIT} pose="fall" expression="dazed" animFrame={frame} />
-        </Tilted>
-      ) : null}
-      {up ? <Person who={KIT} pose="idle" at={[HEDGE_X - 1.6, 0, Z + 0.3]} yaw={-0.25} expression={frame >= BEATS.standing ? "dazed" : "pain"} frame={frame} /> : null}
-      <Person who={TEO} pose={frame >= BEATS.hedge ? "point" : "idle"} at={[HEDGE_X - 3.2, 0, Z - 1.6]} yaw={0.7} expression={frame >= BEATS.hedge ? "shock" : "neutral"} frame={frame} />
+      <Cast who={KIT} track={porchKit} frame={frame} />
+      <Cast who={TEO} track={porchTeo} frame={frame} />
       <SpeedLines frame={frame} center={[x - 0.3, kitPorchY(x) + 1.0, Z]} speed={v / 0.18} />
       <Blink frame={frame} at={BEATS.leave} position={[ARRIVE_X, PORCH_TOP, Z]} kind="in" seed={30} />
       {dust(BEATS.hedge, [HEDGE_X - 0.6, 0.9, Z], "hedge-leaves", 0.8)}
@@ -304,31 +316,52 @@ const CAKE_AT: P3 = [PARTY_X, TABLE_TOP + 0.03, TABLE_Z];
 const KIT_PARTY: P3 = [PARTY_X - 3.0, 0, Z + 0.4];
 const TEO_PARTY: P3 = [PARTY_X + 2.0, 0, Z + 0.2];
 
-const Guests: React.FC<{ frame: number; cheer?: boolean }> = ({ frame, cheer }) => (
+/** Guests at the table; `cheerAt` turns them to cheering (each at its own tempo, so they never move in sync). */
+const GUESTS: { who: AdventurerClass; at: P3; yaw: number; speed: number }[] = [
+  { who: "mom", at: [PARTY_X - 0.6, 0, TABLE_Z - 0.9], yaw: 0.1, speed: 1 },
+  { who: "dad", at: [PARTY_X + 1.2, 0, TABLE_Z - 1.0], yaw: -0.3, speed: 0.92 },
+  { who: "kid", at: [PARTY_X + 0.3, 0, TABLE_Z - 0.8], yaw: -0.1, speed: 1.1 },
+];
+const Guests: React.FC<{ frame: number; cheerAt?: number }> = ({ frame, cheerAt = Infinity }) => (
   <>
-    <Person who="mom" pose={cheer ? "cheer" : "idle"} at={[PARTY_X - 0.6, 0, TABLE_Z - 0.9]} yaw={0.1} frame={frame} />
-    <Person who="dad" pose={cheer ? "cheer" : "idle"} at={[PARTY_X + 1.2, 0, TABLE_Z - 1.0]} yaw={-0.3} frame={frame + 9} />
-    <Person who="kid" pose={cheer ? "cheer" : "idle"} at={[PARTY_X + 0.3, 0, TABLE_Z - 0.8]} yaw={-0.1} frame={frame + 17} />
+    {GUESTS.map((g) => (
+      <Cast key={g.who} who={g.who} track={(f) => act(f >= cheerAt ? "cheer" : "idle", g.at, g.yaw, undefined, { speed: g.speed })} frame={frame} />
+    ))}
   </>
 );
 
-const PartyShot: React.FC<{ frame: number }> = ({ frame }) => {
-  const grabbed = frame >= BEATS.grabs;
-  const kitPose: AdventurerPose = frame >= BEATS.easy && frame < BEATS.grabs ? "point" : "idle";
-  const kitExpr: Expression = frame >= BEATS.grabs ? "shock" : frame >= BEATS.easy ? "smug" : frame >= BEATS.ninety ? "dazed" : "happy";
-  const teoAt: P3 = grabbed ? [KIT_PARTY[0] + 0.75, 0, KIT_PARTY[2] - 0.35] : TEO_PARTY;
-  return (
-    <>
-      <BackyardSet frame={frame} party={1} />
-      <Cake position={CAKE_AT} lit={0} frame={frame} />
-      <Person who="sisterTess" pose={frame >= BEATS.snowball ? "cheer" : "idle"} at={TESS_AT} yaw={0.4} expression="happy" frame={frame} />
-      <Guests frame={frame} />
-      <Person who={KIT} pose={kitPose} at={KIT_PARTY} yaw={kitPose === "point" ? 0.2 : 0.35} expression={kitExpr} frame={frame} />
-      <Person who={TEO} pose={grabbed && frame < BEATS.maps - 10 ? "point" : "idle"} at={teoAt} yaw={grabbed ? -1.2 : -0.5} expression={grabbed ? "angry" : "smug"} frame={frame} />
-      {frame >= BEATS.maps - 10 ? <PaperMap position={[teoAt[0] - 0.25, 1.15, teoAt[2] + 0.35]} rotation={[0, -0.6, 0]} open={grow(frame, BEATS.maps - 10, 10)} /> : null}
-    </>
-  );
+/** Grandpa sprints in from the table and has Kit by the collar on "grabs". */
+const TEO_GRAB: P3 = [KIT_PARTY[0] + 0.75, 0, KIT_PARTY[2] - 0.35];
+const GRAB_RUN: [number, number] = [BEATS.grabs - 20, BEATS.grabs];
+
+const partyKit: ActorTrack = (f) => {
+  const pointing = f >= BEATS.easy && f < BEATS.grabs;
+  const expression: Expression = f >= BEATS.grabs ? "shock" : f >= BEATS.easy ? "smug" : f >= BEATS.ninety ? "dazed" : "happy";
+  return act(pointing ? "point" : "idle", KIT_PARTY, pointing ? 0.2 : f >= BEATS.grabs ? 0.9 : 0.35, expression);
 };
+
+const partyTeo: ActorTrack = (f) => {
+  if (f < GRAB_RUN[0]) return act("idle", TEO_PARTY, -0.5, "smug");
+  if (f < GRAB_RUN[1]) {
+    const t = progress(f, GRAB_RUN);
+    return act("run", [lerp(TEO_PARTY[0], TEO_GRAB[0], t), 0, lerp(TEO_PARTY[2], TEO_GRAB[2], t)], -Math.PI / 2, "angry", { speed: 2.2 });
+  }
+  return act(f < BEATS.maps - 10 ? "point" : "idle", TEO_GRAB, -1.2, "angry");
+};
+
+const partyTess: ActorTrack = (f) => act(f >= BEATS.snowball ? "cheer" : "idle", TESS_AT, 0.4, "happy");
+
+const PartyShot: React.FC<{ frame: number }> = ({ frame }) => (
+  <>
+    <BackyardSet frame={frame} party={1} />
+    <Cake position={CAKE_AT} lit={0} frame={frame} />
+    <Cast who="sisterTess" track={partyTess} frame={frame} />
+    <Guests frame={frame} />
+    <Cast who={KIT} track={partyKit} frame={frame} />
+    <Cast who={TEO} track={partyTeo} frame={frame} />
+    {frame >= BEATS.maps - 10 ? <PaperMap position={[TEO_GRAB[0] - 0.25, 1.15, TEO_GRAB[2] + 0.35]} rotation={[0, -0.6, 0]} open={grow(frame, BEATS.maps - 10, 10)} /> : null}
+  </>
+);
 
 // ---------------------------------------------------------------------------
 // The ladder: one demo hop in the yard, then the piggyback hops north.
@@ -336,9 +369,24 @@ const PartyShot: React.FC<{ frame: number }> = ({ frame }) => {
 const WALK = 1.7 * MPH;
 export const LADDER_X = 5;
 
+const ladderKitX = (f: number) => (f >= BEATS.land2 - 3 ? LADDER_X + 3 + Math.min(f - BEATS.land2 + 3, 30) * WALK : LADDER_X);
+const ladderKit: ActorTrack = (f) => {
+  const hopped = f >= BEATS.land2 - 3;
+  const stepping = hopped && f < BEATS.land2 + 27;
+  return act(stepping ? "walk" : "idle", [ladderKitX(f), 0, Z], stepping ? EAST : 0.4, hopped ? "happy" : "focus");
+};
+/** Grandpa stays put for the demo hop, then ambles over to climb on. */
+const TEO_AMBLE: [number, number] = [BEATS.land2 + 12, BEATS.climbs - 6];
+const ladderTeo: ActorTrack = (f) => {
+  const x0 = LADDER_X - 1.2;
+  const x1 = ladderKitX(BEATS.climbs) - 0.55;
+  const t = progress(f, TEO_AMBLE);
+  const ambling = t > 0 && t < 1;
+  return act(ambling ? "walk" : "idle", [lerp(x0, x1, t), 0, lerp(Z - 0.6, Z - 0.3, t)], ambling ? EAST : 0.6, "smug", { speed: 0.7 });
+};
+
 const LadderShot: React.FC<{ frame: number }> = ({ frame }) => {
-  const hopped = frame >= BEATS.land2 - 3;
-  const kitX = hopped ? LADDER_X + 3 + Math.min(frame - BEATS.land2 + 3, 30) * WALK : LADDER_X;
+  const kitX = ladderKitX(frame);
   const mounted = frame >= BEATS.climbs;
   return (
     <>
@@ -350,8 +398,8 @@ const LadderShot: React.FC<{ frame: number }> = ({ frame }) => {
         </>
       ) : (
         <>
-          <Person who={KIT} pose={hopped && frame < BEATS.land2 + 24 ? "walk" : "idle"} at={[kitX, 0, Z]} yaw={hopped && frame < BEATS.land2 + 24 ? EAST : 0.4} expression={hopped ? "happy" : "focus"} frame={frame} />
-          <Person who={TEO} pose="idle" at={[kitX - 1.2, 0, Z - 0.6]} yaw={0.6} expression="smug" frame={frame} weapon="cane" />
+          <Cast who={KIT} track={ladderKit} frame={frame} />
+          <Cast who={TEO} track={ladderTeo} frame={frame} weapon="cane" />
         </>
       )}
       <Blink frame={frame} at={BEATS.land2 - 3} position={[LADDER_X, 0, Z]} kind="out" seed={40} />
@@ -370,19 +418,21 @@ const HopPair: React.FC<{ frame: number; at: number; x0?: number; steps?: number
   carrierExpression = "focus",
   riderExpression = "happy",
 }) => {
-  const t = Math.min(Math.max(0, frame - at), steps);
-  const x = x0 + t * WALK * 2.2;
-  const walking = frame >= at && frame < at + steps;
+  const pairX = (f: number) => x0 + Math.min(Math.max(0, f - at), steps) * WALK * 2.2;
+  const x = pairX(frame);
+  const yaw = EAST - 0.5;
+  const ride = riderOffset(KIT, TEO);
+  // The carrier steps out of the blink, then settles into the carry; the rider sits on its back.
+  const carrier: ActorTrack = (f) => {
+    const walking = f >= at && f < at + steps;
+    return act(walking ? "walk" : "carry", [pairX(f), 0, Z], yaw, carrierExpression, { speed: walking ? 1.4 : 1 });
+  };
+  const rider: ActorTrack = (f) =>
+    act("ride", [pairX(f) + ride[2] * Math.sin(yaw), ride[1], Z + ride[2] * Math.cos(yaw)], yaw, riderExpression);
   return (
     <>
-      {walking ? (
-        <Tilted position={[x, 0, Z]} yaw={EAST - 0.5} pitch={0.08} pivot={hipHeight(KIT)}>
-          <AdventurerUnit classType={KIT} pose="walk" expression={carrierExpression} animFrame={frame * 1.4} />
-          <AdventurerUnit classType={TEO} pose="ride" weapon="none" expression={riderExpression} position={[0, hipHeight(KIT) + 0.2 - hipHeight(TEO), -0.34]} animFrame={frame} />
-        </Tilted>
-      ) : (
-        <Piggyback carrier={KIT} rider={TEO} position={[x, 0, Z]} yaw={EAST - 0.5} carrierExpression={carrierExpression} riderExpression={riderExpression} frame={frame} />
-      )}
+      <Cast who={KIT} track={carrier} frame={frame} />
+      <Cast who={TEO} track={rider} frame={frame} />
       {snowball > 0 ? <Snowball position={[x + 0.25, 1.05, Z + 0.35]} r={snowball} /> : null}
       <Blink frame={frame} at={at} position={[x0, 0, Z]} kind="in" seed={at} />
     </>
@@ -499,8 +549,8 @@ const HandJumpShot: React.FC<{ frame: number }> = ({ frame }) => {
       <Hayfield frame={frame + 1000} knock={BEATS.bales} hitX={0} />
       {!gone ? (
         <>
-          <Person who={KIT} pose={frame >= BEATS.hand ? "point" : "idle"} at={[-0.35, 0, Z]} yaw={0.9} expression="focus" frame={frame} />
-          <Person who={TEO} pose={frame >= BEATS.hand ? "point" : "idle"} at={[0.45, 0, Z]} yaw={-0.9} expression="smug" frame={frame} />
+          <Cast who={KIT} track={(f) => act(f >= BEATS.hand ? "point" : "idle", [-0.35, 0, Z], 0.9, "focus")} frame={frame} />
+          <Cast who={TEO} track={(f) => act(f >= BEATS.hand ? "point" : "idle", [0.45, 0, Z], -0.9, "smug")} frame={frame} />
         </>
       ) : null}
       <Blink frame={frame} at={BEATS.axisJump} position={[0.05, 0, Z]} kind="out" seed={70} height={2.4} />
@@ -569,28 +619,28 @@ export const snowballR = (frame: number) => {
   return lerp(0.08, 0.3, easeInOut(progress(frame, [BEATS.pack, BEATS.biggest + 10])));
 };
 
+const kitShiver = (f: number) => (f >= BEATS.colder ? Math.sin(f * 2.1) * 0.015 : 0);
+
+const patagoniaKit: ActorTrack = (f) => {
+  if (f < BEATS.step - 3) return null;
+  const packing = f >= BEATS.pack && f < BEATS.biggest;
+  // A double-take at the glacier: a glance up, a beat, then the full turn with the shock face.
+  const look = f >= BEATS.glacier + 8 && f < BEATS.sunSpot ? Math.PI + 0.3 : f >= BEATS.glacier && f < BEATS.sunSpot ? 1.2 : 0.35;
+  const expression: Expression = f >= BEATS.biggest ? "happy" : f >= BEATS.colder ? "scared" : f >= BEATS.glacier + 7 ? "shock" : "happy";
+  return act(packing ? "cower" : f >= BEATS.biggest ? "cheer" : "idle", [-0.45 + kitShiver(f), 0, Z], look, expression);
+};
+
+const patagoniaTeo: ActorTrack = (f) => (f < BEATS.step - 3 ? null : act("idle", [0.6, 0, Z - 0.3], f >= BEATS.jacket ? 0.1 : -0.4, f >= BEATS.jacket ? "smug" : "happy"));
+
 const PatagoniaShot: React.FC<{ frame: number }> = ({ frame }) => {
-  const arrived = frame >= BEATS.step - 3;
-  const shiver = frame >= BEATS.colder ? Math.sin(frame * 2.1) * 0.015 : 0;
   const packing = frame >= BEATS.pack && frame < BEATS.biggest;
   const r = snowballR(frame);
-  const kitAt: P3 = [-0.45 + shiver, 0, Z];
+  const kitAt: P3 = [-0.45 + kitShiver(frame), 0, Z];
   return (
     <>
       <PatagoniaSet frame={frame} />
-      {arrived ? (
-        <>
-          <Person
-            who={KIT}
-            pose={packing ? "cower" : frame >= BEATS.biggest ? "cheer" : "idle"}
-            at={kitAt}
-            yaw={frame >= BEATS.glacier && frame < BEATS.sunSpot ? Math.PI + 0.3 : 0.35}
-            expression={frame >= BEATS.biggest ? "happy" : frame >= BEATS.colder ? "scared" : frame >= BEATS.glacier ? "shock" : "happy"}
-            frame={frame}
-          />
-          <Person who={TEO} pose="idle" at={[0.6, 0, Z - 0.3]} yaw={frame >= BEATS.jacket ? 0.1 : -0.4} expression={frame >= BEATS.jacket ? "smug" : "happy"} frame={frame} />
-        </>
-      ) : null}
+      <Cast who={KIT} track={patagoniaKit} frame={frame} />
+      <Cast who={TEO} track={patagoniaTeo} frame={frame} />
       {r > 0 ? <Snowball position={packing ? [kitAt[0] + 0.05, 0.62, Z + 0.4] : [kitAt[0], 2.05 + r * 0.6, Z + 0.1]} r={r} /> : null}
       <Blink frame={frame} at={BEATS.step - 3} position={[0.05, 0, Z]} kind="in" color="#bff3ff" height={2.4} seed={80} />
       {dust(BEATS.step, [-0.45, 0.05, Z], "snow-step", 0.6)}
@@ -612,9 +662,9 @@ const HayReturnShot: React.FC<{ frame: number }> = ({ frame }) => {
       <Hayfield frame={frame + 1000} knock={BEATS.bales} hitX={0} />
       {frame >= BEATS.stepBack - 2 && !gone ? (
         <>
-          <Person who={KIT} pose="carry" at={[-0.4, 0, Z]} yaw={0.4} expression="happy" frame={frame} />
+          <Cast who={KIT} track={() => act("carry", [-0.4, 0, Z], 0.4, "happy")} frame={frame} />
           <Snowball position={[-0.2, 1.0, Z + 0.4]} r={r} />
-          <Person who={TEO} pose="idle" at={[0.6, 0, Z - 0.3]} yaw={-0.3} expression={frame >= BEATS.eleven ? "focus" : "smug"} frame={frame} />
+          <Cast who={TEO} track={(f) => act("idle", [0.6, 0, Z - 0.3], f >= BEATS.eleven ? 0.1 : -0.3, f >= BEATS.eleven ? "focus" : "smug")} frame={frame} />
         </>
       ) : null}
       <Blink frame={frame} at={BEATS.stepBack - 2} position={[0.1, 0, Z]} kind="in" seed={90} height={2.4} />
@@ -654,19 +704,21 @@ const BackyardsShot: React.FC<{ frame: number }> = ({ frame }) => (
   </>
 );
 
+const ARRIVE_STEPS = 50;
+const arriveX = (f: number) => KIT_PARTY[0] - 4 + Math.min(Math.max(0, f - BEATS.lastHop), ARRIVE_STEPS) * WALK * 2.2;
+const arriving = (f: number) => f - BEATS.lastHop < ARRIVE_STEPS;
+
 const ArriveShot: React.FC<{ frame: number }> = ({ frame }) => {
-  const t = Math.max(0, frame - BEATS.lastHop);
-  const x = KIT_PARTY[0] - 4 + Math.min(t, 50) * WALK * 2.2;
-  const walking = t < 50;
+  const x = arriveX(frame);
   return (
     <>
       <BackyardSet frame={frame} party={1} />
       <Cake position={CAKE_AT} lit={1} frame={frame} />
-      <Person who="sisterTess" pose="idle" at={TESS_AT} yaw={0.4} expression="neutral" frame={frame} />
+      <Cast who="sisterTess" track={() => act("idle", TESS_AT, 0.4, "neutral")} frame={frame} />
       <Guests frame={frame} />
-      <Person who={KIT} pose={walking ? "walk" : "carry"} at={[x, 0, KIT_PARTY[2]]} yaw={walking ? EAST : 0.35} expression="happy" frame={frame} />
+      <Cast who={KIT} track={(f) => act(arriving(f) ? "walk" : "carry", [arriveX(f), 0, KIT_PARTY[2]], arriving(f) ? EAST : 0.35, "happy")} frame={frame} />
       <Snowball position={[x + 0.2, 1.0, KIT_PARTY[2] + 0.4]} r={homeSnowball(frame)} />
-      <Person who={TEO} pose={walking ? "walk" : "idle"} at={[x - 1.0, 0, KIT_PARTY[2] - 0.6]} yaw={walking ? EAST : 0.2} expression="smug" frame={frame + 7} />
+      <Cast who={TEO} track={(f) => act(arriving(f) ? "walk" : "idle", [arriveX(f) - 1.0, 0, KIT_PARTY[2] - 0.6], arriving(f) ? EAST : 0.2, "smug", { speed: 0.95 })} frame={frame} />
       <Blink frame={frame} at={BEATS.lastHop} position={[KIT_PARTY[0] - 4.4, 0, KIT_PARTY[2] - 0.3]} kind="in" seed={100} height={2.4} />
     </>
   );
@@ -684,6 +736,33 @@ export const snowballFlight = (frame: number): P3 => {
   return [lerp(a[0], b[0], t), lerp(a[1], b[1], t) + Math.sin(Math.PI * t) * 0.5, lerp(a[2], b[2], t)];
 };
 
+/** Tess: a big breath (crouch), the blow, then the snowball: a windup before the throw, a cheer on the hit. */
+const payoffTess: ActorTrack = (f) => {
+  const thrown = f >= BEATS.hits - 6;
+  const hit = f >= BEATS.face;
+  const pose: AdventurerPose = thrown && !hit ? "windup" : hit ? "cheer" : f >= BEATS.breath && f < BEATS.blows + 14 ? "cower" : "idle";
+  const expression: Expression = hit ? "happy" : f >= BEATS.grabsIt ? "smug" : f >= BEATS.holdOut ? "shock" : "focus";
+  return act(pose, TESS_AT, f >= BEATS.grabsIt ? -0.9 : TESS_YAW, expression);
+};
+
+/** Kit holds out the snowball, lets go, and takes it in the face: a flinch, rocked back a step, feet planted. */
+const KNOCK_BACK = 0.25;
+const KNOCK_TILT = 0.18;
+const knock = (f: number) => easeOutCubic(progress(f, [BEATS.face, BEATS.face + 8]));
+/** Where the splat sits on Kit's face while he rocks back. */
+const faceSplat = (f: number): P3 => {
+  const t = knock(f);
+  const above = 1.42 - hipHeight(KIT);
+  return [KIT_GIVE[0] + 0.12 - KNOCK_BACK * t - Math.sin(KNOCK_TILT * t) * above, 1.42 - (1 - Math.cos(KNOCK_TILT * t)) * above, KIT_GIVE[2] + 0.22];
+};
+const payoffKit: ActorTrack = (f) => {
+  if (f >= BEATS.face) {
+    const t = knock(f);
+    return act("cower", [KIT_GIVE[0] - KNOCK_BACK * t, 0, KIT_GIVE[2]], 0.9, "shock", { tilt: KNOCK_TILT * t, pivot: hipHeight(KIT) });
+  }
+  return act(f >= BEATS.holdOut && f < BEATS.grabsIt ? "carry" : "idle", KIT_GIVE, 0.9, "happy");
+};
+
 const PayoffShot: React.FC<{ frame: number }> = ({ frame }) => {
   const blow = progress(frame, [BEATS.blows, BEATS.blows + 14]);
   const lit = 1 - blow;
@@ -696,18 +775,11 @@ const PayoffShot: React.FC<{ frame: number }> = ({ frame }) => {
     <>
       <BackyardSet frame={frame} party={1} />
       <Cake position={CAKE_AT} lit={lit} blow={blow} frame={frame} />
-      <Person
-        who="sisterTess"
-        pose={thrown && !hit ? "windup" : hit ? "cheer" : frame >= BEATS.breath && frame < BEATS.blows + 14 ? "cower" : "idle"}
-        at={TESS_AT}
-        yaw={given ? -0.9 : TESS_YAW}
-        expression={hit ? "happy" : frame >= BEATS.grabsIt ? "smug" : frame >= BEATS.holdOut ? "shock" : "focus"}
-        frame={frame}
-      />
-      <Guests frame={frame} cheer={frame >= BEATS.blows + 10} />
-      <Person who={KIT} pose={hit ? "fall" : frame >= BEATS.holdOut && !given ? "carry" : "idle"} at={KIT_GIVE} yaw={0.9} expression={hit ? "shock" : "happy"} frame={frame} />
-      {hit ? <Snowball position={[KIT_GIVE[0] + 0.12, 1.42, KIT_GIVE[2] + 0.22]} r={0.2} /> : <Snowball position={ballAt} r={r} />}
-      <Person who={TEO} pose={hit ? "cheer" : "idle"} at={[PARTY_X + 2.4, 0, Z + 0.1]} yaw={-0.6} expression={hit ? "happy" : "smug"} frame={frame} />
+      <Cast who="sisterTess" track={payoffTess} frame={frame} />
+      <Guests frame={frame} cheerAt={BEATS.blows + 10} />
+      <Cast who={KIT} track={payoffKit} frame={frame} />
+      {hit ? <Snowball position={faceSplat(frame)} r={0.2} /> : <Snowball position={ballAt} r={r} />}
+      <Cast who={TEO} track={(f) => act(f >= BEATS.face ? "cheer" : "idle", [PARTY_X + 2.4, 0, Z + 0.1], -0.6, f >= BEATS.face ? "happy" : "smug")} frame={frame} />
       {jellySplash(BEATS.face, [KIT_GIVE[0] + 0.1, 1.45, KIT_GIVE[2] + 0.25], "snow-splat", "#ffffff")}
     </>
   );
@@ -728,8 +800,8 @@ const NightShot: React.FC<{ frame: number }> = ({ frame }) => (
     <Moon position={[-60, 120, -300]} size={12} />
     <pointLight position={[HOUSE_X - 1.2, 2.6, Z + 1.6]} intensity={30} color="#ffd9a8" distance={14} decay={1.5} />
     <pointLight position={[HOUSE_X - 1.0, 1.8, Z + 4.5]} intensity={22} color="#ffe2c0" distance={10} decay={1.5} />
-    <Person who={TEO} pose="ride" at={[HOUSE_X - 1.2, sitY(TEO, PORCH_TOP * 0.66), Z + 1.55]} yaw={0.2} expression="smug" frame={frame} />
-    <Person who={KIT} pose="ride" at={[HOUSE_X - 2.1, sitY(KIT, PORCH_TOP * 0.66), Z + 1.6]} yaw={0.4} expression="happy" frame={frame} />
+    <Cast who={TEO} track={(f) => act("ride", [HOUSE_X - 1.2, sitY(TEO, PORCH_TOP * 0.66), Z + 1.55], 0.2, f >= BEATS.stops ? "happy" : "smug")} frame={frame} />
+    <Cast who={KIT} track={(f) => act("ride", [HOUSE_X - 2.1, sitY(KIT, PORCH_TOP * 0.66), Z + 1.6], f >= BEATS.spinsAgain ? 0.75 : 0.4, f >= BEATS.stops ? "focus" : "happy")} frame={frame} />
     <Globe position={NIGHT_GLOBE} radius={0.09} spin={nightSpin(frame)} />
   </>
 );
@@ -767,8 +839,8 @@ export const Scene: React.FC = () => {
       {shot === "still" ? (
         <>
           <BackyardSet frame={frame} />
-          <Person who={KIT} pose="idle" at={[HEDGE_X - 4, 0, Z + 0.3]} yaw={0.2} expression="dazed" frame={frame} />
-          <Person who={TEO} pose="idle" at={[HEDGE_X - 2.8, 0, Z - 0.6]} yaw={-0.3} expression="smug" frame={frame} />
+          <Cast who={KIT} track={() => act("idle", [HEDGE_X - 4, 0, Z + 0.3], 0.2, "dazed")} frame={frame} />
+          <Cast who={TEO} track={() => act("idle", [HEDGE_X - 2.8, 0, Z - 0.6], -0.3, "smug")} frame={frame} />
         </>
       ) : null}
       {shot === "orbit" ? <OrbitShot frame={frame} /> : null}

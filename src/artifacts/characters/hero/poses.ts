@@ -20,6 +20,7 @@ export const POSES = [
   "point",
   "matrix",
   "fly",
+  "diveCatch",
   "hover",
   "carry",
   "ride",
@@ -322,6 +323,21 @@ export const solvePose = (pose: AdventurerPose, f: number): RigPose => {
       p.kneeR = 0.4;
       p.bob = k * 0.02;
       p.head = [-0.75, 0];
+      break;
+    }
+    case "diveCatch": {
+      // The fly glide with the LEFT arm reaching forward and down (toward the
+      // belly) instead of overhead: tilted flat, the hand reaches the floor ahead
+      // of and below the chin, where a catch reads clearly. Legs held still.
+      p.armL = [-2.45, 0, 0.18];
+      p.armR = [0.35, 0, -0.22];
+      p.elbowL = -0.05;
+      p.elbowR = -0.15;
+      p.legL = [0.12, 0, 0.05];
+      p.legR = [0.22, 0, -0.05];
+      p.kneeL = 0.12;
+      p.kneeR = 0.4;
+      p.head = [-0.6, 0];
       break;
     }
     case "hover": {

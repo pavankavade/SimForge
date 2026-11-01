@@ -5,9 +5,10 @@
  *   node scripts/render.mjs <CompositionId> [slug] [--keep] [--concurrency 8] [--crf 18]
  *                           [--lufs -14] [--tp -1.5] [-- extra remotion render args]
  *
- *  1. scripts/solo.mjs render -> out/<slug>.raw.mp4 (only this episode is bundled)
- *  2. scripts/master-audio.mjs two-pass loudness -> out/<slug>.mp4
- *     (--keep writes out/<slug>_v2.mp4, _v3, ... instead of overwriting)
+ *  1. scripts/solo.mjs render -> out/<series>/<slug>/<slug>.raw.mp4 (only this episode is bundled)
+ *  2. scripts/master-audio.mjs two-pass loudness -> out/<series>/<slug>/<slug>.mp4
+ *     (--keep writes <slug>_v2.mp4, _v3, ... instead of overwriting)
+ *  (the series folder comes from scripts/out-paths.mjs)
  *  3. scripts/check-video.mjs: contact sheet + loudness check
  *
  * `slug` defaults to the kebab-case composition id (CrushingWalls -> crushing-walls).
@@ -18,6 +19,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { master } from "./master-audio.mjs";
+import { episodeDir, seriesOf } from "./out-paths.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const argv = process.argv.slice(2);
@@ -36,7 +38,8 @@ if (!id) {
   process.exit(1);
 }
 const slug = slugArg ?? id.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-const outDir = path.join(root, "out");
+if (seriesOf(slug) === "misc") console.warn(`${slug} is not in SERIES (scripts/out-paths.mjs); writing to out/misc/${slug}/.`);
+const outDir = episodeDir(slug);
 mkdirSync(outDir, { recursive: true });
 
 const raw = path.join(outDir, `${slug}.raw.mp4`);

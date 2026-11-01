@@ -1,6 +1,6 @@
 {
   "slug": "teleport",
-  "version": 2,
+  "version": 3,
   "sampleRate": 48000,
   "fps": 30,
   "totalSamples": 12512150,

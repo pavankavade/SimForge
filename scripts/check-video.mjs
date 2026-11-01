@@ -1,10 +1,10 @@
 /**
  * Final-render check: contact sheet + integrated loudness.
  *
- *   npm run check:video -- <slug>          # reads out/<slug>.mp4
+ *   npm run check:video -- <slug>          # reads out/<series>/<slug>/<slug>.mp4
  *   npm run check:video -- out/file.mp4
  *
- * Writes out/review/<slug>-video-sheet-N.png (every 40th frame, 10x6 tiles,
+ * Writes <video folder>/review/<name>-video-sheet-N.png (every 40th frame, 10x6 tiles,
  * frame numbers burned in; landscape videos get 16:9 tiles) and prints
  * integrated loudness (target -14 LUFS, accept -15..-13) and true peak (must
  * be <= -1 dBTP).
@@ -14,6 +14,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { episodeDir } from "./out-paths.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arg = process.argv[2];
@@ -22,14 +23,14 @@ if (!arg) {
   process.exit(1);
 }
 
-const video = arg.endsWith(".mp4") ? path.resolve(root, arg) : path.join(root, "out", `${arg}.mp4`);
+const video = arg.endsWith(".mp4") ? path.resolve(root, arg) : path.join(episodeDir(arg), `${arg}.mp4`);
 if (!existsSync(video)) {
   console.error(`Not found: ${video}. Run npm run render:<slug> first.`);
   process.exit(1);
 }
 
 const name = path.basename(video, ".mp4");
-const outDir = path.join(root, "out", "review");
+const outDir = path.join(path.dirname(video), "review");
 mkdirSync(outDir, { recursive: true });
 
 const ffmpeg = (args) => spawnSync("ffmpeg", ["-hide_banner", "-y", ...args], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });

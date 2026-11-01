@@ -1,7 +1,7 @@
 /**
  * Scaffolds a new "Evolution of a ..." episode from templates/episode.
  *
- *   npm run new:episode -- <slug> "<Trap Title>" [--theme dungeon] [--no-audio]
+ *   npm run new:episode -- <slug> "<Trap Title>" [--theme dungeon] [--series dungeon] [--no-audio]
  *
  * Creates:
  *   src/episodes/<slug>/            timeline.ts, Scene.tsx, config.ts, TrapHUD.tsx, index.ts, data/
@@ -20,6 +20,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { estimateCues } from "./estimate-cues.mjs";
+import { SERIES, withSlug } from "./out-paths.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -39,11 +40,13 @@ const has = (name) => {
 };
 
 const theme = (flag("--theme") || "dungeon").toLowerCase();
+// Series folder under out/ (out/<series>/<slug>/); defaults to the theme.
+const series = (flag("--series") || theme).toLowerCase();
 const skipAudio = has("--no-audio");
 const rawSlug = args[0];
 
 if (!rawSlug) {
-  console.error('Usage: npm run new:episode -- <slug> "<Trap Title>" [--theme dungeon] [--no-audio]');
+  console.error('Usage: npm run new:episode -- <slug> "<Trap Title>" [--theme dungeon] [--series dungeon] [--no-audio]');
   process.exit(1);
 }
 
@@ -149,12 +152,22 @@ const pkg = JSON.parse(pkgText);
 const pkgEol = pkgText.includes("\r\n") ? "\r\n" : "\n";
 // Render, two-pass loudness master and check in one go (scripts/render.mjs).
 pkg.scripts[`render:${slug}`] = `node scripts/render.mjs ${compositionId} ${slug}`;
-pkg.scripts[`still:${slug}`] = `node scripts/solo.mjs still ${compositionId} out/${slug}-still.png --frame=${Math.round(est.durationFrames / 2)}`;
+pkg.scripts[`still:${slug}`] = `node scripts/solo.mjs still ${compositionId} out/${series}/${slug}/wip/${slug}-still.png --frame=${Math.round(est.durationFrames / 2)}`;
 await writeFile(pkgPath, (JSON.stringify(pkg, null, 2) + "\n").replace(/\n/g, pkgEol), "utf8");
+
+// 4. Output folder: file the slug under its series in scripts/out-paths.mjs ---
+const outPathsFile = path.join(root, "scripts", "out-paths.mjs");
+const inSeries = Object.keys(SERIES).find((s) => SERIES[s].includes(slug));
+if (inSeries && inSeries !== series) {
+  console.warn(`Note: ${slug} is already filed under out/${inSeries}/ in scripts/out-paths.mjs; left as is.`);
+} else if (!inSeries) {
+  await writeFile(outPathsFile, withSlug(await readFile(outPathsFile, "utf8"), series, slug), "utf8");
+}
 
 console.log(`Created src/episodes/${slug} (composition: ${compositionId})`);
 console.log(`Created scripts/${slug}-audio.py`);
 console.log(`Added render:${slug} and still:${slug} to package.json`);
+console.log(`Outputs go to out/${inSeries ?? series}/${slug}/ (scripts/out-paths.mjs)`);
 console.log(`Estimated cues: ${est.lines} lines, ${est.durationFrames} frames`);
 
 // 4. Audio -------------------------------------------------------------------

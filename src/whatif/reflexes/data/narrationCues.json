@@ -1,0 +1,5570 @@
+{
+  "slug": "reflexes",
+  "version": 3,
+  "sampleRate": 48000,
+  "fps": 30,
+  "totalSamples": 18866870,
+  "durationSeconds": 393.06,
+  "durationFrames": 11792,
+  "lines": {
+    "a1": {
+      "startFrame": 16,
+      "endFrame": 220,
+      "words": [
+        {
+          "word": "What",
+          "startFrame": 16,
+          "endFrame": 19
+        },
+        {
+          "word": "if",
+          "startFrame": 19,
+          "endFrame": 22
+        },
+        {
+          "word": "your",
+          "startFrame": 22,
+          "endFrame": 25
+        },
+        {
+          "word": "brain",
+          "startFrame": 25,
+          "endFrame": 40
+        },
+        {
+          "word": "worked",
+          "startFrame": 40,
+          "endFrame": 52
+        },
+        {
+          "word": "ten",
+          "startFrame": 52,
+          "endFrame": 64
+        },
+        {
+          "word": "times",
+          "startFrame": 64,
+          "endFrame": 76
+        },
+        {
+          "word": "faster",
+          "startFrame": 76,
+          "endFrame": 88
+        },
+        {
+          "word": "than",
+          "startFrame": 88,
+          "endFrame": 94
+        },
+        {
+          "word": "everyone",
+          "startFrame": 94,
+          "endFrame": 106
+        },
+        {
+          "word": "else's?",
+          "startFrame": 106,
+          "endFrame": 121
+        },
+        {
+          "word": "Every",
+          "startFrame": 130,
+          "endFrame": 139
+        },
+        {
+          "word": "thought.",
+          "startFrame": 139,
+          "endFrame": 154
+        },
+        {
+          "word": "Every",
+          "startFrame": 160,
+          "endFrame": 163
+        },
+        {
+          "word": "decision.",
+          "startFrame": 163,
+          "endFrame": 187
+        },
+        {
+          "word": "Every",
+          "startFrame": 190,
+          "endFrame": 199
+        },
+        {
+          "word": "reaction.",
+          "startFrame": 199,
+          "endFrame": 220
+        }
+      ]
+    },
+    "a2": {
+      "startFrame": 235,
+      "endFrame": 340,
+      "words": [
+        {
+          "word": "There",
+          "startFrame": 235,
+          "endFrame": 238
+        },
+        {
+          "word": "is",
+          "startFrame": 238,
+          "endFrame": 241
+        },
+        {
+          "word": "just",
+          "startFrame": 241,
+          "endFrame": 250
+        },
+        {
+          "word": "one",
+          "startFrame": 250,
+          "endFrame": 259
+        },
+        {
+          "word": "catch.",
+          "startFrame": 259,
+          "endFrame": 280
+        },
+        {
+          "word": "Your",
+          "startFrame": 292,
+          "endFrame": 298
+        },
+        {
+          "word": "body",
+          "startFrame": 298,
+          "endFrame": 319
+        },
+        {
+          "word": "does",
+          "startFrame": 319,
+          "endFrame": 328
+        },
+        {
+          "word": "not.",
+          "startFrame": 328,
+          "endFrame": 340
+        }
+      ]
+    },
+    "a3": {
+      "startFrame": 358,
+      "endFrame": 535,
+      "words": [
+        {
+          "word": "Breakfast.",
+          "startFrame": 358,
+          "endFrame": 376
+        },
+        {
+          "word": "Your",
+          "startFrame": 388,
+          "endFrame": 394
+        },
+        {
+          "word": "little",
+          "startFrame": 394,
+          "endFrame": 400
+        },
+        {
+          "word": "sister",
+          "startFrame": 400,
+          "endFrame": 409
+        },
+        {
+          "word": "Tess",
+          "startFrame": 409,
+          "endFrame": 421
+        },
+        {
+          "word": "reaches",
+          "startFrame": 421,
+          "endFrame": 433
+        },
+        {
+          "word": "for",
+          "startFrame": 433,
+          "endFrame": 436
+        },
+        {
+          "word": "the",
+          "startFrame": 436,
+          "endFrame": 439
+        },
+        {
+          "word": "cereal,",
+          "startFrame": 439,
+          "endFrame": 454
+        },
+        {
+          "word": "and",
+          "startFrame": 457,
+          "endFrame": 460
+        },
+        {
+          "word": "her",
+          "startFrame": 460,
+          "endFrame": 466
+        },
+        {
+          "word": "elbow",
+          "startFrame": 466,
+          "endFrame": 478
+        },
+        {
+          "word": "clips",
+          "startFrame": 478,
+          "endFrame": 493
+        },
+        {
+          "word": "a",
+          "startFrame": 493,
+          "endFrame": 496
+        },
+        {
+          "word": "full",
+          "startFrame": 496,
+          "endFrame": 508
+        },
+        {
+          "word": "glass",
+          "startFrame": 508,
+          "endFrame": 520
+        },
+        {
+          "word": "of",
+          "startFrame": 520,
+          "endFrame": 523
+        },
+        {
+          "word": "milk.",
+          "startFrame": 523,
+          "endFrame": 535
+        }
+      ]
+    },
+    "a4": {
+      "startFrame": 546,
+      "endFrame": 759,
+      "words": [
+        {
+          "word": "To",
+          "startFrame": 546,
+          "endFrame": 549
+        },
+        {
+          "word": "everyone",
+          "startFrame": 549,
+          "endFrame": 558
+        },
+        {
+          "word": "else,",
+          "startFrame": 558,
+          "endFrame": 570
+        },
+        {
+          "word": "it",
+          "startFrame": 573,
+          "endFrame": 582
+        },
+        {
+          "word": "is",
+          "startFrame": 582,
+          "endFrame": 585
+        },
+        {
+          "word": "a",
+          "startFrame": 585,
+          "endFrame": 588
+        },
+        {
+          "word": "blink.",
+          "startFrame": 588,
+          "endFrame": 612
+        },
+        {
+          "word": "To",
+          "startFrame": 615,
+          "endFrame": 621
+        },
+        {
+          "word": "you,",
+          "startFrame": 621,
+          "endFrame": 630
+        },
+        {
+          "word": "the",
+          "startFrame": 630,
+          "endFrame": 633
+        },
+        {
+          "word": "glass",
+          "startFrame": 633,
+          "endFrame": 645
+        },
+        {
+          "word": "hangs",
+          "startFrame": 645,
+          "endFrame": 660
+        },
+        {
+          "word": "at",
+          "startFrame": 660,
+          "endFrame": 663
+        },
+        {
+          "word": "the",
+          "startFrame": 663,
+          "endFrame": 666
+        },
+        {
+          "word": "edge",
+          "startFrame": 666,
+          "endFrame": 675
+        },
+        {
+          "word": "of",
+          "startFrame": 675,
+          "endFrame": 678
+        },
+        {
+          "word": "the",
+          "startFrame": 678,
+          "endFrame": 679
+        },
+        {
+          "word": "table",
+          "startFrame": 678,
+          "endFrame": 696
+        },
+        {
+          "word": "like",
+          "startFrame": 699,
+          "endFrame": 705
+        },
+        {
+          "word": "it",
+          "startFrame": 705,
+          "endFrame": 708
+        },
+        {
+          "word": "is",
+          "startFrame": 708,
+          "endFrame": 720
+        },
+        {
+          "word": "thinking",
+          "startFrame": 732,
+          "endFrame": 741
+        },
+        {
+          "word": "about",
+          "startFrame": 741,
+          "endFrame": 753
+        },
+        {
+          "word": "it.",
+          "startFrame": 753,
+          "endFrame": 759
+        }
+      ]
+    },
+    "a5": {
+      "startFrame": 774,
+      "endFrame": 933,
+      "words": [
+        {
+          "word": "You",
+          "startFrame": 774,
+          "endFrame": 777
+        },
+        {
+          "word": "know",
+          "startFrame": 777,
+          "endFrame": 789
+        },
+        {
+          "word": "exactly",
+          "startFrame": 789,
+          "endFrame": 807
+        },
+        {
+          "word": "what",
+          "startFrame": 807,
+          "endFrame": 810
+        },
+        {
+          "word": "to",
+          "startFrame": 810,
+          "endFrame": 813
+        },
+        {
+          "word": "do.",
+          "startFrame": 813,
+          "endFrame": 822
+        },
+        {
+          "word": "Catch",
+          "startFrame": 840,
+          "endFrame": 846
+        },
+        {
+          "word": "it.",
+          "startFrame": 846,
+          "endFrame": 852
+        },
+        {
+          "word": "The",
+          "startFrame": 867,
+          "endFrame": 870
+        },
+        {
+          "word": "decision",
+          "startFrame": 870,
+          "endFrame": 882
+        },
+        {
+          "word": "takes",
+          "startFrame": 882,
+          "endFrame": 891
+        },
+        {
+          "word": "you",
+          "startFrame": 891,
+          "endFrame": 894
+        },
+        {
+          "word": "almost",
+          "startFrame": 894,
+          "endFrame": 909
+        },
+        {
+          "word": "no",
+          "startFrame": 909,
+          "endFrame": 915
+        },
+        {
+          "word": "time",
+          "startFrame": 915,
+          "endFrame": 921
+        },
+        {
+          "word": "at",
+          "startFrame": 921,
+          "endFrame": 924
+        },
+        {
+          "word": "all.",
+          "startFrame": 924,
+          "endFrame": 933
+        }
+      ]
+    },
+    "a6": {
+      "startFrame": 945,
+      "endFrame": 1032,
+      "words": [
+        {
+          "word": "Then",
+          "startFrame": 945,
+          "endFrame": 948
+        },
+        {
+          "word": "you",
+          "startFrame": 948,
+          "endFrame": 951
+        },
+        {
+          "word": "tell",
+          "startFrame": 951,
+          "endFrame": 957
+        },
+        {
+          "word": "your",
+          "startFrame": 957,
+          "endFrame": 960
+        },
+        {
+          "word": "hand",
+          "startFrame": 960,
+          "endFrame": 969
+        },
+        {
+          "word": "to",
+          "startFrame": 969,
+          "endFrame": 972
+        },
+        {
+          "word": "move.",
+          "startFrame": 972,
+          "endFrame": 987
+        },
+        {
+          "word": "And",
+          "startFrame": 1017,
+          "endFrame": 1020
+        },
+        {
+          "word": "you",
+          "startFrame": 1020,
+          "endFrame": 1023
+        },
+        {
+          "word": "wait.",
+          "startFrame": 1023,
+          "endFrame": 1032
+        }
+      ]
+    },
+    "a7": {
+      "startFrame": 1052,
+      "endFrame": 1331,
+      "words": [
+        {
+          "word": "Your",
+          "startFrame": 1052,
+          "endFrame": 1061
+        },
+        {
+          "word": "arm",
+          "startFrame": 1061,
+          "endFrame": 1073
+        },
+        {
+          "word": "drifts",
+          "startFrame": 1073,
+          "endFrame": 1091
+        },
+        {
+          "word": "across",
+          "startFrame": 1091,
+          "endFrame": 1103
+        },
+        {
+          "word": "the",
+          "startFrame": 1103,
+          "endFrame": 1106
+        },
+        {
+          "word": "table",
+          "startFrame": 1106,
+          "endFrame": 1121
+        },
+        {
+          "word": "like",
+          "startFrame": 1121,
+          "endFrame": 1130
+        },
+        {
+          "word": "it",
+          "startFrame": 1130,
+          "endFrame": 1133
+        },
+        {
+          "word": "is",
+          "startFrame": 1133,
+          "endFrame": 1139
+        },
+        {
+          "word": "swimming",
+          "startFrame": 1139,
+          "endFrame": 1154
+        },
+        {
+          "word": "through",
+          "startFrame": 1154,
+          "endFrame": 1163
+        },
+        {
+          "word": "honey.",
+          "startFrame": 1163,
+          "endFrame": 1178
+        },
+        {
+          "word": "The",
+          "startFrame": 1193,
+          "endFrame": 1196
+        },
+        {
+          "word": "glass",
+          "startFrame": 1196,
+          "endFrame": 1208
+        },
+        {
+          "word": "tips.",
+          "startFrame": 1208,
+          "endFrame": 1223
+        },
+        {
+          "word": "The",
+          "startFrame": 1235,
+          "endFrame": 1238
+        },
+        {
+          "word": "milk",
+          "startFrame": 1238,
+          "endFrame": 1256
+        },
+        {
+          "word": "pours",
+          "startFrame": 1256,
+          "endFrame": 1274
+        },
+        {
+          "word": "out",
+          "startFrame": 1274,
+          "endFrame": 1283
+        },
+        {
+          "word": "in",
+          "startFrame": 1283,
+          "endFrame": 1286
+        },
+        {
+          "word": "a",
+          "startFrame": 1286,
+          "endFrame": 1289
+        },
+        {
+          "word": "slow",
+          "startFrame": 1289,
+          "endFrame": 1310
+        },
+        {
+          "word": "white",
+          "startFrame": 1310,
+          "endFrame": 1319
+        },
+        {
+          "word": "ribbon.",
+          "startFrame": 1319,
+          "endFrame": 1331
+        }
+      ]
+    },
+    "a8": {
+      "startFrame": 1346,
+      "endFrame": 1532,
+      "words": [
+        {
+          "word": "Four",
+          "startFrame": 1346,
+          "endFrame": 1364
+        },
+        {
+          "word": "whole",
+          "startFrame": 1364,
+          "endFrame": 1376
+        },
+        {
+          "word": "seconds,",
+          "startFrame": 1376,
+          "endFrame": 1406
+        },
+        {
+          "word": "for",
+          "startFrame": 1415,
+          "endFrame": 1421
+        },
+        {
+          "word": "you,",
+          "startFrame": 1421,
+          "endFrame": 1433
+        },
+        {
+          "word": "of",
+          "startFrame": 1439,
+          "endFrame": 1445
+        },
+        {
+          "word": "watching",
+          "startFrame": 1445,
+          "endFrame": 1460
+        },
+        {
+          "word": "your",
+          "startFrame": 1460,
+          "endFrame": 1466
+        },
+        {
+          "word": "own",
+          "startFrame": 1469,
+          "endFrame": 1478
+        },
+        {
+          "word": "hand",
+          "startFrame": 1478,
+          "endFrame": 1502
+        },
+        {
+          "word": "crawl.",
+          "startFrame": 1505,
+          "endFrame": 1532
+        }
+      ]
+    },
+    "a9": {
+      "startFrame": 1544,
+      "endFrame": 1655,
+      "words": [
+        {
+          "word": "Your",
+          "startFrame": 1544,
+          "endFrame": 1550
+        },
+        {
+          "word": "fingers",
+          "startFrame": 1550,
+          "endFrame": 1562
+        },
+        {
+          "word": "close",
+          "startFrame": 1562,
+          "endFrame": 1580
+        },
+        {
+          "word": "around",
+          "startFrame": 1580,
+          "endFrame": 1589
+        },
+        {
+          "word": "the",
+          "startFrame": 1589,
+          "endFrame": 1592
+        },
+        {
+          "word": "glass",
+          "startFrame": 1592,
+          "endFrame": 1610
+        },
+        {
+          "word": "an",
+          "startFrame": 1613,
+          "endFrame": 1616
+        },
+        {
+          "word": "inch",
+          "startFrame": 1619,
+          "endFrame": 1634
+        },
+        {
+          "word": "above",
+          "startFrame": 1634,
+          "endFrame": 1640
+        },
+        {
+          "word": "the",
+          "startFrame": 1640,
+          "endFrame": 1643
+        },
+        {
+          "word": "floor.",
+          "startFrame": 1643,
+          "endFrame": 1655
+        }
+      ]
+    },
+    "a10": {
+      "startFrame": 1669,
+      "endFrame": 1825,
+      "words": [
+        {
+          "word": "Tess",
+          "startFrame": 1669,
+          "endFrame": 1687
+        },
+        {
+          "word": "did",
+          "startFrame": 1687,
+          "endFrame": 1690
+        },
+        {
+          "word": "not",
+          "startFrame": 1690,
+          "endFrame": 1696
+        },
+        {
+          "word": "even",
+          "startFrame": 1696,
+          "endFrame": 1705
+        },
+        {
+          "word": "see",
+          "startFrame": 1705,
+          "endFrame": 1711
+        },
+        {
+          "word": "you",
+          "startFrame": 1711,
+          "endFrame": 1717
+        },
+        {
+          "word": "move.",
+          "startFrame": 1717,
+          "endFrame": 1735
+        },
+        {
+          "word": "To",
+          "startFrame": 1744,
+          "endFrame": 1747
+        },
+        {
+          "word": "her,",
+          "startFrame": 1747,
+          "endFrame": 1759
+        },
+        {
+          "word": "you",
+          "startFrame": 1771,
+          "endFrame": 1774
+        },
+        {
+          "word": "just",
+          "startFrame": 1774,
+          "endFrame": 1783
+        },
+        {
+          "word": "snatched",
+          "startFrame": 1783,
+          "endFrame": 1798
+        },
+        {
+          "word": "it",
+          "startFrame": 1798,
+          "endFrame": 1801
+        },
+        {
+          "word": "out",
+          "startFrame": 1801,
+          "endFrame": 1804
+        },
+        {
+          "word": "of",
+          "startFrame": 1804,
+          "endFrame": 1807
+        },
+        {
+          "word": "the",
+          "startFrame": 1807,
+          "endFrame": 1813
+        },
+        {
+          "word": "air.",
+          "startFrame": 1813,
+          "endFrame": 1825
+        }
+      ]
+    },
+    "a11": {
+      "startFrame": 1837,
+      "endFrame": 1936,
+      "words": [
+        {
+          "word": "To",
+          "startFrame": 1837,
+          "endFrame": 1843
+        },
+        {
+          "word": "you,",
+          "startFrame": 1843,
+          "endFrame": 1855
+        },
+        {
+          "word": "it",
+          "startFrame": 1864,
+          "endFrame": 1867
+        },
+        {
+          "word": "was",
+          "startFrame": 1867,
+          "endFrame": 1870
+        },
+        {
+          "word": "the",
+          "startFrame": 1870,
+          "endFrame": 1873
+        },
+        {
+          "word": "slowest",
+          "startFrame": 1873,
+          "endFrame": 1897
+        },
+        {
+          "word": "catch",
+          "startFrame": 1897,
+          "endFrame": 1909
+        },
+        {
+          "word": "of",
+          "startFrame": 1909,
+          "endFrame": 1915
+        },
+        {
+          "word": "your",
+          "startFrame": 1915,
+          "endFrame": 1918
+        },
+        {
+          "word": "life.",
+          "startFrame": 1918,
+          "endFrame": 1936
+        }
+      ]
+    },
+    "b1": {
+      "startFrame": 1969,
+      "endFrame": 2125,
+      "words": [
+        {
+          "word": "Here",
+          "startFrame": 1969,
+          "endFrame": 1975
+        },
+        {
+          "word": "is",
+          "startFrame": 1975,
+          "endFrame": 1981
+        },
+        {
+          "word": "why.",
+          "startFrame": 1981,
+          "endFrame": 1999
+        },
+        {
+          "word": "Reacting",
+          "startFrame": 2011,
+          "endFrame": 2026
+        },
+        {
+          "word": "to",
+          "startFrame": 2026,
+          "endFrame": 2029
+        },
+        {
+          "word": "anything",
+          "startFrame": 2029,
+          "endFrame": 2044
+        },
+        {
+          "word": "takes",
+          "startFrame": 2044,
+          "endFrame": 2053
+        },
+        {
+          "word": "the",
+          "startFrame": 2053,
+          "endFrame": 2059
+        },
+        {
+          "word": "average",
+          "startFrame": 2059,
+          "endFrame": 2068
+        },
+        {
+          "word": "person",
+          "startFrame": 2068,
+          "endFrame": 2080
+        },
+        {
+          "word": "about",
+          "startFrame": 2080,
+          "endFrame": 2089
+        },
+        {
+          "word": "a",
+          "startFrame": 2089,
+          "endFrame": 2090
+        },
+        {
+          "word": "quarter",
+          "startFrame": 2089,
+          "endFrame": 2101
+        },
+        {
+          "word": "of",
+          "startFrame": 2101,
+          "endFrame": 2104
+        },
+        {
+          "word": "a",
+          "startFrame": 2104,
+          "endFrame": 2107
+        },
+        {
+          "word": "second.",
+          "startFrame": 2107,
+          "endFrame": 2125
+        }
+      ]
+    },
+    "b2": {
+      "startFrame": 2137,
+      "endFrame": 2353,
+      "words": [
+        {
+          "word": "Most",
+          "startFrame": 2137,
+          "endFrame": 2149
+        },
+        {
+          "word": "of",
+          "startFrame": 2149,
+          "endFrame": 2150
+        },
+        {
+          "word": "that",
+          "startFrame": 2149,
+          "endFrame": 2158
+        },
+        {
+          "word": "happens",
+          "startFrame": 2158,
+          "endFrame": 2170
+        },
+        {
+          "word": "inside",
+          "startFrame": 2170,
+          "endFrame": 2185
+        },
+        {
+          "word": "your",
+          "startFrame": 2185,
+          "endFrame": 2188
+        },
+        {
+          "word": "head.",
+          "startFrame": 2188,
+          "endFrame": 2206
+        },
+        {
+          "word": "Your",
+          "startFrame": 2212,
+          "endFrame": 2218
+        },
+        {
+          "word": "eyes",
+          "startFrame": 2218,
+          "endFrame": 2230
+        },
+        {
+          "word": "send",
+          "startFrame": 2230,
+          "endFrame": 2236
+        },
+        {
+          "word": "the",
+          "startFrame": 2236,
+          "endFrame": 2239
+        },
+        {
+          "word": "picture,",
+          "startFrame": 2239,
+          "endFrame": 2254
+        },
+        {
+          "word": "your",
+          "startFrame": 2260,
+          "endFrame": 2263
+        },
+        {
+          "word": "brain",
+          "startFrame": 2263,
+          "endFrame": 2278
+        },
+        {
+          "word": "works",
+          "startFrame": 2278,
+          "endFrame": 2284
+        },
+        {
+          "word": "out",
+          "startFrame": 2284,
+          "endFrame": 2290
+        },
+        {
+          "word": "what",
+          "startFrame": 2290,
+          "endFrame": 2296
+        },
+        {
+          "word": "it",
+          "startFrame": 2296,
+          "endFrame": 2299
+        },
+        {
+          "word": "is,",
+          "startFrame": 2299,
+          "endFrame": 2314
+        },
+        {
+          "word": "and",
+          "startFrame": 2317,
+          "endFrame": 2320
+        },
+        {
+          "word": "decides",
+          "startFrame": 2320,
+          "endFrame": 2335
+        },
+        {
+          "word": "what",
+          "startFrame": 2335,
+          "endFrame": 2338
+        },
+        {
+          "word": "to",
+          "startFrame": 2338,
+          "endFrame": 2341
+        },
+        {
+          "word": "do.",
+          "startFrame": 2341,
+          "endFrame": 2353
+        }
+      ]
+    },
+    "b3": {
+      "startFrame": 2364,
+      "endFrame": 2409,
+      "words": [
+        {
+          "word": "That",
+          "startFrame": 2364,
+          "endFrame": 2367
+        },
+        {
+          "word": "part",
+          "startFrame": 2367,
+          "endFrame": 2376
+        },
+        {
+          "word": "is",
+          "startFrame": 2376,
+          "endFrame": 2379
+        },
+        {
+          "word": "now",
+          "startFrame": 2379,
+          "endFrame": 2385
+        },
+        {
+          "word": "ten",
+          "startFrame": 2385,
+          "endFrame": 2391
+        },
+        {
+          "word": "times",
+          "startFrame": 2391,
+          "endFrame": 2397
+        },
+        {
+          "word": "faster.",
+          "startFrame": 2397,
+          "endFrame": 2409
+        }
+      ]
+    },
+    "b4": {
+      "startFrame": 2421,
+      "endFrame": 2724,
+      "words": [
+        {
+          "word": "But",
+          "startFrame": 2421,
+          "endFrame": 2424
+        },
+        {
+          "word": "then",
+          "startFrame": 2424,
+          "endFrame": 2433
+        },
+        {
+          "word": "the",
+          "startFrame": 2433,
+          "endFrame": 2439
+        },
+        {
+          "word": "order",
+          "startFrame": 2439,
+          "endFrame": 2448
+        },
+        {
+          "word": "has",
+          "startFrame": 2448,
+          "endFrame": 2454
+        },
+        {
+          "word": "to",
+          "startFrame": 2454,
+          "endFrame": 2457
+        },
+        {
+          "word": "travel",
+          "startFrame": 2457,
+          "endFrame": 2472
+        },
+        {
+          "word": "down",
+          "startFrame": 2472,
+          "endFrame": 2481
+        },
+        {
+          "word": "your",
+          "startFrame": 2481,
+          "endFrame": 2487
+        },
+        {
+          "word": "nerves,",
+          "startFrame": 2487,
+          "endFrame": 2508
+        },
+        {
+          "word": "at",
+          "startFrame": 2511,
+          "endFrame": 2514
+        },
+        {
+          "word": "about",
+          "startFrame": 2514,
+          "endFrame": 2529
+        },
+        {
+          "word": "two",
+          "startFrame": 2529,
+          "endFrame": 2541
+        },
+        {
+          "word": "hundred",
+          "startFrame": 2541,
+          "endFrame": 2553
+        },
+        {
+          "word": "miles",
+          "startFrame": 2553,
+          "endFrame": 2565
+        },
+        {
+          "word": "an",
+          "startFrame": 2565,
+          "endFrame": 2568
+        },
+        {
+          "word": "hour.",
+          "startFrame": 2571,
+          "endFrame": 2583
+        },
+        {
+          "word": "That",
+          "startFrame": 2598,
+          "endFrame": 2607
+        },
+        {
+          "word": "is",
+          "startFrame": 2610,
+          "endFrame": 2619
+        },
+        {
+          "word": "fast",
+          "startFrame": 2622,
+          "endFrame": 2634
+        },
+        {
+          "word": "for",
+          "startFrame": 2634,
+          "endFrame": 2637
+        },
+        {
+          "word": "a",
+          "startFrame": 2637,
+          "endFrame": 2638
+        },
+        {
+          "word": "car.",
+          "startFrame": 2637,
+          "endFrame": 2655
+        },
+        {
+          "word": "It",
+          "startFrame": 2664,
+          "endFrame": 2667
+        },
+        {
+          "word": "is",
+          "startFrame": 2667,
+          "endFrame": 2673
+        },
+        {
+          "word": "slow",
+          "startFrame": 2673,
+          "endFrame": 2700
+        },
+        {
+          "word": "for",
+          "startFrame": 2700,
+          "endFrame": 2706
+        },
+        {
+          "word": "a",
+          "startFrame": 2706,
+          "endFrame": 2707
+        },
+        {
+          "word": "thought.",
+          "startFrame": 2706,
+          "endFrame": 2724
+        }
+      ]
+    },
+    "b5": {
+      "startFrame": 2739,
+      "endFrame": 2880,
+      "words": [
+        {
+          "word": "And",
+          "startFrame": 2739,
+          "endFrame": 2742
+        },
+        {
+          "word": "when",
+          "startFrame": 2742,
+          "endFrame": 2745
+        },
+        {
+          "word": "it",
+          "startFrame": 2745,
+          "endFrame": 2748
+        },
+        {
+          "word": "reaches",
+          "startFrame": 2748,
+          "endFrame": 2757
+        },
+        {
+          "word": "the",
+          "startFrame": 2757,
+          "endFrame": 2763
+        },
+        {
+          "word": "muscle,",
+          "startFrame": 2763,
+          "endFrame": 2775
+        },
+        {
+          "word": "the",
+          "startFrame": 2793,
+          "endFrame": 2796
+        },
+        {
+          "word": "muscle",
+          "startFrame": 2796,
+          "endFrame": 2805
+        },
+        {
+          "word": "needs",
+          "startFrame": 2805,
+          "endFrame": 2808
+        },
+        {
+          "word": "about",
+          "startFrame": 2808,
+          "endFrame": 2814
+        },
+        {
+          "word": "a",
+          "startFrame": 2814,
+          "endFrame": 2817
+        },
+        {
+          "word": "twentieth",
+          "startFrame": 2823,
+          "endFrame": 2838
+        },
+        {
+          "word": "of",
+          "startFrame": 2838,
+          "endFrame": 2841
+        },
+        {
+          "word": "a",
+          "startFrame": 2841,
+          "endFrame": 2844
+        },
+        {
+          "word": "second",
+          "startFrame": 2844,
+          "endFrame": 2856
+        },
+        {
+          "word": "just",
+          "startFrame": 2856,
+          "endFrame": 2862
+        },
+        {
+          "word": "to",
+          "startFrame": 2862,
+          "endFrame": 2865
+        },
+        {
+          "word": "switch",
+          "startFrame": 2865,
+          "endFrame": 2874
+        },
+        {
+          "word": "on.",
+          "startFrame": 2874,
+          "endFrame": 2880
+        }
+      ]
+    },
+    "b6": {
+      "startFrame": 2894,
+      "endFrame": 3119,
+      "words": [
+        {
+          "word": "None",
+          "startFrame": 2894,
+          "endFrame": 2903
+        },
+        {
+          "word": "of",
+          "startFrame": 2903,
+          "endFrame": 2906
+        },
+        {
+          "word": "that",
+          "startFrame": 2906,
+          "endFrame": 2918
+        },
+        {
+          "word": "got",
+          "startFrame": 2918,
+          "endFrame": 2924
+        },
+        {
+          "word": "faster.",
+          "startFrame": 2924,
+          "endFrame": 2942
+        },
+        {
+          "word": "So",
+          "startFrame": 2957,
+          "endFrame": 2963
+        },
+        {
+          "word": "your",
+          "startFrame": 2963,
+          "endFrame": 2969
+        },
+        {
+          "word": "brain",
+          "startFrame": 2969,
+          "endFrame": 2981
+        },
+        {
+          "word": "is",
+          "startFrame": 2981,
+          "endFrame": 2987
+        },
+        {
+          "word": "ten",
+          "startFrame": 2987,
+          "endFrame": 2999
+        },
+        {
+          "word": "times",
+          "startFrame": 2999,
+          "endFrame": 3008
+        },
+        {
+          "word": "quicker,",
+          "startFrame": 3008,
+          "endFrame": 3023
+        },
+        {
+          "word": "but",
+          "startFrame": 3026,
+          "endFrame": 3032
+        },
+        {
+          "word": "you",
+          "startFrame": 3032,
+          "endFrame": 3038
+        },
+        {
+          "word": "only",
+          "startFrame": 3038,
+          "endFrame": 3044
+        },
+        {
+          "word": "react",
+          "startFrame": 3044,
+          "endFrame": 3062
+        },
+        {
+          "word": "about",
+          "startFrame": 3062,
+          "endFrame": 3077
+        },
+        {
+          "word": "two",
+          "startFrame": 3077,
+          "endFrame": 3086
+        },
+        {
+          "word": "and",
+          "startFrame": 3086,
+          "endFrame": 3087
+        },
+        {
+          "word": "a",
+          "startFrame": 3086,
+          "endFrame": 3089
+        },
+        {
+          "word": "half",
+          "startFrame": 3089,
+          "endFrame": 3098
+        },
+        {
+          "word": "times",
+          "startFrame": 3098,
+          "endFrame": 3110
+        },
+        {
+          "word": "quicker.",
+          "startFrame": 3110,
+          "endFrame": 3119
+        }
+      ]
+    },
+    "b7": {
+      "startFrame": 3134,
+      "endFrame": 3356,
+      "words": [
+        {
+          "word": "In",
+          "startFrame": 3134,
+          "endFrame": 3135
+        },
+        {
+          "word": "a",
+          "startFrame": 3134,
+          "endFrame": 3137
+        },
+        {
+          "word": "race,",
+          "startFrame": 3137,
+          "endFrame": 3152
+        },
+        {
+          "word": "you",
+          "startFrame": 3158,
+          "endFrame": 3161
+        },
+        {
+          "word": "would",
+          "startFrame": 3161,
+          "endFrame": 3164
+        },
+        {
+          "word": "leave",
+          "startFrame": 3164,
+          "endFrame": 3170
+        },
+        {
+          "word": "the",
+          "startFrame": 3170,
+          "endFrame": 3173
+        },
+        {
+          "word": "blocks",
+          "startFrame": 3173,
+          "endFrame": 3185
+        },
+        {
+          "word": "a",
+          "startFrame": 3185,
+          "endFrame": 3188
+        },
+        {
+          "word": "tenth",
+          "startFrame": 3188,
+          "endFrame": 3200
+        },
+        {
+          "word": "of",
+          "startFrame": 3200,
+          "endFrame": 3203
+        },
+        {
+          "word": "a",
+          "startFrame": 3203,
+          "endFrame": 3206
+        },
+        {
+          "word": "second",
+          "startFrame": 3206,
+          "endFrame": 3215
+        },
+        {
+          "word": "after",
+          "startFrame": 3215,
+          "endFrame": 3218
+        },
+        {
+          "word": "the",
+          "startFrame": 3218,
+          "endFrame": 3221
+        },
+        {
+          "word": "gun.",
+          "startFrame": 3221,
+          "endFrame": 3233
+        },
+        {
+          "word": "Right",
+          "startFrame": 3248,
+          "endFrame": 3257
+        },
+        {
+          "word": "on",
+          "startFrame": 3257,
+          "endFrame": 3260
+        },
+        {
+          "word": "the",
+          "startFrame": 3260,
+          "endFrame": 3263
+        },
+        {
+          "word": "line.",
+          "startFrame": 3263,
+          "endFrame": 3278
+        },
+        {
+          "word": "Any",
+          "startFrame": 3290,
+          "endFrame": 3296
+        },
+        {
+          "word": "faster,",
+          "startFrame": 3296,
+          "endFrame": 3308
+        },
+        {
+          "word": "and",
+          "startFrame": 3314,
+          "endFrame": 3317
+        },
+        {
+          "word": "the",
+          "startFrame": 3317,
+          "endFrame": 3320
+        },
+        {
+          "word": "judges",
+          "startFrame": 3320,
+          "endFrame": 3329
+        },
+        {
+          "word": "call",
+          "startFrame": 3329,
+          "endFrame": 3335
+        },
+        {
+          "word": "it",
+          "startFrame": 3335,
+          "endFrame": 3336
+        },
+        {
+          "word": "a",
+          "startFrame": 3335,
+          "endFrame": 3338
+        },
+        {
+          "word": "false",
+          "startFrame": 3338,
+          "endFrame": 3344
+        },
+        {
+          "word": "start.",
+          "startFrame": 3344,
+          "endFrame": 3356
+        }
+      ]
+    },
+    "b8": {
+      "startFrame": 3374,
+      "endFrame": 3665,
+      "words": [
+        {
+          "word": "And",
+          "startFrame": 3374,
+          "endFrame": 3383
+        },
+        {
+          "word": "here",
+          "startFrame": 3383,
+          "endFrame": 3392
+        },
+        {
+          "word": "is",
+          "startFrame": 3392,
+          "endFrame": 3395
+        },
+        {
+          "word": "the",
+          "startFrame": 3395,
+          "endFrame": 3398
+        },
+        {
+          "word": "strange",
+          "startFrame": 3398,
+          "endFrame": 3416
+        },
+        {
+          "word": "part.",
+          "startFrame": 3416,
+          "endFrame": 3434
+        },
+        {
+          "word": "Your",
+          "startFrame": 3440,
+          "endFrame": 3443
+        },
+        {
+          "word": "thoughts",
+          "startFrame": 3443,
+          "endFrame": 3464
+        },
+        {
+          "word": "run",
+          "startFrame": 3464,
+          "endFrame": 3473
+        },
+        {
+          "word": "ten",
+          "startFrame": 3473,
+          "endFrame": 3491
+        },
+        {
+          "word": "times",
+          "startFrame": 3491,
+          "endFrame": 3506
+        },
+        {
+          "word": "faster,",
+          "startFrame": 3506,
+          "endFrame": 3524
+        },
+        {
+          "word": "so",
+          "startFrame": 3533,
+          "endFrame": 3536
+        },
+        {
+          "word": "the",
+          "startFrame": 3536,
+          "endFrame": 3539
+        },
+        {
+          "word": "whole",
+          "startFrame": 3539,
+          "endFrame": 3551
+        },
+        {
+          "word": "world",
+          "startFrame": 3551,
+          "endFrame": 3569
+        },
+        {
+          "word": "looks",
+          "startFrame": 3569,
+          "endFrame": 3575
+        },
+        {
+          "word": "ten",
+          "startFrame": 3575,
+          "endFrame": 3587
+        },
+        {
+          "word": "times",
+          "startFrame": 3587,
+          "endFrame": 3599
+        },
+        {
+          "word": "slower.",
+          "startFrame": 3599,
+          "endFrame": 3617
+        },
+        {
+          "word": "Including",
+          "startFrame": 3641,
+          "endFrame": 3656
+        },
+        {
+          "word": "you.",
+          "startFrame": 3656,
+          "endFrame": 3665
+        }
+      ]
+    },
+    "c1": {
+      "startFrame": 3694,
+      "endFrame": 3802,
+      "words": [
+        {
+          "word": "Life",
+          "startFrame": 3694,
+          "endFrame": 3709
+        },
+        {
+          "word": "in",
+          "startFrame": 3709,
+          "endFrame": 3715
+        },
+        {
+          "word": "slow",
+          "startFrame": 3715,
+          "endFrame": 3727
+        },
+        {
+          "word": "motion",
+          "startFrame": 3727,
+          "endFrame": 3742
+        },
+        {
+          "word": "is",
+          "startFrame": 3742,
+          "endFrame": 3748
+        },
+        {
+          "word": "not",
+          "startFrame": 3748,
+          "endFrame": 3763
+        },
+        {
+          "word": "what",
+          "startFrame": 3763,
+          "endFrame": 3766
+        },
+        {
+          "word": "the",
+          "startFrame": 3766,
+          "endFrame": 3772
+        },
+        {
+          "word": "movies",
+          "startFrame": 3772,
+          "endFrame": 3784
+        },
+        {
+          "word": "promised.",
+          "startFrame": 3784,
+          "endFrame": 3802
+        }
+      ]
+    },
+    "c2": {
+      "startFrame": 3814,
+      "endFrame": 3940,
+      "words": [
+        {
+          "word": "Every",
+          "startFrame": 3814,
+          "endFrame": 3826
+        },
+        {
+          "word": "time",
+          "startFrame": 3826,
+          "endFrame": 3838
+        },
+        {
+          "word": "you",
+          "startFrame": 3838,
+          "endFrame": 3841
+        },
+        {
+          "word": "blink,",
+          "startFrame": 3841,
+          "endFrame": 3862
+        },
+        {
+          "word": "the",
+          "startFrame": 3865,
+          "endFrame": 3868
+        },
+        {
+          "word": "world",
+          "startFrame": 3868,
+          "endFrame": 3877
+        },
+        {
+          "word": "goes",
+          "startFrame": 3877,
+          "endFrame": 3886
+        },
+        {
+          "word": "dark",
+          "startFrame": 3886,
+          "endFrame": 3904
+        },
+        {
+          "word": "for",
+          "startFrame": 3904,
+          "endFrame": 3907
+        },
+        {
+          "word": "a",
+          "startFrame": 3907,
+          "endFrame": 3910
+        },
+        {
+          "word": "second",
+          "startFrame": 3910,
+          "endFrame": 3919
+        },
+        {
+          "word": "and",
+          "startFrame": 3919,
+          "endFrame": 3922
+        },
+        {
+          "word": "a",
+          "startFrame": 3922,
+          "endFrame": 3923
+        },
+        {
+          "word": "half.",
+          "startFrame": 3922,
+          "endFrame": 3940
+        }
+      ]
+    },
+    "c3": {
+      "startFrame": 3955,
+      "endFrame": 4216,
+      "words": [
+        {
+          "word": "Talking",
+          "startFrame": 3955,
+          "endFrame": 3964
+        },
+        {
+          "word": "is",
+          "startFrame": 3964,
+          "endFrame": 3970
+        },
+        {
+          "word": "torture.",
+          "startFrame": 3970,
+          "endFrame": 3985
+        },
+        {
+          "word": "You",
+          "startFrame": 3997,
+          "endFrame": 4000
+        },
+        {
+          "word": "finish",
+          "startFrame": 4000,
+          "endFrame": 4006
+        },
+        {
+          "word": "a",
+          "startFrame": 4006,
+          "endFrame": 4009
+        },
+        {
+          "word": "sentence",
+          "startFrame": 4009,
+          "endFrame": 4018
+        },
+        {
+          "word": "in",
+          "startFrame": 4018,
+          "endFrame": 4021
+        },
+        {
+          "word": "your",
+          "startFrame": 4021,
+          "endFrame": 4024
+        },
+        {
+          "word": "head,",
+          "startFrame": 4024,
+          "endFrame": 4033
+        },
+        {
+          "word": "and",
+          "startFrame": 4033,
+          "endFrame": 4036
+        },
+        {
+          "word": "then",
+          "startFrame": 4036,
+          "endFrame": 4039
+        },
+        {
+          "word": "you",
+          "startFrame": 4039,
+          "endFrame": 4042
+        },
+        {
+          "word": "sit",
+          "startFrame": 4042,
+          "endFrame": 4054
+        },
+        {
+          "word": "there",
+          "startFrame": 4054,
+          "endFrame": 4057
+        },
+        {
+          "word": "while",
+          "startFrame": 4057,
+          "endFrame": 4063
+        },
+        {
+          "word": "your",
+          "startFrame": 4063,
+          "endFrame": 4069
+        },
+        {
+          "word": "mouth",
+          "startFrame": 4069,
+          "endFrame": 4084
+        },
+        {
+          "word": "spells",
+          "startFrame": 4084,
+          "endFrame": 4096
+        },
+        {
+          "word": "it",
+          "startFrame": 4096,
+          "endFrame": 4099
+        },
+        {
+          "word": "out,",
+          "startFrame": 4099,
+          "endFrame": 4114
+        },
+        {
+          "word": "one,",
+          "startFrame": 4117,
+          "endFrame": 4135
+        },
+        {
+          "word": "slow,",
+          "startFrame": 4138,
+          "endFrame": 4156
+        },
+        {
+          "word": "word,",
+          "startFrame": 4159,
+          "endFrame": 4177
+        },
+        {
+          "word": "at",
+          "startFrame": 4180,
+          "endFrame": 4192
+        },
+        {
+          "word": "a",
+          "startFrame": 4192,
+          "endFrame": 4195
+        },
+        {
+          "word": "time.",
+          "startFrame": 4195,
+          "endFrame": 4216
+        }
+      ]
+    },
+    "c4": {
+      "startFrame": 4231,
+      "endFrame": 4390,
+      "words": [
+        {
+          "word": "A",
+          "startFrame": 4231,
+          "endFrame": 4239
+        },
+        {
+          "word": "six",
+          "startFrame": 4239,
+          "endFrame": 4248
+        },
+        {
+          "word": "hour",
+          "startFrame": 4248,
+          "endFrame": 4257
+        },
+        {
+          "word": "school",
+          "startFrame": 4257,
+          "endFrame": 4266
+        },
+        {
+          "word": "day",
+          "startFrame": 4266,
+          "endFrame": 4275
+        },
+        {
+          "word": "feels",
+          "startFrame": 4275,
+          "endFrame": 4284
+        },
+        {
+          "word": "like",
+          "startFrame": 4284,
+          "endFrame": 4292
+        },
+        {
+          "word": "sixty.",
+          "startFrame": 4292,
+          "endFrame": 4301
+        },
+        {
+          "word": "One",
+          "startFrame": 4301,
+          "endFrame": 4310
+        },
+        {
+          "word": "math",
+          "startFrame": 4310,
+          "endFrame": 4319
+        },
+        {
+          "word": "class",
+          "startFrame": 4319,
+          "endFrame": 4328
+        },
+        {
+          "word": "feels",
+          "startFrame": 4328,
+          "endFrame": 4337
+        },
+        {
+          "word": "like",
+          "startFrame": 4337,
+          "endFrame": 4345
+        },
+        {
+          "word": "a",
+          "startFrame": 4345,
+          "endFrame": 4354
+        },
+        {
+          "word": "full",
+          "startFrame": 4354,
+          "endFrame": 4363
+        },
+        {
+          "word": "day",
+          "startFrame": 4363,
+          "endFrame": 4372
+        },
+        {
+          "word": "at",
+          "startFrame": 4372,
+          "endFrame": 4381
+        },
+        {
+          "word": "work.",
+          "startFrame": 4381,
+          "endFrame": 4390
+        }
+      ]
+    },
+    "c5": {
+      "startFrame": 4404,
+      "endFrame": 4497,
+      "words": [
+        {
+          "word": "And",
+          "startFrame": 4404,
+          "endFrame": 4407
+        },
+        {
+          "word": "then",
+          "startFrame": 4407,
+          "endFrame": 4419
+        },
+        {
+          "word": "you",
+          "startFrame": 4425,
+          "endFrame": 4431
+        },
+        {
+          "word": "stub",
+          "startFrame": 4431,
+          "endFrame": 4443
+        },
+        {
+          "word": "your",
+          "startFrame": 4443,
+          "endFrame": 4449
+        },
+        {
+          "word": "toe",
+          "startFrame": 4449,
+          "endFrame": 4464
+        },
+        {
+          "word": "on",
+          "startFrame": 4464,
+          "endFrame": 4467
+        },
+        {
+          "word": "the",
+          "startFrame": 4467,
+          "endFrame": 4470
+        },
+        {
+          "word": "bed",
+          "startFrame": 4470,
+          "endFrame": 4482
+        },
+        {
+          "word": "frame.",
+          "startFrame": 4482,
+          "endFrame": 4497
+        }
+      ]
+    },
+    "c6": {
+      "startFrame": 4509,
+      "endFrame": 4800,
+      "words": [
+        {
+          "word": "The",
+          "startFrame": 4509,
+          "endFrame": 4510
+        },
+        {
+          "word": "first",
+          "startFrame": 4509,
+          "endFrame": 4533
+        },
+        {
+          "word": "sharp",
+          "startFrame": 4533,
+          "endFrame": 4548
+        },
+        {
+          "word": "sting",
+          "startFrame": 4548,
+          "endFrame": 4566
+        },
+        {
+          "word": "arrives",
+          "startFrame": 4566,
+          "endFrame": 4584
+        },
+        {
+          "word": "fast.",
+          "startFrame": 4584,
+          "endFrame": 4608
+        },
+        {
+          "word": "But",
+          "startFrame": 4614,
+          "endFrame": 4617
+        },
+        {
+          "word": "the",
+          "startFrame": 4617,
+          "endFrame": 4620
+        },
+        {
+          "word": "deep,",
+          "startFrame": 4620,
+          "endFrame": 4635
+        },
+        {
+          "word": "throbbing",
+          "startFrame": 4638,
+          "endFrame": 4659
+        },
+        {
+          "word": "ache",
+          "startFrame": 4662,
+          "endFrame": 4674
+        },
+        {
+          "word": "travels",
+          "startFrame": 4674,
+          "endFrame": 4689
+        },
+        {
+          "word": "on",
+          "startFrame": 4689,
+          "endFrame": 4695
+        },
+        {
+          "word": "slower",
+          "startFrame": 4695,
+          "endFrame": 4710
+        },
+        {
+          "word": "nerves,",
+          "startFrame": 4710,
+          "endFrame": 4731
+        },
+        {
+          "word": "at",
+          "startFrame": 4743,
+          "endFrame": 4746
+        },
+        {
+          "word": "about",
+          "startFrame": 4746,
+          "endFrame": 4761
+        },
+        {
+          "word": "walking",
+          "startFrame": 4770,
+          "endFrame": 4785
+        },
+        {
+          "word": "speed.",
+          "startFrame": 4785,
+          "endFrame": 4800
+        }
+      ]
+    },
+    "c7": {
+      "startFrame": 4812,
+      "endFrame": 5010,
+      "words": [
+        {
+          "word": "So",
+          "startFrame": 4812,
+          "endFrame": 4818
+        },
+        {
+          "word": "you",
+          "startFrame": 4818,
+          "endFrame": 4821
+        },
+        {
+          "word": "get",
+          "startFrame": 4821,
+          "endFrame": 4827
+        },
+        {
+          "word": "to",
+          "startFrame": 4827,
+          "endFrame": 4830
+        },
+        {
+          "word": "stand",
+          "startFrame": 4830,
+          "endFrame": 4851
+        },
+        {
+          "word": "there,",
+          "startFrame": 4851,
+          "endFrame": 4869
+        },
+        {
+          "word": "for",
+          "startFrame": 4869,
+          "endFrame": 4872
+        },
+        {
+          "word": "eleven",
+          "startFrame": 4872,
+          "endFrame": 4893
+        },
+        {
+          "word": "long",
+          "startFrame": 4893,
+          "endFrame": 4905
+        },
+        {
+          "word": "seconds,",
+          "startFrame": 4905,
+          "endFrame": 4929
+        },
+        {
+          "word": "knowing",
+          "startFrame": 4935,
+          "endFrame": 4953
+        },
+        {
+          "word": "exactly",
+          "startFrame": 4953,
+          "endFrame": 4983
+        },
+        {
+          "word": "what",
+          "startFrame": 4986,
+          "endFrame": 4992
+        },
+        {
+          "word": "is",
+          "startFrame": 4992,
+          "endFrame": 4995
+        },
+        {
+          "word": "coming.",
+          "startFrame": 4995,
+          "endFrame": 5010
+        }
+      ]
+    },
+    "c8": {
+      "startFrame": 5024,
+      "endFrame": 5087,
+      "words": [
+        {
+          "word": "And",
+          "startFrame": 5024,
+          "endFrame": 5027
+        },
+        {
+          "word": "then",
+          "startFrame": 5027,
+          "endFrame": 5036
+        },
+        {
+          "word": "it",
+          "startFrame": 5063,
+          "endFrame": 5066
+        },
+        {
+          "word": "arrives.",
+          "startFrame": 5066,
+          "endFrame": 5087
+        }
+      ]
+    },
+    "c9": {
+      "startFrame": 5120,
+      "endFrame": 5294,
+      "words": [
+        {
+          "word": "Grandpa",
+          "startFrame": 5120,
+          "endFrame": 5129
+        },
+        {
+          "word": "Teo",
+          "startFrame": 5129,
+          "endFrame": 5137
+        },
+        {
+          "word": "thinks",
+          "startFrame": 5137,
+          "endFrame": 5146
+        },
+        {
+          "word": "you",
+          "startFrame": 5146,
+          "endFrame": 5155
+        },
+        {
+          "word": "have",
+          "startFrame": 5155,
+          "endFrame": 5164
+        },
+        {
+          "word": "become",
+          "startFrame": 5164,
+          "endFrame": 5172
+        },
+        {
+          "word": "very",
+          "startFrame": 5172,
+          "endFrame": 5181
+        },
+        {
+          "word": "wise",
+          "startFrame": 5181,
+          "endFrame": 5190
+        },
+        {
+          "word": "lately.",
+          "startFrame": 5190,
+          "endFrame": 5198
+        },
+        {
+          "word": "You",
+          "startFrame": 5198,
+          "endFrame": 5207
+        },
+        {
+          "word": "just",
+          "startFrame": 5207,
+          "endFrame": 5216
+        },
+        {
+          "word": "have",
+          "startFrame": 5216,
+          "endFrame": 5224
+        },
+        {
+          "word": "ten",
+          "startFrame": 5224,
+          "endFrame": 5233
+        },
+        {
+          "word": "times",
+          "startFrame": 5233,
+          "endFrame": 5242
+        },
+        {
+          "word": "longer",
+          "startFrame": 5242,
+          "endFrame": 5251
+        },
+        {
+          "word": "to",
+          "startFrame": 5251,
+          "endFrame": 5259
+        },
+        {
+          "word": "think",
+          "startFrame": 5259,
+          "endFrame": 5268
+        },
+        {
+          "word": "before",
+          "startFrame": 5268,
+          "endFrame": 5277
+        },
+        {
+          "word": "you",
+          "startFrame": 5277,
+          "endFrame": 5285
+        },
+        {
+          "word": "speak.",
+          "startFrame": 5285,
+          "endFrame": 5294
+        }
+      ]
+    },
+    "d1": {
+      "startFrame": 5315,
+      "endFrame": 5501,
+      "words": [
+        {
+          "word": "Friday",
+          "startFrame": 5315,
+          "endFrame": 5333
+        },
+        {
+          "word": "is",
+          "startFrame": 5333,
+          "endFrame": 5339
+        },
+        {
+          "word": "the",
+          "startFrame": 5339,
+          "endFrame": 5342
+        },
+        {
+          "word": "school",
+          "startFrame": 5342,
+          "endFrame": 5357
+        },
+        {
+          "word": "dodgeball",
+          "startFrame": 5357,
+          "endFrame": 5375
+        },
+        {
+          "word": "tournament.",
+          "startFrame": 5375,
+          "endFrame": 5393
+        },
+        {
+          "word": "This,",
+          "startFrame": 5414,
+          "endFrame": 5426
+        },
+        {
+          "word": "you",
+          "startFrame": 5426,
+          "endFrame": 5429
+        },
+        {
+          "word": "think,",
+          "startFrame": 5429,
+          "endFrame": 5444
+        },
+        {
+          "word": "is",
+          "startFrame": 5447,
+          "endFrame": 5453
+        },
+        {
+          "word": "where",
+          "startFrame": 5453,
+          "endFrame": 5459
+        },
+        {
+          "word": "it",
+          "startFrame": 5459,
+          "endFrame": 5462
+        },
+        {
+          "word": "finally",
+          "startFrame": 5462,
+          "endFrame": 5480
+        },
+        {
+          "word": "pays",
+          "startFrame": 5480,
+          "endFrame": 5489
+        },
+        {
+          "word": "off.",
+          "startFrame": 5489,
+          "endFrame": 5501
+        }
+      ]
+    },
+    "d2": {
+      "startFrame": 5512,
+      "endFrame": 5665,
+      "words": [
+        {
+          "word": "Marcus",
+          "startFrame": 5512,
+          "endFrame": 5530
+        },
+        {
+          "word": "from",
+          "startFrame": 5530,
+          "endFrame": 5533
+        },
+        {
+          "word": "the",
+          "startFrame": 5533,
+          "endFrame": 5539
+        },
+        {
+          "word": "eighth",
+          "startFrame": 5539,
+          "endFrame": 5545
+        },
+        {
+          "word": "grade",
+          "startFrame": 5545,
+          "endFrame": 5560
+        },
+        {
+          "word": "throws",
+          "startFrame": 5566,
+          "endFrame": 5572
+        },
+        {
+          "word": "the",
+          "startFrame": 5572,
+          "endFrame": 5575
+        },
+        {
+          "word": "hardest",
+          "startFrame": 5575,
+          "endFrame": 5593
+        },
+        {
+          "word": "ball",
+          "startFrame": 5593,
+          "endFrame": 5599
+        },
+        {
+          "word": "in",
+          "startFrame": 5599,
+          "endFrame": 5602
+        },
+        {
+          "word": "school.",
+          "startFrame": 5602,
+          "endFrame": 5614
+        },
+        {
+          "word": "Forty",
+          "startFrame": 5629,
+          "endFrame": 5638
+        },
+        {
+          "word": "miles",
+          "startFrame": 5638,
+          "endFrame": 5650
+        },
+        {
+          "word": "an",
+          "startFrame": 5650,
+          "endFrame": 5653
+        },
+        {
+          "word": "hour.",
+          "startFrame": 5653,
+          "endFrame": 5665
+        }
+      ]
+    },
+    "d3": {
+      "startFrame": 5677,
+      "endFrame": 5866,
+      "words": [
+        {
+          "word": "From",
+          "startFrame": 5677,
+          "endFrame": 5683
+        },
+        {
+          "word": "twenty",
+          "startFrame": 5683,
+          "endFrame": 5695
+        },
+        {
+          "word": "feet",
+          "startFrame": 5695,
+          "endFrame": 5701
+        },
+        {
+          "word": "away,",
+          "startFrame": 5701,
+          "endFrame": 5713
+        },
+        {
+          "word": "it",
+          "startFrame": 5713,
+          "endFrame": 5719
+        },
+        {
+          "word": "reaches",
+          "startFrame": 5719,
+          "endFrame": 5731
+        },
+        {
+          "word": "you",
+          "startFrame": 5731,
+          "endFrame": 5740
+        },
+        {
+          "word": "in",
+          "startFrame": 5740,
+          "endFrame": 5743
+        },
+        {
+          "word": "a",
+          "startFrame": 5743,
+          "endFrame": 5746
+        },
+        {
+          "word": "third",
+          "startFrame": 5746,
+          "endFrame": 5755
+        },
+        {
+          "word": "of",
+          "startFrame": 5755,
+          "endFrame": 5758
+        },
+        {
+          "word": "a",
+          "startFrame": 5758,
+          "endFrame": 5761
+        },
+        {
+          "word": "second.",
+          "startFrame": 5761,
+          "endFrame": 5776
+        },
+        {
+          "word": "For",
+          "startFrame": 5785,
+          "endFrame": 5791
+        },
+        {
+          "word": "you,",
+          "startFrame": 5791,
+          "endFrame": 5803
+        },
+        {
+          "word": "that",
+          "startFrame": 5809,
+          "endFrame": 5818
+        },
+        {
+          "word": "is",
+          "startFrame": 5818,
+          "endFrame": 5821
+        },
+        {
+          "word": "more",
+          "startFrame": 5821,
+          "endFrame": 5827
+        },
+        {
+          "word": "than",
+          "startFrame": 5827,
+          "endFrame": 5833
+        },
+        {
+          "word": "three",
+          "startFrame": 5833,
+          "endFrame": 5848
+        },
+        {
+          "word": "seconds.",
+          "startFrame": 5848,
+          "endFrame": 5866
+        }
+      ]
+    },
+    "d4": {
+      "startFrame": 5878,
+      "endFrame": 6073,
+      "words": [
+        {
+          "word": "Plenty",
+          "startFrame": 5878,
+          "endFrame": 5884
+        },
+        {
+          "word": "of",
+          "startFrame": 5884,
+          "endFrame": 5887
+        },
+        {
+          "word": "time.",
+          "startFrame": 5887,
+          "endFrame": 5905
+        },
+        {
+          "word": "You",
+          "startFrame": 5911,
+          "endFrame": 5914
+        },
+        {
+          "word": "see",
+          "startFrame": 5914,
+          "endFrame": 5920
+        },
+        {
+          "word": "it",
+          "startFrame": 5920,
+          "endFrame": 5923
+        },
+        {
+          "word": "leave",
+          "startFrame": 5923,
+          "endFrame": 5929
+        },
+        {
+          "word": "his",
+          "startFrame": 5929,
+          "endFrame": 5930
+        },
+        {
+          "word": "hand.",
+          "startFrame": 5929,
+          "endFrame": 5950
+        },
+        {
+          "word": "You",
+          "startFrame": 5956,
+          "endFrame": 5959
+        },
+        {
+          "word": "see",
+          "startFrame": 5959,
+          "endFrame": 5965
+        },
+        {
+          "word": "the",
+          "startFrame": 5965,
+          "endFrame": 5968
+        },
+        {
+          "word": "seams",
+          "startFrame": 5968,
+          "endFrame": 5989
+        },
+        {
+          "word": "turning.",
+          "startFrame": 5989,
+          "endFrame": 6007
+        },
+        {
+          "word": "You",
+          "startFrame": 6019,
+          "endFrame": 6022
+        },
+        {
+          "word": "decide",
+          "startFrame": 6022,
+          "endFrame": 6037
+        },
+        {
+          "word": "to",
+          "startFrame": 6037,
+          "endFrame": 6040
+        },
+        {
+          "word": "step",
+          "startFrame": 6040,
+          "endFrame": 6049
+        },
+        {
+          "word": "left.",
+          "startFrame": 6049,
+          "endFrame": 6073
+        }
+      ]
+    },
+    "d5": {
+      "startFrame": 6085,
+      "endFrame": 6133,
+      "words": [
+        {
+          "word": "Your",
+          "startFrame": 6085,
+          "endFrame": 6091
+        },
+        {
+          "word": "legs",
+          "startFrame": 6091,
+          "endFrame": 6106
+        },
+        {
+          "word": "start",
+          "startFrame": 6106,
+          "endFrame": 6118
+        },
+        {
+          "word": "the",
+          "startFrame": 6118,
+          "endFrame": 6121
+        },
+        {
+          "word": "step.",
+          "startFrame": 6121,
+          "endFrame": 6133
+        }
+      ]
+    },
+    "d6": {
+      "startFrame": 6141,
+      "endFrame": 6207,
+      "words": [
+        {
+          "word": "The",
+          "startFrame": 6141,
+          "endFrame": 6144
+        },
+        {
+          "word": "ball",
+          "startFrame": 6144,
+          "endFrame": 6156
+        },
+        {
+          "word": "is",
+          "startFrame": 6156,
+          "endFrame": 6162
+        },
+        {
+          "word": "already",
+          "startFrame": 6162,
+          "endFrame": 6186
+        },
+        {
+          "word": "halfway.",
+          "startFrame": 6186,
+          "endFrame": 6207
+        }
+      ]
+    },
+    "d7": {
+      "startFrame": 6216,
+      "endFrame": 6444,
+      "words": [
+        {
+          "word": "Moving",
+          "startFrame": 6216,
+          "endFrame": 6222
+        },
+        {
+          "word": "your",
+          "startFrame": 6222,
+          "endFrame": 6225
+        },
+        {
+          "word": "whole",
+          "startFrame": 6225,
+          "endFrame": 6237
+        },
+        {
+          "word": "body",
+          "startFrame": 6237,
+          "endFrame": 6246
+        },
+        {
+          "word": "sideways",
+          "startFrame": 6246,
+          "endFrame": 6264
+        },
+        {
+          "word": "takes",
+          "startFrame": 6273,
+          "endFrame": 6276
+        },
+        {
+          "word": "about",
+          "startFrame": 6276,
+          "endFrame": 6282
+        },
+        {
+          "word": "a",
+          "startFrame": 6282,
+          "endFrame": 6285
+        },
+        {
+          "word": "third",
+          "startFrame": 6285,
+          "endFrame": 6297
+        },
+        {
+          "word": "of",
+          "startFrame": 6297,
+          "endFrame": 6300
+        },
+        {
+          "word": "a",
+          "startFrame": 6300,
+          "endFrame": 6301
+        },
+        {
+          "word": "second.",
+          "startFrame": 6300,
+          "endFrame": 6315
+        },
+        {
+          "word": "Your",
+          "startFrame": 6327,
+          "endFrame": 6333
+        },
+        {
+          "word": "brain",
+          "startFrame": 6333,
+          "endFrame": 6345
+        },
+        {
+          "word": "is",
+          "startFrame": 6345,
+          "endFrame": 6354
+        },
+        {
+          "word": "ten",
+          "startFrame": 6354,
+          "endFrame": 6369
+        },
+        {
+          "word": "times",
+          "startFrame": 6369,
+          "endFrame": 6378
+        },
+        {
+          "word": "faster.",
+          "startFrame": 6378,
+          "endFrame": 6390
+        },
+        {
+          "word": "Your",
+          "startFrame": 6402,
+          "endFrame": 6405
+        },
+        {
+          "word": "legs",
+          "startFrame": 6405,
+          "endFrame": 6417
+        },
+        {
+          "word": "are",
+          "startFrame": 6432,
+          "endFrame": 6435
+        },
+        {
+          "word": "not.",
+          "startFrame": 6435,
+          "endFrame": 6444
+        }
+      ]
+    },
+    "d8": {
+      "startFrame": 6459,
+      "endFrame": 6660,
+      "words": [
+        {
+          "word": "You",
+          "startFrame": 6459,
+          "endFrame": 6465
+        },
+        {
+          "word": "watch",
+          "startFrame": 6465,
+          "endFrame": 6480
+        },
+        {
+          "word": "it",
+          "startFrame": 6480,
+          "endFrame": 6486
+        },
+        {
+          "word": "come",
+          "startFrame": 6486,
+          "endFrame": 6498
+        },
+        {
+          "word": "the",
+          "startFrame": 6498,
+          "endFrame": 6501
+        },
+        {
+          "word": "whole",
+          "startFrame": 6501,
+          "endFrame": 6525
+        },
+        {
+          "word": "way.",
+          "startFrame": 6525,
+          "endFrame": 6537
+        },
+        {
+          "word": "Every",
+          "startFrame": 6564,
+          "endFrame": 6570
+        },
+        {
+          "word": "inch.",
+          "startFrame": 6570,
+          "endFrame": 6588
+        },
+        {
+          "word": "Right",
+          "startFrame": 6612,
+          "endFrame": 6624
+        },
+        {
+          "word": "into",
+          "startFrame": 6624,
+          "endFrame": 6636
+        },
+        {
+          "word": "your",
+          "startFrame": 6636,
+          "endFrame": 6639
+        },
+        {
+          "word": "stomach.",
+          "startFrame": 6639,
+          "endFrame": 6660
+        }
+      ]
+    },
+    "d9": {
+      "startFrame": 6692,
+      "endFrame": 6905,
+      "words": [
+        {
+          "word": "On",
+          "startFrame": 6692,
+          "endFrame": 6693
+        },
+        {
+          "word": "the",
+          "startFrame": 6692,
+          "endFrame": 6695
+        },
+        {
+          "word": "bench,",
+          "startFrame": 6695,
+          "endFrame": 6713
+        },
+        {
+          "word": "you",
+          "startFrame": 6713,
+          "endFrame": 6716
+        },
+        {
+          "word": "replay",
+          "startFrame": 6716,
+          "endFrame": 6731
+        },
+        {
+          "word": "it.",
+          "startFrame": 6731,
+          "endFrame": 6732
+        },
+        {
+          "word": "Over",
+          "startFrame": 6749,
+          "endFrame": 6764
+        },
+        {
+          "word": "and",
+          "startFrame": 6764,
+          "endFrame": 6770
+        },
+        {
+          "word": "over.",
+          "startFrame": 6770,
+          "endFrame": 6782
+        },
+        {
+          "word": "You",
+          "startFrame": 6794,
+          "endFrame": 6797
+        },
+        {
+          "word": "cannot",
+          "startFrame": 6797,
+          "endFrame": 6812
+        },
+        {
+          "word": "be",
+          "startFrame": 6812,
+          "endFrame": 6815
+        },
+        {
+          "word": "faster",
+          "startFrame": 6815,
+          "endFrame": 6833
+        },
+        {
+          "word": "than",
+          "startFrame": 6833,
+          "endFrame": 6836
+        },
+        {
+          "word": "the",
+          "startFrame": 6836,
+          "endFrame": 6842
+        },
+        {
+          "word": "ball.",
+          "startFrame": 6842,
+          "endFrame": 6860
+        },
+        {
+          "word": "Nobody",
+          "startFrame": 6878,
+          "endFrame": 6893
+        },
+        {
+          "word": "can.",
+          "startFrame": 6893,
+          "endFrame": 6905
+        }
+      ]
+    },
+    "d10": {
+      "startFrame": 6917,
+      "endFrame": 7139,
+      "words": [
+        {
+          "word": "But",
+          "startFrame": 6917,
+          "endFrame": 6920
+        },
+        {
+          "word": "Marcus",
+          "startFrame": 6920,
+          "endFrame": 6932
+        },
+        {
+          "word": "is",
+          "startFrame": 6932,
+          "endFrame": 6935
+        },
+        {
+          "word": "not",
+          "startFrame": 6935,
+          "endFrame": 6941
+        },
+        {
+          "word": "that",
+          "startFrame": 6941,
+          "endFrame": 6950
+        },
+        {
+          "word": "fast",
+          "startFrame": 6950,
+          "endFrame": 6962
+        },
+        {
+          "word": "either.",
+          "startFrame": 6962,
+          "endFrame": 6977
+        },
+        {
+          "word": "Before",
+          "startFrame": 6986,
+          "endFrame": 6995
+        },
+        {
+          "word": "the",
+          "startFrame": 6995,
+          "endFrame": 6998
+        },
+        {
+          "word": "ball",
+          "startFrame": 6998,
+          "endFrame": 7004
+        },
+        {
+          "word": "leaves",
+          "startFrame": 7004,
+          "endFrame": 7010
+        },
+        {
+          "word": "his",
+          "startFrame": 7010,
+          "endFrame": 7013
+        },
+        {
+          "word": "hand,",
+          "startFrame": 7013,
+          "endFrame": 7031
+        },
+        {
+          "word": "his",
+          "startFrame": 7034,
+          "endFrame": 7037
+        },
+        {
+          "word": "arm",
+          "startFrame": 7037,
+          "endFrame": 7046
+        },
+        {
+          "word": "has",
+          "startFrame": 7046,
+          "endFrame": 7049
+        },
+        {
+          "word": "to",
+          "startFrame": 7049,
+          "endFrame": 7055
+        },
+        {
+          "word": "wind",
+          "startFrame": 7055,
+          "endFrame": 7067
+        },
+        {
+          "word": "back.",
+          "startFrame": 7067,
+          "endFrame": 7088
+        },
+        {
+          "word": "That",
+          "startFrame": 7091,
+          "endFrame": 7097
+        },
+        {
+          "word": "takes",
+          "startFrame": 7097,
+          "endFrame": 7106
+        },
+        {
+          "word": "a",
+          "startFrame": 7106,
+          "endFrame": 7107
+        },
+        {
+          "word": "quarter",
+          "startFrame": 7106,
+          "endFrame": 7121
+        },
+        {
+          "word": "of",
+          "startFrame": 7121,
+          "endFrame": 7124
+        },
+        {
+          "word": "a",
+          "startFrame": 7124,
+          "endFrame": 7125
+        },
+        {
+          "word": "second.",
+          "startFrame": 7124,
+          "endFrame": 7139
+        }
+      ]
+    },
+    "d11": {
+      "startFrame": 7154,
+      "endFrame": 7262,
+      "words": [
+        {
+          "word": "Everyone",
+          "startFrame": 7154,
+          "endFrame": 7163
+        },
+        {
+          "word": "else",
+          "startFrame": 7163,
+          "endFrame": 7169
+        },
+        {
+          "word": "watches",
+          "startFrame": 7169,
+          "endFrame": 7181
+        },
+        {
+          "word": "the",
+          "startFrame": 7181,
+          "endFrame": 7184
+        },
+        {
+          "word": "ball.",
+          "startFrame": 7184,
+          "endFrame": 7196
+        },
+        {
+          "word": "You",
+          "startFrame": 7208,
+          "endFrame": 7220
+        },
+        {
+          "word": "start",
+          "startFrame": 7220,
+          "endFrame": 7229
+        },
+        {
+          "word": "watching",
+          "startFrame": 7229,
+          "endFrame": 7238
+        },
+        {
+          "word": "his",
+          "startFrame": 7238,
+          "endFrame": 7244
+        },
+        {
+          "word": "shoulder.",
+          "startFrame": 7244,
+          "endFrame": 7262
+        }
+      ]
+    },
+    "d12": {
+      "startFrame": 7276,
+      "endFrame": 7417,
+      "words": [
+        {
+          "word": "Next",
+          "startFrame": 7276,
+          "endFrame": 7285
+        },
+        {
+          "word": "round.",
+          "startFrame": 7285,
+          "endFrame": 7297
+        },
+        {
+          "word": "His",
+          "startFrame": 7309,
+          "endFrame": 7315
+        },
+        {
+          "word": "shoulder",
+          "startFrame": 7315,
+          "endFrame": 7330
+        },
+        {
+          "word": "twists",
+          "startFrame": 7330,
+          "endFrame": 7348
+        },
+        {
+          "word": "back,",
+          "startFrame": 7348,
+          "endFrame": 7363
+        },
+        {
+          "word": "and",
+          "startFrame": 7366,
+          "endFrame": 7369
+        },
+        {
+          "word": "you",
+          "startFrame": 7369,
+          "endFrame": 7372
+        },
+        {
+          "word": "are",
+          "startFrame": 7372,
+          "endFrame": 7378
+        },
+        {
+          "word": "already",
+          "startFrame": 7378,
+          "endFrame": 7399
+        },
+        {
+          "word": "moving.",
+          "startFrame": 7399,
+          "endFrame": 7417
+        }
+      ]
+    },
+    "d13": {
+      "startFrame": 7429,
+      "endFrame": 7537,
+      "words": [
+        {
+          "word": "The",
+          "startFrame": 7429,
+          "endFrame": 7432
+        },
+        {
+          "word": "ball",
+          "startFrame": 7432,
+          "endFrame": 7444
+        },
+        {
+          "word": "flies",
+          "startFrame": 7444,
+          "endFrame": 7465
+        },
+        {
+          "word": "through",
+          "startFrame": 7465,
+          "endFrame": 7471
+        },
+        {
+          "word": "the",
+          "startFrame": 7471,
+          "endFrame": 7474
+        },
+        {
+          "word": "spot",
+          "startFrame": 7474,
+          "endFrame": 7489
+        },
+        {
+          "word": "where",
+          "startFrame": 7489,
+          "endFrame": 7492
+        },
+        {
+          "word": "your",
+          "startFrame": 7492,
+          "endFrame": 7498
+        },
+        {
+          "word": "stomach",
+          "startFrame": 7498,
+          "endFrame": 7516
+        },
+        {
+          "word": "used",
+          "startFrame": 7516,
+          "endFrame": 7522
+        },
+        {
+          "word": "to",
+          "startFrame": 7522,
+          "endFrame": 7525
+        },
+        {
+          "word": "be.",
+          "startFrame": 7525,
+          "endFrame": 7537
+        }
+      ]
+    },
+    "d14": {
+      "startFrame": 7552,
+      "endFrame": 7660,
+      "words": [
+        {
+          "word": "You",
+          "startFrame": 7552,
+          "endFrame": 7555
+        },
+        {
+          "word": "are",
+          "startFrame": 7555,
+          "endFrame": 7558
+        },
+        {
+          "word": "not",
+          "startFrame": 7558,
+          "endFrame": 7564
+        },
+        {
+          "word": "faster",
+          "startFrame": 7564,
+          "endFrame": 7582
+        },
+        {
+          "word": "than",
+          "startFrame": 7582,
+          "endFrame": 7588
+        },
+        {
+          "word": "anyone.",
+          "startFrame": 7588,
+          "endFrame": 7612
+        },
+        {
+          "word": "You",
+          "startFrame": 7618,
+          "endFrame": 7633
+        },
+        {
+          "word": "are",
+          "startFrame": 7636,
+          "endFrame": 7642
+        },
+        {
+          "word": "earlier.",
+          "startFrame": 7645,
+          "endFrame": 7660
+        }
+      ]
+    },
+    "d15": {
+      "startFrame": 7693,
+      "endFrame": 7936,
+      "words": [
+        {
+          "word": "Your",
+          "startFrame": 7693,
+          "endFrame": 7699
+        },
+        {
+          "word": "team",
+          "startFrame": 7699,
+          "endFrame": 7714
+        },
+        {
+          "word": "wins",
+          "startFrame": 7714,
+          "endFrame": 7729
+        },
+        {
+          "word": "the",
+          "startFrame": 7729,
+          "endFrame": 7732
+        },
+        {
+          "word": "tournament.",
+          "startFrame": 7732,
+          "endFrame": 7747
+        },
+        {
+          "word": "Marcus",
+          "startFrame": 7768,
+          "endFrame": 7780
+        },
+        {
+          "word": "asks",
+          "startFrame": 7780,
+          "endFrame": 7789
+        },
+        {
+          "word": "if",
+          "startFrame": 7789,
+          "endFrame": 7792
+        },
+        {
+          "word": "you",
+          "startFrame": 7792,
+          "endFrame": 7795
+        },
+        {
+          "word": "can",
+          "startFrame": 7795,
+          "endFrame": 7801
+        },
+        {
+          "word": "see",
+          "startFrame": 7801,
+          "endFrame": 7807
+        },
+        {
+          "word": "the",
+          "startFrame": 7807,
+          "endFrame": 7810
+        },
+        {
+          "word": "future.",
+          "startFrame": 7810,
+          "endFrame": 7837
+        },
+        {
+          "word": "You",
+          "startFrame": 7867,
+          "endFrame": 7873
+        },
+        {
+          "word": "tell",
+          "startFrame": 7873,
+          "endFrame": 7882
+        },
+        {
+          "word": "him",
+          "startFrame": 7882,
+          "endFrame": 7885
+        },
+        {
+          "word": "you",
+          "startFrame": 7897,
+          "endFrame": 7900
+        },
+        {
+          "word": "just",
+          "startFrame": 7900,
+          "endFrame": 7906
+        },
+        {
+          "word": "watch",
+          "startFrame": 7906,
+          "endFrame": 7918
+        },
+        {
+          "word": "shoulders.",
+          "startFrame": 7918,
+          "endFrame": 7936
+        }
+      ]
+    },
+    "e1": {
+      "startFrame": 7956,
+      "endFrame": 8178,
+      "words": [
+        {
+          "word": "Sunday.",
+          "startFrame": 7956,
+          "endFrame": 7967
+        },
+        {
+          "word": "Grandpa",
+          "startFrame": 7967,
+          "endFrame": 7977
+        },
+        {
+          "word": "Teo",
+          "startFrame": 7977,
+          "endFrame": 7988
+        },
+        {
+          "word": "is",
+          "startFrame": 7988,
+          "endFrame": 7999
+        },
+        {
+          "word": "up",
+          "startFrame": 7999,
+          "endFrame": 8009
+        },
+        {
+          "word": "on",
+          "startFrame": 8009,
+          "endFrame": 8020
+        },
+        {
+          "word": "the",
+          "startFrame": 8020,
+          "endFrame": 8030
+        },
+        {
+          "word": "stepladder,",
+          "startFrame": 8030,
+          "endFrame": 8041
+        },
+        {
+          "word": "clearing",
+          "startFrame": 8041,
+          "endFrame": 8051
+        },
+        {
+          "word": "leaves",
+          "startFrame": 8051,
+          "endFrame": 8062
+        },
+        {
+          "word": "out",
+          "startFrame": 8062,
+          "endFrame": 8073
+        },
+        {
+          "word": "of",
+          "startFrame": 8073,
+          "endFrame": 8083
+        },
+        {
+          "word": "the",
+          "startFrame": 8083,
+          "endFrame": 8094
+        },
+        {
+          "word": "gutter.",
+          "startFrame": 8094,
+          "endFrame": 8104
+        },
+        {
+          "word": "Your",
+          "startFrame": 8104,
+          "endFrame": 8115
+        },
+        {
+          "word": "job",
+          "startFrame": 8115,
+          "endFrame": 8125
+        },
+        {
+          "word": "is",
+          "startFrame": 8125,
+          "endFrame": 8136
+        },
+        {
+          "word": "to",
+          "startFrame": 8136,
+          "endFrame": 8147
+        },
+        {
+          "word": "hold",
+          "startFrame": 8147,
+          "endFrame": 8157
+        },
+        {
+          "word": "the",
+          "startFrame": 8157,
+          "endFrame": 8168
+        },
+        {
+          "word": "ladder.",
+          "startFrame": 8168,
+          "endFrame": 8178
+        }
+      ]
+    },
+    "e2": {
+      "startFrame": 8190,
+      "endFrame": 8358,
+      "words": [
+        {
+          "word": "Tess",
+          "startFrame": 8190,
+          "endFrame": 8199
+        },
+        {
+          "word": "calls",
+          "startFrame": 8199,
+          "endFrame": 8208
+        },
+        {
+          "word": "you",
+          "startFrame": 8208,
+          "endFrame": 8211
+        },
+        {
+          "word": "from",
+          "startFrame": 8211,
+          "endFrame": 8214
+        },
+        {
+          "word": "the",
+          "startFrame": 8214,
+          "endFrame": 8217
+        },
+        {
+          "word": "porch.",
+          "startFrame": 8217,
+          "endFrame": 8229
+        },
+        {
+          "word": "Lemonade.",
+          "startFrame": 8253,
+          "endFrame": 8274
+        },
+        {
+          "word": "You",
+          "startFrame": 8298,
+          "endFrame": 8301
+        },
+        {
+          "word": "let",
+          "startFrame": 8301,
+          "endFrame": 8307
+        },
+        {
+          "word": "go,",
+          "startFrame": 8307,
+          "endFrame": 8313
+        },
+        {
+          "word": "just",
+          "startFrame": 8331,
+          "endFrame": 8340
+        },
+        {
+          "word": "for",
+          "startFrame": 8340,
+          "endFrame": 8343
+        },
+        {
+          "word": "a",
+          "startFrame": 8343,
+          "endFrame": 8346
+        },
+        {
+          "word": "moment.",
+          "startFrame": 8346,
+          "endFrame": 8358
+        }
+      ]
+    },
+    "e3": {
+      "startFrame": 8370,
+      "endFrame": 8484,
+      "words": [
+        {
+          "word": "You",
+          "startFrame": 8370,
+          "endFrame": 8376
+        },
+        {
+          "word": "are",
+          "startFrame": 8376,
+          "endFrame": 8377
+        },
+        {
+          "word": "four",
+          "startFrame": 8376,
+          "endFrame": 8394
+        },
+        {
+          "word": "steps",
+          "startFrame": 8394,
+          "endFrame": 8406
+        },
+        {
+          "word": "away",
+          "startFrame": 8406,
+          "endFrame": 8418
+        },
+        {
+          "word": "when",
+          "startFrame": 8421,
+          "endFrame": 8427
+        },
+        {
+          "word": "Grandpa",
+          "startFrame": 8427,
+          "endFrame": 8442
+        },
+        {
+          "word": "leans",
+          "startFrame": 8442,
+          "endFrame": 8451
+        },
+        {
+          "word": "a",
+          "startFrame": 8451,
+          "endFrame": 8454
+        },
+        {
+          "word": "little",
+          "startFrame": 8454,
+          "endFrame": 8463
+        },
+        {
+          "word": "too",
+          "startFrame": 8463,
+          "endFrame": 8469
+        },
+        {
+          "word": "far.",
+          "startFrame": 8469,
+          "endFrame": 8484
+        }
+      ]
+    },
+    "e4": {
+      "startFrame": 8498,
+      "endFrame": 8597,
+      "words": [
+        {
+          "word": "The",
+          "startFrame": 8498,
+          "endFrame": 8509
+        },
+        {
+          "word": "ladder",
+          "startFrame": 8509,
+          "endFrame": 8520
+        },
+        {
+          "word": "rocks",
+          "startFrame": 8520,
+          "endFrame": 8531
+        },
+        {
+          "word": "up",
+          "startFrame": 8531,
+          "endFrame": 8542
+        },
+        {
+          "word": "onto",
+          "startFrame": 8542,
+          "endFrame": 8553
+        },
+        {
+          "word": "two",
+          "startFrame": 8553,
+          "endFrame": 8564
+        },
+        {
+          "word": "legs.",
+          "startFrame": 8564,
+          "endFrame": 8575
+        },
+        {
+          "word": "One",
+          "startFrame": 8575,
+          "endFrame": 8586
+        },
+        {
+          "word": "degree.",
+          "startFrame": 8586,
+          "endFrame": 8597
+        }
+      ]
+    },
+    "e5": {
+      "startFrame": 8609,
+      "endFrame": 8762,
+      "words": [
+        {
+          "word": "Nobody",
+          "startFrame": 8609,
+          "endFrame": 8618
+        },
+        {
+          "word": "else",
+          "startFrame": 8618,
+          "endFrame": 8633
+        },
+        {
+          "word": "would",
+          "startFrame": 8633,
+          "endFrame": 8642
+        },
+        {
+          "word": "notice",
+          "startFrame": 8642,
+          "endFrame": 8654
+        },
+        {
+          "word": "it",
+          "startFrame": 8654,
+          "endFrame": 8660
+        },
+        {
+          "word": "yet.",
+          "startFrame": 8660,
+          "endFrame": 8672
+        },
+        {
+          "word": "To",
+          "startFrame": 8684,
+          "endFrame": 8690
+        },
+        {
+          "word": "everyone",
+          "startFrame": 8690,
+          "endFrame": 8696
+        },
+        {
+          "word": "else,",
+          "startFrame": 8696,
+          "endFrame": 8708
+        },
+        {
+          "word": "one",
+          "startFrame": 8711,
+          "endFrame": 8720
+        },
+        {
+          "word": "degree",
+          "startFrame": 8720,
+          "endFrame": 8738
+        },
+        {
+          "word": "is",
+          "startFrame": 8738,
+          "endFrame": 8744
+        },
+        {
+          "word": "nothing.",
+          "startFrame": 8744,
+          "endFrame": 8762
+        }
+      ]
+    },
+    "e6": {
+      "startFrame": 8774,
+      "endFrame": 8846,
+      "words": [
+        {
+          "word": "To",
+          "startFrame": 8774,
+          "endFrame": 8780
+        },
+        {
+          "word": "you,",
+          "startFrame": 8780,
+          "endFrame": 8795
+        },
+        {
+          "word": "it",
+          "startFrame": 8804,
+          "endFrame": 8807
+        },
+        {
+          "word": "is",
+          "startFrame": 8807,
+          "endFrame": 8810
+        },
+        {
+          "word": "the",
+          "startFrame": 8810,
+          "endFrame": 8813
+        },
+        {
+          "word": "start",
+          "startFrame": 8813,
+          "endFrame": 8822
+        },
+        {
+          "word": "of",
+          "startFrame": 8822,
+          "endFrame": 8825
+        },
+        {
+          "word": "a",
+          "startFrame": 8825,
+          "endFrame": 8828
+        },
+        {
+          "word": "fall.",
+          "startFrame": 8828,
+          "endFrame": 8846
+        }
+      ]
+    },
+    "e7": {
+      "startFrame": 8860,
+      "endFrame": 8941,
+      "words": [
+        {
+          "word": "And",
+          "startFrame": 8860,
+          "endFrame": 8863
+        },
+        {
+          "word": "falls",
+          "startFrame": 8863,
+          "endFrame": 8875
+        },
+        {
+          "word": "have",
+          "startFrame": 8875,
+          "endFrame": 8878
+        },
+        {
+          "word": "a",
+          "startFrame": 8878,
+          "endFrame": 8881
+        },
+        {
+          "word": "secret.",
+          "startFrame": 8881,
+          "endFrame": 8899
+        },
+        {
+          "word": "They",
+          "startFrame": 8911,
+          "endFrame": 8914
+        },
+        {
+          "word": "start",
+          "startFrame": 8914,
+          "endFrame": 8926
+        },
+        {
+          "word": "slow.",
+          "startFrame": 8926,
+          "endFrame": 8941
+        }
+      ]
+    },
+    "e8": {
+      "startFrame": 8953,
+      "endFrame": 9265,
+      "words": [
+        {
+          "word": "A",
+          "startFrame": 8953,
+          "endFrame": 8963
+        },
+        {
+          "word": "tipping",
+          "startFrame": 8963,
+          "endFrame": 8973
+        },
+        {
+          "word": "ladder",
+          "startFrame": 8973,
+          "endFrame": 8983
+        },
+        {
+          "word": "barely",
+          "startFrame": 8983,
+          "endFrame": 8993
+        },
+        {
+          "word": "moves",
+          "startFrame": 8993,
+          "endFrame": 9004
+        },
+        {
+          "word": "at",
+          "startFrame": 9004,
+          "endFrame": 9014
+        },
+        {
+          "word": "first.",
+          "startFrame": 9014,
+          "endFrame": 9024
+        },
+        {
+          "word": "It",
+          "startFrame": 9024,
+          "endFrame": 9034
+        },
+        {
+          "word": "takes",
+          "startFrame": 9034,
+          "endFrame": 9044
+        },
+        {
+          "word": "a",
+          "startFrame": 9044,
+          "endFrame": 9054
+        },
+        {
+          "word": "whole",
+          "startFrame": 9054,
+          "endFrame": 9064
+        },
+        {
+          "word": "second",
+          "startFrame": 9064,
+          "endFrame": 9074
+        },
+        {
+          "word": "to",
+          "startFrame": 9074,
+          "endFrame": 9084
+        },
+        {
+          "word": "lean",
+          "startFrame": 9084,
+          "endFrame": 9094
+        },
+        {
+          "word": "five",
+          "startFrame": 9094,
+          "endFrame": 9104
+        },
+        {
+          "word": "degrees.",
+          "startFrame": 9104,
+          "endFrame": 9114
+        },
+        {
+          "word": "Then",
+          "startFrame": 9114,
+          "endFrame": 9124
+        },
+        {
+          "word": "it",
+          "startFrame": 9124,
+          "endFrame": 9134
+        },
+        {
+          "word": "speeds",
+          "startFrame": 9134,
+          "endFrame": 9144
+        },
+        {
+          "word": "up,",
+          "startFrame": 9144,
+          "endFrame": 9154
+        },
+        {
+          "word": "and",
+          "startFrame": 9154,
+          "endFrame": 9165
+        },
+        {
+          "word": "a",
+          "startFrame": 9165,
+          "endFrame": 9175
+        },
+        {
+          "word": "little",
+          "startFrame": 9175,
+          "endFrame": 9185
+        },
+        {
+          "word": "over",
+          "startFrame": 9185,
+          "endFrame": 9195
+        },
+        {
+          "word": "a",
+          "startFrame": 9195,
+          "endFrame": 9205
+        },
+        {
+          "word": "second",
+          "startFrame": 9205,
+          "endFrame": 9215
+        },
+        {
+          "word": "later,",
+          "startFrame": 9215,
+          "endFrame": 9225
+        },
+        {
+          "word": "it",
+          "startFrame": 9225,
+          "endFrame": 9235
+        },
+        {
+          "word": "hits",
+          "startFrame": 9235,
+          "endFrame": 9245
+        },
+        {
+          "word": "the",
+          "startFrame": 9245,
+          "endFrame": 9255
+        },
+        {
+          "word": "ground.",
+          "startFrame": 9255,
+          "endFrame": 9265
+        }
+      ]
+    },
+    "e9": {
+      "startFrame": 9280,
+      "endFrame": 9454,
+      "words": [
+        {
+          "word": "You",
+          "startFrame": 9280,
+          "endFrame": 9283
+        },
+        {
+          "word": "cannot",
+          "startFrame": 9283,
+          "endFrame": 9298
+        },
+        {
+          "word": "run",
+          "startFrame": 9298,
+          "endFrame": 9307
+        },
+        {
+          "word": "any",
+          "startFrame": 9307,
+          "endFrame": 9319
+        },
+        {
+          "word": "faster",
+          "startFrame": 9319,
+          "endFrame": 9334
+        },
+        {
+          "word": "than",
+          "startFrame": 9334,
+          "endFrame": 9337
+        },
+        {
+          "word": "you",
+          "startFrame": 9337,
+          "endFrame": 9340
+        },
+        {
+          "word": "could",
+          "startFrame": 9340,
+          "endFrame": 9349
+        },
+        {
+          "word": "yesterday.",
+          "startFrame": 9349,
+          "endFrame": 9370
+        },
+        {
+          "word": "Four",
+          "startFrame": 9382,
+          "endFrame": 9391
+        },
+        {
+          "word": "steps",
+          "startFrame": 9391,
+          "endFrame": 9403
+        },
+        {
+          "word": "take",
+          "startFrame": 9403,
+          "endFrame": 9409
+        },
+        {
+          "word": "you",
+          "startFrame": 9409,
+          "endFrame": 9412
+        },
+        {
+          "word": "about",
+          "startFrame": 9412,
+          "endFrame": 9418
+        },
+        {
+          "word": "a",
+          "startFrame": 9418,
+          "endFrame": 9421
+        },
+        {
+          "word": "second",
+          "startFrame": 9421,
+          "endFrame": 9436
+        },
+        {
+          "word": "and",
+          "startFrame": 9436,
+          "endFrame": 9439
+        },
+        {
+          "word": "a",
+          "startFrame": 9439,
+          "endFrame": 9440
+        },
+        {
+          "word": "half.",
+          "startFrame": 9439,
+          "endFrame": 9454
+        }
+      ]
+    },
+    "e10": {
+      "startFrame": 9466,
+      "endFrame": 9697,
+      "words": [
+        {
+          "word": "A",
+          "startFrame": 9466,
+          "endFrame": 9474
+        },
+        {
+          "word": "normal",
+          "startFrame": 9474,
+          "endFrame": 9483
+        },
+        {
+          "word": "kid",
+          "startFrame": 9483,
+          "endFrame": 9491
+        },
+        {
+          "word": "would",
+          "startFrame": 9491,
+          "endFrame": 9500
+        },
+        {
+          "word": "notice",
+          "startFrame": 9500,
+          "endFrame": 9508
+        },
+        {
+          "word": "the",
+          "startFrame": 9508,
+          "endFrame": 9517
+        },
+        {
+          "word": "fall",
+          "startFrame": 9517,
+          "endFrame": 9525
+        },
+        {
+          "word": "at",
+          "startFrame": 9525,
+          "endFrame": 9534
+        },
+        {
+          "word": "five",
+          "startFrame": 9534,
+          "endFrame": 9543
+        },
+        {
+          "word": "degrees,",
+          "startFrame": 9543,
+          "endFrame": 9551
+        },
+        {
+          "word": "react,",
+          "startFrame": 9551,
+          "endFrame": 9560
+        },
+        {
+          "word": "and",
+          "startFrame": 9560,
+          "endFrame": 9568
+        },
+        {
+          "word": "start",
+          "startFrame": 9568,
+          "endFrame": 9577
+        },
+        {
+          "word": "running.",
+          "startFrame": 9577,
+          "endFrame": 9585
+        },
+        {
+          "word": "They",
+          "startFrame": 9585,
+          "endFrame": 9594
+        },
+        {
+          "word": "would",
+          "startFrame": 9594,
+          "endFrame": 9602
+        },
+        {
+          "word": "arrive",
+          "startFrame": 9602,
+          "endFrame": 9611
+        },
+        {
+          "word": "a",
+          "startFrame": 9611,
+          "endFrame": 9620
+        },
+        {
+          "word": "third",
+          "startFrame": 9620,
+          "endFrame": 9628
+        },
+        {
+          "word": "of",
+          "startFrame": 9628,
+          "endFrame": 9637
+        },
+        {
+          "word": "a",
+          "startFrame": 9637,
+          "endFrame": 9645
+        },
+        {
+          "word": "second",
+          "startFrame": 9645,
+          "endFrame": 9654
+        },
+        {
+          "word": "after",
+          "startFrame": 9654,
+          "endFrame": 9662
+        },
+        {
+          "word": "Grandpa",
+          "startFrame": 9662,
+          "endFrame": 9671
+        },
+        {
+          "word": "hit",
+          "startFrame": 9671,
+          "endFrame": 9679
+        },
+        {
+          "word": "the",
+          "startFrame": 9679,
+          "endFrame": 9688
+        },
+        {
+          "word": "grass.",
+          "startFrame": 9688,
+          "endFrame": 9697
+        }
+      ]
+    },
+    "e11": {
+      "startFrame": 9711,
+      "endFrame": 9780,
+      "words": [
+        {
+          "word": "But",
+          "startFrame": 9711,
+          "endFrame": 9717
+        },
+        {
+          "word": "you",
+          "startFrame": 9717,
+          "endFrame": 9726
+        },
+        {
+          "word": "saw",
+          "startFrame": 9726,
+          "endFrame": 9738
+        },
+        {
+          "word": "it",
+          "startFrame": 9738,
+          "endFrame": 9744
+        },
+        {
+          "word": "at",
+          "startFrame": 9744,
+          "endFrame": 9750
+        },
+        {
+          "word": "one",
+          "startFrame": 9750,
+          "endFrame": 9765
+        },
+        {
+          "word": "degree.",
+          "startFrame": 9765,
+          "endFrame": 9780
+        }
+      ]
+    },
+    "e12": {
+      "startFrame": 9795,
+      "endFrame": 10077,
+      "words": [
+        {
+          "word": "You",
+          "startFrame": 9795,
+          "endFrame": 9807
+        },
+        {
+          "word": "are",
+          "startFrame": 9807,
+          "endFrame": 9813
+        },
+        {
+          "word": "already",
+          "startFrame": 9813,
+          "endFrame": 9837
+        },
+        {
+          "word": "running.",
+          "startFrame": 9837,
+          "endFrame": 9846
+        },
+        {
+          "word": "Fourteen",
+          "startFrame": 9858,
+          "endFrame": 9885
+        },
+        {
+          "word": "slow",
+          "startFrame": 9885,
+          "endFrame": 9903
+        },
+        {
+          "word": "seconds,",
+          "startFrame": 9903,
+          "endFrame": 9921
+        },
+        {
+          "word": "for",
+          "startFrame": 9933,
+          "endFrame": 9936
+        },
+        {
+          "word": "you,",
+          "startFrame": 9936,
+          "endFrame": 9948
+        },
+        {
+          "word": "of",
+          "startFrame": 9954,
+          "endFrame": 9960
+        },
+        {
+          "word": "watching",
+          "startFrame": 9960,
+          "endFrame": 9972
+        },
+        {
+          "word": "the",
+          "startFrame": 9972,
+          "endFrame": 9975
+        },
+        {
+          "word": "ladder",
+          "startFrame": 9975,
+          "endFrame": 9990
+        },
+        {
+          "word": "lean,",
+          "startFrame": 9990,
+          "endFrame": 10014
+        },
+        {
+          "word": "and",
+          "startFrame": 10017,
+          "endFrame": 10023
+        },
+        {
+          "word": "lean,",
+          "startFrame": 10023,
+          "endFrame": 10044
+        },
+        {
+          "word": "and",
+          "startFrame": 10053,
+          "endFrame": 10059
+        },
+        {
+          "word": "lean.",
+          "startFrame": 10059,
+          "endFrame": 10077
+        }
+      ]
+    },
+    "e13": {
+      "startFrame": 10092,
+      "endFrame": 10161,
+      "words": [
+        {
+          "word": "Your",
+          "startFrame": 10092,
+          "endFrame": 10095
+        },
+        {
+          "word": "hands",
+          "startFrame": 10095,
+          "endFrame": 10107
+        },
+        {
+          "word": "hit",
+          "startFrame": 10107,
+          "endFrame": 10110
+        },
+        {
+          "word": "the",
+          "startFrame": 10110,
+          "endFrame": 10113
+        },
+        {
+          "word": "rail",
+          "startFrame": 10113,
+          "endFrame": 10125
+        },
+        {
+          "word": "at",
+          "startFrame": 10125,
+          "endFrame": 10128
+        },
+        {
+          "word": "fourteen",
+          "startFrame": 10128,
+          "endFrame": 10149
+        },
+        {
+          "word": "degrees.",
+          "startFrame": 10149,
+          "endFrame": 10161
+        }
+      ]
+    },
+    "e14": {
+      "startFrame": 10172,
+      "endFrame": 10289,
+      "words": [
+        {
+          "word": "At",
+          "startFrame": 10172,
+          "endFrame": 10184
+        },
+        {
+          "word": "fourteen",
+          "startFrame": 10184,
+          "endFrame": 10196
+        },
+        {
+          "word": "degrees,",
+          "startFrame": 10196,
+          "endFrame": 10207
+        },
+        {
+          "word": "it",
+          "startFrame": 10207,
+          "endFrame": 10219
+        },
+        {
+          "word": "is",
+          "startFrame": 10219,
+          "endFrame": 10231
+        },
+        {
+          "word": "still",
+          "startFrame": 10231,
+          "endFrame": 10243
+        },
+        {
+          "word": "just",
+          "startFrame": 10243,
+          "endFrame": 10254
+        },
+        {
+          "word": "a",
+          "startFrame": 10254,
+          "endFrame": 10266
+        },
+        {
+          "word": "heavy",
+          "startFrame": 10266,
+          "endFrame": 10278
+        },
+        {
+          "word": "push.",
+          "startFrame": 10278,
+          "endFrame": 10289
+        }
+      ]
+    },
+    "e15": {
+      "startFrame": 10301,
+      "endFrame": 10475,
+      "words": [
+        {
+          "word": "You",
+          "startFrame": 10301,
+          "endFrame": 10304
+        },
+        {
+          "word": "shove.",
+          "startFrame": 10304,
+          "endFrame": 10325
+        },
+        {
+          "word": "The",
+          "startFrame": 10340,
+          "endFrame": 10343
+        },
+        {
+          "word": "legs",
+          "startFrame": 10343,
+          "endFrame": 10352
+        },
+        {
+          "word": "thump",
+          "startFrame": 10352,
+          "endFrame": 10361
+        },
+        {
+          "word": "back",
+          "startFrame": 10361,
+          "endFrame": 10370
+        },
+        {
+          "word": "onto",
+          "startFrame": 10370,
+          "endFrame": 10376
+        },
+        {
+          "word": "the",
+          "startFrame": 10376,
+          "endFrame": 10379
+        },
+        {
+          "word": "grass.",
+          "startFrame": 10379,
+          "endFrame": 10394
+        },
+        {
+          "word": "Grandpa",
+          "startFrame": 10400,
+          "endFrame": 10412
+        },
+        {
+          "word": "grabs",
+          "startFrame": 10412,
+          "endFrame": 10421
+        },
+        {
+          "word": "the",
+          "startFrame": 10421,
+          "endFrame": 10424
+        },
+        {
+          "word": "gutter,",
+          "startFrame": 10424,
+          "endFrame": 10430
+        },
+        {
+          "word": "and",
+          "startFrame": 10448,
+          "endFrame": 10449
+        },
+        {
+          "word": "the",
+          "startFrame": 10448,
+          "endFrame": 10451
+        },
+        {
+          "word": "gutter",
+          "startFrame": 10451,
+          "endFrame": 10457
+        },
+        {
+          "word": "holds.",
+          "startFrame": 10457,
+          "endFrame": 10475
+        }
+      ]
+    },
+    "e16": {
+      "startFrame": 10490,
+      "endFrame": 10703,
+      "words": [
+        {
+          "word": "Grandpa",
+          "startFrame": 10490,
+          "endFrame": 10500
+        },
+        {
+          "word": "looks",
+          "startFrame": 10500,
+          "endFrame": 10510
+        },
+        {
+          "word": "down",
+          "startFrame": 10510,
+          "endFrame": 10520
+        },
+        {
+          "word": "at",
+          "startFrame": 10520,
+          "endFrame": 10530
+        },
+        {
+          "word": "you.",
+          "startFrame": 10530,
+          "endFrame": 10541
+        },
+        {
+          "word": "Then",
+          "startFrame": 10541,
+          "endFrame": 10551
+        },
+        {
+          "word": "at",
+          "startFrame": 10551,
+          "endFrame": 10561
+        },
+        {
+          "word": "Tess,",
+          "startFrame": 10561,
+          "endFrame": 10571
+        },
+        {
+          "word": "who",
+          "startFrame": 10571,
+          "endFrame": 10581
+        },
+        {
+          "word": "is",
+          "startFrame": 10581,
+          "endFrame": 10591
+        },
+        {
+          "word": "still",
+          "startFrame": 10591,
+          "endFrame": 10601
+        },
+        {
+          "word": "holding",
+          "startFrame": 10601,
+          "endFrame": 10612
+        },
+        {
+          "word": "out",
+          "startFrame": 10612,
+          "endFrame": 10622
+        },
+        {
+          "word": "the",
+          "startFrame": 10622,
+          "endFrame": 10632
+        },
+        {
+          "word": "lemonade,",
+          "startFrame": 10632,
+          "endFrame": 10642
+        },
+        {
+          "word": "and",
+          "startFrame": 10642,
+          "endFrame": 10652
+        },
+        {
+          "word": "has",
+          "startFrame": 10652,
+          "endFrame": 10662
+        },
+        {
+          "word": "no",
+          "startFrame": 10662,
+          "endFrame": 10672
+        },
+        {
+          "word": "idea",
+          "startFrame": 10672,
+          "endFrame": 10683
+        },
+        {
+          "word": "anything",
+          "startFrame": 10683,
+          "endFrame": 10693
+        },
+        {
+          "word": "happened.",
+          "startFrame": 10693,
+          "endFrame": 10703
+        }
+      ]
+    },
+    "f1": {
+      "startFrame": 10735,
+      "endFrame": 10867,
+      "words": [
+        {
+          "word": "That",
+          "startFrame": 10735,
+          "endFrame": 10741
+        },
+        {
+          "word": "night,",
+          "startFrame": 10741,
+          "endFrame": 10759
+        },
+        {
+          "word": "Grandpa",
+          "startFrame": 10765,
+          "endFrame": 10780
+        },
+        {
+          "word": "says",
+          "startFrame": 10780,
+          "endFrame": 10789
+        },
+        {
+          "word": "you",
+          "startFrame": 10789,
+          "endFrame": 10798
+        },
+        {
+          "word": "are",
+          "startFrame": 10798,
+          "endFrame": 10801
+        },
+        {
+          "word": "the",
+          "startFrame": 10801,
+          "endFrame": 10804
+        },
+        {
+          "word": "fastest",
+          "startFrame": 10804,
+          "endFrame": 10825
+        },
+        {
+          "word": "kid",
+          "startFrame": 10825,
+          "endFrame": 10834
+        },
+        {
+          "word": "he",
+          "startFrame": 10837,
+          "endFrame": 10843
+        },
+        {
+          "word": "has",
+          "startFrame": 10843,
+          "endFrame": 10849
+        },
+        {
+          "word": "ever",
+          "startFrame": 10849,
+          "endFrame": 10855
+        },
+        {
+          "word": "seen.",
+          "startFrame": 10855,
+          "endFrame": 10867
+        }
+      ]
+    },
+    "f2": {
+      "startFrame": 10879,
+      "endFrame": 11188,
+      "words": [
+        {
+          "word": "You",
+          "startFrame": 10879,
+          "endFrame": 10882
+        },
+        {
+          "word": "are",
+          "startFrame": 10882,
+          "endFrame": 10885
+        },
+        {
+          "word": "not.",
+          "startFrame": 10885,
+          "endFrame": 10897
+        },
+        {
+          "word": "Your",
+          "startFrame": 10912,
+          "endFrame": 10918
+        },
+        {
+          "word": "legs",
+          "startFrame": 10918,
+          "endFrame": 10930
+        },
+        {
+          "word": "are",
+          "startFrame": 10930,
+          "endFrame": 10933
+        },
+        {
+          "word": "exactly",
+          "startFrame": 10933,
+          "endFrame": 10957
+        },
+        {
+          "word": "as",
+          "startFrame": 10957,
+          "endFrame": 10960
+        },
+        {
+          "word": "slow",
+          "startFrame": 10960,
+          "endFrame": 10969
+        },
+        {
+          "word": "as",
+          "startFrame": 10969,
+          "endFrame": 10975
+        },
+        {
+          "word": "everyone's.",
+          "startFrame": 10975,
+          "endFrame": 10999
+        },
+        {
+          "word": "But",
+          "startFrame": 11011,
+          "endFrame": 11014
+        },
+        {
+          "word": "everyone",
+          "startFrame": 11014,
+          "endFrame": 11023
+        },
+        {
+          "word": "else",
+          "startFrame": 11023,
+          "endFrame": 11032
+        },
+        {
+          "word": "notices",
+          "startFrame": 11032,
+          "endFrame": 11044
+        },
+        {
+          "word": "a",
+          "startFrame": 11044,
+          "endFrame": 11047
+        },
+        {
+          "word": "fall",
+          "startFrame": 11047,
+          "endFrame": 11065
+        },
+        {
+          "word": "when",
+          "startFrame": 11065,
+          "endFrame": 11068
+        },
+        {
+          "word": "it",
+          "startFrame": 11068,
+          "endFrame": 11071
+        },
+        {
+          "word": "is",
+          "startFrame": 11071,
+          "endFrame": 11074
+        },
+        {
+          "word": "already",
+          "startFrame": 11074,
+          "endFrame": 11086
+        },
+        {
+          "word": "a",
+          "startFrame": 11086,
+          "endFrame": 11087
+        },
+        {
+          "word": "fall.",
+          "startFrame": 11086,
+          "endFrame": 11101
+        },
+        {
+          "word": "You",
+          "startFrame": 11119,
+          "endFrame": 11128
+        },
+        {
+          "word": "notice",
+          "startFrame": 11128,
+          "endFrame": 11140
+        },
+        {
+          "word": "it",
+          "startFrame": 11140,
+          "endFrame": 11143
+        },
+        {
+          "word": "while",
+          "startFrame": 11143,
+          "endFrame": 11149
+        },
+        {
+          "word": "it",
+          "startFrame": 11149,
+          "endFrame": 11152
+        },
+        {
+          "word": "is",
+          "startFrame": 11152,
+          "endFrame": 11158
+        },
+        {
+          "word": "still",
+          "startFrame": 11158,
+          "endFrame": 11167
+        },
+        {
+          "word": "a",
+          "startFrame": 11170,
+          "endFrame": 11173
+        },
+        {
+          "word": "wobble.",
+          "startFrame": 11173,
+          "endFrame": 11188
+        }
+      ]
+    },
+    "f3": {
+      "startFrame": 11206,
+      "endFrame": 11311,
+      "words": [
+        {
+          "word": "At",
+          "startFrame": 11206,
+          "endFrame": 11209
+        },
+        {
+          "word": "breakfast,",
+          "startFrame": 11209,
+          "endFrame": 11233
+        },
+        {
+          "word": "Tess's",
+          "startFrame": 11233,
+          "endFrame": 11248
+        },
+        {
+          "word": "elbow",
+          "startFrame": 11248,
+          "endFrame": 11263
+        },
+        {
+          "word": "clips",
+          "startFrame": 11263,
+          "endFrame": 11272
+        },
+        {
+          "word": "the",
+          "startFrame": 11272,
+          "endFrame": 11275
+        },
+        {
+          "word": "milk",
+          "startFrame": 11275,
+          "endFrame": 11299
+        },
+        {
+          "word": "again.",
+          "startFrame": 11299,
+          "endFrame": 11311
+        }
+      ]
+    },
+    "f4": {
+      "startFrame": 11323,
+      "endFrame": 11467,
+      "words": [
+        {
+          "word": "You",
+          "startFrame": 11323,
+          "endFrame": 11329
+        },
+        {
+          "word": "sigh,",
+          "startFrame": 11329,
+          "endFrame": 11347
+        },
+        {
+          "word": "and",
+          "startFrame": 11359,
+          "endFrame": 11365
+        },
+        {
+          "word": "start",
+          "startFrame": 11365,
+          "endFrame": 11374
+        },
+        {
+          "word": "the",
+          "startFrame": 11374,
+          "endFrame": 11377
+        },
+        {
+          "word": "four",
+          "startFrame": 11377,
+          "endFrame": 11389
+        },
+        {
+          "word": "second",
+          "startFrame": 11389,
+          "endFrame": 11404
+        },
+        {
+          "word": "journey",
+          "startFrame": 11404,
+          "endFrame": 11416
+        },
+        {
+          "word": "of",
+          "startFrame": 11416,
+          "endFrame": 11419
+        },
+        {
+          "word": "your",
+          "startFrame": 11419,
+          "endFrame": 11425
+        },
+        {
+          "word": "hand",
+          "startFrame": 11425,
+          "endFrame": 11437
+        },
+        {
+          "word": "across",
+          "startFrame": 11437,
+          "endFrame": 11449
+        },
+        {
+          "word": "the",
+          "startFrame": 11449,
+          "endFrame": 11452
+        },
+        {
+          "word": "table.",
+          "startFrame": 11452,
+          "endFrame": 11467
+        }
+      ]
+    },
+    "end": {
+      "startFrame": 11499,
+      "endFrame": 11742,
+      "words": [
+        {
+          "word": "Would",
+          "startFrame": 11499,
+          "endFrame": 11502
+        },
+        {
+          "word": "you",
+          "startFrame": 11502,
+          "endFrame": 11505
+        },
+        {
+          "word": "take",
+          "startFrame": 11505,
+          "endFrame": 11511
+        },
+        {
+          "word": "the",
+          "startFrame": 11511,
+          "endFrame": 11514
+        },
+        {
+          "word": "deal?",
+          "startFrame": 11514,
+          "endFrame": 11526
+        },
+        {
+          "word": "A",
+          "startFrame": 11535,
+          "endFrame": 11538
+        },
+        {
+          "word": "brain",
+          "startFrame": 11538,
+          "endFrame": 11553
+        },
+        {
+          "word": "ten",
+          "startFrame": 11553,
+          "endFrame": 11559
+        },
+        {
+          "word": "times",
+          "startFrame": 11559,
+          "endFrame": 11568
+        },
+        {
+          "word": "faster,",
+          "startFrame": 11568,
+          "endFrame": 11586
+        },
+        {
+          "word": "stuck",
+          "startFrame": 11592,
+          "endFrame": 11601
+        },
+        {
+          "word": "in",
+          "startFrame": 11601,
+          "endFrame": 11604
+        },
+        {
+          "word": "the",
+          "startFrame": 11604,
+          "endFrame": 11607
+        },
+        {
+          "word": "same",
+          "startFrame": 11607,
+          "endFrame": 11613
+        },
+        {
+          "word": "old",
+          "startFrame": 11613,
+          "endFrame": 11619
+        },
+        {
+          "word": "body?",
+          "startFrame": 11619,
+          "endFrame": 11631
+        },
+        {
+          "word": "Tell",
+          "startFrame": 11646,
+          "endFrame": 11652
+        },
+        {
+          "word": "us",
+          "startFrame": 11652,
+          "endFrame": 11655
+        },
+        {
+          "word": "in",
+          "startFrame": 11655,
+          "endFrame": 11658
+        },
+        {
+          "word": "the",
+          "startFrame": 11658,
+          "endFrame": 11661
+        },
+        {
+          "word": "comments,",
+          "startFrame": 11661,
+          "endFrame": 11676
+        },
+        {
+          "word": "and",
+          "startFrame": 11679,
+          "endFrame": 11682
+        },
+        {
+          "word": "subscribe",
+          "startFrame": 11682,
+          "endFrame": 11697
+        },
+        {
+          "word": "for",
+          "startFrame": 11697,
+          "endFrame": 11703
+        },
+        {
+          "word": "the",
+          "startFrame": 11703,
+          "endFrame": 11706
+        },
+        {
+          "word": "next",
+          "startFrame": 11706,
+          "endFrame": 11721
+        },
+        {
+          "word": "what",
+          "startFrame": 11727,
+          "endFrame": 11733
+        },
+        {
+          "word": "if.",
+          "startFrame": 11733,
+          "endFrame": 11742
+        }
+      ]
+    }
+  }
+}

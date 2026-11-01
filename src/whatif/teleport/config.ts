@@ -1,11 +1,11 @@
 import type { CameraPose, CameraTrack, EpisodeConfig, SfxCue, SubtitleSegment, Vec3 } from "../../engine/types";
-import { chainTracks, loopCue, sfxFor } from "../../kit";
+import { chainTracks, crashZoom, loopCue, sfxFor } from "../../kit";
 import wordTimestamps from "./data/wordTimestamps.json";
 import { JumpHUD } from "./JumpHUD";
 import { HOUSE_X, LADDER_X, PARTY_X, SHOT_GEOMETRY, SWING_X, orbitEarth } from "./Scene";
 import { BEATS, DURATION, HEDGE_X, Z, easeInOut, hayX, kitRunX, lerp, progress, shotEnd, shotStart, type ShotId } from "./timeline";
 
-const { KIT_PARTY, KIT_GIVE, NIGHT_GLOBE } = SHOT_GEOMETRY;
+const { KIT_PARTY, KIT_GIVE, NIGHT_GLOBE, DOCK_ARRIVE, WALK } = SHOT_GEOMETRY;
 
 const cue = sfxFor("teleport", "whatif");
 /** Effects sit about 6 dB under the voice, as in Slow Flight. */
@@ -190,6 +190,16 @@ const nightCam = (f: number) => {
   return mixPose(porch, close, ease(f, BEATS.spinsAgain - 10, BEATS.spinsAgain + 30));
 };
 
+/** Where the piggyback pair stops on the dock. */
+const DOCK_PAIR_X = DOCK_ARRIVE + 22 * WALK * 2.2;
+
+/** Comedy punch-ins on the two realisations: Grandpa's hand on the collar, and "three hours". */
+const CRASH_ZOOMS: CameraTrack[] = [
+  crashZoom(BEATS.grabs, Math.min(BEATS.grabs + 30, BEATS.maps - 12), pose([KIT_PARTY[0] + 0.35, 1.4, KIT_PARTY[2] + 4.2], [KIT_PARTY[0] + 0.35, 1.25, KIT_PARTY[2]]), { zoom: 1.7 }),
+  // The pair faces yaw EAST - 0.5 (toward +x and the lens): shoot from in front so both faces read.
+  crashZoom(BEATS.threeHours, BEATS.threeHours + 32, pose([DOCK_PAIR_X + 1.7, 1.7, Z + 3.7], [DOCK_PAIR_X + 0.1, 1.55, Z]), { zoom: 1.6 }),
+];
+
 const TRACKS: CameraTrack[] = chainTracks([
   track(0, shotEnd("yard"), yardCam),
   track(shotStart("porch"), shotEnd("porch"), porchCam),
@@ -219,7 +229,7 @@ const TRACKS: CameraTrack[] = chainTracks([
   track(shotStart("payoff"), shotEnd("payoff"), payoffCam),
   track(shotStart("night"), shotEnd("night"), nightCam),
   push("launchGlobe", globe(12, 0.6), globe(10.5, 0.6)),
-]);
+]).concat(CRASH_ZOOMS);
 
 const wp = (frame: number, p: CameraPose) => ({ frame: Math.round(frame), ...p });
 
@@ -246,8 +256,8 @@ export const config: EpisodeConfig = {
     ],
     rumbles: [{ start: BEATS.bigJump, end: BEATS.bales, strength: 0.03 }],
   },
-  audio: { src: "whatif/teleport/narration_v2.mp3", volume: 1, fadeInFrames: 0, fadeOutFrames: 10 },
-  music: { src: "whatif/teleport/score_v2.mp3", volume: 1, fadeInFrames: 20, fadeOutFrames: 40 },
+  audio: { src: "whatif/teleport/narration_v3.mp3", volume: 1, fadeInFrames: 0, fadeOutFrames: 10 },
+  music: { src: "whatif/teleport/score_v3.mp3", volume: 1, fadeInFrames: 20, fadeOutFrames: 40 },
   sfx: SFX,
   subtitles: {
     segments: wordTimestamps as SubtitleSegment[],

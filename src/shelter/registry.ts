@@ -2,6 +2,7 @@ import { caveHomeProduction } from "./cave-home";
 import { nuclearBunkerProduction } from "./nuclear-bunker";
 import { lighthouseProduction } from "./lighthouse";
 import { castleWallProduction } from "./castle-wall";
+import { tornadoShelterProduction } from "./tornado-shelter";
 
 /**
  * SimForge Shelter & Bushcraft Engineering Series.
@@ -12,4 +13,5 @@ export const SHELTER_PRODUCTIONS = [
   nuclearBunkerProduction,
   lighthouseProduction,
   castleWallProduction,
+  tornadoShelterProduction,
 ];

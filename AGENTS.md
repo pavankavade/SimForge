@@ -9,7 +9,7 @@ step by step. When a rule here and your instinct disagree, follow the rule.
 
 ```pwsh
 $env:GEMINI_API_KEY = "<your-key>"                            # required for Gemini TTS voicing (see §9)
-npm run new:episode -- <slug> "<Trap Name>" --theme dungeon   # scaffold (see §2)
+npm run new:episode -- <slug> "<Trap Name>" --theme dungeon   # scaffold + file under out/dungeon/ (§2, §12)
 # 1. write the 5-level script in scripts/<slug>-audio.py (LINES)
 python scripts/<slug>-audio.py narration                      # voice it -> exact word cues
 # 2. timeline.ts: geometry + BEATS (all w("line","word") ± n) + kinematics
@@ -51,8 +51,11 @@ A "first pass" that only puts geometry on screen is not done. The user rejected 
 ## 2. Scaffolding a new episode
 
 ```pwsh
-npm run new:episode -- <slug> "<Trap Name>" [--theme dungeon] [--no-audio]
+npm run new:episode -- <slug> "<Trap Name>" [--theme dungeon] [--series dungeon] [--no-audio]
 ```
+
+`--series` is the output folder under `out/` (`dungeon`, `shelter`, `whatif`, or a new one). It
+defaults to the theme.
 
 This creates and wires everything:
 
@@ -65,8 +68,9 @@ This creates and wires everything:
 | `src/episodes/<slug>/data/` | `narrationCues.json` + `wordTimestamps.json` (generated) |
 | `scripts/<slug>-audio.py` | narration / score / SFX pipeline; **the script (`LINES`) lives here** |
 | `public/episodes/<slug>/` | `narration_v1.mp3`, `score_v1.mp3`, `sfx/*.wav` (generated) |
-| `package.json` | `render:<slug>`, `still:<slug>` |
+| `package.json` | `render:<slug>`, `still:<slug>` (still → `out/<series>/<slug>/wip/`) |
 | `src/episodes/registry.ts` | registration |
+| `scripts/out-paths.mjs` | the slug added to `SERIES[<series>]`, so every output lands in `out/<series>/<slug>/` |
 
 The composition id is the PascalCase slug (`ceiling-crusher` → `CeilingCrusher`). The scaffolder
 runs the audio script. Voicing fresh lines requires `$env:GEMINI_API_KEY` (see §9). If no key is set or
@@ -523,12 +527,19 @@ The audio script (copied from `templates/audio.py`) imports the Ep1 and Ep2 tool
    - [ ] Stage titles fit on one line.
 5. **Render:** `npm run render:<slug>` (`node scripts/render.mjs <Id> <slug>`). It renders the
    episode, masters the loudness (§9) and runs `check:video`.
-   - `--keep` writes `out/<slug>_v2.mp4` and so on instead of overwriting.
+   - The video goes to `out/<series>/<slug>/<slug>.mp4` (see §12, *Output folders*). `--keep`
+     writes `<slug>_v2.mp4` and so on instead of overwriting.
    - Anything after `--` goes to remotion. For example, `-- --frames=0-299` renders a quick slice.
-   - The check writes `out/review/<slug>-video-sheet-N.png` (every 40th frame, numbered) and checks
+   - The check writes `out/<series>/<slug>/review/<slug>-video-sheet-N.png` (every 40th frame, numbered) and checks
      the integrated loudness (−14 ±1 LUFS, true peak ≤ −1 dBTP).
    - The sheet must read as a coherent story with no dead frames.
-6. Commit only when the user asks.
+6. **Thumbnails and upload metadata:** follow `.claude/skills/youtube-thumbnails/SKILL.md`
+   (niche research, layout rules, `Thumbnail.tsx` pattern). It boils down to: one close
+   hero face (≥ 25% of the frame height, extreme expression), 1–3 huge words that add the
+   stakes rather than repeat the title, nothing in the bottom-right badge corner, and three
+   different concepts. Prove each set with `node scripts/thumb-sheet.mjs <thumbs...>`
+   (168 px and greyscale checks).
+7. Commit only when the user asks.
 
 ## 12. Conventions
 
@@ -547,6 +558,45 @@ The audio script (copied from `templates/audio.py`) imports the Ep1 and Ep2 tool
   re-voicing, so cached audio is never stale.
 - Legacy code: `SoldierUnit`, the siege and starter episodes, and `src/toon/` are separate
   pipelines. Do not use them for new episodes.
+- **Output folders.** Every file an episode produces is filed by series, then by episode. Never
+  write a loose file to the top of `out/`.
+
+  ```text
+  out/
+    dungeon/   <slug>/   Evolution-of-a-trap shorts and the dungeon campaign
+    shelter/   <slug>/   shelter shorts (cave home, nuclear bunker, lighthouse, castle wall)
+    whatif/    <slug>/   what-if episodes (slow flight, teleport)
+    misc/      <slug>/   anything not in SERIES (tests, legacy siege/starter)
+    channel/             avatar, banner and other channel art
+    _scratch/            old loose test stills (do not add to it)
+    review/ solo/ tmp/ audio-tmp-<slug>/ sfx-gen/ score-previews/   tool working folders
+  ```
+
+  Inside `out/<series>/<slug>/`:
+
+  | Path | What | Written by |
+  | --- | --- | --- |
+  | `<slug>.mp4`, `<slug>.raw.mp4`, `<slug>_vN.mp4` | final renders | `npm run render:<slug>` |
+  | `thumbnails/` | thumbnails, `-sheet.png` checks, `<slug>-metadata.md` | thumbnail scripts, `thumb-sheet.mjs` |
+  | `review/` | final-render contact sheets | `check:video` |
+  | `logs/` | render and audio logs you save | you |
+  | `wip/` | one-off stills, test frames, scratch mixes | `still:<slug>`, you |
+
+  - `scripts/out-paths.mjs` is the one place that maps a slug to its series (`SERIES`,
+    `seriesOf(slug)`, `episodeDir(slug, sub)`). `render.mjs`, `check-video.mjs`, the thumbnail
+    scripts and `new-episode.mjs` use it. The scaffolder adds new slugs itself. For an episode made
+    any other way (a what-if or shelter episode under `src/whatif`, `src/shelter`), **add its slug to
+    `SERIES` by hand** before the first render. `render.mjs` warns when a slug falls into `out/misc/`.
+  - A new series gets a new `SERIES` key, and its folder appears on the first render.
+  - New scripts that write episode files import `episodeDir` instead of building `out/...` paths.
+    New `package.json` stills and thumbnails write to `out/<series>/<slug>/wip/` or `.../thumbnails/`.
+  - Commands you run by hand follow the same layout. For example:
+    - `node scripts/solo.mjs still <Id> out/<series>/<slug>/wip/<name>.png --frame=N`;
+    - `npm run check:video -- <slug>` finds `out/<series>/<slug>/<slug>.mp4` by itself;
+    - pipe a log you keep to `out/<series>/<slug>/logs/<name>.log`.
+  - Review stills stay in `out/review/<Id>/` (they are rebuilt on every run), the TTS cache stays in
+    `out/audio-tmp-<slug>/`, and render temp files stay in `out/tmp/`. Do not move them per episode.
+  - Nothing under `out/` is committed.
 
 ## 13. Long-form (16:9 campaigns)
 

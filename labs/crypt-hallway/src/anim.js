@@ -134,7 +134,7 @@ const PAL_S0 = 21;
 const PENDULUM = { s: PAL_STOP_S, y: 7.5, len: 6.1, amp: 0.8 };
 const SLAB = { s0: 15.55, s1: 19.6, hw: 1.9 }; // the catapult: the floor under the entrance, hinged at s0
 const MIMIC = { x: 0.35, s: 10.4 };
-export const TANK = [-1.6, 20.6]; // the oil tank (x, s), just past the catapult slab
+export const TANK = [-3.5, 19.5]; // the oil tank (x, s): out in the left aisle, mid-bay, beside the catapult slab
 export { MAGE_MID_S, PENDULUM, SLAB, MIMIC };
 
 // --- props -----------------------------------------------------------------------------------

@@ -35,7 +35,9 @@ export const master = (input, output, { lufs = -14, tp = -1.5 } = {}) => {
   const limited = before.tp + gain > tp;
   const ceiling = Math.pow(10, (tp - 0.5) / 20);
   const filter = [`volume=${gain.toFixed(2)}dB`, ...(limited ? [`alimiter=limit=${ceiling.toFixed(4)}:attack=1:release=60:level=false`] : []), "aresample=48000"].join(",");
-  const res = ff(["-y", "-i", input, "-c:v", "copy", "-af", filter, "-c:a", "aac", "-b:a", "192k", output]);
+  // 256k, not 192k: at 192k ffmpeg's native AAC coder sometimes invents loud bursts in quiet
+  // passages (Reflexes: a ±0.1 signal came out at +2.6 dBFS) that fail the true-peak check.
+  const res = ff(["-y", "-i", input, "-c:v", "copy", "-af", filter, "-c:a", "aac", "-b:a", "256k", output]);
   if (res.status !== 0) throw new Error(`ffmpeg failed:\n${res.stderr.split("\n").slice(-12).join("\n")}`);
   const after = measure(output);
   return { before, after, gain, limited };

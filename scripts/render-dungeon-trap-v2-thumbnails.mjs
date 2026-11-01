@@ -1,5 +1,5 @@
 /**
- * Renders every DungeonTrapV2 shorts thumbnail variant to out/thumbnails/.
+ * Renders every DungeonTrapV2 shorts thumbnail variant to out/<series>/dungeon-trap-v2/thumbnails/.
  * Each variant's frame comes from the composition's calculateMetadata
  * (derived from BEATS), so re-voicing the episode never stales a thumbnail.
  * Bundles only the thumbnail (like scripts/solo.mjs), so a half-built episode
@@ -14,7 +14,7 @@ import fs from "node:fs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const ID = "DungeonTrapV2Thumbnail";
-const outDir = path.join(root, "out", "thumbnails");
+const outDir = episodeDir("dungeon-trap-v2", "thumbnails");
 fs.mkdirSync(outDir, { recursive: true });
 const tmp = path.join(root, "out", "tmp");
 fs.mkdirSync(tmp, { recursive: true });
@@ -30,6 +30,7 @@ import React from "react";
 import { Composition, registerRoot } from "remotion";
 import { DungeonTrapV2Thumbnail, dungeonV2ThumbMetadata } from "../../src/episodes/dungeon-trap-v2/Thumbnail";
 import { DURATION } from "../../src/episodes/dungeon-trap-v2/timeline";
+import { episodeDir } from "./out-paths.mjs";
 
 registerRoot(() =>
   React.createElement(Composition, {

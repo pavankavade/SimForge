@@ -1,0 +1,1309 @@
+[
+  {
+    "startFrame": 18,
+    "endFrame": 120,
+    "text": "When the tornado siren goes off, you hide in your bedroom closet.",
+    "words": [
+      {
+        "word": "When",
+        "startFrame": 18,
+        "endFrame": 21
+      },
+      {
+        "word": "the",
+        "startFrame": 21,
+        "endFrame": 24
+      },
+      {
+        "word": "tornado",
+        "startFrame": 24,
+        "endFrame": 39
+      },
+      {
+        "word": "siren",
+        "startFrame": 39,
+        "endFrame": 48
+      },
+      {
+        "word": "goes",
+        "startFrame": 48,
+        "endFrame": 57
+      },
+      {
+        "word": "off,",
+        "startFrame": 57,
+        "endFrame": 66
+      },
+      {
+        "word": "you",
+        "startFrame": 72,
+        "endFrame": 75
+      },
+      {
+        "word": "hide",
+        "startFrame": 75,
+        "endFrame": 84
+      },
+      {
+        "word": "in",
+        "startFrame": 84,
+        "endFrame": 87
+      },
+      {
+        "word": "your",
+        "startFrame": 87,
+        "endFrame": 93
+      },
+      {
+        "word": "bedroom",
+        "startFrame": 93,
+        "endFrame": 105
+      },
+      {
+        "word": "closet.",
+        "startFrame": 105,
+        "endFrame": 120
+      }
+    ]
+  },
+  {
+    "startFrame": 133,
+    "endFrame": 295,
+    "text": "But the closet is on an outside wall. The wind tears the wall away, and you go with it.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 133,
+        "endFrame": 136
+      },
+      {
+        "word": "the",
+        "startFrame": 136,
+        "endFrame": 139
+      },
+      {
+        "word": "closet",
+        "startFrame": 139,
+        "endFrame": 151
+      },
+      {
+        "word": "is",
+        "startFrame": 154,
+        "endFrame": 157
+      },
+      {
+        "word": "on",
+        "startFrame": 157,
+        "endFrame": 160
+      },
+      {
+        "word": "an",
+        "startFrame": 160,
+        "endFrame": 163
+      },
+      {
+        "word": "outside",
+        "startFrame": 163,
+        "endFrame": 181
+      },
+      {
+        "word": "wall.",
+        "startFrame": 181,
+        "endFrame": 196
+      },
+      {
+        "word": "The",
+        "startFrame": 205,
+        "endFrame": 208
+      },
+      {
+        "word": "wind",
+        "startFrame": 208,
+        "endFrame": 220
+      },
+      {
+        "word": "tears",
+        "startFrame": 220,
+        "endFrame": 232
+      },
+      {
+        "word": "the",
+        "startFrame": 232,
+        "endFrame": 235
+      },
+      {
+        "word": "wall",
+        "startFrame": 235,
+        "endFrame": 241
+      },
+      {
+        "word": "away,",
+        "startFrame": 241,
+        "endFrame": 250
+      },
+      {
+        "word": "and",
+        "startFrame": 256,
+        "endFrame": 262
+      },
+      {
+        "word": "you",
+        "startFrame": 262,
+        "endFrame": 274
+      },
+      {
+        "word": "go",
+        "startFrame": 274,
+        "endFrame": 280
+      },
+      {
+        "word": "with",
+        "startFrame": 280,
+        "endFrame": 286
+      },
+      {
+        "word": "it.",
+        "startFrame": 286,
+        "endFrame": 295
+      }
+    ]
+  },
+  {
+    "startFrame": 325,
+    "endFrame": 457,
+    "text": "So you pick a room in the middle of the house, on the lowest floor, with no windows.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 325,
+        "endFrame": 331
+      },
+      {
+        "word": "you",
+        "startFrame": 331,
+        "endFrame": 334
+      },
+      {
+        "word": "pick",
+        "startFrame": 334,
+        "endFrame": 340
+      },
+      {
+        "word": "a",
+        "startFrame": 340,
+        "endFrame": 343
+      },
+      {
+        "word": "room",
+        "startFrame": 343,
+        "endFrame": 355
+      },
+      {
+        "word": "in",
+        "startFrame": 355,
+        "endFrame": 358
+      },
+      {
+        "word": "the",
+        "startFrame": 358,
+        "endFrame": 361
+      },
+      {
+        "word": "middle",
+        "startFrame": 361,
+        "endFrame": 370
+      },
+      {
+        "word": "of",
+        "startFrame": 370,
+        "endFrame": 373
+      },
+      {
+        "word": "the",
+        "startFrame": 373,
+        "endFrame": 376
+      },
+      {
+        "word": "house,",
+        "startFrame": 376,
+        "endFrame": 391
+      },
+      {
+        "word": "on",
+        "startFrame": 394,
+        "endFrame": 397
+      },
+      {
+        "word": "the",
+        "startFrame": 397,
+        "endFrame": 398
+      },
+      {
+        "word": "lowest",
+        "startFrame": 397,
+        "endFrame": 409
+      },
+      {
+        "word": "floor,",
+        "startFrame": 409,
+        "endFrame": 424
+      },
+      {
+        "word": "with",
+        "startFrame": 427,
+        "endFrame": 433
+      },
+      {
+        "word": "no",
+        "startFrame": 433,
+        "endFrame": 442
+      },
+      {
+        "word": "windows.",
+        "startFrame": 442,
+        "endFrame": 457
+      }
+    ]
+  },
+  {
+    "startFrame": 469,
+    "endFrame": 616,
+    "text": "The walls stay up. But a board flies through the drywall like a spear.",
+    "words": [
+      {
+        "word": "The",
+        "startFrame": 469,
+        "endFrame": 472
+      },
+      {
+        "word": "walls",
+        "startFrame": 472,
+        "endFrame": 484
+      },
+      {
+        "word": "stay",
+        "startFrame": 484,
+        "endFrame": 493
+      },
+      {
+        "word": "up.",
+        "startFrame": 493,
+        "endFrame": 502
+      },
+      {
+        "word": "But",
+        "startFrame": 517,
+        "endFrame": 520
+      },
+      {
+        "word": "a",
+        "startFrame": 520,
+        "endFrame": 523
+      },
+      {
+        "word": "board",
+        "startFrame": 526,
+        "endFrame": 538
+      },
+      {
+        "word": "flies",
+        "startFrame": 538,
+        "endFrame": 556
+      },
+      {
+        "word": "through",
+        "startFrame": 556,
+        "endFrame": 562
+      },
+      {
+        "word": "the",
+        "startFrame": 562,
+        "endFrame": 565
+      },
+      {
+        "word": "drywall",
+        "startFrame": 565,
+        "endFrame": 586
+      },
+      {
+        "word": "like",
+        "startFrame": 586,
+        "endFrame": 592
+      },
+      {
+        "word": "a",
+        "startFrame": 592,
+        "endFrame": 595
+      },
+      {
+        "word": "spear.",
+        "startFrame": 595,
+        "endFrame": 616
+      }
+    ]
+  },
+  {
+    "startFrame": 646,
+    "endFrame": 781,
+    "text": "Most tornado injuries come from flying debris, not from the wind.",
+    "words": [
+      {
+        "word": "Most",
+        "startFrame": 646,
+        "endFrame": 658
+      },
+      {
+        "word": "tornado",
+        "startFrame": 658,
+        "endFrame": 679
+      },
+      {
+        "word": "injuries",
+        "startFrame": 679,
+        "endFrame": 697
+      },
+      {
+        "word": "come",
+        "startFrame": 697,
+        "endFrame": 703
+      },
+      {
+        "word": "from",
+        "startFrame": 703,
+        "endFrame": 709
+      },
+      {
+        "word": "flying",
+        "startFrame": 709,
+        "endFrame": 730
+      },
+      {
+        "word": "debris,",
+        "startFrame": 730,
+        "endFrame": 751
+      },
+      {
+        "word": "not",
+        "startFrame": 751,
+        "endFrame": 757
+      },
+      {
+        "word": "from",
+        "startFrame": 757,
+        "endFrame": 763
+      },
+      {
+        "word": "the",
+        "startFrame": 763,
+        "endFrame": 764
+      },
+      {
+        "word": "wind.",
+        "startFrame": 763,
+        "endFrame": 781
+      }
+    ]
+  },
+  {
+    "startFrame": 795,
+    "endFrame": 924,
+    "text": "So you line the walls with two layers of plywood and a sheet of steel.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 795,
+        "endFrame": 804
+      },
+      {
+        "word": "you",
+        "startFrame": 804,
+        "endFrame": 810
+      },
+      {
+        "word": "line",
+        "startFrame": 810,
+        "endFrame": 822
+      },
+      {
+        "word": "the",
+        "startFrame": 822,
+        "endFrame": 825
+      },
+      {
+        "word": "walls",
+        "startFrame": 825,
+        "endFrame": 837
+      },
+      {
+        "word": "with",
+        "startFrame": 837,
+        "endFrame": 840
+      },
+      {
+        "word": "two",
+        "startFrame": 840,
+        "endFrame": 849
+      },
+      {
+        "word": "layers",
+        "startFrame": 849,
+        "endFrame": 861
+      },
+      {
+        "word": "of",
+        "startFrame": 861,
+        "endFrame": 864
+      },
+      {
+        "word": "plywood",
+        "startFrame": 864,
+        "endFrame": 882
+      },
+      {
+        "word": "and",
+        "startFrame": 882,
+        "endFrame": 897
+      },
+      {
+        "word": "a",
+        "startFrame": 897,
+        "endFrame": 900
+      },
+      {
+        "word": "sheet",
+        "startFrame": 900,
+        "endFrame": 906
+      },
+      {
+        "word": "of",
+        "startFrame": 906,
+        "endFrame": 909
+      },
+      {
+        "word": "steel.",
+        "startFrame": 909,
+        "endFrame": 924
+      }
+    ]
+  },
+  {
+    "startFrame": 938,
+    "endFrame": 1151,
+    "text": "Engineers test it by firing a fifteen pound board at a hundred miles an hour. It bounces off.",
+    "words": [
+      {
+        "word": "Engineers",
+        "startFrame": 938,
+        "endFrame": 959
+      },
+      {
+        "word": "test",
+        "startFrame": 959,
+        "endFrame": 967
+      },
+      {
+        "word": "it",
+        "startFrame": 967,
+        "endFrame": 974
+      },
+      {
+        "word": "by",
+        "startFrame": 974,
+        "endFrame": 980
+      },
+      {
+        "word": "firing",
+        "startFrame": 980,
+        "endFrame": 995
+      },
+      {
+        "word": "a",
+        "startFrame": 995,
+        "endFrame": 998
+      },
+      {
+        "word": "fifteen",
+        "startFrame": 1004,
+        "endFrame": 1022
+      },
+      {
+        "word": "pound",
+        "startFrame": 1022,
+        "endFrame": 1040
+      },
+      {
+        "word": "board",
+        "startFrame": 1040,
+        "endFrame": 1064
+      },
+      {
+        "word": "at",
+        "startFrame": 1067,
+        "endFrame": 1070
+      },
+      {
+        "word": "a",
+        "startFrame": 1070,
+        "endFrame": 1079
+      },
+      {
+        "word": "hundred",
+        "startFrame": 1079,
+        "endFrame": 1088
+      },
+      {
+        "word": "miles",
+        "startFrame": 1088,
+        "endFrame": 1100
+      },
+      {
+        "word": "an",
+        "startFrame": 1100,
+        "endFrame": 1103
+      },
+      {
+        "word": "hour.",
+        "startFrame": 1103,
+        "endFrame": 1112
+      },
+      {
+        "word": "It",
+        "startFrame": 1127,
+        "endFrame": 1130
+      },
+      {
+        "word": "bounces",
+        "startFrame": 1130,
+        "endFrame": 1142
+      },
+      {
+        "word": "off.",
+        "startFrame": 1142,
+        "endFrame": 1151
+      }
+    ]
+  },
+  {
+    "startFrame": 1184,
+    "endFrame": 1322,
+    "text": "Then the wind gets under the ceiling, and lifts the whole room off the floor.",
+    "words": [
+      {
+        "word": "Then",
+        "startFrame": 1184,
+        "endFrame": 1187
+      },
+      {
+        "word": "the",
+        "startFrame": 1187,
+        "endFrame": 1190
+      },
+      {
+        "word": "wind",
+        "startFrame": 1190,
+        "endFrame": 1205
+      },
+      {
+        "word": "gets",
+        "startFrame": 1205,
+        "endFrame": 1214
+      },
+      {
+        "word": "under",
+        "startFrame": 1214,
+        "endFrame": 1223
+      },
+      {
+        "word": "the",
+        "startFrame": 1223,
+        "endFrame": 1226
+      },
+      {
+        "word": "ceiling,",
+        "startFrame": 1226,
+        "endFrame": 1247
+      },
+      {
+        "word": "and",
+        "startFrame": 1253,
+        "endFrame": 1256
+      },
+      {
+        "word": "lifts",
+        "startFrame": 1256,
+        "endFrame": 1265
+      },
+      {
+        "word": "the",
+        "startFrame": 1265,
+        "endFrame": 1268
+      },
+      {
+        "word": "whole",
+        "startFrame": 1268,
+        "endFrame": 1283
+      },
+      {
+        "word": "room",
+        "startFrame": 1283,
+        "endFrame": 1298
+      },
+      {
+        "word": "off",
+        "startFrame": 1298,
+        "endFrame": 1301
+      },
+      {
+        "word": "the",
+        "startFrame": 1301,
+        "endFrame": 1304
+      },
+      {
+        "word": "floor.",
+        "startFrame": 1304,
+        "endFrame": 1322
+      }
+    ]
+  },
+  {
+    "startFrame": 1354,
+    "endFrame": 1552,
+    "text": "You might think you should open a window to let the pressure out. Don't. That only lets the wind in to push from below.",
+    "words": [
+      {
+        "word": "You",
+        "startFrame": 1354,
+        "endFrame": 1355
+      },
+      {
+        "word": "might",
+        "startFrame": 1354,
+        "endFrame": 1363
+      },
+      {
+        "word": "think",
+        "startFrame": 1363,
+        "endFrame": 1372
+      },
+      {
+        "word": "you",
+        "startFrame": 1372,
+        "endFrame": 1375
+      },
+      {
+        "word": "should",
+        "startFrame": 1375,
+        "endFrame": 1381
+      },
+      {
+        "word": "open",
+        "startFrame": 1381,
+        "endFrame": 1384
+      },
+      {
+        "word": "a",
+        "startFrame": 1384,
+        "endFrame": 1387
+      },
+      {
+        "word": "window",
+        "startFrame": 1387,
+        "endFrame": 1402
+      },
+      {
+        "word": "to",
+        "startFrame": 1402,
+        "endFrame": 1405
+      },
+      {
+        "word": "let",
+        "startFrame": 1405,
+        "endFrame": 1411
+      },
+      {
+        "word": "the",
+        "startFrame": 1411,
+        "endFrame": 1414
+      },
+      {
+        "word": "pressure",
+        "startFrame": 1414,
+        "endFrame": 1423
+      },
+      {
+        "word": "out.",
+        "startFrame": 1423,
+        "endFrame": 1429
+      },
+      {
+        "word": "Don't.",
+        "startFrame": 1447,
+        "endFrame": 1459
+      },
+      {
+        "word": "That",
+        "startFrame": 1468,
+        "endFrame": 1477
+      },
+      {
+        "word": "only",
+        "startFrame": 1477,
+        "endFrame": 1483
+      },
+      {
+        "word": "lets",
+        "startFrame": 1483,
+        "endFrame": 1492
+      },
+      {
+        "word": "the",
+        "startFrame": 1492,
+        "endFrame": 1495
+      },
+      {
+        "word": "wind",
+        "startFrame": 1495,
+        "endFrame": 1507
+      },
+      {
+        "word": "in",
+        "startFrame": 1507,
+        "endFrame": 1519
+      },
+      {
+        "word": "to",
+        "startFrame": 1519,
+        "endFrame": 1522
+      },
+      {
+        "word": "push",
+        "startFrame": 1522,
+        "endFrame": 1531
+      },
+      {
+        "word": "from",
+        "startFrame": 1531,
+        "endFrame": 1537
+      },
+      {
+        "word": "below.",
+        "startFrame": 1537,
+        "endFrame": 1552
+      }
+    ]
+  },
+  {
+    "startFrame": 1583,
+    "endFrame": 1706,
+    "text": "So you bolt the walls into the concrete floor, with steel anchors all the way around.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1583,
+        "endFrame": 1588
+      },
+      {
+        "word": "you",
+        "startFrame": 1588,
+        "endFrame": 1593
+      },
+      {
+        "word": "bolt",
+        "startFrame": 1593,
+        "endFrame": 1598
+      },
+      {
+        "word": "the",
+        "startFrame": 1598,
+        "endFrame": 1601
+      },
+      {
+        "word": "walls",
+        "startFrame": 1601,
+        "endFrame": 1616
+      },
+      {
+        "word": "into",
+        "startFrame": 1616,
+        "endFrame": 1625
+      },
+      {
+        "word": "the",
+        "startFrame": 1625,
+        "endFrame": 1628
+      },
+      {
+        "word": "concrete",
+        "startFrame": 1628,
+        "endFrame": 1640
+      },
+      {
+        "word": "floor,",
+        "startFrame": 1640,
+        "endFrame": 1655
+      },
+      {
+        "word": "with",
+        "startFrame": 1658,
+        "endFrame": 1664
+      },
+      {
+        "word": "steel",
+        "startFrame": 1664,
+        "endFrame": 1673
+      },
+      {
+        "word": "anchors",
+        "startFrame": 1673,
+        "endFrame": 1685
+      },
+      {
+        "word": "all",
+        "startFrame": 1685,
+        "endFrame": 1688
+      },
+      {
+        "word": "the",
+        "startFrame": 1688,
+        "endFrame": 1691
+      },
+      {
+        "word": "way",
+        "startFrame": 1691,
+        "endFrame": 1694
+      },
+      {
+        "word": "around.",
+        "startFrame": 1694,
+        "endFrame": 1706
+      }
+    ]
+  },
+  {
+    "startFrame": 1719,
+    "endFrame": 1830,
+    "text": "Now the weakest part is the door. A normal door blows right in.",
+    "words": [
+      {
+        "word": "Now",
+        "startFrame": 1719,
+        "endFrame": 1722
+      },
+      {
+        "word": "the",
+        "startFrame": 1722,
+        "endFrame": 1725
+      },
+      {
+        "word": "weakest",
+        "startFrame": 1725,
+        "endFrame": 1740
+      },
+      {
+        "word": "part",
+        "startFrame": 1740,
+        "endFrame": 1749
+      },
+      {
+        "word": "is",
+        "startFrame": 1749,
+        "endFrame": 1752
+      },
+      {
+        "word": "the",
+        "startFrame": 1752,
+        "endFrame": 1755
+      },
+      {
+        "word": "door.",
+        "startFrame": 1755,
+        "endFrame": 1770
+      },
+      {
+        "word": "A",
+        "startFrame": 1782,
+        "endFrame": 1783
+      },
+      {
+        "word": "normal",
+        "startFrame": 1782,
+        "endFrame": 1794
+      },
+      {
+        "word": "door",
+        "startFrame": 1794,
+        "endFrame": 1803
+      },
+      {
+        "word": "blows",
+        "startFrame": 1803,
+        "endFrame": 1815
+      },
+      {
+        "word": "right",
+        "startFrame": 1815,
+        "endFrame": 1824
+      },
+      {
+        "word": "in.",
+        "startFrame": 1824,
+        "endFrame": 1830
+      }
+    ]
+  },
+  {
+    "startFrame": 1860,
+    "endFrame": 1989,
+    "text": "So you hang a steel door, with three hinges and three locks.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1860,
+        "endFrame": 1875
+      },
+      {
+        "word": "you",
+        "startFrame": 1875,
+        "endFrame": 1878
+      },
+      {
+        "word": "hang",
+        "startFrame": 1878,
+        "endFrame": 1887
+      },
+      {
+        "word": "a",
+        "startFrame": 1887,
+        "endFrame": 1888
+      },
+      {
+        "word": "steel",
+        "startFrame": 1887,
+        "endFrame": 1905
+      },
+      {
+        "word": "door,",
+        "startFrame": 1905,
+        "endFrame": 1920
+      },
+      {
+        "word": "with",
+        "startFrame": 1929,
+        "endFrame": 1935
+      },
+      {
+        "word": "three",
+        "startFrame": 1935,
+        "endFrame": 1944
+      },
+      {
+        "word": "hinges",
+        "startFrame": 1944,
+        "endFrame": 1962
+      },
+      {
+        "word": "and",
+        "startFrame": 1962,
+        "endFrame": 1965
+      },
+      {
+        "word": "three",
+        "startFrame": 1965,
+        "endFrame": 1974
+      },
+      {
+        "word": "locks.",
+        "startFrame": 1974,
+        "endFrame": 1989
+      }
+    ]
+  },
+  {
+    "startFrame": 2000,
+    "endFrame": 2120,
+    "text": "And the air vents get steel covers, so nothing can fly in through them.",
+    "words": [
+      {
+        "word": "And",
+        "startFrame": 2000,
+        "endFrame": 2006
+      },
+      {
+        "word": "the",
+        "startFrame": 2006,
+        "endFrame": 2012
+      },
+      {
+        "word": "air",
+        "startFrame": 2012,
+        "endFrame": 2018
+      },
+      {
+        "word": "vents",
+        "startFrame": 2018,
+        "endFrame": 2030
+      },
+      {
+        "word": "get",
+        "startFrame": 2030,
+        "endFrame": 2036
+      },
+      {
+        "word": "steel",
+        "startFrame": 2036,
+        "endFrame": 2048
+      },
+      {
+        "word": "covers,",
+        "startFrame": 2048,
+        "endFrame": 2066
+      },
+      {
+        "word": "so",
+        "startFrame": 2069,
+        "endFrame": 2072
+      },
+      {
+        "word": "nothing",
+        "startFrame": 2075,
+        "endFrame": 2081
+      },
+      {
+        "word": "can",
+        "startFrame": 2081,
+        "endFrame": 2087
+      },
+      {
+        "word": "fly",
+        "startFrame": 2087,
+        "endFrame": 2102
+      },
+      {
+        "word": "in",
+        "startFrame": 2102,
+        "endFrame": 2108
+      },
+      {
+        "word": "through",
+        "startFrame": 2108,
+        "endFrame": 2114
+      },
+      {
+        "word": "them.",
+        "startFrame": 2114,
+        "endFrame": 2120
+      }
+    ]
+  },
+  {
+    "startFrame": 2150,
+    "endFrame": 2354,
+    "text": "The worst of the storm passes in under a minute. The house is gone. Your room is still standing.",
+    "words": [
+      {
+        "word": "The",
+        "startFrame": 2150,
+        "endFrame": 2153
+      },
+      {
+        "word": "worst",
+        "startFrame": 2153,
+        "endFrame": 2162
+      },
+      {
+        "word": "of",
+        "startFrame": 2162,
+        "endFrame": 2165
+      },
+      {
+        "word": "the",
+        "startFrame": 2165,
+        "endFrame": 2168
+      },
+      {
+        "word": "storm",
+        "startFrame": 2168,
+        "endFrame": 2180
+      },
+      {
+        "word": "passes",
+        "startFrame": 2180,
+        "endFrame": 2195
+      },
+      {
+        "word": "in",
+        "startFrame": 2195,
+        "endFrame": 2201
+      },
+      {
+        "word": "under",
+        "startFrame": 2201,
+        "endFrame": 2210
+      },
+      {
+        "word": "a",
+        "startFrame": 2210,
+        "endFrame": 2213
+      },
+      {
+        "word": "minute.",
+        "startFrame": 2213,
+        "endFrame": 2228
+      },
+      {
+        "word": "The",
+        "startFrame": 2240,
+        "endFrame": 2243
+      },
+      {
+        "word": "house",
+        "startFrame": 2243,
+        "endFrame": 2258
+      },
+      {
+        "word": "is",
+        "startFrame": 2258,
+        "endFrame": 2264
+      },
+      {
+        "word": "gone.",
+        "startFrame": 2264,
+        "endFrame": 2279
+      },
+      {
+        "word": "Your",
+        "startFrame": 2297,
+        "endFrame": 2300
+      },
+      {
+        "word": "room",
+        "startFrame": 2300,
+        "endFrame": 2318
+      },
+      {
+        "word": "is",
+        "startFrame": 2321,
+        "endFrame": 2324
+      },
+      {
+        "word": "still",
+        "startFrame": 2324,
+        "endFrame": 2336
+      },
+      {
+        "word": "standing.",
+        "startFrame": 2336,
+        "endFrame": 2354
+      }
+    ]
+  },
+  {
+    "startFrame": 2389,
+    "endFrame": 2566,
+    "text": "Add a flashlight, bottled water, helmets for everyone, and a weather radio.",
+    "words": [
+      {
+        "word": "Add",
+        "startFrame": 2389,
+        "endFrame": 2392
+      },
+      {
+        "word": "a",
+        "startFrame": 2392,
+        "endFrame": 2395
+      },
+      {
+        "word": "flashlight,",
+        "startFrame": 2395,
+        "endFrame": 2428
+      },
+      {
+        "word": "bottled",
+        "startFrame": 2431,
+        "endFrame": 2443
+      },
+      {
+        "word": "water,",
+        "startFrame": 2443,
+        "endFrame": 2464
+      },
+      {
+        "word": "helmets",
+        "startFrame": 2479,
+        "endFrame": 2497
+      },
+      {
+        "word": "for",
+        "startFrame": 2497,
+        "endFrame": 2500
+      },
+      {
+        "word": "everyone,",
+        "startFrame": 2500,
+        "endFrame": 2521
+      },
+      {
+        "word": "and",
+        "startFrame": 2527,
+        "endFrame": 2536
+      },
+      {
+        "word": "a",
+        "startFrame": 2536,
+        "endFrame": 2539
+      },
+      {
+        "word": "weather",
+        "startFrame": 2539,
+        "endFrame": 2551
+      },
+      {
+        "word": "radio.",
+        "startFrame": 2551,
+        "endFrame": 2566
+      }
+    ]
+  },
+  {
+    "startFrame": 2580,
+    "endFrame": 2676,
+    "text": "Congratulations. You have built a tornado shelter.",
+    "words": [
+      {
+        "word": "Congratulations.",
+        "startFrame": 2580,
+        "endFrame": 2619
+      },
+      {
+        "word": "You",
+        "startFrame": 2619,
+        "endFrame": 2628
+      },
+      {
+        "word": "have",
+        "startFrame": 2628,
+        "endFrame": 2634
+      },
+      {
+        "word": "built",
+        "startFrame": 2634,
+        "endFrame": 2643
+      },
+      {
+        "word": "a",
+        "startFrame": 2643,
+        "endFrame": 2646
+      },
+      {
+        "word": "tornado",
+        "startFrame": 2646,
+        "endFrame": 2664
+      },
+      {
+        "word": "shelter.",
+        "startFrame": 2664,
+        "endFrame": 2676
+      }
+    ]
+  }
+]

@@ -4,6 +4,7 @@ import { EPISODES } from "./episodes/registry";
 import { CAMPAIGN_SEGMENTS, dungeonCampaign } from "./episodes/dungeon-campaign";
 import { CampaignThumbnail, campaignThumbMetadata } from "./episodes/dungeon-campaign/Thumbnail";
 import { SHELTER_PRODUCTIONS } from "./shelter/registry";
+import { lowPolyStyleTest } from "./lowpoly/style-test";
 import { DungeonTrapThumbnail } from "./episodes/dungeon-trap/Thumbnail";
 import { DURATION as DUNGEON_DURATION } from "./episodes/dungeon-trap/timeline";
 import { RollingBoulderThumbnail } from "./episodes/rolling-boulder/Thumbnail";
@@ -12,6 +13,8 @@ import { DURATION as NUCLEAR_DURATION } from "./shelter/nuclear-bunker/timeline"
 import { LighthouseThumbnail } from "./shelter/lighthouse/Thumbnail";
 import { DURATION as LIGHTHOUSE_DURATION } from "./shelter/lighthouse/timeline";
 import { CastleWallThumbnail } from "./shelter/castle-wall/Thumbnail";
+import { TornadoShelterThumbnail } from "./shelter/tornado-shelter/Thumbnail";
+import { DURATION as TORNADO_DURATION } from "./shelter/tornado-shelter/timeline";
 import { DURATION as CASTLE_WALL_DURATION } from "./shelter/castle-wall/timeline";
 import { DURATION as BOULDER_DURATION } from "./episodes/rolling-boulder/timeline";
 import { DartTrapThumbnail, dartThumbMetadata } from "./episodes/dart-trap/Thumbnail";
@@ -25,7 +28,10 @@ import { CharacterLab, LAB_DURATION } from "./lab/CharacterLab";
 import { ProfileAvatar } from "./lab/ProfileAvatar";
 import { slowFlightEpisode } from "./whatif/slow-flight";
 import { teleportEpisode } from "./whatif/teleport";
+import { reflexesEpisode } from "./whatif/reflexes";
 import { SlowFlightThumbnail } from "./whatif/slow-flight/Thumbnail";
+import { TeleportThumbnail } from "./whatif/teleport/Thumbnail";
+import { ReflexesThumbnail } from "./whatif/reflexes/Thumbnail";
 import { ChannelAvatar, ChannelBanner } from "./whatif/Branding";
 import { SlowFlightShort } from "./whatif/slow-flight-short/ShortVideo";
 import { DURATION as SHORT_DURATION } from "./whatif/slow-flight-short/timeline";
@@ -85,6 +91,15 @@ export const RemotionRoot: React.FC = () => {
           defaultProps={{ beats: prod.beats, audit: prod.audit }}
         />
       ))}
+      {/* Clean low-poly look development (src/lowpoly) */}
+      <Composition
+        id={lowPolyStyleTest.config.id}
+        component={lowPolyStyleTest.Video}
+        durationInFrames={lowPolyStyleTest.config.durationInFrames}
+        fps={lowPolyStyleTest.config.fps}
+        width={lowPolyStyleTest.config.width}
+        height={lowPolyStyleTest.config.height}
+      />
       <Composition
         id="DungeonTrapThumbnail"
         component={DungeonTrapThumbnail}
@@ -136,6 +151,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="NuclearBunkerThumbnail" component={NuclearBunkerThumbnail} durationInFrames={NUCLEAR_DURATION} fps={30} width={1080} height={1920} />
       <Composition id="LighthouseThumbnail" component={LighthouseThumbnail} durationInFrames={LIGHTHOUSE_DURATION} fps={30} width={1080} height={1920} />
       <Composition id="CastleWallThumbnail" component={CastleWallThumbnail} durationInFrames={CASTLE_WALL_DURATION} fps={30} width={1080} height={1920} />
+      <Composition id="TornadoShelterThumbnail" component={TornadoShelterThumbnail} durationInFrames={TORNADO_DURATION} fps={30} width={1080} height={1920} defaultProps={{ variant: 0 }} />
       <Composition id="CharacterLab" component={CharacterLab} durationInFrames={LAB_DURATION} fps={30} width={1080} height={1920} />
       <Composition id="ProfileAvatar" component={ProfileAvatar} durationInFrames={30} fps={30} width={1024} height={1024} defaultProps={{ classType: "paladin" }} />
       <Composition
@@ -156,7 +172,18 @@ export const RemotionRoot: React.FC = () => {
         height={teleportEpisode.config.height}
         defaultProps={{ beats: teleportEpisode.beats, audit: teleportEpisode.audit }}
       />
+      <Composition
+        id={reflexesEpisode.config.id}
+        component={reflexesEpisode.Video}
+        durationInFrames={reflexesEpisode.config.durationInFrames}
+        fps={reflexesEpisode.config.fps}
+        width={reflexesEpisode.config.width}
+        height={reflexesEpisode.config.height}
+        defaultProps={{ beats: reflexesEpisode.beats, audit: reflexesEpisode.audit }}
+      />
       <Composition id="SlowFlightThumbnail" component={SlowFlightThumbnail} durationInFrames={2} fps={30} width={1280} height={720} defaultProps={{ variant: 0 }} />
+      <Composition id="TeleportThumbnail" component={TeleportThumbnail} durationInFrames={2} fps={30} width={1280} height={720} defaultProps={{ variant: 0 }} />
+      <Composition id="ReflexesThumbnail" component={ReflexesThumbnail} durationInFrames={2} fps={30} width={1280} height={720} defaultProps={{ variant: 0 }} />
       <Composition id="SlowFlightShort" component={SlowFlightShort} durationInFrames={SHORT_DURATION} fps={30} width={1080} height={1920} />
       <Composition id="ChannelAvatar" component={ChannelAvatar} durationInFrames={2} fps={30} width={1024} height={1024} />
       <Composition id="ChannelBanner" component={ChannelBanner} durationInFrames={2} fps={30} width={2560} height={1440} defaultProps={{ guides: false }} />

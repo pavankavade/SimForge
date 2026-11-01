@@ -32,7 +32,7 @@ def load_audio(path, target_sr=SR):
     arr = np.frombuffer(raw, dtype=np.float32).copy()
     return arr.reshape(-1, 2)
 
-def mix_audio_track(start_frame=0, end_frame=305, output_wav="out/cw_level1_audio.wav"):
+def mix_audio_track(start_frame=0, end_frame=305, output_wav="out/dungeon/crushing-walls/wip/cw_level1_audio.wav"):
     os.makedirs(os.path.dirname(output_wav), exist_ok=True)
     total_frames = end_frame - start_frame + 1
     total_samples = int(total_frames * SPF)
@@ -109,4 +109,4 @@ def mix_audio_track(start_frame=0, end_frame=305, output_wav="out/cw_level1_audi
     print(f"Wrote master audio mix to: {output_wav}")
 
 if __name__ == "__main__":
-    mix_audio_track(0, 305, "out/cw_level1_audio.wav")
+    mix_audio_track(0, 305, "out/dungeon/crushing-walls/wip/cw_level1_audio.wav")

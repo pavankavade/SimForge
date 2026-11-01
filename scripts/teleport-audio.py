@@ -36,7 +36,7 @@ sf = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sf)
 
 SLUG = "teleport"
-VERSION = 2
+VERSION = 3
 
 LINES = [
     # Cold open
@@ -121,7 +121,7 @@ for d in (sf.EP, sf.SFX_DIR, sf.DATA, sf.VOICE_TMP):
     d.mkdir(parents=True, exist_ok=True)
 
 sf.SCORE_STYLE = "musicbox"
-sf.SCORE_LUFS = -33.0
+sf.SCORE_LUFS = -37.0  # 4 dB under Slow Flight: the score sits further behind the voice
 
 SR = sf.SR
 

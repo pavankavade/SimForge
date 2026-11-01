@@ -66,7 +66,7 @@ export const EpisodeCanvas: React.FC<EpisodeVideoProps> = ({ config, Scene }) =>
           far: config.camera.far ?? 400,
           position: config.camera.initialPosition,
         }}
-        shadows
+        shadows={config.shadows ?? true}
       >
         {fog ? <fog attach="fog" args={[fog.color, fog.near, fog.far]} /> : null}
 

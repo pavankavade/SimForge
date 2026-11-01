@@ -2,9 +2,10 @@ import { bundle } from "@remotion/bundler";
 import { renderStill, selectComposition } from "@remotion/renderer";
 import path from "node:path";
 import fs from "node:fs";
+import { episodeDir } from "./out-paths.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
-const outDir = path.join(root, "out", "thumbnails");
+const outDir = episodeDir("rolling-boulder", "thumbnails");
 const artifactDir = "C:\\Users\\qwert\\.gemini\\antigravity\\brain\\ee2f1715-8fa1-4da3-98af-0253d82885e3";
 fs.mkdirSync(outDir, { recursive: true });
 

@@ -251,6 +251,12 @@ def build_narration():
         wav_file = VOICE_TMP / f"{line_id}.wav"
         words = align_to_script(text, spell_numbers(tts_gemini_line(text, wav_file)))
         x = ba.decode_samples(wav_file)
+        # The transcriber now and then returns a word that ends before it starts (Reflexes b4:
+        # "thought." 9.9 -> 0.5 s), which would cut the line there. Close it at the next word or the clip end.
+        words = [
+            (lab, s, e if e >= s else (words[i + 1][1] if i + 1 < len(words) else min(len(x) / SR, s + 0.6)))
+            for i, (lab, s, e) in enumerate(words)
+        ]
 
         a = max(0, int((words[0][1] - 0.04) * SR))
         b = min(len(x), int((words[-1][2] + 0.05) * SR))

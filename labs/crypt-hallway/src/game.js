@@ -155,6 +155,7 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     fireAt: -1e9,
     iceAt: -1e9, melt: 0, iceGone: true,
     still: 0, launchAt: -1e9,
+    onFlaps: 0, // frames stood on the false floor
     lidOpenAt: -1e9, chompAt: -1e9, burpAt: -1e9,
   };
   const p = {}; // the player
@@ -202,7 +203,8 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
   const iceLevel = () => (trap.iceGone ? 0 : easeInOut(prog(F, trap.iceAt + 4, trap.iceAt + 30)));
   const frozen = () => iceLevel() > 0.98 && trap.melt < 0.6;
 
-  const FUSE = 22, BURN = 80, COOL = 70;
+  const FUSE = 22, BURN = 45, COOL = 70;
+  const LINGER = 90; // frames on the false floor before it drops you (outlasts one burn)
   function fireLevel() {
     const d = F - trap.fireAt - FUSE;
     if (d < 0 || d > BURN + 8) return 0;
@@ -366,8 +368,14 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     const onPlate = onFeet && Math.abs(p.x) < 0.45 && Math.abs(p.s - PLATE_S) < 0.45;
     if (onPlate && !trap.plateHeld) pressPlate();
     trap.plateHeld = onPlate;
+    // the false floor won't hold you for long: linger on the flaps and they creak, sag and give way
+    const onFlaps = onFeet && overPit(p.x, p.s) && !frozen() && flapAngle() === 0;
+    trap.onFlaps = onFlaps ? trap.onFlaps + 1 : 0;
+    if (trap.onFlaps === LINGER - 36) play("ratchet", 0.3);
+    if (trap.onFlaps === LINGER - 14) play("crack", 0.3);
+    if (trap.onFlaps >= LINGER) { trap.onFlaps = 0; trap.plateAt = -1e9; pressPlate(); }
     // burners arm as soon as you're on the trapdoor or its rims
-    if (p.s > NEAR_S - 0.4 && p.s < FAR_S + 0.4) armBurners();
+    if (RIMS.some((r) => Math.abs(p.s - r) < 0.6)) armBurners(); // stepping up to either rim
     const fire = fireLevel();
     if (fire > 0.4 && !shielding && p.y < 0.9 * fire && RIMS.some((s) => Math.abs(p.s - s) < 0.38)) {
       play("sizzle", 0.5);
@@ -564,7 +572,8 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
 
   // --- what the film's props and the cast see -------------------------------------------------
   function propState() {
-    const fa = flapAngle();
+    const creak = trap.onFlaps > LINGER - 36 ? -0.03 * Math.abs(Math.sin(F * 0.9)) * prog(trap.onFlaps, LINGER - 36, LINGER) : 0;
+    const fa = flapAngle() + creak;
     const fire = fireLevel();
     const castAge = F - p.castAt;
     const ice = iceLevel();

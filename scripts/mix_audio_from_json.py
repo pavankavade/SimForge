@@ -1,5 +1,5 @@
 """
-Mixes Narration + Score + exact SFX cues from out/cw_full_sfx.json into out/cw_full_master_audio.wav
+Mixes Narration + Score + exact SFX cues from out/dungeon/crushing-walls/wip/cw_full_sfx.json into cw_full_master_audio.wav (same folder)
 """
 
 import os
@@ -14,7 +14,7 @@ EP = ROOT / "public" / "episodes" / "crushing-walls"
 SFX_DIR = EP / "sfx"
 NARRATION_FILE = EP / "narration_v2.mp3"
 SCORE_FILE = EP / "score_v2.mp3"
-SFX_JSON = ROOT / "out" / "cw_full_sfx.json"
+SFX_JSON = ROOT / "out" / "dungeon" / "crushing-walls" / "wip" / "cw_full_sfx.json"
 
 FPS = 30
 SR = 44100
@@ -31,7 +31,7 @@ def load_audio(path, target_sr=SR):
     arr = np.frombuffer(raw, dtype=np.float32).copy()
     return arr.reshape(-1, 2)
 
-def mix(total_frames=3110, output_wav="out/cw_full_master_audio.wav"):
+def mix(total_frames=3110, output_wav="out/dungeon/crushing-walls/wip/cw_full_master_audio.wav"):
     total_samples = int(total_frames * SPF)
     master = np.zeros((total_samples, 2), dtype=np.float32)
     

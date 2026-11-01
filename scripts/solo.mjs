@@ -22,7 +22,7 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SERIES_DIRS = ["src/episodes", "src/shelter", "src/whatif"];
+const SERIES_DIRS = ["src/episodes", "src/shelter", "src/whatif", "src/lowpoly"];
 export const FULL_ENTRY = path.join(root, "src", "index.ts");
 
 /** The episode folder whose config.ts declares this composition id, or null. */

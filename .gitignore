@@ -30,3 +30,18 @@ __pycache__/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Any env file (keys), except a template
+.env*
+!.env.example
+
+# Claude Code per-machine settings
+.claude/settings.local.json
+
+# Local scratch, agent session dumps and helper scripts (private, never pushed)
+scratch*
+opencode_session*.json
+oc_help.*
+
+# Large videos under public/ (render-sized; media/demo.mp4 stays tracked)
+public/**/*.mp4

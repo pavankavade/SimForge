@@ -1,6 +1,6 @@
 /**
  * Non-overwriting render: like `node scripts/render.mjs <Id> [slug]`, but the
- * final file goes to out/<slug>_v2.mp4, _v3, ... if out/<slug>.mp4 exists.
+ * final file goes to out/<series>/<slug>/<slug>_v2.mp4, _v3, ... if <slug>.mp4 exists.
  *
  *   node scripts/render-safe.mjs <CompositionId> [slug]
  */

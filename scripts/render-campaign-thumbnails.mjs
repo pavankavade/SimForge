@@ -1,5 +1,5 @@
 /**
- * Renders every DungeonCampaign (long-form) thumbnail variant to out/thumbnails/.
+ * Renders every DungeonCampaign (long-form) thumbnail variant to out/<series>/dungeon-campaign/thumbnails/.
  * Each variant's frame comes from the composition's calculateMetadata
  * (derived from BEATS), so re-voicing the episode never stales a thumbnail.
  *
@@ -9,9 +9,10 @@ import { bundle } from "@remotion/bundler";
 import { renderStill, selectComposition } from "@remotion/renderer";
 import path from "node:path";
 import fs from "node:fs";
+import { episodeDir } from "./out-paths.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
-const outDir = path.join(root, "out", "thumbnails");
+const outDir = episodeDir("dungeon-campaign", "thumbnails");
 fs.mkdirSync(outDir, { recursive: true });
 
 console.log("Bundling...");

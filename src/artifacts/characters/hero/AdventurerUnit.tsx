@@ -51,6 +51,7 @@ const POSE_EXPRESSION: Record<AdventurerPose, Expression> = {
   point: "smug",
   matrix: "focus",
   fly: "happy",
+  diveCatch: "focus",
   hover: "focus",
   carry: "focus",
   ride: "happy",
@@ -63,7 +64,7 @@ export const poseSway = (pose: AdventurerPose, animFrame: number) =>
   Math.sin(animFrame * 0.26) * 0.05 +
   (pose === "walk" || pose === "shieldWalk" ? 0.12 : 0) +
   (pose === "run" ? 0.35 : 0) +
-  (pose === "jump" || pose === "fall" || pose === "launch" || pose === "float" || pose === "fly" || pose === "hover" ? 0.3 : 0);
+  (pose === "jump" || pose === "fall" || pose === "launch" || pose === "float" || pose === "fly" || pose === "diveCatch" || pose === "hover" ? 0.3 : 0);
 
 /** Hip height above the feet for a class (world units at scale 1): the pivot for flight tilts and piggybacks. */
 export const hipHeight = (classType: AdventurerClass) => {

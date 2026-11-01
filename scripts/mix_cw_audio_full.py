@@ -261,7 +261,7 @@ def build_sfx_list():
     
     return sfx
 
-def mix_full_episode(total_frames=3110, output_wav="out/cw_full_master_audio.wav"):
+def mix_full_episode(total_frames=3110, output_wav="out/dungeon/crushing-walls/wip/cw_full_master_audio.wav"):
     os.makedirs(os.path.dirname(output_wav), exist_ok=True)
     total_samples = int(total_frames * SPF)
     master = np.zeros((total_samples, 2), dtype=np.float32)

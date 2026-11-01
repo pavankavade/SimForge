@@ -8,7 +8,7 @@ import type { EpisodeConfig, Vec3 } from "../../engine/types";
  * YouTube thumbnail (1280x720) for Slow Flight. Two variants:
  *  0 - bright afternoon over the patchwork, "FLY AT 3 MPH?"
  *  1 - the sunset run to town, "38 MILES. 3 MPH."
- * Render: npx remotion still SlowFlightThumbnail out/slow-flight-thumb-0.png --props='{"variant":0}'
+ * Render: node scripts/solo.mjs still SlowFlightThumbnail out/whatif/slow-flight/thumbnails/slow-flight-thumb-0.png --props='{"variant":0}'
  */
 
 const FONT = "'Arial Black', 'Arial', sans-serif";

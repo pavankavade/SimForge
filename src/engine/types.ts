@@ -210,6 +210,8 @@ export interface EpisodeConfig {
   subtitles?: SubtitleConfig;
   overlays?: OverlayConfig;
   OverlayComponent?: React.FC;
+  /** Shadow map type. Default PCF soft; "variance" lets a light's shadow.radius blur wide penumbras (src/lowpoly). */
+  shadows?: "soft" | "variance";
 }
 
 /** Story beats by name (frame, or list of frames). Exposed for review tooling. */

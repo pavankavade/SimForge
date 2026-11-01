@@ -55,6 +55,11 @@ export function buildTraps(scene, { floorMaterial }) {
     ring.position.z = s;
     feed.add(ring);
   }
+  // tank to feed: a short run across the aisle through the arcade
+  const stub = TANK[0] + 0.45 + RIM_X; // tank wall, in the feed's local x (negative)
+  const stubPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, -stub, 12).rotateZ(Math.PI / 2).translate(stub / 2, 0, 0), cu);
+  const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), iron);
+  feed.add(stubPipe, elbow);
   pipes.add(feed);
   shadows(pipes);
   scene.add(pipes);
