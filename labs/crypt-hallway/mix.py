@@ -20,6 +20,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 EP = ROOT / "public" / "episodes" / "dungeon-trap-v2"
 SR = 48000
+SCORE_DB = -4.0  # the score sits a little under the episodes' level, so the voice and SFX carry
 
 
 def load(path):
@@ -57,9 +58,9 @@ def main(spec_path, out_path):
     nar = fade_out(nar, int(spec["narrationEnd"] / fps * SR), int(0.15 * SR))
     lay(nar, 0, 1.0)
 
-    # score under everything, faded out over the last 1.5 s
+    # score under everything (SCORE_DB), faded out over the last 1.5 s
     score = load(EP / "score_v1.mp3")[:total]
-    lay(fade_out(score, total - int(1.5 * SR), int(1.5 * SR)), 0, 1.0)
+    lay(fade_out(score, total - int(1.5 * SR), int(1.5 * SR)), 0, 10 ** (SCORE_DB / 20))
 
     cache = {}
     for cue in spec["sfx"]:
