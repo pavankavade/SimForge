@@ -18,6 +18,21 @@ import { createWalker } from "./walk.js";
 
 const params = new URLSearchParams(location.search);
 const hud = document.getElementById("hud");
+// loading screen (index.html): a progress bar between the heavy start-up steps, and any failure
+const loader = document.getElementById("loader");
+const progress = async (pct, text) => {
+  if (!loader) return;
+  loader.querySelector(".bar > i").style.width = `${pct}%`;
+  loader.querySelector(".msg").textContent = `${text} ${pct}%`;
+  await new Promise((r) => setTimeout(r, 30)); // let it repaint before the next blocking step
+};
+const fail = (why) => {
+  if (!loader) return;
+  loader.querySelector(".spin")?.remove();
+  loader.querySelector(".err").textContent = `${why} Try Chrome or Edge on a desktop, close other heavy tabs, or reload.`;
+};
+window.addEventListener("error", (e) => fail(`Something broke while starting: ${e.message}.`));
+window.addEventListener("unhandledrejection", (e) => fail(`Something broke while starting: ${e.reason?.message ?? e.reason}.`));
 if (params.has("shot") || params.has("cam")) hud.style.display = "none";
 
 const renderer = new THREE.WebGPURenderer({ antialias: false });
@@ -27,6 +42,12 @@ const SHOT = params.get("shot"); // style test with the episode cast (cast.jsx),
 const CAM = params.get("cam"); // camera test: the animated beat (anim.js) through one camera rig, stepped by film.mjs
 // the traps as a game (game.js): same props, driven by triggers. The hosted build opens on it (?lab=1 for the walk).
 const PLAY = !CAM && !SHOT && (params.has("play") || (import.meta.env.PROD && !params.has("lab") && !params.has("s") && !params.has("mode")));
+// The game runs light by default when hosted (?quality=high for the full look): no SSGI, SSR or
+// godrays, no torch shadows, a 2k sun shadow and at most ~1280 px of render width. The full stack
+// compiling at once is enough to hang or crash a modest GPU.
+const LOW = PLAY && ((params.get("quality") ?? (import.meta.env.PROD ? "low" : "high")) === "low" || !navigator.gpu);
+if (LOW) for (const k of ["gi", "ssr", "rays"]) if (!params.has(k)) params.set(k, "0");
+if (LOW) renderer.setPixelRatio(Math.min(1, 1280 / Math.max(1, window.innerWidth)));
 const FIXED = params.has("w") ? [Number(params.get("w")), Number(params.get("h") ?? 720)] : SHOT || CAM ? [1080, 1920] : null;
 const viewSize = () => FIXED ?? [Math.max(1, window.innerWidth), Math.max(1, window.innerHeight)];
 renderer.setSize(...viewSize(), !FIXED);
@@ -34,19 +55,25 @@ if (FIXED) Object.assign(renderer.domElement.style, { width: "100vw", height: "1
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.AgXToneMapping;
-renderer.toneMappingExposure = Number(params.get("exposure") ?? (CAM ? 1.55 : PLAY ? 1.4 : 1.2)); // the film reads on phones: brighter
+renderer.toneMappingExposure = Number(params.get("exposure") ?? (CAM ? 1.55 : PLAY ? (LOW ? 1.75 : 1.4) : 1.2)); // light mode has no bounce light: brighter // the film reads on phones: brighter
 document.body.appendChild(renderer.domElement);
+await progress(5, "Starting the renderer…");
 await renderer.init();
+renderer.backend.device?.lost?.then((info) => { if (info.reason !== "destroyed") fail(`The graphics device was lost (${info.message || info.reason}).`); });
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xc6dcff).multiplyScalar(8); // sky seen up the light well
 
 const camera = new THREE.PerspectiveCamera(52, viewSize()[0] / viewSize()[1], 0.05, 90);
 
+await progress(15, "Loading the cast…");
 const castMod = SHOT || CAM || PLAY ? await import("./cast.jsx") : null;
 const anim = CAM || PLAY ? await import("./anim.js") : null;
+await progress(30, "Building the hall…");
 const hall = buildHall(scene, { pit: anim ? anim.PIT : castMod ? castMod.PIT : null });
 const { torches } = hall;
+if (LOW) for (const t of torches) t.light.castShadow = false;
+await progress(45, "Setting the traps…");
 const { drawHud } = CAM ? await import("./hud.js") : {};
 const updateProps = CAM || PLAY ? (await import("./props.js")).buildProps(scene, hall) : null;
 const updateTraps = CAM || PLAY ? (await import("./traps.js")).buildTraps(scene, hall) : null;
@@ -61,6 +88,7 @@ if (SHOT) {
   await castMod.mountCast({ renderer, scene, camera, shot: SHOT, size: FIXED });
 }
 const poseCast = CAM ? await castMod.mountFilm({ renderer, scene, camera, cam: CAM, size: FIXED }) : null;
+if (PLAY) await progress(60, "Dressing the adventurers…");
 const drawCast = PLAY ? await castMod.mountTracks({ renderer, scene, camera, size: viewSize() }) : null;
 const gameMod = PLAY ? await import("./game.js") : null;
 if (PLAY) gameMod.buildFence(scene);
@@ -78,7 +106,7 @@ const sunDir = new THREE.Vector3(0.12, 1, -0.3).normalize();
 sun.target.position.set(0, 0, -wellS + 3.6);
 sun.position.copy(sun.target.position).addScaledVector(sunDir, 32);
 sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.mapSize.setScalar(LOW ? 2048 : 4096);
 Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24, near: 1, far: 70 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.02;
@@ -257,6 +285,20 @@ if (CAM) {
   window.__frameCount = anim.FRAMES;
   window.__audio = { sfx: anim.SFX, narrationEnd: anim.NARRATION_END, fps: anim.FPS };
 }
+
+// the first frame compiles every shader (through the post pipeline's own targets), so draw it
+// behind the loader
+if (PLAY) {
+  await progress(75, "Compiling shaders… (the slow part)");
+  const props = game.propState();
+  updateProps(props);
+  updateTraps(props);
+  pipeline.render();
+  await progress(95, "Almost there…");
+  pipeline.render();
+  await progress(100, "Ready");
+  loader?.remove();
+} else loader?.remove();
 
 if (!CAM) renderer.setAnimationLoop((ms) => {
   timer.update(ms);
