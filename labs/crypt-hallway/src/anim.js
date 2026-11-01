@@ -131,7 +131,7 @@ const MAGE_S0 = MAGE_STOP_S + WALK * (B.mageArrive - MAGE_START);
 const MAGE_MID_S = 13.2; // where she stands, mid-pan, when the fire starts
 const PAL_STOP_S = EDGE_S - 0.5; // on the far flap, short of the plate: "the exact spot"
 const PAL_S0 = 21;
-const PENDULUM = { s: PAL_STOP_S, y: 7.5, len: 6.1, amp: 0.8 };
+const PENDULUM = { s: PAL_STOP_S, y: 7.5, len: 6.1, amp: 0.5 }; // swings across the nave: past 0.5 rad the arm would cut into the arcade wall
 const SLAB = { s0: 15.55, s1: 19.6, hw: 1.9 }; // the catapult: the floor under the entrance, hinged at s0
 const MIMIC = { x: 0.35, s: 10.4 };
 export const TANK = [-3.5, 19.5]; // the oil tank (x, s): out in the left aisle, mid-bay, beside the catapult slab
@@ -636,7 +636,7 @@ export const BURSTS = [
   { kind: "sparks", at: B.mageImpale, pos: [-0.7, -0.5, -(MAGE_MID_S + 0.1)], n: 30 },
   { kind: "dust", at: B.close3, pos: [0, 0.03, -PIT.s], box: SEAM, n: 40 },
   // level 4
-  { kind: "dust", at: B.pendulum + 6, pos: [0, PENDULUM.y + 0.3, -PENDULUM.s], box: [1.2, 0.1, 0.3], n: 20, size: 0.8 },
+  { kind: "dust", at: B.pendulum + 6, pos: [0, PENDULUM.y + 0.3, -PENDULUM.s], box: [0.3, 0.1, 1.2], n: 20, size: 0.8 },
   { kind: "sparks", at: B.bladeHit, pos: [0, 1.1, -(PAL_STOP_S + 0.15)], n: 60 },
   { kind: "sparks", at: B.palImpale, pos: [PAL_CORPSE[0], -0.5, -PAL_CORPSE[1]], n: 34 },
   { kind: "dust", at: B.palImpale, pos: [PAL_CORPSE[0], -0.55, -PAL_CORPSE[1]], n: 18 },

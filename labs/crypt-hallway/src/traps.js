@@ -1,7 +1,7 @@
 // Levels 3-5 trap props, shared by the film and the game: buildTraps returns update(state), the
 // plain prop state from anim.js propsAt(f) or game.js (`clock` is the frame, for flicker):
 //   3  copper burner pipes along both rims of the trapdoor, fed from a pressurised oil tank
-//   4  a gear-driven pendulum blade hung from the vault over "the exact spot"
+//   4  a gear-driven pendulum blade hung from the vault over "the exact spot", swiping across the hall
 //   5  the counterweight catapult (the floor under the entrance) and the pet Mimic
 import * as THREE from "three/webgpu";
 import { color, uniform } from "three/tsl";
@@ -122,6 +122,7 @@ export function buildTraps(scene, { floorMaterial }) {
   // --- level 4: the pendulum -------------------------------------------------------------------
   const pend = new THREE.Group(); // drops in from the vault
   pend.position.set(0, PENDULUM.y, -PENDULUM.s);
+  pend.rotation.y = Math.PI / 2; // the beam runs down the hall, the blade swipes across it (left to right)
   const beam = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.28, 0.32), new THREE.MeshStandardNodeMaterial({ color: 0x3a2a1c, roughness: 0.8 }));
   beam.position.y = 0.32;
   pend.add(beam);
@@ -288,7 +289,7 @@ export function buildTraps(scene, { floorMaterial }) {
     pend.visible = p.pendulumIn > 0.001;
     swing.scale.y = Math.max(0.001, p.pendulumIn);
     pend.position.y = PENDULUM.y + 1.2 * (1 - Math.min(1, p.pendulumIn));
-    swing.rotation.x = p.pendulumAngle; // + angle carries the blade towards the far end (-z)
+    swing.rotation.x = p.pendulumAngle; // + angle carries the blade towards -x (the left of the nave, looking down the hall)
     bigGear.rotation.x = -p.pendulumAngle;
     pinion.rotation.x = p.pendulumAngle * 2.5;
     // level 5

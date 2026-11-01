@@ -6,7 +6,7 @@
 //   catapult  stand still on the slab under the light well and it throws you into the Mimic
 //   plate     the hidden pressure plate on the trapdoor drops both flaps into the spike pit
 //   burners   stepping onto the trapdoor arms the oil tank; both rims burst into flame
-//   pendulum  the gear-driven blade swings over the trapdoor on a timer
+//   pendulum  the gear-driven blade, cocked to one side, swipes across the trapdoor once you step on it
 //   mimic     don't touch the chest
 // Classes: rogue jumps further, mage (E) freezes the trapdoor, paladin (hold E) shields from fire.
 import { PIT, PLATE_S, ICE_Y, FLAP_OPEN, PENDULUM, SLAB, MIMIC, TANK, MIMIC_MOUTH } from "./anim.js";
@@ -25,7 +25,7 @@ const SPIKES_Y = -0.62;                      // where a body comes to rest on th
 const HIP = 0.95 * CHAR_SCALE_VALUE;
 const BLADE_R = PENDULUM.len - 0.45 + 0.95;  // pivot to the blade's lowest edge
 const PERIOD = 96;                           // pendulum: frames per full swing
-const SWING = 0.38;                          // swing amplitude: the film's 0.8 would sweep the catapult at head height
+const SWING = PENDULUM.amp;                  // swing amplitude, across the nave (as in the film)
 const MIMIC_R = 0.95;                        // touching distance (chest half-width + body)
 
 const CLASS_SCALE = { rogue: 1, mage: 1, paladin: 1.06 };
@@ -87,7 +87,9 @@ export function buildFence(scene) {
   const iron = ironMaterial();
   const bars = [];
   for (const sx of [-1, 1]) for (let s0 = LANE[0]; s0 < LANE[1] - 0.1; s0 += BAY) {
-    for (let s = s0 + 0.42; s < s0 + BAY - 0.4; s += 0.2) bars.push([sx * WALL_X, s]);
+    for (let s = s0 + 0.42; s < s0 + BAY - 0.4; s += 0.2) {
+      if (Math.abs(s - PENDULUM.s) > 0.3) bars.push([sx * WALL_X, s]); // a slot for the blade to swing through
+    }
   }
   const H = 2.3;
   const barMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.018, 0.018, H, 6).translate(0, H / 2, 0), iron, bars.length);
@@ -156,6 +158,7 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     iceAt: -1e9, melt: 0, iceGone: true,
     still: 0, launchAt: -1e9,
     onFlaps: 0, // frames stood on the false floor
+    pendAt: null, pendStop: null, lastOnDoor: -1e9, // the blade: released / caught again
     lidOpenAt: -1e9, chompAt: -1e9, burpAt: -1e9,
   };
   const p = {}; // the player
@@ -210,10 +213,14 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     if (d < 0 || d > BURN + 8) return 0;
     return Math.min(1, d / 5) * (d > BURN ? 1 - (d - BURN) / 8 : 1);
   }
-  const pendulumAngle = (f = F) => SWING * Math.sin((2 * Math.PI * f) / PERIOD);
-  const bladeAt = (f = F) => { // the blade's lowest edge (x = 0)
+  // the blade waits cocked at +SWING (out over the left aisle) and swings from there once released
+  const pendulumAngle = (f = F) => {
+    if (trap.pendAt == null || (trap.pendStop != null && f >= trap.pendStop)) return SWING;
+    return SWING * Math.cos((2 * Math.PI * (f - trap.pendAt)) / PERIOD);
+  };
+  const bladeAt = (f = F) => { // the blade's lowest edge, swinging across x at PENDULUM.s
     const a = pendulumAngle(f);
-    return { s: PENDULUM.s + BLADE_R * Math.sin(a), y: PENDULUM.y - BLADE_R * Math.cos(a) };
+    return { x: -BLADE_R * Math.sin(a), y: PENDULUM.y - BLADE_R * Math.cos(a) };
   };
   function slabAngle() {
     const d = F - trap.launchAt;
@@ -384,13 +391,23 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
       return;
     }
     // pendulum
+    // the pendulum: stepping on the trapdoor releases it; it's caught again, cocked, a while after you leave
+    if (onFeet && overPit(p.x, p.s)) trap.lastOnDoor = F;
+    const idle = trap.pendAt == null || trap.pendStop != null;
+    if (idle && trap.lastOnDoor === F) {
+      trap.pendAt = F; trap.pendStop = null;
+      play("twang", 0.45);
+    } else if (!idle && F - trap.lastOnDoor > 45 && (F - trap.pendAt) % PERIOD === 0) {
+      trap.pendStop = F;
+      play("ratchet", near(0, PENDULUM.s, 0.3, 12));
+    }
     const b = bladeAt();
-    if (Math.abs(p.x) < 0.6 && Math.abs(p.s - b.s) < 0.5 && b.y < p.y + 1.75 && b.y + 0.7 > p.y) {
-      const dir = Math.sign(pendulumAngle(F + 1) - pendulumAngle(F)) || 1;
+    if (Math.abs(p.s - PENDULUM.s) < 0.45 && Math.abs(p.x - b.x) < 0.55 && b.y < p.y + 1.75 && b.y + 0.7 > p.y) {
+      const dir = Math.sign(bladeAt(F + 1).x - b.x) || 1;
       play("clang", 0.6);
       burst({ kind: "sparks", pos: [p.x, p.y + 1.1, -p.s], n: 60 });
       p.state = "knocked"; p.since = F;
-      p.vs = dir * 5.5; p.vx = (p.x >= 0 ? 1 : -1) * 0.8; p.vy = 3.6; p.grounded = false;
+      p.vx = dir * 5.5; p.vs = (p.s >= PENDULUM.s ? 1 : -1) * 0.6; p.vy = 3.6; p.grounded = false; // swatted sideways
       p.reason = "blade";
       return;
     }
@@ -448,6 +465,7 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
         p.s = Math.max(NEAR_S + 0.3, Math.min(FAR_S - 0.3, p.s));
       }
       if (blocked(p.x, p.s) && !overPit(p.x, p.s)) { p.vx = 0; p.vs = 0; }
+      if (p.s > LANE[0] && p.s < LANE[1] && Math.abs(p.x) > LANE_X) { p.x = Math.sign(p.x) * LANE_X; p.vx = 0; } // the grilles stop you
       const floor = floorAt(p.x, p.s);
       if (p.state === "falling" && p.y <= SPIKES_Y) {
         play("spike", 0.55);
