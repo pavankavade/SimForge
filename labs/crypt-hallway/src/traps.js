@@ -19,7 +19,8 @@ const copper = () => {
 };
 const hash = (i, k) => { const x = Math.sin(i * 51.3 + k * 17.9) * 43758.5453; return x - Math.floor(x); };
 
-export function buildTraps(scene, { floorMaterial }) {
+// `pendulumS`: where the pendulums hang (default: the film's one); state.pendulumAngles drives each
+export function buildTraps(scene, { floorMaterial }, { pendulumS } = {}) {
   const iron = ironMaterial(), cu = copper();
   const shadows = (o) => o.traverse((m) => { if (m.isMesh) m.castShadow = m.receiveShadow = true; });
 
@@ -120,51 +121,57 @@ export function buildTraps(scene, { floorMaterial }) {
   }
 
   // --- level 4: the pendulum -------------------------------------------------------------------
-  const pend = new THREE.Group(); // drops in from the vault
-  pend.position.set(0, PENDULUM.y, -PENDULUM.s);
-  pend.rotation.y = Math.PI / 2; // the beam runs down the hall, the blade swipes across it (left to right)
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.28, 0.32), new THREE.MeshStandardNodeMaterial({ color: 0x3a2a1c, roughness: 0.8 }));
-  beam.position.y = 0.32;
-  pend.add(beam);
-  const gear = (r, teeth, thick) => {
-    const g = new THREE.Group();
-    g.add(new THREE.Mesh(new THREE.CylinderGeometry(r, r, thick, 32).rotateZ(Math.PI / 2), iron));
-    const tooth = new THREE.BoxGeometry(thick, 0.08, 0.08);
-    for (let i = 0; i < teeth; i++) {
-      const t = new THREE.Mesh(tooth, iron);
-      const a = (i / teeth) * Math.PI * 2;
-      t.position.set(0, Math.cos(a) * (r + 0.03), Math.sin(a) * (r + 0.03));
-      t.rotation.x = -a;
-      g.add(t);
-    }
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.25, r * 0.25, thick * 1.6, 12).rotateZ(Math.PI / 2), cu);
-    g.add(hub);
-    return g;
+  // one pendulum hung at s = at; side -1 mirrors it, so its + angle swings the other way (the
+  // game hangs a second one; the film has just the one)
+  const buildPendulum = (at, side) => {
+    const pend = new THREE.Group(); // drops in from the vault
+    pend.position.set(0, PENDULUM.y, -at);
+    pend.rotation.y = side * Math.PI / 2; // the beam runs down the hall, the blade swipes across it (left to right)
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.28, 0.32), new THREE.MeshStandardNodeMaterial({ color: 0x3a2a1c, roughness: 0.8 }));
+    beam.position.y = 0.32;
+    pend.add(beam);
+    const gear = (r, teeth, thick) => {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(new THREE.CylinderGeometry(r, r, thick, 32).rotateZ(Math.PI / 2), iron));
+      const tooth = new THREE.BoxGeometry(thick, 0.08, 0.08);
+      for (let i = 0; i < teeth; i++) {
+        const t = new THREE.Mesh(tooth, iron);
+        const a = (i / teeth) * Math.PI * 2;
+        t.position.set(0, Math.cos(a) * (r + 0.03), Math.sin(a) * (r + 0.03));
+        t.rotation.x = -a;
+        g.add(t);
+      }
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.25, r * 0.25, thick * 1.6, 12).rotateZ(Math.PI / 2), cu);
+      g.add(hub);
+      return g;
+    };
+    const bigGear = gear(0.55, 22, 0.1), pinion = gear(0.22, 9, 0.1);
+    bigGear.position.x = -0.2;
+    pinion.position.set(-0.2, 0.55 + 0.22 + 0.04, 0);
+    pend.add(bigGear, pinion);
+    const swing = new THREE.Group(); // rotates about x at the pivot
+    pend.add(swing);
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, PENDULUM.len, 10).translate(0, -PENDULUM.len / 2, 0), iron);
+    swing.add(arm);
+    // crescent blade in the swing plane (y-s), edge down and forward/back
+    const shape = new THREE.Shape();
+    shape.absarc(0, 0, 0.95, Math.PI * 1.15, Math.PI * 1.85, false);
+    shape.absarc(0, 0.3, 0.62, Math.PI * 1.8, Math.PI * 1.2, true);
+    const bladeGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.035, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.03, bevelSegments: 1, curveSegments: 24 });
+    bladeGeo.translate(0, 0, -0.0175).rotateY(Math.PI / 2);
+    const steel = new THREE.MeshStandardNodeMaterial({ color: 0xd9dcdf, metalness: 0.7, roughness: 0.22 });
+    steel.emissiveNode = color(0x1a1a1c);
+    const blade = new THREE.Mesh(bladeGeo, steel);
+    blade.position.y = -PENDULUM.len + 0.45;
+    const hubB = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.14, 16).rotateZ(Math.PI / 2), iron);
+    hubB.position.y = -PENDULUM.len + 0.45;
+    swing.add(blade, hubB);
+    shadows(pend);
+    pend.visible = false;
+    scene.add(pend);
+    return { pend, swing, bigGear, pinion };
   };
-  const bigGear = gear(0.55, 22, 0.1), pinion = gear(0.22, 9, 0.1);
-  bigGear.position.x = -0.2;
-  pinion.position.set(-0.2, 0.55 + 0.22 + 0.04, 0);
-  pend.add(bigGear, pinion);
-  const swing = new THREE.Group(); // rotates about x at the pivot
-  pend.add(swing);
-  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, PENDULUM.len, 10).translate(0, -PENDULUM.len / 2, 0), iron);
-  swing.add(arm);
-  // crescent blade in the swing plane (y-s), edge down and forward/back
-  const shape = new THREE.Shape();
-  shape.absarc(0, 0, 0.95, Math.PI * 1.15, Math.PI * 1.85, false);
-  shape.absarc(0, 0.3, 0.62, Math.PI * 1.8, Math.PI * 1.2, true);
-  const bladeGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.035, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.03, bevelSegments: 1, curveSegments: 24 });
-  bladeGeo.translate(0, 0, -0.0175).rotateY(Math.PI / 2);
-  const steel = new THREE.MeshStandardNodeMaterial({ color: 0xd9dcdf, metalness: 0.7, roughness: 0.22 });
-  steel.emissiveNode = color(0x1a1a1c);
-  const blade = new THREE.Mesh(bladeGeo, steel);
-  blade.position.y = -PENDULUM.len + 0.45;
-  const hubB = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.14, 16).rotateZ(Math.PI / 2), iron);
-  hubB.position.y = -PENDULUM.len + 0.45;
-  swing.add(blade, hubB);
-  shadows(pend);
-  pend.visible = false;
-  scene.add(pend);
+  const pendulums = (pendulumS ?? [PENDULUM.s]).map((at, i) => buildPendulum(at, i % 2 ? -1 : 1));
 
   // --- level 5: the catapult slab, its counterweight, the Mimic -------------------------------
   const len = SLAB.s1 - SLAB.s0;
@@ -286,12 +293,15 @@ export function buildTraps(scene, { floorMaterial }) {
     }
     for (const [i, l] of fireLights.entries()) l.intensity = 9 * p.fire * (0.85 + 0.15 * Math.sin(f * 0.9 + i));
     // level 4
-    pend.visible = p.pendulumIn > 0.001;
-    swing.scale.y = Math.max(0.001, p.pendulumIn);
-    pend.position.y = PENDULUM.y + 1.2 * (1 - Math.min(1, p.pendulumIn));
-    swing.rotation.x = p.pendulumAngle; // + angle carries the blade towards -x (the left of the nave, looking down the hall)
-    bigGear.rotation.x = -p.pendulumAngle;
-    pinion.rotation.x = p.pendulumAngle * 2.5;
+    for (const [i, { pend, swing, bigGear, pinion }] of pendulums.entries()) {
+      const a = p.pendulumAngles?.[i] ?? p.pendulumAngle;
+      pend.visible = p.pendulumIn > 0.001;
+      swing.scale.y = Math.max(0.001, p.pendulumIn);
+      pend.position.y = PENDULUM.y + 1.2 * (1 - Math.min(1, p.pendulumIn));
+      swing.rotation.x = a; // + angle carries the first blade towards -x (the left of the nave, looking down the hall)
+      bigGear.rotation.x = -a;
+      pinion.rotation.x = a * 2.5;
+    }
     // level 5
     seamGlow.value = p.slabReveal * (p.slab > 0.01 ? 0 : 1) * (0.7 + 0.3 * Math.sin(f * 0.3));
     slabPivot.rotation.x = p.slab; // far edge (-z) up
@@ -304,7 +314,7 @@ export function buildTraps(scene, { floorMaterial }) {
     }
     mimic.visible = p.mimicY != null;
     if (p.mimicY != null) {
-      mimic.position.set(MIMIC.x, p.mimicY, -MIMIC.s);
+      mimic.position.set(p.mimicX ?? MIMIC.x, p.mimicY, -(p.mimicS ?? MIMIC.s)); // the game's Mimic hops about
       lidHinge.rotation.x = -p.mimicLid;
       mouthLight.intensity = 3 * Math.min(1, p.mimicLid);
     }

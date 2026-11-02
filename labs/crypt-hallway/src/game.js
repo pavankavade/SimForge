@@ -3,12 +3,18 @@
 // state object anim.js propsAt(f) builds from the narration, so a visual fix lands in both.
 // Simulation runs at a fixed 30 Hz (the film's frame rate), so ActorView's look-back easing and the
 // frame-keyed bursts behave exactly as in the film.
-//   catapult  stand still on the slab under the light well and it throws you into the Mimic
-//   plate     the hidden pressure plate on the trapdoor drops both flaps into the spike pit
-//   burners   stepping onto the trapdoor arms the oil tank; both rims burst into flame
-//   pendulum  the gear-driven blade, cocked to one side, swipes across the trapdoor once you step on it
-//   mimic     don't touch the chest
-// Classes: rogue jumps further, mage (E) freezes the trapdoor, paladin (hold E) shields from fire.
+//   catapult  1.2 s on the slab under the light well and it throws you into the Mimic: sprint
+//   plate     the hidden pressure plate on the trapdoor drops both flaps into the spike pit (and so
+//             does lingering on the false floor)
+//   burners   stepping up to a rim arms the oil tank; both rims burst into flame
+//   pendulums two gear-driven blades swipe across the trapdoor nonstop, a quarter swing apart: one
+//             narrow gap per swing (about 11 frames in a usable lane) to get through both
+//   mimic     it lunges at anything that walks past: sprint by
+// Every trap can be beaten by every class, with timing or with the class's own move:
+//   rogue    E dash (a short burst with i-frames, 2.5 s cooldown), the best jump
+//   mage     E freeze the trapdoor (fire melts it), Q blink 2.4 m (3 s cooldown)
+//   paladin  hold E shield: fireproof, pins you to the catapult, blocks one blade or bite (and
+//            breaks), 3 s of stamina
 import { PIT, PLATE_S, ICE_Y, FLAP_OPEN, PENDULUM, SLAB, MIMIC, TANK, MIMIC_MOUTH } from "./anim.js";
 import * as THREE from "three/webgpu";
 import { walkable } from "./walk.js";
@@ -24,15 +30,26 @@ const LANE = [9, 21], LANE_X = 1.95;        // the trap run is fenced to the nav
 const SPIKES_Y = -0.62;                      // where a body comes to rest on the spike tips
 const HIP = 0.95 * CHAR_SCALE_VALUE;
 const BLADE_R = PENDULUM.len - 0.45 + 0.95;  // pivot to the blade's lowest edge
-const PERIOD = 96;                           // pendulum: frames per full swing
+const PERIOD = 72;                           // pendulum: frames per full swing
 const SWING = PENDULUM.amp;                  // swing amplitude, across the nave (as in the film)
+// Two blades, 0.9 m apart (no safe strip between them), hung from opposite sides, the second a
+// quarter swing behind. Tuned by brute force over lanes, speeds and start frames: the widest gap is
+// 12 frames, twice per cycle, near the middle lane; elsewhere it's narrower or shut.
+const BLADES = [{ s: PENDULUM.s, side: -1, lag: 0 }, { s: PENDULUM.s - 0.9, side: 1, lag: PERIOD / 4 }];
+export const BLADE_S = BLADES.map((b) => b.s); // where traps.js hangs them
+const BLADE_HW = 1.1, BLADE_DEPTH = 0.45;    // hit box: blade half-width (0.85) + body, and along the hall
 const MIMIC_R = 0.95;                        // touching distance (chest half-width + body)
+const SLAB_FUSE = 36;                        // frames on the catapult slab before it fires
+const DASH = { frames: 7, speed: 7.5, cooldown: 75 };   // rogue: ~1.75 m, invulnerable while dashing
+const BLINK = { dist: 2.4, cooldown: 90 };              // mage
+const SHIELD = { stamina: 90, recharge: 120 };          // paladin: frames held / frames to recover a break
+const LUNGE = { range: 2.6, tell: 12, lock: 4, hop: 8, reach: 1.6, sit: 30, back: 16, bite: 1.25 }; // the Mimic
 
 const CLASS_SCALE = { rogue: 1, mage: 1, paladin: 1.06 };
 const CLASSES = {
-  rogue: { walk: 2.7, run: 4.6, jump: 5.4, ability: "longer, higher jumps" },
-  mage: { walk: 2.7, run: 4.2, jump: 4.4, ability: "E: freeze the trapdoor" },
-  paladin: { walk: 2.5, run: 3.8, jump: 4.0, ability: "hold E: shield (fireproof)" },
+  rogue: { walk: 2.7, run: 4.6, jump: 5.4, ability: "E dash (dodges everything) · best jump" },
+  mage: { walk: 2.7, run: 4.2, jump: 4.4, ability: "E freeze the trapdoor · Q blink 2.4 m" },
+  paladin: { walk: 2.5, run: 3.8, jump: 4.0, ability: "hold E shield: fireproof, anchors, blocks one hit" },
 };
 const DEATHS = {
   spikes: "SKEWERED", fire: "FLAMBÉED", blade: "SLICED", mimic: "EATEN", launch: "LAUNCHED… AND EATEN",
@@ -88,7 +105,7 @@ export function buildFence(scene) {
   const bars = [];
   for (const sx of [-1, 1]) for (let s0 = LANE[0]; s0 < LANE[1] - 0.1; s0 += BAY) {
     for (let s = s0 + 0.42; s < s0 + BAY - 0.4; s += 0.2) {
-      if (Math.abs(s - PENDULUM.s) > 0.3) bars.push([sx * WALL_X, s]); // a slot for the blade to swing through
+      if (BLADES.every((b) => Math.abs(s - b.s) > 0.3)) bars.push([sx * WALL_X, s]); // slots for the blades to swing through
     }
   }
   const H = 2.3;
@@ -158,9 +175,11 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     iceAt: -1e9, melt: 0, iceGone: true,
     still: 0, launchAt: -1e9,
     onFlaps: 0, // frames stood on the false floor
-    pendAt: null, pendStop: null, lastOnDoor: -1e9, // the blade: released / caught again
-    lidOpenAt: -1e9, chompAt: -1e9, burpAt: -1e9,
+    lidOpenAt: -1e9, chompAt: -1e9, burpAt: -1e9, ate: false,
+    // the Mimic's lunge: where it sits and hops (it starts at home)
+    mx: MIMIC.x, ms: MIMIC.s, my: 0, lunge: null,
   };
+  const disabled = new Set(); // tests switch single traps off (__game.disable(["blades", ...]))
   const p = {}; // the player
   let cls = classType;
 
@@ -169,6 +188,8 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     Object.assign(p, {
       x: 0, s: START_S, y: 0, vx: 0, vs: 0, vy: 0, yaw: Math.PI, grounded: true,
       state: "alive", since: F, reason: null, castAt: -1e9, flight: null,
+      dashUntil: -1e9, dashReady: F, blinkReady: F, iUntil: -1e9, // abilities
+      shieldHeld: 0, shieldBrokenUntil: -1e9, dashDir: [0, -1], staggerUntil: -1e9,
     });
     camYaw = Math.PI;
     history.clear();
@@ -213,14 +234,11 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     if (d < 0 || d > BURN + 8) return 0;
     return Math.min(1, d / 5) * (d > BURN ? 1 - (d - BURN) / 8 : 1);
   }
-  // the blade waits cocked at +SWING (out over the left aisle) and swings from there once released
-  const pendulumAngle = (f = F) => {
-    if (trap.pendAt == null || (trap.pendStop != null && f >= trap.pendStop)) return SWING;
-    return SWING * Math.cos((2 * Math.PI * (f - trap.pendAt)) / PERIOD);
-  };
-  const bladeAt = (f = F) => { // the blade's lowest edge, swinging across x at PENDULUM.s
-    const a = pendulumAngle(f);
-    return { x: -BLADE_R * Math.sin(a), y: PENDULUM.y - BLADE_R * Math.cos(a) };
+  // the blades never stop: each swings from its own side, the second a quarter swing behind
+  const pendulumAngle = (i, f = F) => SWING * Math.cos((2 * Math.PI * (f - BLADES[i].lag)) / PERIOD);
+  const bladeAt = (i, f = F) => { // blade i's lowest edge, swinging across x at BLADES[i].s
+    const a = pendulumAngle(i, f);
+    return { x: BLADES[i].side * BLADE_R * Math.sin(a), y: PENDULUM.y - BLADE_R * Math.cos(a) };
   };
   function slabAngle() {
     const d = F - trap.launchAt;
@@ -234,7 +252,7 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     return lerp(1.1, 4.4, easeInOut(prog(d, 74, 120))); // winched back up
   }
   function mimicLid() {
-    const near2 = Math.hypot(p.x - MIMIC.x, p.s - MIMIC.s);
+    const near2 = Math.hypot(p.x - trap.mx, p.s - trap.ms);
     if (F >= trap.burpAt && F < trap.burpAt + 12) return 0.5 * Math.sin(Math.PI * prog(F, trap.burpAt, trap.burpAt + 12));
     if (F >= trap.lidOpenAt && F < trap.chompAt) return 1.75 * easeOutBack(prog(F, trap.lidOpenAt, trap.lidOpenAt + 6));
     if (F >= trap.chompAt && F < trap.chompAt + 3) return 1.75 * (1 - prog(F, trap.chompAt, trap.chompAt + 3));
@@ -310,19 +328,30 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     const k = CLASSES[cls];
     const f = (keys.has("KeyW") || keys.has("ArrowUp") ? 1 : 0) - (keys.has("KeyS") || keys.has("ArrowDown") ? 1 : 0);
     const r = (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0) - (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0);
-    const shielding = cls === "paladin" && keys.has("KeyE") && p.grounded;
+    // paladin: the shield holds for SHIELD.stamina frames, then breaks; a break takes a while to mend
+    const wantShield = cls === "paladin" && keys.has("KeyE") && p.grounded && F >= p.shieldBrokenUntil;
+    p.shieldHeld = wantShield ? p.shieldHeld + 1 : Math.max(0, p.shieldHeld - 2);
+    if (p.shieldHeld > SHIELD.stamina) breakShield();
+    const shielding = wantShield && F >= p.shieldBrokenUntil;
+    const dashing = F < p.dashUntil;
+    const invulnerable = dashing || F < p.iUntil;
     const running = (keys.has("ShiftLeft") || keys.has("ShiftRight")) && !shielding;
     const speed = shielding ? 1.6 : running ? k.run : k.walk;
     let tx = 0, ts = 0;
-    if (f || r) {
+    if ((f || r) && F >= p.staggerUntil) { // a blocked hit staggers you: no control for a moment
       const n = Math.hypot(f, r);
       const fx = -Math.sin(camYaw), fs = Math.cos(camYaw), rx = Math.cos(camYaw), rs = Math.sin(camYaw);
       tx = ((fx * f + rx * r) / n) * speed;
       ts = ((fs * f + rs * r) / n) * speed;
     }
     const grip = p.grounded ? 14 : 2.5;
-    p.vx += (tx - p.vx) * Math.min(1, grip * DT);
-    p.vs += (ts - p.vs) * Math.min(1, grip * DT);
+    if (tx || ts) { const n = Math.hypot(tx, ts); p.dashDir = [tx / n, ts / n]; }
+    if (dashing) { // the rogue's burst: fixed speed along the dash direction
+      p.vx = p.dashDir[0] * DASH.speed; p.vs = p.dashDir[1] * DASH.speed;
+    } else {
+      p.vx += (tx - p.vx) * Math.min(1, grip * DT);
+      p.vs += (ts - p.vs) * Math.min(1, grip * DT);
+    }
     // slide along obstacles: each axis on its own
     if (!blocked(p.x + p.vx * DT, p.s)) p.x += p.vx * DT; else p.vx = 0;
     if (!blocked(p.x, p.s + p.vs * DT)) p.s += p.vs * DT; else p.vs = 0;
@@ -338,6 +367,21 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
       p.grounded = false;
       play("whoosh", 0.18);
       burst({ kind: "dust", pos: [p.x, 0.02, -p.s], n: 10, size: 0.6 });
+    }
+    if (cls === "rogue" && pressed.has("KeyE") && F >= p.dashReady) {
+      p.dashUntil = F + DASH.frames; p.dashReady = F + DASH.cooldown;
+      play("whoosh", 0.35);
+      burst({ kind: "dust", pos: [p.x, 0.05, -p.s], n: 14, size: 0.7 });
+    }
+    if (cls === "mage" && pressed.has("KeyQ") && F >= p.blinkReady) {
+      const [dx, ds] = p.dashDir;
+      const to = [p.x + dx * BLINK.dist, p.s + ds * BLINK.dist];
+      if (!blocked(to[0], to[1])) {
+        burst({ kind: "glints", end: F + 10, pos: [p.x, 1.0, -p.s], box: [0.3, 0.7, 0.3], n: 18, tint: "ice" });
+        p.x = to[0]; p.s = to[1]; p.iUntil = F + 3; p.blinkReady = F + BLINK.cooldown;
+        play("zap", 0.45);
+        burst({ kind: "glints", end: F + 12, pos: [p.x, 1.0, -p.s], box: [0.3, 0.7, 0.3], n: 18, tint: "ice" });
+      } else play("sparkle", 0.2);
     }
     if (cls === "mage" && pressed.has("KeyE") && F - p.castAt > 40) {
       p.castAt = F;
@@ -372,53 +416,56 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     // --- traps --------------------------------------------------------------------------------
     const onFeet = p.grounded;
     // pressure plate
-    const onPlate = onFeet && Math.abs(p.x) < 0.45 && Math.abs(p.s - PLATE_S) < 0.45;
+    const onPlate = onFeet && !dashing && !disabled.has("plate") && Math.abs(p.x) < 0.45 && Math.abs(p.s - PLATE_S) < 0.45;
     if (onPlate && !trap.plateHeld) pressPlate();
     trap.plateHeld = onPlate;
     // the false floor won't hold you for long: linger on the flaps and they creak, sag and give way
-    const onFlaps = onFeet && overPit(p.x, p.s) && !frozen() && flapAngle() === 0;
+    const onFlaps = onFeet && !disabled.has("linger") && overPit(p.x, p.s) && !frozen() && flapAngle() === 0;
     trap.onFlaps = onFlaps ? trap.onFlaps + 1 : 0;
     if (trap.onFlaps === LINGER - 36) play("ratchet", 0.3);
     if (trap.onFlaps === LINGER - 14) play("crack", 0.3);
     if (trap.onFlaps >= LINGER) { trap.onFlaps = 0; trap.plateAt = -1e9; pressPlate(); }
     // burners arm as soon as you're on the trapdoor or its rims
-    if (RIMS.some((r) => Math.abs(p.s - r) < 0.6)) armBurners(); // stepping up to either rim
+    if (!disabled.has("fire") && RIMS.some((r) => Math.abs(p.s - r) < 0.6)) armBurners(); // stepping up to either rim
     const fire = fireLevel();
-    if (fire > 0.4 && !shielding && p.y < 0.9 * fire && RIMS.some((s) => Math.abs(p.s - s) < 0.38)) {
+    if (fire > 0.4 && !shielding && !invulnerable && p.y < 0.9 * fire && RIMS.some((s) => Math.abs(p.s - s) < 0.38)) {
       play("sizzle", 0.5);
       burst({ kind: "sparks", pos: [p.x, 0.8, -p.s], n: 30, tint: "fire" });
       die("fire", { x: p.x, s: p.s, y: 0, yaw: FACE_RIGHT, tilt: Math.PI / 2, onFlap: overPit(p.x, p.s) });
       return;
     }
-    // pendulum
-    // the pendulum: stepping on the trapdoor releases it; it's caught again, cocked, a while after you leave
-    if (onFeet && overPit(p.x, p.s)) trap.lastOnDoor = F;
-    const idle = trap.pendAt == null || trap.pendStop != null;
-    if (idle && trap.lastOnDoor === F) {
-      trap.pendAt = F; trap.pendStop = null;
-      play("twang", 0.45);
-    } else if (!idle && F - trap.lastOnDoor > 45 && (F - trap.pendAt) % PERIOD === 0) {
-      trap.pendStop = F;
-      play("ratchet", near(0, PENDULUM.s, 0.3, 12));
-    }
-    const b = bladeAt();
-    if (Math.abs(p.s - PENDULUM.s) < 0.45 && Math.abs(p.x - b.x) < 0.55 && b.y < p.y + 1.75 && b.y + 0.7 > p.y) {
-      const dir = Math.sign(bladeAt(F + 1).x - b.x) || 1;
+    // the pendulums: timing, a dash, a blink, or one hit on the shield
+    const hitBy = disabled.has("blades") || invulnerable ? -1 : BLADES.findIndex((bl, k) => {
+      const b = bladeAt(k);
+      return Math.abs(p.s - bl.s) < BLADE_DEPTH && Math.abs(p.x - b.x) < BLADE_HW && b.y < p.y + 1.75 && b.y + 0.7 > p.y;
+    });
+    if (hitBy >= 0 && shielding) { // the shield takes it: you're thrown back the way you came and it breaks
+      play("clang", 0.6);
+      play("helmet", 0.4);
+      burst({ kind: "sparks", pos: [p.x, p.y + 1.1, -p.s], n: 60 });
+      breakShield();
+      p.vs = 6; p.vx = 0; p.vy = 2.2; p.grounded = false; p.iUntil = F + 20; p.staggerUntil = F + 14;
+    } else if (hitBy >= 0) {
+      const b = bladeAt(hitBy);
+      const dir = Math.sign(bladeAt(hitBy, F + 1).x - b.x) || 1;
       play("clang", 0.6);
       burst({ kind: "sparks", pos: [p.x, p.y + 1.1, -p.s], n: 60 });
       p.state = "knocked"; p.since = F;
-      p.vx = dir * 5.5; p.vs = (p.s >= PENDULUM.s ? 1 : -1) * 0.6; p.vy = 3.6; p.grounded = false; // swatted sideways
+      p.vx = dir * 5.5; p.vs = (p.s >= BLADES[hitBy].s ? 1 : -1) * 0.6; p.vy = 3.6; p.grounded = false; // swatted sideways
       p.reason = "blade";
       return;
     }
-    // catapult slab: stand still on it and it fires
-    const onSlab = onFeet && Math.abs(p.x) < SLAB.hw && p.s > SLAB.s0 && p.s < SLAB.s1;
-    trap.still = onSlab && hs < 0.35 && F - trap.launchAt > 120 ? trap.still + 1 : 0;
+    // catapult slab: it counts the frames you're on it (feet down, not dashing); a shield pins you
+    const onSlab = !disabled.has("catapult") && Math.abs(p.x) < SLAB.hw && p.s > SLAB.s0 && p.s < SLAB.s1;
+    if (!onSlab || F - trap.launchAt < 120) trap.still = 0;
+    else if (onFeet && !dashing && !shielding) trap.still++;
     if (trap.still === 12) play("rumble", 0.35);
-    if (trap.still >= 40) launch();
-    // the Mimic
-    if (Math.hypot(p.x - MIMIC.x, p.s - MIMIC.s) < MIMIC_R + 0.3) {
-      trap.lidOpenAt = F - 2; trap.chompAt = F + 4;
+    if (trap.still >= SLAB_FUSE) launch();
+    // the Mimic: lunges at you (see stepMimic); touching it is the end too
+    if (stepMimic(shielding, invulnerable)) return;
+    // touching it while it sits still is the end; mid-lunge only the bite counts (and a shield stops it)
+    if (!disabled.has("mimic") && !invulnerable && !shielding && !trap.lunge && Math.hypot(p.x - trap.mx, p.s - trap.ms) < MIMIC_R + 0.3) {
+      trap.lidOpenAt = F - 2; trap.chompAt = F + 4; trap.ate = true;
       play("growl", 0.4);
       p.state = "grabbed"; p.since = F;
       return;
@@ -431,6 +478,65 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     }
   }
 
+  function breakShield() {
+    p.shieldBrokenUntil = F + SHIELD.recharge;
+    p.shieldHeld = 0;
+    play("crack", 0.35);
+  }
+
+  // The Mimic notices anything within LUNGE.range, opens up (the tell), locks onto where you are
+  // LUNGE.lock frames before it hops, hops up to LUNGE.reach toward that spot and bites. Walking past
+  // gets you eaten; sprinting, a dash, a blink or a shield gets you by. Returns true if it bit.
+  function stepMimic(shielding, invulnerable) {
+    if (disabled.has("mimic")) return false;
+    const L = trap.lunge;
+    const home = [MIMIC.x, MIMIC.s];
+    if (!L) {
+      if (Math.hypot(p.x - trap.mx, p.s - trap.ms) < LUNGE.range) {
+        trap.lunge = { at: F, from: [trap.mx, trap.ms] };
+        trap.lidOpenAt = F; trap.chompAt = F + LUNGE.tell + LUNGE.hop; trap.ate = false;
+        play("growl", 0.4);
+      }
+      return false;
+    }
+    const d = F - L.at;
+    if (d === LUNGE.tell - LUNGE.lock) { // locks on
+      const dx = p.x - L.from[0], ds = p.s - L.from[1], n = Math.hypot(dx, ds) || 1, k = Math.min(1, LUNGE.reach / n);
+      L.to = [L.from[0] + dx * k, L.from[1] + ds * k];
+    }
+    if (L.to && d >= LUNGE.tell && d < LUNGE.tell + LUNGE.hop) { // the hop
+      const u = (d - LUNGE.tell + 1) / LUNGE.hop;
+      trap.mx = lerp(L.from[0], L.to[0], u); trap.ms = lerp(L.from[1], L.to[1], u); trap.my = 0.6 * Math.sin(Math.PI * u);
+    }
+    if (d === LUNGE.tell + LUNGE.hop - 1) { // the bite
+      trap.my = 0;
+      play("thud", 0.4);
+      burst({ kind: "dust", pos: [trap.mx, 0.03, -trap.ms], n: 20 });
+      if (Math.hypot(p.x - trap.mx, p.s - trap.ms) < LUNGE.bite && !invulnerable) {
+        if (shielding) { // teeth on steel: it recoils, you're shoved back, the shield breaks
+          play("clang", 0.6);
+          burst({ kind: "sparks", pos: [p.x, 1.0, -p.s], n: 40 });
+          breakShield();
+          p.vx = 0; p.vs = (p.s >= trap.ms ? 1 : -1) * 4; p.vy = 2; p.grounded = false; // shoved back along the hall
+          p.iUntil = F + 20; p.staggerUntil = F + 10;
+          L.stunned = true;
+        } else {
+          trap.ate = true;
+          p.state = "grabbed"; p.since = F;
+          return true;
+        }
+      }
+    }
+    const back0 = LUNGE.tell + LUNGE.hop + LUNGE.sit + (L.stunned ? 30 : 0);
+    if (d >= back0) { // waddles home
+      const u = prog(d, back0, back0 + LUNGE.back);
+      if (!L.back) L.back = [trap.mx, trap.ms];
+      trap.mx = lerp(L.back[0], home[0], u); trap.ms = lerp(L.back[1], home[1], u); trap.my = 0.25 * Math.abs(Math.sin(Math.PI * u * 3));
+      if (u >= 1) { trap.lunge = null; trap.my = 0; }
+    }
+    return false;
+  }
+
   function launch() {
     trap.launchAt = F;
     trap.still = 0;
@@ -441,7 +547,7 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     p.state = "launched"; p.since = F;
     p.flight = { start, dur };
     trap.lidOpenAt = F + dur - 10;
-    trap.chompAt = F + 3 + dur + 2;
+    trap.chompAt = F + 3 + dur + 2; trap.ate = true;
     setTimeoutFrames(4, () => play("whoosh_big", 0.45));
     setTimeoutFrames(dur - 10, () => play("growl", 0.3));
   }
@@ -496,12 +602,12 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     // the Mimic's meal
     if (F === trap.chompAt) {
       play("chomp", 0.6);
-      burst({ kind: "sparks", pos: [MIMIC.x, 1.0, -(MIMIC.s - 0.3)], n: 30, tint: "splinter" });
-      setTimeoutFrames(8, () => play("chew", 0.4));
-      trap.burpAt = F + 60;
-      setTimeoutFrames(60, () => {
+      burst({ kind: "sparks", pos: [trap.mx, 1.0, -(trap.ms - 0.3)], n: 30, tint: "splinter" });
+      if (trap.ate) setTimeoutFrames(8, () => play("chew", 0.4));
+      if (trap.ate) trap.burpAt = F + 60;
+      if (trap.ate) setTimeoutFrames(60, () => {
         play("burp", 0.5);
-        burst({ kind: "glints", end: F + 24, pos: [MIMIC.x, 1.4, -(MIMIC.s - 0.2)], box: [0.4, 0.3, 0.3], n: 16, tint: "burp" });
+        burst({ kind: "glints", end: F + 24, pos: [trap.mx, 1.4, -(trap.ms - 0.2)], box: [0.4, 0.3, 0.3], n: 16, tint: "burp" });
       });
     }
     if (trap.launchAt === F - 2) play("thud", 0.45); // counterweight bottoms out
@@ -522,8 +628,9 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
       } else if (F - trap.iceAt > 20 * FPS) { trap.iceGone = true; trap.melt = 0; } // thaws on its own
     }
     // pendulum whoosh on each pass, when you're close enough to hear it
-    const a0 = pendulumAngle(F - 1), a1 = pendulumAngle(F);
-    if (Math.sign(a0) !== Math.sign(a1)) play("whoosh_big", near(0, PENDULUM.s, 0.3, 12));
+    for (const [k, bl] of BLADES.entries()) {
+      if (Math.sign(pendulumAngle(k, F - 1)) !== Math.sign(pendulumAngle(k, F))) play("whoosh_big", near(0, bl.s, 0.25, 12));
+    }
     // corpses on the trapdoor drop in when it opens
     for (const c of corpses) {
       if (c.onFlap && floorOpen()) { c.onFlap = false; c.dropAt = F; c.y0 = c.y; }
@@ -545,7 +652,8 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
         const hs = Math.hypot(p.vx, p.vs);
         if (cls === "mage" && F - p.castAt < 22) return { pose: "cast", position: at, yaw: p.yaw, expression: "focus" };
         if (!p.grounded) return { pose: "jump", position: at, yaw: p.yaw, expression: "focus" };
-        const shield = cls === "paladin" && keys.has("KeyE");
+        const shield = cls === "paladin" && keys.has("KeyE") && F >= p.shieldBrokenUntil;
+        if (F < p.dashUntil) return { pose: "run", position: at, yaw: p.yaw, speed: 3, expression: "focus" };
         const danger = fireLevel() > 0 || Math.abs(p.s - PIT.s) < PIT.hl + 0.5;
         const expression = trap.still > 12 ? "shock" : danger ? "focus" : undefined;
         if (shield) return { pose: hs > 0.4 ? "shieldWalk" : "shield", position: at, yaw: p.yaw, speed: hs > 0.4 ? 0.7 : 1, expression: "focus" };
@@ -558,7 +666,7 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
       case "knocked":
         return { pose: "fall", position: at, yaw: p.yaw, tilt: -Math.PI * 1.5 * prog(F, p.since, p.since + 22), pivot: HIP, expression: "pain" };
       case "grabbed":
-        return { pose: "cower", position: at, yaw: Math.atan2(MIMIC.x - p.x, p.s - MIMIC.s), expression: "scared" };
+        return { pose: "cower", position: at, yaw: Math.atan2(trap.mx - p.x, p.s - trap.ms), expression: "scared" };
       case "launched": {
         const { start, dur } = p.flight;
         const t0 = p.since + 3;
@@ -600,9 +708,9 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
       pipes: 1, tank: 0,
       gauge: F - trap.fireAt < FUSE + BURN ? prog(F, trap.fireAt, trap.fireAt + FUSE) : 0,
       fire, melt: trap.melt,
-      pendulumIn: 1, pendulumAngle: pendulumAngle(),
+      pendulumIn: 1, pendulumAngle: pendulumAngle(0), pendulumAngles: BLADES.map((_, k) => pendulumAngle(k)),
       slabReveal: clamp01(trap.still / 40), slab: slabAngle(), counterweight: counterweight(),
-      mimicY: 0, mimicLid: mimicLid(),
+      mimicY: trap.my, mimicX: trap.mx, mimicS: trap.ms, mimicLid: mimicLid(),
       spikesY: 0, flapsY: 0, flapA: fa, flapB: fa,
       chestY: null, chestSwing: 0, chestGlow: 0,
       plateGlow: fa < -0.05 ? 1 : trap.iceClick != null && F - trap.iceClick < 20 ? 0.6 : 0,
@@ -650,6 +758,16 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     camera.lookAt(cam.lx, cam.ly, cam.lz);
   }
 
+  // the HUD's ability line: keys, and what's ready
+  const cd = (ready) => (F >= ready ? "READY" : `${((ready - F) / FPS).toFixed(1)} s`);
+  function abilityLine() {
+    if (cls === "rogue") return `E dash (i-frames): ${cd(p.dashReady)}  ·  shift+space long jump`;
+    if (cls === "mage") return `E freeze trapdoor: ${cd(p.castAt + 40)}  ·  Q blink 2.4 m: ${cd(p.blinkReady)}`;
+    const left = Math.max(0, 1 - p.shieldHeld / SHIELD.stamina);
+    const bar = F < p.shieldBrokenUntil ? `BROKEN ${cd(p.shieldBrokenUntil)}` : "█".repeat(Math.ceil(left * 10)).padEnd(10, "░");
+    return `hold E shield ${bar}  (fireproof · anchors · blocks one hit)`;
+  }
+
   spawn();
   // start screen: pick a class (the hosted build opens here; ?class= skips it)
   let started = !picker;
@@ -682,14 +800,14 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     }
     const keysHelp = document.createElement("div");
     keysHelp.style.opacity = "0.8";
-    keysHelp.textContent = "WASD move · mouse look · shift run · space jump · E ability · 1/2/3 switch class · R restart";
+    keysHelp.textContent = "WASD move · mouse look · shift run · space jump · E / Q class ability · 1/2/3 switch class · R restart";
     const gpu = document.createElement("div");
     gpu.style.color = "#ff9a6a";
     if (!navigator.gpu) gpu.textContent = "No WebGPU in this browser: running the slower fallback. Chrome or Edge on desktop plays best.";
     menu.append(h, row, keysHelp, gpu);
     document.body.append(menu);
   }
-  const help = "WASD move · mouse look (click to lock) · shift run · space jump · E ability · 1/2/3 class · R restart";
+  const help = "WASD move · mouse look (click to lock) · shift run · space jump · E / Q class ability · 1/2/3 class · R restart";
   return {
     help,
     // advance the fixed-step simulation by real time dt; returns how many steps ran
@@ -698,10 +816,14 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
       let n = 0;
       while (acc >= DT) { if (started) step(); acc -= DT; n++; }
       placeCamera(dt);
-      hud.textContent = `${cls.toUpperCase()}  ·  ${CLASSES[cls].ability}\nDEATHS ${deaths}   ·   ${((F - runStart) / FPS).toFixed(1)} s\nreach the far end of the hall (past the Mimic)`;
+      hud.textContent = `${cls.toUpperCase()}  ·  ${abilityLine()}\nDEATHS ${deaths}   ·   ${((F - runStart) / FPS).toFixed(1)} s\nreach the far end of the hall (past the Mimic)`;
       return n;
     },
     get frame() { return F; },
+    at: (frame, fn) => timers.push({ at: frame, fn }), // run fn at the start of that game frame (tests)
+    disable: (names) => { disabled.clear(); for (const n of names) disabled.add(n); }, // tests: isolate one trap
+    reset: () => Object.assign(trap, { plateAt: -1e9, fireAt: -1e9, iceGone: true, melt: 0, still: 0, onFlaps: 0, launchAt: -1e9, lunge: null, mx: MIMIC.x, ms: MIMIC.s, my: 0 }),
+    get trap() { return trap; },
     get player() { return p; },
     propState,
     tracks,

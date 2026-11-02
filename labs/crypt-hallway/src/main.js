@@ -76,7 +76,8 @@ if (LOW) for (const t of torches) t.light.castShadow = false;
 await progress(45, "Setting the traps…");
 const { drawHud } = CAM ? await import("./hud.js") : {};
 const updateProps = CAM || PLAY ? (await import("./props.js")).buildProps(scene, hall) : null;
-const updateTraps = CAM || PLAY ? (await import("./traps.js")).buildTraps(scene, hall) : null;
+const gameMod = PLAY ? await import("./game.js") : null;
+const updateTraps = CAM || PLAY ? (await import("./traps.js")).buildTraps(scene, hall, PLAY ? { pendulumS: gameMod.BLADE_S } : {}) : null;
 const updateFx = CAM || PLAY ? (await import("./fx.js")).buildFx(scene) : null;
 if (SHOT) {
   const c = castMod.SHOTS[SHOT].camera;
@@ -90,7 +91,6 @@ if (SHOT) {
 const poseCast = CAM ? await castMod.mountFilm({ renderer, scene, camera, cam: CAM, size: FIXED }) : null;
 if (PLAY) await progress(60, "Dressing the adventurers…");
 const drawCast = PLAY ? await castMod.mountTracks({ renderer, scene, camera, size: viewSize() }) : null;
-const gameMod = PLAY ? await import("./game.js") : null;
 if (PLAY) gameMod.buildFence(scene);
 const game = PLAY ? gameMod.createGame({ camera, canvas: renderer.domElement, classType: params.get("class") ?? "rogue", picker: !params.has("class") }) : null;
 if (PLAY) {
