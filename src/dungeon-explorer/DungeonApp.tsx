@@ -17,7 +17,35 @@ import { createMobSimulation, type MobAgent } from "./npcSim";
 const WALK_CELLS = 2.6;
 const RUN_CELLS = 4.2;
 const LOOK_SENS = 0.0024;
+const TOUCH_LOOK_SENS = 0.0052;
 const EYE_HEIGHT_CELLS = 1.04;
+
+function responsiveFov(baseVfov: number, width: number, height: number): number {
+  const aspect = Math.max(0.35, width / Math.max(1, height));
+  if (aspect >= 1) return baseVfov;
+  const minHfovRad = (84 * Math.PI) / 180;
+  const needed = (2 * Math.atan(Math.tan(minHfovRad / 2) / aspect) * 180) / Math.PI;
+  return Math.min(96, Math.max(baseVfov, needed));
+}
+
+async function enterLandscapeMode(): Promise<void> {
+  const docEl = document.documentElement as HTMLElement & {
+    webkitRequestFullscreen?: () => Promise<void>;
+  };
+  try {
+    if (!document.fullscreenElement) {
+      await (docEl.requestFullscreen?.() ?? docEl.webkitRequestFullscreen?.());
+    }
+  } catch {
+    // Optional fullscreen permission
+  }
+  try {
+    const ori = window.screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+    await ori?.lock?.("landscape");
+  } catch {
+    // Browsers like iOS Safari rely on physical orientation; layout adapts automatically on resize
+  }
+}
 
 interface CharacterViewProps {
   classType: AdventurerClass;
@@ -75,6 +103,10 @@ interface DungeonSceneProps {
   firstPerson: boolean;
   onHudUpdate: (patch: Partial<HudInfo>) => void;
   minimapCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+  touchMoveRef: React.RefObject<{ forward: number; strafe: number }>;
+  touchSprintRef: React.RefObject<boolean>;
+  jumpQueueRef: React.RefObject<boolean>;
+  onTouchDetected: () => void;
 }
 
 function resolveThirdPersonCam(
@@ -133,6 +165,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   firstPerson,
   onHudUpdate,
   minimapCanvasRef,
+  touchMoveRef,
+  touchSprintRef,
+  jumpQueueRef,
+  onTouchDetected,
 }) => {
   const { gl, scene, camera, size } = useThree();
   const viewRef = useRef<ReturnType<typeof createDungeonView> | null>(null);
@@ -140,7 +176,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const worldRef = useRef<WorldState | null>(null);
   const keysRef = useRef<Set<string>>(new Set());
   const camDistRef = useRef<number>(3.1);
-  const draggingRef = useRef<{ active: boolean; x: number; y: number }>({ active: false, x: 0, y: 0 });
+  const lookPointerRef = useRef<{ id: number; x: number; y: number; touch: boolean } | null>(null);
+  const lastTouchDownRef = useRef(false);
   const playerGroupRef = useRef<THREE.Group | null>(null);
   const mobGroupRefs = useRef<Array<THREE.Group | null>>([]);
   const [mobs, setMobs] = useState<MobAgent[]>([]);
@@ -167,7 +204,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     };
   }, [gl, scene, camera]);
 
-  // Input listeners (WASD/Arrows + Shift + Space + Mouse look + Wheel zoom).
+  // Input listeners (WASD/Arrows + Shift + Space + Mouse/Touch drag look + Wheel zoom).
   useEffect(() => {
     const dom = gl.domElement;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -180,9 +217,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const onKeyUp = (e: KeyboardEvent) => keysRef.current.delete(e.code);
     const onBlur = () => {
       keysRef.current.clear();
-      draggingRef.current.active = false;
+      lookPointerRef.current = null;
     };
     const onClick = () => {
+      if (lastTouchDownRef.current) return;
       if (document.pointerLockElement !== dom) {
         try {
           const p = dom.requestPointerLock?.() as unknown as Promise<void> | undefined;
@@ -196,34 +234,46 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       onHudUpdate({ pointerLocked: document.pointerLockElement === dom });
       if (document.pointerLockElement !== dom) keysRef.current.clear();
     };
-    const onMouseDown = (e: MouseEvent) => {
-      if (e.button === 0) {
-        draggingRef.current = { active: true, x: e.clientX, y: e.clientY };
+    const onPointerDown = (e: PointerEvent) => {
+      const isTouch = e.pointerType === "touch";
+      lastTouchDownRef.current = isTouch;
+      if (isTouch) onTouchDetected();
+      if (!isTouch && e.button !== 0) return;
+      if (lookPointerRef.current !== null) return;
+      lookPointerRef.current = { id: e.pointerId, x: e.clientX, y: e.clientY, touch: isTouch };
+      try {
+        dom.setPointerCapture?.(e.pointerId);
+      } catch {
+        // Optional capture
       }
     };
-    const onMouseUp = () => {
-      draggingRef.current.active = false;
+    const clearLookPointer = (e: PointerEvent) => {
+      if (lookPointerRef.current?.id === e.pointerId) {
+        lookPointerRef.current = null;
+      }
     };
-    const onMouseMove = (e: MouseEvent) => {
+    const onPointerMove = (e: PointerEvent) => {
       const world = worldRef.current;
       if (!world) return;
       let dx = 0;
       let dy = 0;
+      let sens = LOOK_SENS;
       if (document.pointerLockElement === dom) {
         dx = e.movementX;
         dy = e.movementY;
-      } else if (draggingRef.current.active) {
-        dx = e.clientX - draggingRef.current.x;
-        dy = e.clientY - draggingRef.current.y;
-        draggingRef.current.x = e.clientX;
-        draggingRef.current.y = e.clientY;
+      } else if (lookPointerRef.current && lookPointerRef.current.id === e.pointerId) {
+        dx = e.clientX - lookPointerRef.current.x;
+        dy = e.clientY - lookPointerRef.current.y;
+        lookPointerRef.current.x = e.clientX;
+        lookPointerRef.current.y = e.clientY;
+        if (lookPointerRef.current.touch) sens = TOUCH_LOOK_SENS;
       } else {
         return;
       }
-      world.walker.yaw -= dx * LOOK_SENS;
+      world.walker.yaw -= dx * sens;
       const minPitch = firstPerson ? -1.1 : -0.35;
       const maxPitch = firstPerson ? 1.1 : 1.05;
-      world.walker.pitch = Math.max(minPitch, Math.min(maxPitch, world.walker.pitch + (firstPerson ? -dy : dy) * LOOK_SENS));
+      world.walker.pitch = Math.max(minPitch, Math.min(maxPitch, world.walker.pitch + (firstPerson ? -dy : dy) * sens));
     };
     const onWheel = (e: WheelEvent) => {
       camDistRef.current = Math.max(1.6, Math.min(5.2, camDistRef.current + e.deltaY * 0.0025));
@@ -234,9 +284,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     window.addEventListener("blur", onBlur);
     dom.addEventListener("click", onClick);
     document.addEventListener("pointerlockchange", onPointerLock);
-    dom.addEventListener("mousedown", onMouseDown);
-    window.addEventListener("mouseup", onMouseUp);
-    window.addEventListener("mousemove", onMouseMove);
+    dom.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointerup", clearLookPointer);
+    window.addEventListener("pointercancel", clearLookPointer);
+    window.addEventListener("pointermove", onPointerMove);
     dom.addEventListener("wheel", onWheel, { passive: true });
     return () => {
       window.removeEventListener("keydown", onKeyDown);
@@ -244,12 +295,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       window.removeEventListener("blur", onBlur);
       dom.removeEventListener("click", onClick);
       document.removeEventListener("pointerlockchange", onPointerLock);
-      dom.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mouseup", onMouseUp);
-      window.removeEventListener("mousemove", onMouseMove);
+      dom.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerup", clearLookPointer);
+      window.removeEventListener("pointercancel", clearLookPointer);
+      window.removeEventListener("pointermove", onPointerMove);
       dom.removeEventListener("wheel", onWheel);
     };
-  }, [gl, firstPerson, onHudUpdate]);
+  }, [gl, firstPerson, onHudUpdate, onTouchDetected]);
 
   // Build / rebuild the dungeon floor when seed, roomCount, or theme changes.
   useEffect(() => {
@@ -344,13 +396,22 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     world.time += dt;
     const { dungeon, level, walker, sim, lamps } = world;
     const keys = keysRef.current;
-
-    const forward =
+    const kbForward =
       (keys.has("KeyW") || keys.has("ArrowUp") ? 1 : 0) - (keys.has("KeyS") || keys.has("ArrowDown") ? 1 : 0);
-    const strafe =
+    const kbStrafe =
       (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0) - (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0);
-    const sprinting = keys.has("ShiftLeft") || keys.has("ShiftRight");
+    const tMove = touchMoveRef.current;
+    const forward = Math.max(-1, Math.min(1, kbForward + tMove.forward));
+    const strafe = Math.max(-1, Math.min(1, kbStrafe + tMove.strafe));
+    const stickMag = Math.hypot(tMove.forward, tMove.strafe);
+    const sprinting =
+      keys.has("ShiftLeft") || keys.has("ShiftRight") || touchSprintRef.current || stickMag > 0.88;
     const speed = sprinting ? RUN_CELLS : WALK_CELLS;
+
+    if (jumpQueueRef.current) {
+      jumpQueueRef.current = false;
+      if (world.playerJumpY <= 0.01) world.playerJumpVy = 4.6;
+    }
 
     walker.step(dt, forward, strafe, speed);
 
@@ -399,6 +460,14 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
 
     // Update camera (3rd-person follow with wall/ceiling collision, or 1st-person eye).
     const persp = camera as THREE.PerspectiveCamera;
+    const desiredFov = responsiveFov(68, size.width, size.height);
+    if (Math.abs(persp.fov - desiredFov) > 0.2) {
+      persp.fov = desiredFov;
+      persp.updateProjectionMatrix();
+    }
+    const aspect = Math.max(0.35, size.width / Math.max(1, size.height));
+    const distScale = aspect < 0.85 ? 1.24 : 1;
+
     if (firstPerson) {
       const eyeY = (world.playerFloor + EYE_HEIGHT_CELLS + Math.sin(walker.bob) * 0.012) * CELL_M + world.playerJumpY;
       persp.position.set(px, eyeY, pz);
@@ -415,7 +484,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         pz,
         walker.yaw,
         walker.pitch,
-        camDistRef.current
+        camDistRef.current * distScale
       );
       persp.position.set(cam.cx, cam.cy, cam.cz);
       persp.up.set(0, 1, 0);
@@ -521,6 +590,12 @@ export interface DungeonAppProps {
 
 const VALID_THEMES: ThemeName[] = ["verdant", "ancient", "molten", "frost", "grim"];
 
+function detectInitialTouch(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.matchMedia?.("(pointer: coarse)")?.matches) return true;
+  return "ontouchstart" in window && window.innerWidth <= 1024;
+}
+
 export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const initialSeed = Number(params.get("seed")) || 1337;
@@ -534,6 +609,14 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [theme, setTheme] = useState<ThemeName>(initialTheme);
   const [firstPerson, setFirstPerson] = useState(false);
   const [showMap, setShowMap] = useState(true);
+  const [isTouchUI, setIsTouchUI] = useState(detectInitialTouch);
+  const [viewport, setViewport] = useState(() => ({
+    w: typeof window !== "undefined" ? window.innerWidth : 1280,
+    h: typeof window !== "undefined" ? window.innerHeight : 720,
+  }));
+  const [sprintLocked, setSprintLocked] = useState(false);
+  const [rotateDismissed, setRotateDismissed] = useState(false);
+  const [stickOffset, setStickOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [hud, setHud] = useState<HudInfo>({
     name: "Forging Dungeon...",
     rooms: initialRooms,
@@ -546,9 +629,40 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     loading: "Initializing...",
   });
   const minimapRef = useRef<HTMLCanvasElement | null>(null);
+  const touchMoveRef = useRef<{ forward: number; strafe: number }>({ forward: 0, strafe: 0 });
+  const touchSprintRef = useRef(false);
+  const jumpQueueRef = useRef(false);
+  const stickPointerRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
 
   const handleHudUpdate = useCallback((patch: Partial<HudInfo>) => {
     setHud((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const handleTouchDetected = useCallback(() => {
+    setIsTouchUI(true);
+  }, []);
+
+  useEffect(() => {
+    touchSprintRef.current = sprintLocked;
+  }, [sprintLocked]);
+
+  useEffect(() => {
+    const syncViewport = () => {
+      setViewport({ w: window.innerWidth, h: window.innerHeight });
+    };
+    const onOrientation = () => {
+      syncViewport();
+      window.setTimeout(syncViewport, 120);
+    };
+    const onTouchStart = () => setIsTouchUI(true);
+    window.addEventListener("resize", syncViewport);
+    window.addEventListener("orientationchange", onOrientation);
+    window.addEventListener("touchstart", onTouchStart, { passive: true, once: true });
+    return () => {
+      window.removeEventListener("resize", syncViewport);
+      window.removeEventListener("orientationchange", onOrientation);
+      window.removeEventListener("touchstart", onTouchStart);
+    };
   }, []);
 
   useEffect(() => {
@@ -566,8 +680,47 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const isPortrait = viewport.h > viewport.w;
+  const isCompact = viewport.w < 760 || viewport.h < 520;
+  const mobileMode = isTouchUI || isCompact;
+  const mapPixels = isPortrait ? 94 : mobileMode ? 112 : 156;
+
+  const updateStick = (clientX: number, clientY: number) => {
+    const s = stickPointerRef.current;
+    if (!s) return;
+    const maxR = 38;
+    const dx = clientX - s.cx;
+    const dy = clientY - s.cy;
+    const dist = Math.hypot(dx, dy);
+    const scale = dist > maxR ? maxR / dist : 1;
+    const clampedX = dx * scale;
+    const clampedY = dy * scale;
+    setStickOffset({ x: clampedX, y: clampedY });
+    touchMoveRef.current = {
+      strafe: clampedX / maxR,
+      forward: -clampedY / maxR,
+    };
+  };
+
+  const resetStick = () => {
+    stickPointerRef.current = null;
+    setStickOffset({ x: 0, y: 0 });
+    touchMoveRef.current = { forward: 0, strafe: 0 };
+  };
+
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#050608", color: "#f2efe8", fontFamily: "system-ui, sans-serif", userSelect: "none" }}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#050608",
+        color: "#f2efe8",
+        fontFamily: "system-ui, sans-serif",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        touchAction: "none",
+      }}
+    >
       <Canvas
         flat
         linear
@@ -575,7 +728,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         shadows={{ type: THREE.PCFShadowMap }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
         camera={{ fov: 68, near: 0.1, far: 240 }}
-        style={{ width: "100%", height: "100%", display: "block" }}
+        style={{ width: "100%", height: "100%", display: "block", touchAction: "none" }}
       >
         <DungeonScene
           seed={seed}
@@ -584,6 +737,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           firstPerson={firstPerson}
           onHudUpdate={handleHudUpdate}
           minimapCanvasRef={minimapRef}
+          touchMoveRef={touchMoveRef}
+          touchSprintRef={touchSprintRef}
+          jumpQueueRef={jumpQueueRef}
+          onTouchDetected={handleTouchDetected}
         />
       </Canvas>
 
@@ -591,34 +748,36 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       <div
         style={{
           position: "fixed",
-          top: 14,
-          left: 14,
+          top: "max(10px, env(safe-area-inset-top))",
+          left: "max(10px, env(safe-area-inset-left))",
           background: "rgba(8, 10, 14, 0.72)",
           backdropFilter: "blur(6px)",
           border: "1px solid rgba(255,255,255,0.12)",
           borderRadius: 10,
-          padding: "10px 14px",
+          padding: mobileMode ? "7px 10px" : "10px 14px",
           pointerEvents: "auto",
-          maxWidth: 360,
+          maxWidth: mobileMode && showMap ? `calc(100vw - ${mapPixels + 44}px)` : mobileMode ? "calc(100vw - 24px)" : 360,
         }}
       >
-        <div style={{ fontWeight: 700, fontSize: 15, color: "#ffd84d" }}>{hud.name}</div>
-        <div style={{ fontSize: 12, color: "#c9d2db", marginTop: 3 }}>
-          Hero: <b>Paladin</b> · Area: <b>{hud.roomLabel}</b>
+        <div style={{ fontWeight: 700, fontSize: mobileMode ? 13 : 15, color: "#ffd84d", lineHeight: 1.2 }}>
+          {hud.name}
         </div>
-        <div style={{ fontSize: 12, color: "#9fb0bf", marginTop: 2 }}>
-          Rooms: <b>{hud.rooms}</b> (max 10) · Running Mobs: <b>{hud.mobs}</b> · Theme: <b>{THEMES[theme].label}</b>
+        <div style={{ fontSize: mobileMode ? 11 : 12, color: "#c9d2db", marginTop: 2 }}>
+          <b>Paladin</b> · {hud.roomLabel}
         </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ fontSize: mobileMode ? 10 : 12, color: "#9fb0bf", marginTop: 1 }}>
+          Rooms: <b>{hud.rooms}</b> (max 10) · Mobs: <b>{hud.mobs}</b> · {THEMES[theme].label}
+        </div>
+        <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
           <button
             type="button"
             onClick={() => setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999)}
             style={btnStyle}
           >
-            New Seed (R)
+            {mobileMode ? "Seed" : "New Seed (R)"}
           </button>
           <button type="button" onClick={() => setFirstPerson((v) => !v)} style={btnStyle}>
-            {firstPerson ? "3rd Person (V)" : "1st Person (V)"}
+            {firstPerson ? (mobileMode ? "3rd P" : "3rd Person (V)") : mobileMode ? "1st P" : "1st Person (V)"}
           </button>
           <button
             type="button"
@@ -628,10 +787,15 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             }}
             style={btnStyle}
           >
-            Theme (T)
+            {mobileMode ? "Theme" : "Theme (T)"}
           </button>
-          <label style={{ fontSize: 11, color: "#c9d2db", display: "flex", alignItems: "center", gap: 4 }}>
-            Rooms:
+          {mobileMode ? (
+            <button type="button" onClick={() => void enterLandscapeMode()} style={{ ...btnStyle, color: "#7df39b" }}>
+              ↻ Wide
+            </button>
+          ) : null}
+          <label style={{ fontSize: 11, color: "#c9d2db", display: "flex", alignItems: "center", gap: 3 }}>
+            {mobileMode ? "R:" : "Rooms:"}
             <select
               value={roomCount}
               onChange={(e) => setRoomCount(Math.min(10, Math.max(4, Number(e.target.value))))}
@@ -655,49 +819,240 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
                 alignItems: "center",
               }}
             >
-              ← All Modes
+              ← Modes
             </a>
           ) : null}
         </div>
       </div>
 
-      {/* Bottom controls hint */}
-      <div
-        style={{
-          position: "fixed",
-          left: "50%",
-          bottom: 18,
-          transform: "translateX(-50%)",
-          padding: "7px 14px",
-          background: "rgba(8, 10, 14, 0.72)",
-          border: "1px solid rgba(255,255,255,0.12)",
-          borderRadius: 8,
-          fontSize: 12,
-          color: "#dce3ea",
-          pointerEvents: "none",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {hud.pointerLocked
-          ? "WASD / Arrows Move · Shift Sprint · Space Jump · Scroll Zoom · Esc Unlock Mouse"
-          : "Click or Drag to Look · WASD / Arrows Move · Shift Sprint · Space Jump · V Camera · M Map"}
-      </div>
+      {/* Dismissible Auto-Rotate / Landscape tip when holding phone upright */}
+      {isTouchUI && isPortrait && !rotateDismissed && !hud.loading ? (
+        <div
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: "calc(max(20px, env(safe-area-inset-bottom)) + 126px)",
+            transform: "translateX(-50%)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "rgba(12, 16, 22, 0.86)",
+            border: "1px solid rgba(125, 243, 155, 0.35)",
+            borderRadius: 999,
+            padding: "5px 10px 5px 12px",
+            fontSize: 11,
+            color: "#e6efe9",
+            whiteSpace: "nowrap",
+            zIndex: 12,
+          }}
+        >
+          <span>Rotate phone or tap:</span>
+          <button
+            type="button"
+            onClick={() => void enterLandscapeMode()}
+            style={{
+              background: "#6ce88a",
+              color: "#071a0d",
+              border: "none",
+              borderRadius: 999,
+              padding: "4px 9px",
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            ↻ Landscape
+          </button>
+          <button
+            type="button"
+            aria-label="Dismiss rotate hint"
+            onClick={() => setRotateDismissed(true)}
+            style={{
+              background: "transparent",
+              color: "#9fb0bf",
+              border: "none",
+              padding: "2px 4px",
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
 
-      {/* Minimap */}
+      {/* Desktop bottom controls hint (hidden when touch controls are visible) */}
+      {!isTouchUI ? (
+        <div
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: 18,
+            transform: "translateX(-50%)",
+            padding: "7px 14px",
+            background: "rgba(8, 10, 14, 0.72)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 8,
+            fontSize: 12,
+            color: "#dce3ea",
+            pointerEvents: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {hud.pointerLocked
+            ? "WASD / Arrows Move · Shift Sprint · Space Jump · Scroll Zoom · Esc Unlock Mouse"
+            : "Click or Drag to Look · WASD / Arrows Move · Shift Sprint · Space Jump · V Camera · M Map"}
+        </div>
+      ) : null}
+
+      {/* Touch Controls: Left virtual thumbstick + Right Jump / Run buttons */}
+      {isTouchUI && !hud.loading ? (
+        <>
+          <div
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              stickPointerRef.current = {
+                id: e.pointerId,
+                cx: rect.left + rect.width / 2,
+                cy: rect.top + rect.height / 2,
+              };
+              try {
+                e.currentTarget.setPointerCapture?.(e.pointerId);
+              } catch {
+                // Optional capture
+              }
+              updateStick(e.clientX, e.clientY);
+            }}
+            onPointerMove={(e) => {
+              if (stickPointerRef.current?.id === e.pointerId) {
+                e.stopPropagation();
+                updateStick(e.clientX, e.clientY);
+              }
+            }}
+            onPointerUp={(e) => {
+              if (stickPointerRef.current?.id === e.pointerId) {
+                e.stopPropagation();
+                resetStick();
+              }
+            }}
+            onPointerCancel={(e) => {
+              if (stickPointerRef.current?.id === e.pointerId) {
+                e.stopPropagation();
+                resetStick();
+              }
+            }}
+            style={{
+              position: "fixed",
+              left: "max(18px, env(safe-area-inset-left))",
+              bottom: "max(18px, env(safe-area-inset-bottom))",
+              width: 112,
+              height: 112,
+              borderRadius: "50%",
+              background: "rgba(10, 14, 20, 0.48)",
+              border: "2px solid rgba(255, 216, 77, 0.35)",
+              backdropFilter: "blur(4px)",
+              touchAction: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 14,
+            }}
+          >
+            <div
+              style={{
+                width: 46,
+                height: 46,
+                borderRadius: "50%",
+                background: "rgba(255, 216, 77, 0.78)",
+                border: "2px solid #fff3c4",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.45)",
+                transform: `translate3d(${stickOffset.x}px, ${stickOffset.y}px, 0)`,
+                pointerEvents: "none",
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              position: "fixed",
+              right: "max(18px, env(safe-area-inset-right))",
+              bottom: "max(20px, env(safe-area-inset-bottom))",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: 10,
+              touchAction: "none",
+              zIndex: 14,
+            }}
+          >
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                setSprintLocked((v) => !v);
+              }}
+              style={{
+                width: 56,
+                height: 42,
+                borderRadius: 999,
+                border: sprintLocked ? "2px solid #7df39b" : "1.5px solid rgba(255,255,255,0.28)",
+                background: sprintLocked ? "rgba(108, 232, 138, 0.85)" : "rgba(12, 16, 22, 0.64)",
+                color: sprintLocked ? "#071a0d" : "#e8eef5",
+                fontWeight: 800,
+                fontSize: 12,
+                touchAction: "none",
+              }}
+            >
+              RUN
+            </button>
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                jumpQueueRef.current = true;
+              }}
+              style={{
+                width: 68,
+                height: 68,
+                borderRadius: "50%",
+                border: "2px solid rgba(255, 216, 77, 0.72)",
+                background: "rgba(32, 24, 10, 0.76)",
+                color: "#ffd84d",
+                fontWeight: 900,
+                fontSize: 13,
+                letterSpacing: "0.04em",
+                touchAction: "none",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.45)",
+              }}
+            >
+              JUMP
+            </button>
+          </div>
+        </>
+      ) : null}
+
+      {/* Minimap (top-right on touch/mobile so right thumb action pad has clean space) */}
       {showMap ? (
         <div
           style={{
             position: "fixed",
-            right: 14,
-            bottom: 14,
+            right: "max(10px, env(safe-area-inset-right))",
+            top: mobileMode ? "max(10px, env(safe-area-inset-top))" : undefined,
+            bottom: mobileMode ? undefined : 14,
             background: "rgba(8, 10, 14, 0.78)",
             border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: 10,
-            padding: 8,
+            padding: mobileMode ? 5 : 8,
             pointerEvents: "none",
           }}
         >
-          <canvas ref={minimapRef} width={156} height={156} style={{ display: "block" }} />
+          <canvas
+            ref={minimapRef}
+            width={mapPixels}
+            height={mapPixels}
+            style={{ width: mapPixels, height: mapPixels, display: "block" }}
+          />
           <div style={{ fontSize: 10, color: "#9fb0bf", textAlign: "center", marginTop: 2 }}>
             <span style={{ color: "#ffd84d" }}>●</span> Paladin &nbsp; <span style={{ color: "#6ce88a" }}>●</span> Mobs
           </div>

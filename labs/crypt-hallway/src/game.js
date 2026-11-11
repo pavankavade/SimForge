@@ -21,6 +21,7 @@ import { walkable } from "./walk.js";
 import { WALL_X, BAY } from "./hall.js";
 import { ironMaterial } from "./materials.js";
 import { CHAR_SCALE_VALUE, FACE_RIGHT } from "./castConsts.js";
+import { mountTouchControls } from "./touch.js";
 
 const FPS = 30, DT = 1 / FPS, G = 9.8;
 const START_S = 24.5, GOAL_S = 8.2;
@@ -126,8 +127,21 @@ export function buildFence(scene) {
 export function createGame({ camera, canvas, classType = "rogue", picker = false }) {
   const play = createSound();
   const keys = new Set();
+  const pressed = new Set(); // key-downs since the last step
   let camYaw = Math.PI, camPitch = 0.3, dragging = false;
-  canvas.addEventListener("click", () => { if (document.pointerLockElement !== canvas) canvas.requestPointerLock?.()?.catch?.(() => {}); });
+  const touchUI = mountTouchControls({
+    canvas,
+    keys,
+    pressed,
+    onLook: (dx, dy) => {
+      camYaw -= dx * 0.0025;
+      camPitch = Math.max(-0.1, Math.min(1.1, camPitch + dy * 0.0025));
+    },
+  });
+  touchUI.setPlaying(!picker);
+  canvas.addEventListener("click", () => {
+    if (!touchUI.lastPointerTouch && document.pointerLockElement !== canvas) canvas.requestPointerLock?.()?.catch?.(() => {});
+  });
   canvas.addEventListener("mousedown", () => { dragging = true; });
   window.addEventListener("mouseup", () => { dragging = false; });
   window.addEventListener("mousemove", (e) => {
@@ -142,13 +156,13 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
   });
   window.addEventListener("keyup", (e) => keys.delete(e.code));
   window.addEventListener("blur", () => keys.clear());
-  const pressed = new Set(); // key-downs since the last step
 
   // --- HUD --------------------------------------------------------------------------------------
   const hud = document.createElement("div");
   Object.assign(hud.style, {
-    position: "fixed", left: "14px", top: "12px", color: "#f3e6cc", font: "600 15px/1.45 system-ui, sans-serif",
-    textShadow: "0 1px 3px #000", pointerEvents: "none", whiteSpace: "pre",
+    position: "fixed", left: "max(12px, env(safe-area-inset-left))", top: "max(10px, env(safe-area-inset-top))",
+    maxWidth: "calc(100vw - 170px)", color: "#f3e6cc", font: "600 clamp(11px, 2.2vw, 15px)/1.35 system-ui, sans-serif",
+    textShadow: "0 1px 3px #000", pointerEvents: "none", whiteSpace: "pre-wrap",
   });
   const banner = document.createElement("div");
   Object.assign(banner.style, {
@@ -774,8 +788,9 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
   if (picker) {
     const menu = document.createElement("div");
     Object.assign(menu.style, {
-      position: "fixed", inset: "0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      gap: "18px", background: "rgba(8,5,3,0.55)", color: "#f3e6cc", font: "600 16px/1.5 system-ui, sans-serif", textAlign: "center", padding: "16px",
+      position: "fixed", inset: "0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "safe center",
+      overflowY: "auto", touchAction: "pan-y", gap: "18px", background: "rgba(8,5,3,0.55)", color: "#f3e6cc",
+      font: "600 16px/1.5 system-ui, sans-serif", textAlign: "center", padding: "20px 16px",
     });
     const h = document.createElement("div");
     h.innerHTML = `<div style="font:900 clamp(28px,6vw,64px)/1.05 system-ui,sans-serif;color:#ffd84d;text-shadow:0 4px 0 #3a1406">EVOLUTION OF A<br>DUNGEON TRAP</div>
@@ -793,8 +808,9 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
         cls = c;
         restart();
         started = true;
+        touchUI.setPlaying(true);
         menu.remove();
-        canvas.requestPointerLock?.()?.catch?.(() => {});
+        if (!touchUI.lastPointerTouch) canvas.requestPointerLock?.()?.catch?.(() => {});
       });
       row.append(b);
     }

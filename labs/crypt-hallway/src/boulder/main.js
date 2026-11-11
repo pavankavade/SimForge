@@ -8,6 +8,7 @@ import { buildPost } from "../post.js";
 import { buildHall, ROOT } from "./hall.js";
 import { buildProps } from "./props.js";
 import { buildFx } from "../fx.js";
+import { fitPortraitFov } from "../touch.js";
 import { WALL_END_X } from "./timeline.js";
 
 const params = new URLSearchParams(location.search);
@@ -151,15 +152,18 @@ if (!PLAY) {
   const drawCast = await castMod.mountBoulderCast({ renderer, scene, camera, size: viewSize() });
   const game = gameMod.createGame({ camera, canvas: renderer.domElement, root, classType: params.get("class") ?? "rogue", picker: !params.has("class") });
   window.__game = game;
-  camera.fov = 60;
+  camera.fov = fitPortraitFov(60, viewSize()[0], viewSize()[1]);
   camera.updateProjectionMatrix();
-  window.addEventListener("resize", () => {
+  const syncSize = () => {
     if (!window.innerWidth || !window.innerHeight) return;
     camera.aspect = window.innerWidth / window.innerHeight;
+    camera.fov = fitPortraitFov(60, window.innerWidth, window.innerHeight);
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     aspect.value = camera.aspect;
-  });
+  };
+  window.addEventListener("resize", syncSize);
+  window.addEventListener("orientationchange", () => setTimeout(syncSize, 120));
   await progress(75, "Compiling shaders… (the slow part)");
   updateProps(game.propState());
   pipeline.render();

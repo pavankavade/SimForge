@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚔️</text></svg>" />
   <title>SimForge — 3D Worlds &amp; Dungeon Arcade</title>
   <style>
-    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
-    canvas { display: block; }
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; overscroll-behavior: none; }
+    canvas { display: block; touch-action: none; }
     #hud {
       position: fixed; left: 12px; bottom: 10px; color: #cbb89a; opacity: .75;
       font: 12px/1.4 ui-monospace, Consolas, monospace; pointer-events: none;

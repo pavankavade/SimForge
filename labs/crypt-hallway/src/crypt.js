@@ -16,6 +16,7 @@ import { bilateralBlur } from "three/addons/tsl/display/BilateralBlurNode.js";
 import { depthAwareBlend } from "three/addons/tsl/display/depthAwareBlend.js";
 import { buildHall, L, WELL, WELL_HALF, WELL_TOP } from "./hall.js";
 import { createWalker } from "./walk.js";
+import { fitPortraitFov } from "./touch.js";
 
 const params = new URLSearchParams(location.search);
 const hud = document.getElementById("hud");
@@ -96,7 +97,7 @@ if (PLAY) gameMod.buildFence(scene);
 const game = PLAY ? gameMod.createGame({ camera, canvas: renderer.domElement, classType: params.get("class") ?? "rogue", picker: !params.has("class") }) : null;
 if (PLAY) {
   window.__game = game; // for debugging and the play test
-  camera.fov = 60;
+  camera.fov = fitPortraitFov(60, viewSize()[0], viewSize()[1]);
   camera.updateProjectionMatrix();
 }
 
@@ -227,13 +228,16 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") paused = !paused;
   if (e.code === "KeyC" && !fixed) mode = mode === "walk" ? "dolly" : "walk";
 });
-window.addEventListener("resize", () => {
+const syncSize = () => {
   if (FIXED || !window.innerWidth || !window.innerHeight) return;
   camera.aspect = window.innerWidth / window.innerHeight;
+  if (PLAY) camera.fov = fitPortraitFov(60, window.innerWidth, window.innerHeight);
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   aspect.value = camera.aspect;
-});
+};
+window.addEventListener("resize", syncSize);
+window.addEventListener("orientationchange", () => setTimeout(syncSize, 120));
 
 const timer = new THREE.Timer();
 let t = 0, frames = 0, fpsT = 0, fps = 0;

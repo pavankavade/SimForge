@@ -5,6 +5,7 @@ import { createSim, CLASSES, DEATHS, ZONES, LAYOUT, FPS } from "./sim.js";
 import { Z, HW, CEILING_Y, BACK_X, WALL_END_X, CUBE_CENTER, EDGE_X, LEDGE_Y, restPosition, R_STONE } from "./timeline.js";
 import { toLab } from "./hall.js";
 import { HIP, lieHeight, lying } from "../../../../src/kit/actors";
+import { mountTouchControls } from "../touch.js";
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -39,8 +40,21 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
   const play = createSound();
   const sim = createSim({ classType });
   const keys = new Set();
+  const pressed = new Set();
   let camYaw = 0, camPitch = 0.28, dragging = false;
-  canvas.addEventListener("click", () => { if (document.pointerLockElement !== canvas) canvas.requestPointerLock?.()?.catch?.(() => {}); });
+  const touchUI = mountTouchControls({
+    canvas,
+    keys,
+    pressed,
+    onLook: (dx, dy) => {
+      camYaw += dx * 0.0025;
+      camPitch = clamp(camPitch + dy * 0.0025, -0.15, 1.0);
+    },
+  });
+  touchUI.setPlaying(!picker);
+  canvas.addEventListener("click", () => {
+    if (!touchUI.lastPointerTouch && document.pointerLockElement !== canvas) canvas.requestPointerLock?.()?.catch?.(() => {});
+  });
   canvas.addEventListener("mousedown", () => { dragging = true; });
   window.addEventListener("mouseup", () => { dragging = false; });
   window.addEventListener("mousemove", (e) => {
@@ -48,14 +62,17 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     camYaw += e.movementX * 0.0025;
     camPitch = clamp(camPitch + e.movementY * 0.0025, -0.15, 1.0);
   });
-  const pressed = new Set();
   window.addEventListener("keydown", (e) => { if (e.code === "Space") e.preventDefault(); if (!e.repeat) pressed.add(e.code); keys.add(e.code); });
   window.addEventListener("keyup", (e) => keys.delete(e.code));
   window.addEventListener("blur", () => keys.clear());
 
   // --- HUD ----------------------------------------------------------------------------------------
   const hud = document.createElement("div");
-  Object.assign(hud.style, { position: "fixed", left: "14px", top: "12px", color: "#f3e6cc", font: "600 15px/1.45 system-ui, sans-serif", textShadow: "0 1px 3px #000", pointerEvents: "none", whiteSpace: "pre" });
+  Object.assign(hud.style, {
+    position: "fixed", left: "max(12px, env(safe-area-inset-left))", top: "max(10px, env(safe-area-inset-top))",
+    maxWidth: "calc(100vw - 170px)", color: "#f3e6cc", font: "600 clamp(11px, 2.2vw, 15px)/1.35 system-ui, sans-serif",
+    textShadow: "0 1px 3px #000", pointerEvents: "none", whiteSpace: "pre-wrap",
+  });
   const banner = document.createElement("div");
   Object.assign(banner.style, { position: "fixed", left: "0", right: "0", top: "36%", textAlign: "center", color: "#ffd84d", font: "900 clamp(34px, 7vw, 84px)/1.05 system-ui, sans-serif", letterSpacing: "0.04em", textShadow: "0 4px 0 #3a1406, 0 0 24px #000", pointerEvents: "none", opacity: "0" });
   const bannerText = document.createElement("div");
@@ -237,7 +254,7 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
 
   if (picker) {
     const menu = document.createElement("div");
-    Object.assign(menu.style, { position: "fixed", inset: "0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "18px", background: "rgba(8,5,3,0.55)", color: "#f3e6cc", font: "600 16px/1.5 system-ui, sans-serif", textAlign: "center", padding: "16px" });
+    Object.assign(menu.style, { position: "fixed", inset: "0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "safe center", overflowY: "auto", touchAction: "pan-y", gap: "18px", background: "rgba(8,5,3,0.55)", color: "#f3e6cc", font: "600 16px/1.5 system-ui, sans-serif", textAlign: "center", padding: "20px 16px" });
     const h = document.createElement("div");
     h.innerHTML = `<div style="font:900 clamp(28px,6vw,64px)/1.05 system-ui,sans-serif;color:#ffd84d;text-shadow:0 4px 0 #3a1406">EVOLUTION OF A<br>BOULDER HALLWAY</div>
       <div style="margin-top:10px;max-width:640px">The door slams behind you. Five boulder traps between you and the release ledge, and every ball fills the hall. Waiting won't save you: pick an adventurer and time their move.</div>`;
@@ -247,7 +264,7 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
       const b = document.createElement("button");
       b.innerHTML = `<div style="font:900 22px system-ui,sans-serif">${c.toUpperCase()}</div><div style="font-size:13px;opacity:.85">${CLASSES[c].moves}</div>`;
       Object.assign(b.style, { cursor: "pointer", padding: "14px 20px", minWidth: "190px", borderRadius: "10px", border: "2px solid #ffd84d", background: "#2a1a0e", color: "#f3e6cc" });
-      b.addEventListener("click", () => { sim.setClass(c); sim.restart(); runStart = sim.frame; started = true; menu.remove(); canvas.requestPointerLock?.()?.catch?.(() => {}); });
+      b.addEventListener("click", () => { sim.setClass(c); sim.restart(); runStart = sim.frame; started = true; touchUI.setPlaying(true); menu.remove(); if (!touchUI.lastPointerTouch) canvas.requestPointerLock?.()?.catch?.(() => {}); });
       row.append(b);
     }
     const keysHelp = document.createElement("div");

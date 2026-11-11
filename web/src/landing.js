@@ -14,13 +14,19 @@ export function renderLanding() {
         position: fixed;
         inset: 0;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
         background:
           radial-gradient(circle at 50% 0%, rgba(255, 198, 72, 0.14), transparent 54%),
           radial-gradient(circle at 50% 100%, rgba(72, 168, 118, 0.10), transparent 50%),
           linear-gradient(180deg, #120d09 0%, #090807 60%, #050506 100%);
         color: #f3ead8;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        padding: clamp(16px, 2.5vw, 30px) 20px 32px;
+        padding:
+          max(16px, env(safe-area-inset-top))
+          max(16px, env(safe-area-inset-right))
+          max(30px, env(safe-area-inset-bottom))
+          max(16px, env(safe-area-inset-left));
         box-sizing: border-box;
       }
       .wrap {
@@ -62,8 +68,8 @@ export function renderLanding() {
       }
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-        gap: 18px;
+        grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+        gap: 16px;
       }
       .card {
         position: relative;
@@ -160,6 +166,7 @@ export function renderLanding() {
         align-items: center;
         justify-content: center;
         width: 100%;
+        min-height: 48px;
         box-sizing: border-box;
         padding: 12px 16px;
         border-radius: 10px;

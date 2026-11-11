@@ -27,10 +27,10 @@ const INDEX_HTML = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>SimForge — 3D Dungeon Floor Explorer</title>
   <link rel="icon" href="data:," />
-  <style>html, body, #root { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #050608; }</style>
+  <style>html, body, #root { margin: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: #050608; } canvas { display: block; touch-action: none; }</style>
 </head>
 <body>
   <div id="root"></div>
