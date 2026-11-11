@@ -804,7 +804,22 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     const gpu = document.createElement("div");
     gpu.style.color = "#ff9a6a";
     if (!navigator.gpu) gpu.textContent = "No WebGPU in this browser: running the slower fallback. Chrome or Edge on desktop plays best.";
-    menu.append(h, row, keysHelp, gpu);
+    const nav = document.createElement("div");
+    Object.assign(nav.style, { display: "flex", gap: "18px", flexWrap: "wrap", justifyContent: "center" });
+    const home = document.createElement("a");
+    home.href = "./";
+    home.textContent = "← All Game Modes";
+    home.style.color = "#cbbba2";
+    const explorer = document.createElement("a");
+    explorer.href = "?hall=explorer";
+    explorer.textContent = "3D Dungeon Floor (Paladin)";
+    explorer.style.color = "#6ce88a";
+    const next = document.createElement("a"); // the second hallway (src/boulder)
+    next.href = "?hall=boulder&play=1";
+    next.textContent = "Hallway 2: the boulder hall →";
+    next.style.color = "#ffd84d";
+    nav.append(home, explorer, next);
+    menu.append(h, row, keysHelp, nav, gpu);
     document.body.append(menu);
   }
   const help = "WASD move · mouse look (click to lock) · shift run · space jump · E / Q class ability · 1/2/3 class · R restart";

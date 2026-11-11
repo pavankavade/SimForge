@@ -11,15 +11,16 @@ const root = document.createElement("div");
 Object.assign(root.style, { position: "fixed", inset: "0", pointerEvents: "none", fontFamily: FONT });
 document.body.appendChild(root);
 
-export function drawHud({ title, titleFrame, stage, caption, end }) {
+// kicker/titleText/status default to Ep1's; the boulder hallway passes its own
+export function drawHud({ title, titleFrame, stage, caption, end, kicker = "EVOLUTION OF A", titleText = "DUNGEON TRAP", status = "DUNGEON STATUS" }) {
   let html = "";
   if (title) {
     const f = titleFrame;
     const top = back(clamp01(f / 10), 1.8), main = back(clamp01((f - 5) / 11), 1.6);
     const out = 1 - clamp01((f - 66) / 14);
     html += `<div style="position:absolute;top:250px;left:0;right:0;text-align:center;opacity:${out};transform:translateY(${(1 - out) * -40}px)">
-      <div style="font-size:56px;color:#fff;letter-spacing:6px;text-shadow:${STROKE};transform:scale(${top})">EVOLUTION OF A</div>
-      <div style="font-size:104px;line-height:1.05;color:#ffd84d;letter-spacing:2px;text-shadow:${STROKE};transform:scale(${main}) rotate(-2deg)">DUNGEON TRAP</div></div>`;
+      <div style="font-size:56px;color:#fff;letter-spacing:6px;text-shadow:${STROKE};transform:scale(${top})">${kicker}</div>
+      <div style="font-size:104px;line-height:1.05;color:#ffd84d;letter-spacing:2px;text-shadow:${STROKE};transform:scale(${main}) rotate(-2deg)">${titleText}</div></div>`;
   }
   if (stage && stage.pop < BADGE_FRAMES) {
     const age = stage.pop;
@@ -44,7 +45,7 @@ export function drawHud({ title, titleFrame, stage, caption, end }) {
     html += `<div style="position:absolute;bottom:370px;left:60px;right:60px;text-align:center;font-size:68px;line-height:1.15;
       -webkit-text-stroke:7px rgba(0,0,0,0.96);paint-order:stroke fill;text-shadow:0 6px 18px rgba(0,0,0,0.5)">${words}</div>`;
   }
-  if (end) html += endCard(end);
+  if (end) html += endCard(end, status);
   root.innerHTML = html;
 }
 
@@ -52,7 +53,7 @@ export function drawHud({ title, titleFrame, stage, caption, end }) {
 // the stamp cracks on "unless", splits and falls on "prove", and the dare slams in.
 const SPLIT = "polygon(0 0, 52% 0, 47% 28%, 54% 52%, 46% 76%, 51% 100%, 0 100%)";
 const SPLIT_R = "polygon(52% 0, 100% 0, 100% 100%, 51% 100%, 46% 76%, 54% 52%, 47% 28%)";
-function endCard({ age, crack, dare }) {
+function endCard({ age, crack, dare, play = -1 }, status) {
   let html = "";
   const slam = 1 + 1.4 * Math.pow(1 - clamp01(age / 6), 3);
   const label = back(clamp01((age - 2) / 8));
@@ -69,8 +70,15 @@ function endCard({ age, crack, dare }) {
       ? piece(SPLIT, -gap / 2 + jitter, falling >= 0 ? -falling * 2 : -1) + piece(SPLIT_R, gap / 2 - jitter, falling >= 0 ? falling * 2.5 : 1)
       : piece("none", 0, 0);
     html += `<div style="position:absolute;top:190px;left:0;right:0;text-align:center">
-      <div style="font-size:52px;color:#fff;letter-spacing:6px;text-shadow:${STROKE};transform:scale(${label});opacity:${falling >= 0 ? 1 - falling / 14 : 1}">DUNGEON STATUS</div>
+      <div style="font-size:52px;color:#fff;letter-spacing:6px;text-shadow:${STROKE};transform:scale(${label});opacity:${falling >= 0 ? 1 - falling / 14 : 1}">${status}</div>
       <div style="position:relative;height:170px;margin-top:34px;transform:scale(${slam}) rotate(-6deg)">${stamp}</div></div>`;
+  }
+  if (play >= 0) { // the boulder hallway's last card: the game link (it replaces the dare)
+    const s = 1 + 1.2 * Math.pow(1 - clamp01(play / 6), 3);
+    const sub = back(clamp01((play - 6) / 9));
+    return html + `<div style="position:absolute;top:230px;left:0;right:0;text-align:center">
+      <div style="font-size:84px;color:#7dff5a;letter-spacing:2px;text-shadow:${STROKE};transform:scale(${s}) rotate(-3deg)">PLAY IT YOURSELF</div>
+      <div style="font-size:48px;color:#fff;letter-spacing:6px;text-shadow:${STROKE};margin-top:8px;transform:scale(${sub})">LINK IN THE COMMENTS</div></div>`;
   }
   if (dare >= 0) {
     const s = 1 + 1.2 * Math.pow(1 - clamp01(dare / 6), 3);

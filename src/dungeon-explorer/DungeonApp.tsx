@@ -1,0 +1,737 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
+import { AdventurerUnit, type AdventurerClass, type AdventurerPose } from "../artifacts/characters/hero";
+import type { Expression } from "../artifacts/characters/hero/Face";
+import { OUTPUT_HEIGHT } from "../engine/viewport";
+import { buildCrypt, type CryptLamp } from "./dungeon/crypt";
+import { floorAt } from "./dungeon/floors";
+import { FLOOR, generateDungeon, type DungeonData } from "./dungeon/generator";
+import { buildLevel, type LevelData } from "./dungeon/level";
+import { ashlar } from "./dungeon/masonry";
+import { THEMES, type ThemeName } from "./dungeon/themes";
+import { CELL_M, createDungeonView, type ScanSet } from "./dungeon/view";
+import { createWalker } from "./dungeon/walker";
+import { createMobSimulation, type MobAgent } from "./npcSim";
+
+const WALK_CELLS = 2.6;
+const RUN_CELLS = 4.2;
+const LOOK_SENS = 0.0024;
+const EYE_HEIGHT_CELLS = 1.04;
+
+interface CharacterViewProps {
+  classType: AdventurerClass;
+  scale: number;
+  pose: AdventurerPose;
+  animFrame: number;
+  expression: Expression;
+  visible?: boolean;
+}
+
+const CharacterModel = React.memo<CharacterViewProps>(
+  ({ classType, scale, pose, animFrame, expression, visible = true }) => (
+    <group visible={visible}>
+      <AdventurerUnit
+        classType={classType}
+        scale={scale}
+        pose={pose}
+        animFrame={Math.floor(animFrame)}
+        expression={expression}
+      />
+    </group>
+  )
+);
+
+interface WorldState {
+  dungeon: DungeonData;
+  level: LevelData;
+  lamps: CryptLamp[];
+  walker: ReturnType<typeof createWalker>;
+  sim: ReturnType<typeof createMobSimulation>;
+  playerFloor: number;
+  playerJumpY: number;
+  playerJumpVy: number;
+  playerAnimFrame: number;
+  playerPose: AdventurerPose;
+  time: number;
+}
+
+interface HudInfo {
+  name: string;
+  rooms: number;
+  mobs: number;
+  roomLabel: string;
+  theme: ThemeName;
+  seed: number;
+  firstPerson: boolean;
+  pointerLocked: boolean;
+  loading: string | null;
+}
+
+interface DungeonSceneProps {
+  seed: number;
+  roomCount: number;
+  theme: ThemeName;
+  firstPerson: boolean;
+  onHudUpdate: (patch: Partial<HudInfo>) => void;
+  minimapCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+}
+
+function resolveThirdPersonCam(
+  d: DungeonData,
+  level: LevelData,
+  px: number,
+  py: number,
+  pz: number,
+  yaw: number,
+  pitch: number,
+  desiredDist: number
+): { cx: number; cy: number; cz: number; tx: number; ty: number; tz: number } {
+  const tx = px;
+  const ty = py + 1.38;
+  const tz = pz;
+  const dirX = Math.cos(pitch) * Math.sin(yaw);
+  const dirY = Math.sin(pitch);
+  const dirZ = Math.cos(pitch) * Math.cos(yaw);
+
+  const STEPS = 22;
+  let safeDist = desiredDist;
+  for (let i = 1; i <= STEPS; i++) {
+    const t = (desiredDist * i) / STEPS;
+    const x = tx + dirX * t;
+    const y = ty + dirY * t;
+    const z = tz + dirZ * t;
+    const gx = x / CELL_M + d.W / 2;
+    const gz = z / CELL_M + d.H / 2;
+    const ix = Math.max(0, Math.min(d.W - 1, Math.floor(gx)));
+    const iz = Math.max(0, Math.min(d.H - 1, Math.floor(gz)));
+    const open = level.openAt ? level.openAt(gx, gz) : d.grid[iz * d.W + ix] === FLOOR ? 1 : 0;
+    const ceilY = (level.heights[iz * d.W + ix] || 2.8) * CELL_M - 0.25;
+    const flY = floorAt(d, gx, gz) * CELL_M + 0.35;
+    if (open < 0.58 || d.grid[iz * d.W + ix] !== FLOOR || y > ceilY || y < flY) {
+      safeDist = Math.max(0.55, (desiredDist * (i - 1)) / STEPS - 0.15);
+      break;
+    }
+  }
+  const cx = tx + dirX * safeDist;
+  let cy = ty + dirY * safeDist;
+  const cz = tz + dirZ * safeDist;
+  const gx = cx / CELL_M + d.W / 2;
+  const gz = cz / CELL_M + d.H / 2;
+  const ix = Math.max(0, Math.min(d.W - 1, Math.floor(gx)));
+  const iz = Math.max(0, Math.min(d.H - 1, Math.floor(gz)));
+  const ceilY = (level.heights[iz * d.W + ix] || 2.8) * CELL_M - 0.28;
+  const flY = floorAt(d, gx, gz) * CELL_M + 0.35;
+  cy = Math.max(flY, Math.min(ceilY, cy));
+  return { cx, cy, cz, tx, ty, tz };
+}
+
+const DungeonScene: React.FC<DungeonSceneProps> = ({
+  seed,
+  roomCount,
+  theme,
+  firstPerson,
+  onHudUpdate,
+  minimapCanvasRef,
+}) => {
+  const { gl, scene, camera, size } = useThree();
+  const viewRef = useRef<ReturnType<typeof createDungeonView> | null>(null);
+  const scansRef = useRef<{ wall: ScanSet; floor: ScanSet; plaster: ScanSet } | null>(null);
+  const worldRef = useRef<WorldState | null>(null);
+  const keysRef = useRef<Set<string>>(new Set());
+  const camDistRef = useRef<number>(3.1);
+  const draggingRef = useRef<{ active: boolean; x: number; y: number }>({ active: false, x: 0, y: 0 });
+  const playerGroupRef = useRef<THREE.Group | null>(null);
+  const mobGroupRefs = useRef<Array<THREE.Group | null>>([]);
+  const [mobs, setMobs] = useState<MobAgent[]>([]);
+  const [animTick, setAnimTick] = useState(0);
+  const animTimerRef = useRef(0);
+  const hudTimerRef = useRef(0);
+
+  OUTPUT_HEIGHT.value = Math.max(480, size.height);
+
+  // Initialize Three.js dungeon renderer + load CC0 PBR maps once.
+  useEffect(() => {
+    const persp = camera as THREE.PerspectiveCamera;
+    persp.fov = 68;
+    persp.near = 0.1;
+    persp.far = 240;
+    persp.updateProjectionMatrix();
+
+    const view = createDungeonView(gl, scene, persp);
+    viewRef.current = view;
+
+    return () => {
+      view.dispose();
+      viewRef.current = null;
+    };
+  }, [gl, scene, camera]);
+
+  // Input listeners (WASD/Arrows + Shift + Space + Mouse look + Wheel zoom).
+  useEffect(() => {
+    const dom = gl.domElement;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!e.repeat) keysRef.current.add(e.code);
+      if (e.code === "Space" && worldRef.current) {
+        const w = worldRef.current;
+        if (w.playerJumpY <= 0.01) w.playerJumpVy = 4.6;
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => keysRef.current.delete(e.code);
+    const onBlur = () => {
+      keysRef.current.clear();
+      draggingRef.current.active = false;
+    };
+    const onClick = () => {
+      if (document.pointerLockElement !== dom) {
+        try {
+          const p = dom.requestPointerLock?.() as unknown as Promise<void> | undefined;
+          p?.catch?.(() => {});
+        } catch {
+          // Pointer lock optional; drag-to-look remains active.
+        }
+      }
+    };
+    const onPointerLock = () => {
+      onHudUpdate({ pointerLocked: document.pointerLockElement === dom });
+      if (document.pointerLockElement !== dom) keysRef.current.clear();
+    };
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button === 0) {
+        draggingRef.current = { active: true, x: e.clientX, y: e.clientY };
+      }
+    };
+    const onMouseUp = () => {
+      draggingRef.current.active = false;
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      const world = worldRef.current;
+      if (!world) return;
+      let dx = 0;
+      let dy = 0;
+      if (document.pointerLockElement === dom) {
+        dx = e.movementX;
+        dy = e.movementY;
+      } else if (draggingRef.current.active) {
+        dx = e.clientX - draggingRef.current.x;
+        dy = e.clientY - draggingRef.current.y;
+        draggingRef.current.x = e.clientX;
+        draggingRef.current.y = e.clientY;
+      } else {
+        return;
+      }
+      world.walker.yaw -= dx * LOOK_SENS;
+      const minPitch = firstPerson ? -1.1 : -0.35;
+      const maxPitch = firstPerson ? 1.1 : 1.05;
+      world.walker.pitch = Math.max(minPitch, Math.min(maxPitch, world.walker.pitch + (firstPerson ? -dy : dy) * LOOK_SENS));
+    };
+    const onWheel = (e: WheelEvent) => {
+      camDistRef.current = Math.max(1.6, Math.min(5.2, camDistRef.current + e.deltaY * 0.0025));
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    dom.addEventListener("click", onClick);
+    document.addEventListener("pointerlockchange", onPointerLock);
+    dom.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("mousemove", onMouseMove);
+    dom.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+      dom.removeEventListener("click", onClick);
+      document.removeEventListener("pointerlockchange", onPointerLock);
+      dom.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("mousemove", onMouseMove);
+      dom.removeEventListener("wheel", onWheel);
+    };
+  }, [gl, firstPerson, onHudUpdate]);
+
+  // Build / rebuild the dungeon floor when seed, roomCount, or theme changes.
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      const view = viewRef.current;
+      if (!view) return;
+
+      if (!scansRef.current) {
+        onHudUpdate({ loading: "Loading stone & dirt PBR textures..." });
+        const loader = new THREE.TextureLoader();
+        const scan = async (base: string): Promise<ScanSet> => {
+          const [color, normal, roughness, height] = await Promise.all(
+            ["baseColor", "normal", "roughness", "displacement"].map((map) => loader.loadAsync(`${base}_${map}.jpg`))
+          );
+          return { color, normal, roughness, height };
+        };
+        const [wall, floor, plaster] = await Promise.all([
+          scan("/assets/materials/medievalBlocks05/medieval_blocks_05"),
+          scan("/assets/materials/dirtFloor/dirt_floor"),
+          scan("/assets/materials/medievalWall01/medieval_wall_01"),
+        ]);
+        if (cancelled) return;
+        scansRef.current = { wall, floor, plaster };
+        view.setScans(scansRef.current);
+
+        onHudUpdate({ loading: "Cutting masonry..." });
+        await new Promise((r) => setTimeout(r, 10));
+        if (cancelled) return;
+        view.setMasonry({ stone: ashlar(512, 11, 8) });
+      }
+
+      onHudUpdate({ loading: "Forging 3D dungeon floor & taller arches..." });
+      await new Promise((r) => setTimeout(r, 10));
+      if (cancelled) return;
+
+      const dungeon = generateDungeon({ seed, rooms: roomCount, loops: 0.35, decor: 0.6, theme });
+      const level = buildLevel(dungeon);
+      view.setLevel(dungeon, level);
+
+      onHudUpdate({ loading: "Raising vaults & paving flagstones..." });
+      await new Promise((r) => setTimeout(r, 10));
+      if (cancelled) return;
+
+      const lamps = buildCrypt(view, dungeon, level);
+      const walker = createWalker(dungeon);
+      walker.start();
+      const playerFloor = floorAt(dungeon, walker.x + dungeon.W / 2, walker.z + dungeon.H / 2);
+      const sim = createMobSimulation(dungeon, walker.x * CELL_M, walker.z * CELL_M);
+
+      mobGroupRefs.current = sim.mobs.map(() => null);
+      worldRef.current = {
+        dungeon,
+        level,
+        lamps,
+        walker,
+        sim,
+        playerFloor,
+        playerJumpY: 0,
+        playerJumpVy: 0,
+        playerAnimFrame: 0,
+        playerPose: "idle",
+        time: 0,
+      };
+      setMobs(sim.mobs);
+      onHudUpdate({
+        loading: null,
+        name: dungeon.name,
+        rooms: dungeon.rooms.length,
+        mobs: sim.mobs.length,
+        roomLabel: "Entrance",
+      });
+    };
+
+    run().catch((err) => {
+      console.error(err);
+      if (!cancelled) onHudUpdate({ loading: `Error: ${err?.message ?? String(err)}` });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [seed, roomCount, theme, onHudUpdate]);
+
+  useFrame((_, rawDelta) => {
+    const view = viewRef.current;
+    const world = worldRef.current;
+    if (!view || !world) return;
+
+    const dt = Math.min(rawDelta, 0.05);
+    world.time += dt;
+    const { dungeon, level, walker, sim, lamps } = world;
+    const keys = keysRef.current;
+
+    const forward =
+      (keys.has("KeyW") || keys.has("ArrowUp") ? 1 : 0) - (keys.has("KeyS") || keys.has("ArrowDown") ? 1 : 0);
+    const strafe =
+      (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0) - (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0);
+    const sprinting = keys.has("ShiftLeft") || keys.has("ShiftRight");
+    const speed = sprinting ? RUN_CELLS : WALK_CELLS;
+
+    walker.step(dt, forward, strafe, speed);
+
+    // Smooth vertical stair/basin height + jump arc.
+    const targetFloor = floorAt(dungeon, walker.x + dungeon.W / 2, walker.z + dungeon.H / 2);
+    world.playerFloor += (targetFloor - world.playerFloor) * (1 - Math.exp(-dt * 12));
+    if (world.playerJumpY > 0 || world.playerJumpVy !== 0) {
+      world.playerJumpY += world.playerJumpVy * dt;
+      world.playerJumpVy -= 13.5 * dt;
+      if (world.playerJumpY <= 0) {
+        world.playerJumpY = 0;
+        world.playerJumpVy = 0;
+      }
+    }
+
+    const px = walker.x * CELL_M;
+    const py = world.playerFloor * CELL_M + world.playerJumpY;
+    const pz = walker.z * CELL_M;
+
+    if (world.playerJumpY > 0.05) {
+      world.playerPose = "jump";
+      world.playerAnimFrame += dt * 30;
+    } else if (walker.speedNow > 0.35) {
+      world.playerPose = sprinting || walker.speedNow > 3.1 ? "run" : "walk";
+      world.playerAnimFrame += walker.speedNow * CELL_M * dt * 10.5;
+    } else {
+      world.playerPose = "idle";
+      world.playerAnimFrame += dt * 30;
+    }
+
+    if (playerGroupRef.current) {
+      playerGroupRef.current.position.set(px, py, pz);
+      playerGroupRef.current.rotation.y = walker.bodyYaw;
+    }
+
+    // Step all roaming NPCs/mobs and apply transforms directly to Three.js groups.
+    sim.step(dt, px, pz);
+    for (let i = 0; i < sim.mobs.length; i++) {
+      const m = sim.mobs[i];
+      const g = mobGroupRefs.current[i];
+      if (g) {
+        g.position.set(m.wx, m.wy, m.wz);
+        g.rotation.y = m.yaw;
+      }
+    }
+
+    // Update camera (3rd-person follow with wall/ceiling collision, or 1st-person eye).
+    const persp = camera as THREE.PerspectiveCamera;
+    if (firstPerson) {
+      const eyeY = (world.playerFloor + EYE_HEIGHT_CELLS + Math.sin(walker.bob) * 0.012) * CELL_M + world.playerJumpY;
+      persp.position.set(px, eyeY, pz);
+      persp.rotation.order = "YXZ";
+      persp.rotation.y = walker.yaw;
+      persp.rotation.x = walker.pitch;
+      persp.rotation.z = 0;
+    } else {
+      const cam = resolveThirdPersonCam(
+        dungeon,
+        level,
+        px,
+        world.playerFloor * CELL_M,
+        pz,
+        walker.yaw,
+        walker.pitch,
+        camDistRef.current
+      );
+      persp.position.set(cam.cx, cam.cy, cam.cz);
+      persp.up.set(0, 1, 0);
+      persp.lookAt(cam.tx, cam.ty, cam.tz);
+    }
+    persp.updateMatrixWorld();
+
+    // Update nearest shadow lamps + render multi-pass crypt frame.
+    view.updateLights(dt, walker.x, walker.z, lamps, dungeon);
+    view.renderFrame(world.time, dt, px, py, pz, size.width, size.height);
+
+    // Throttle React pose/HUD ticks cleanly (~28 Hz for crisp animations, ~6 Hz for room badge & minimap).
+    animTimerRef.current += dt;
+    if (animTimerRef.current >= 1 / 28) {
+      animTimerRef.current = 0;
+      setAnimTick((t) => t + 1);
+    }
+
+    hudTimerRef.current += dt;
+    if (hudTimerRef.current >= 0.16) {
+      hudTimerRef.current = 0;
+      const room = walker.room();
+      const label = room ? `${room.type.charAt(0).toUpperCase()}${room.type.slice(1)} (Room ${room.id + 1})` : "Corridor";
+      onHudUpdate({ roomLabel: label });
+
+      const canvas = minimapCanvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          const cw = canvas.width;
+          const ch = canvas.height;
+          ctx.clearRect(0, 0, cw, ch);
+          const scale = Math.min((cw - 12) / dungeon.W, (ch - 12) / dungeon.H);
+          const ox = (cw - dungeon.W * scale) / 2;
+          const oy = (ch - dungeon.H * scale) / 2;
+          for (let z = 0; z < dungeon.H; z++) {
+            for (let x = 0; x < dungeon.W; x++) {
+              const g = dungeon.grid[z * dungeon.W + x];
+              if (g === FLOOR) {
+                ctx.fillStyle = dungeon.roomId[z * dungeon.W + x] >= 0 ? "rgba(180,192,200,0.42)" : "rgba(130,140,148,0.34)";
+                ctx.fillRect(ox + x * scale, oy + z * scale, Math.ceil(scale), Math.ceil(scale));
+              }
+            }
+          }
+          // Mobs (red/green dots)
+          ctx.fillStyle = "#6ce88a";
+          for (const m of sim.mobs) {
+            ctx.beginPath();
+            ctx.arc(ox + m.cx * scale, oy + m.cz * scale, Math.max(2, scale * 0.35), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          // Player Paladin (gold dot)
+          ctx.fillStyle = "#ffd84d";
+          ctx.beginPath();
+          ctx.arc(ox + (walker.x + dungeon.W / 2) * scale, oy + (walker.z + dungeon.H / 2) * scale, Math.max(3, scale * 0.5), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+  }, 1);
+
+  // Use animTick to drive smooth pose frame updates on Paladin & NPCs.
+  void animTick;
+  const world = worldRef.current;
+
+  return (
+    <>
+      <group ref={playerGroupRef}>
+        <CharacterModel
+          classType="paladin"
+          scale={0.86}
+          pose={world ? world.playerPose : "idle"}
+          animFrame={world ? world.playerAnimFrame : 0}
+          expression="focus"
+          visible={!firstPerson}
+        />
+      </group>
+      {mobs.map((m, idx) => (
+        <group
+          key={m.id}
+          ref={(el) => {
+            mobGroupRefs.current[idx] = el;
+          }}
+          position={[m.wx, m.wy, m.wz]}
+          rotation={[0, m.yaw, 0]}
+        >
+          <CharacterModel
+            classType={m.classType}
+            scale={m.scale}
+            pose={m.pose}
+            animFrame={m.animFrame}
+            expression={m.expression}
+          />
+        </group>
+      ))}
+    </>
+  );
+};
+
+export interface DungeonAppProps {
+  backHref?: string;
+}
+
+const VALID_THEMES: ThemeName[] = ["verdant", "ancient", "molten", "frost", "grim"];
+
+export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
+  const params = useMemo(() => new URLSearchParams(window.location.search), []);
+  const initialSeed = Number(params.get("seed")) || 1337;
+  const initialRooms = Math.min(10, Math.max(4, Number(params.get("rooms")) || 8));
+  const requestedTheme = params.get("theme") as ThemeName | null;
+  const initialTheme: ThemeName =
+    requestedTheme && VALID_THEMES.indexOf(requestedTheme) !== -1 ? requestedTheme : "verdant";
+
+  const [seed, setSeed] = useState(initialSeed);
+  const [roomCount, setRoomCount] = useState(initialRooms);
+  const [theme, setTheme] = useState<ThemeName>(initialTheme);
+  const [firstPerson, setFirstPerson] = useState(false);
+  const [showMap, setShowMap] = useState(true);
+  const [hud, setHud] = useState<HudInfo>({
+    name: "Forging Dungeon...",
+    rooms: initialRooms,
+    mobs: 0,
+    roomLabel: "Entrance",
+    theme: "verdant",
+    seed: initialSeed,
+    firstPerson: false,
+    pointerLocked: false,
+    loading: "Initializing...",
+  });
+  const minimapRef = useRef<HTMLCanvasElement | null>(null);
+
+  const handleHudUpdate = useCallback((patch: Partial<HudInfo>) => {
+    setHud((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (e.code === "KeyV") setFirstPerson((v) => !v);
+      if (e.code === "KeyM") setShowMap((v) => !v);
+      if (e.code === "KeyR") setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999);
+      if (e.code === "KeyT") {
+        const order: ThemeName[] = ["verdant", "ancient", "molten", "frost", "grim"];
+        setTheme((cur) => order[(order.indexOf(cur) + 1) % order.length]);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#050608", color: "#f2efe8", fontFamily: "system-ui, sans-serif", userSelect: "none" }}>
+      <Canvas
+        flat
+        linear
+        dpr={[1, 1.5]}
+        shadows={{ type: THREE.PCFShadowMap }}
+        gl={{ antialias: false, powerPreference: "high-performance" }}
+        camera={{ fov: 68, near: 0.1, far: 240 }}
+        style={{ width: "100%", height: "100%", display: "block" }}
+      >
+        <DungeonScene
+          seed={seed}
+          roomCount={roomCount}
+          theme={theme}
+          firstPerson={firstPerson}
+          onHudUpdate={handleHudUpdate}
+          minimapCanvasRef={minimapRef}
+        />
+      </Canvas>
+
+      {/* Top-left compact HUD */}
+      <div
+        style={{
+          position: "fixed",
+          top: 14,
+          left: 14,
+          background: "rgba(8, 10, 14, 0.72)",
+          backdropFilter: "blur(6px)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: 10,
+          padding: "10px 14px",
+          pointerEvents: "auto",
+          maxWidth: 360,
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: 15, color: "#ffd84d" }}>{hud.name}</div>
+        <div style={{ fontSize: 12, color: "#c9d2db", marginTop: 3 }}>
+          Hero: <b>Paladin</b> · Area: <b>{hud.roomLabel}</b>
+        </div>
+        <div style={{ fontSize: 12, color: "#9fb0bf", marginTop: 2 }}>
+          Rooms: <b>{hud.rooms}</b> (max 10) · Running Mobs: <b>{hud.mobs}</b> · Theme: <b>{THEMES[theme].label}</b>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={() => setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999)}
+            style={btnStyle}
+          >
+            New Seed (R)
+          </button>
+          <button type="button" onClick={() => setFirstPerson((v) => !v)} style={btnStyle}>
+            {firstPerson ? "3rd Person (V)" : "1st Person (V)"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const order: ThemeName[] = ["verdant", "ancient", "molten", "frost", "grim"];
+              setTheme((cur) => order[(order.indexOf(cur) + 1) % order.length]);
+            }}
+            style={btnStyle}
+          >
+            Theme (T)
+          </button>
+          <label style={{ fontSize: 11, color: "#c9d2db", display: "flex", alignItems: "center", gap: 4 }}>
+            Rooms:
+            <select
+              value={roomCount}
+              onChange={(e) => setRoomCount(Math.min(10, Math.max(4, Number(e.target.value))))}
+              style={{ background: "#161a22", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, padding: "2px 4px", fontSize: 11 }}
+            >
+              {[5, 6, 7, 8, 9, 10].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          {backHref ? (
+            <a
+              href={backHref}
+              style={{
+                ...btnStyle,
+                textDecoration: "none",
+                color: "#ffd84d",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              ← All Modes
+            </a>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Bottom controls hint */}
+      <div
+        style={{
+          position: "fixed",
+          left: "50%",
+          bottom: 18,
+          transform: "translateX(-50%)",
+          padding: "7px 14px",
+          background: "rgba(8, 10, 14, 0.72)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: 8,
+          fontSize: 12,
+          color: "#dce3ea",
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {hud.pointerLocked
+          ? "WASD / Arrows Move · Shift Sprint · Space Jump · Scroll Zoom · Esc Unlock Mouse"
+          : "Click or Drag to Look · WASD / Arrows Move · Shift Sprint · Space Jump · V Camera · M Map"}
+      </div>
+
+      {/* Minimap */}
+      {showMap ? (
+        <div
+          style={{
+            position: "fixed",
+            right: 14,
+            bottom: 14,
+            background: "rgba(8, 10, 14, 0.78)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            borderRadius: 10,
+            padding: 8,
+            pointerEvents: "none",
+          }}
+        >
+          <canvas ref={minimapRef} width={156} height={156} style={{ display: "block" }} />
+          <div style={{ fontSize: 10, color: "#9fb0bf", textAlign: "center", marginTop: 2 }}>
+            <span style={{ color: "#ffd84d" }}>●</span> Paladin &nbsp; <span style={{ color: "#6ce88a" }}>●</span> Mobs
+          </div>
+        </div>
+      ) : null}
+
+      {/* Loading overlay */}
+      {hud.loading ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(5, 6, 8, 0.92)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 16,
+            letterSpacing: 0.4,
+            zIndex: 20,
+          }}
+        >
+          {hud.loading}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const btnStyle: React.CSSProperties = {
+  background: "#1c222d",
+  color: "#eef2f6",
+  border: "1px solid rgba(255,255,255,0.18)",
+  borderRadius: 5,
+  padding: "4px 8px",
+  fontSize: 11,
+  cursor: "pointer",
+};

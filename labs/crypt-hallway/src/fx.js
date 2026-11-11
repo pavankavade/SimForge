@@ -25,6 +25,14 @@ const TINT = {
   fire: new THREE.Color(0xff7a20).multiplyScalar(8),
   splinter: new THREE.Color(0xe8d6a8).multiplyScalar(2),
   burp: new THREE.Color(0xc9b8e8).multiplyScalar(3),
+  // boulder hallway
+  slime: new THREE.Color(0x6eff3a).multiplyScalar(0.3),
+  jelly: new THREE.Color(0x7dffa6).multiplyScalar(5),
+  arc: new THREE.Color(0x7fd8ff).multiplyScalar(9),
+  // crushing room
+  magic: new THREE.Color(0xc07aff).multiplyScalar(3.5),
+  grease: new THREE.Color(0x6a4a16).multiplyScalar(0.25),
+  smoke: new THREE.Color(0x6a6560).multiplyScalar(0.18),
 };
 
 export function buildFx(scene) {
@@ -89,7 +97,7 @@ export function buildFx(scene) {
         const drag = (1 - Math.exp(-k * t)) / k;
         const pos = [p0[0] + Math.cos(a) * sp * drag, p0[1] + (0.25 + r(8) * 0.5) * size * drag + 0.12 * t, p0[2] + Math.sin(a) * sp * drag];
         const u = t / life;
-        put(puffs, pos, (0.07 + 0.28 * Math.sqrt(u)) * size * (0.7 + r(9) * 0.6), TINT[b.kind], Math.sin(Math.PI * Math.min(1, u * 1.6 + 0.05)) * (1 - u));
+        put(puffs, pos, (0.07 + 0.28 * Math.sqrt(u)) * size * (0.7 + r(9) * 0.6), TINT[b.tint ?? b.kind], Math.sin(Math.PI * Math.min(1, u * 1.6 + 0.05)) * (1 - u));
       } else if (b.kind === "sparks" || b.kind === "shards") {
         // ballistic bits fanning upward, bouncing off the floor once
         const life = (b.kind === "sparks" ? 0.3 : 0.6) + r(4) * 0.35, t = (f - b.at) / FPS;

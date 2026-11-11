@@ -27,3 +27,29 @@ the film and by trap triggers in the game, so a visual fix lands in both.
 
 Stills: with the dev server running, `node shoot.mjs <out-dir> "s=9&pitch=0.1" ...` drives headless
 Chrome over CDP (the in-app browser pane throttles when hidden).
+
+## Hallway 2: the boulder hall (`?hall=boulder`)
+
+Ep2 ("Evolution of a Boulder Trap", `src/episodes/rolling-boulder`) re-staged in a corridor with a
+release ledge and a daylight doorway (`src/boulder/`). Everything there is authored in Ep2's own
+frame (x along the hall, z across it) under one root group (`hall.js toLab`), so the episode's
+beats, boulder paths and party choreography port almost as they are (`timeline.js`, keyed to
+`rolling-boulder/data/narrationCues.json`); `anim.js` adds the cast, props, camera, SFX and bursts.
+
+```bash
+npm run dev                                                    # then:
+#   ?hall=boulder              the film in real time (space pause, ←/→ seek, &f=N start)
+#   ?hall=boulder&cam=threeq   film mode for film.mjs
+#   ?hall=boulder&play=1       the game (&class=rogue|mage|paladin skips the picker)
+Q="hall=boulder" node film.mjs ../../out/misc/boulder-hallway threeq    # voice + SFX + score, -14 LUFS
+Q="hall=boulder" PICK=240,941 node film.mjs <dir> threeq               # stills only
+python sheet.py <dir>/threeq sheet.png 6                               # contact sheet of stills
+node test-game.mjs --node      # class x trap win/die matrix, in node
+node test-game.mjs             # the same in headless Chrome on the dev server, plus real key events
+```
+
+The game's rules are `src/boulder/sim.js` (no DOM, no three); `game.js` adds input, camera, sound
+and HUD. Five traps, one hall-filling ball each, released when you trip them, so standing still or
+running back never works: rogue E vault / Q tuck-roll, mage E levitate / Q blink, paladin E warhammer /
+hold Q shield wedge, each with a short timing window, and each trap rules some moves out (slime,
+crushers, spikes, magnet). `src/boulder/playtest.js` checks all of it.

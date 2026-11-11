@@ -33,6 +33,7 @@
   },
   "scripts": {
     "dev": "remotion studio",
+    "explorer": "node scripts/dungeon-explorer.mjs",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",

@@ -1,0 +1,122 @@
+{
+ "durationFrames": 2770,
+ "lines": {
+  "cta": {
+   "startFrame": 2580,
+   "endFrame": 2640,
+   "words": [
+    {
+     "word": "Unless",
+     "startFrame": 2580,
+     "endFrame": 2589
+    },
+    {
+     "word": "you",
+     "startFrame": 2589,
+     "endFrame": 2592
+    },
+    {
+     "word": "can",
+     "startFrame": 2592,
+     "endFrame": 2598
+    },
+    {
+     "word": "prove",
+     "startFrame": 2598,
+     "endFrame": 2607
+    },
+    {
+     "word": "us",
+     "startFrame": 2607,
+     "endFrame": 2610
+    },
+    {
+     "word": "wrong",
+     "startFrame": 2610,
+     "endFrame": 2622
+    },
+    {
+     "word": "in",
+     "startFrame": 2622,
+     "endFrame": 2625
+    },
+    {
+     "word": "the",
+     "startFrame": 2625,
+     "endFrame": 2626
+    },
+    {
+     "word": "comments.",
+     "startFrame": 2625,
+     "endFrame": 2640
+    }
+   ]
+  },
+  "play": {
+   "startFrame": 2661,
+   "endFrame": 2721,
+   "words": [
+    {
+     "word": "Check",
+     "startFrame": 2661,
+     "endFrame": 2667
+    },
+    {
+     "word": "the",
+     "startFrame": 2667,
+     "endFrame": 2670
+    },
+    {
+     "word": "link",
+     "startFrame": 2670,
+     "endFrame": 2676
+    },
+    {
+     "word": "in",
+     "startFrame": 2676,
+     "endFrame": 2679
+    },
+    {
+     "word": "the",
+     "startFrame": 2679,
+     "endFrame": 2682
+    },
+    {
+     "word": "comments",
+     "startFrame": 2682,
+     "endFrame": 2694
+    },
+    {
+     "word": "if",
+     "startFrame": 2694,
+     "endFrame": 2697
+    },
+    {
+     "word": "you",
+     "startFrame": 2697,
+     "endFrame": 2700
+    },
+    {
+     "word": "want",
+     "startFrame": 2700,
+     "endFrame": 2703
+    },
+    {
+     "word": "to",
+     "startFrame": 2703,
+     "endFrame": 2706
+    },
+    {
+     "word": "play",
+     "startFrame": 2706,
+     "endFrame": 2712
+    },
+    {
+     "word": "this.",
+     "startFrame": 2712,
+     "endFrame": 2721
+    }
+   ]
+  }
+ }
+}

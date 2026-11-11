@@ -1,4 +1,4 @@
-"""Mix the film test's sound: Ep1's voiced narration (cut after the last line we show), the series
+"""Mix a film's sound (audio.json names the episode: Ep1 by default, Ep2 for the boulder hallway): its voiced narration (cut after the last line we show), the series
 score (Ep1's mix of it), and the beat-keyed SFX list that src/anim.js exports.
 
   python mix.py <audio.json> <out.wav>
@@ -18,7 +18,6 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-EP = ROOT / "public" / "episodes" / "dungeon-trap-v2"
 SR = 48000
 SCORE_DB = -4.0  # the score sits a little under the episodes' level, so the voice and SFX carry
 
@@ -54,20 +53,22 @@ def main(spec_path, out_path):
         mix[at_sample:at_sample + len(clip)] += clip * vol
 
     # narration: frame 0 of the episode is sample 0 here; stop before the next level's line
-    nar = load(EP / "narration_v1.mp3")
+    ep = ROOT / "public" / "episodes" / spec.get("episode", "dungeon-trap-v2")  # the boulder hallway passes Ep2's
+    nar = load(ep / spec.get("narration", "narration_v1.mp3"))
     nar = fade_out(nar, int(spec["narrationEnd"] / fps * SR), int(0.15 * SR))
     lay(nar, 0, 1.0)
 
     # score under everything (SCORE_DB), faded out over the last 1.5 s
-    score = load(EP / "score_v1.mp3")[:total]
+    score = load(ep / spec.get("score", "score_v1.mp3"))[:total]
     lay(fade_out(score, total - int(1.5 * SR), int(1.5 * SR)), 0, 10 ** (SCORE_DB / 20))
 
     cache = {}
     for cue in spec["sfx"]:
         name = cue["name"]
-        if name not in cache:
-            cache[name] = load(EP / "sfx" / f"{name}.wav")
-        clip = cache[name]
+        key = (cue.get("ep"), name)
+        if key not in cache:
+            cache[key] = load(ROOT / "public" / "episodes" / cue["ep"] / "sfx" / f"{name}.wav" if cue.get("ep") else ep / "sfx" / f"{name}.wav")
+        clip = cache[key]
         if cue.get("dur"):  # a looped bed (fire) trimmed to its window, with a short fade out
             n = int(cue["dur"] / fps * SR)
             clip = np.tile(clip, n // len(clip) + 1)[:n].copy()
