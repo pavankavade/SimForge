@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚔️</text></svg>" />
+  <title>SimForge — 3D Worlds &amp; Dungeon Arcade</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    canvas { display: block; }
+    #hud {
+      position: fixed; left: 12px; bottom: 10px; color: #cbb89a; opacity: .75;
+      font: 12px/1.4 ui-monospace, Consolas, monospace; pointer-events: none;
+    }
+    #loader {
+      position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; background: radial-gradient(#2a1a0e, #080503); color: #f3e6cc; font: 600 16px/1.5 system-ui, sans-serif; text-align: center; padding: 16px;
+    }
+    #loader h1 { margin: 0; font: 900 clamp(26px, 5vw, 54px)/1.05 system-ui, sans-serif; color: #ffd84d; text-shadow: 0 4px 0 #3a1406; }
+    #loader .spin { width: 42px; height: 42px; border: 4px solid #5a3a1e; border-top-color: #ffd84d; border-radius: 50%; animation: spin 0.9s linear infinite; }
+    #loader .bar { width: min(360px, 80vw); height: 10px; border-radius: 5px; background: #3a2412; overflow: hidden; }
+    #loader .bar > i { display: block; height: 100%; width: 2%; background: #ffd84d; transition: width 0.25s; }
+    #loader .err { color: #ff9a6a; max-width: 520px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="hud"></div>
+  <div id="loader">
+    <h1>LOADING DUNGEON</h1>
+    <div class="spin"></div>
+    <div class="bar"><i></i></div>
+    <div class="msg">Loading assets… 0%</div>
+    <div class="err"></div>
+  </div>
+  <script>
+    // Landing page (/), 3D Dungeon Explorer (?mode=explorer), and camera captures (?cam= / ?shot=)
+    // do not use the WebGPU hallway #loader.
+    const q = new URLSearchParams(location.search);
+    const mode = q.get("mode") || q.get("hall");
+    const hasRoute = Boolean(mode) || ["play", "cam", "shot", "s", "lab", "class", "film"].some((k) => q.has(k));
+    if (!hasRoute || mode === "explorer" || /[?&](cam|shot)=/.test(location.search)) {
+      document.getElementById("loader").remove();
+    }
+  </script>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

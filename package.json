@@ -34,6 +34,8 @@
   "scripts": {
     "dev": "remotion studio",
     "explorer": "node scripts/dungeon-explorer.mjs",
+    "web:dev": "npm --prefix web run dev",
+    "build:web": "npm --prefix web ci && npm --prefix web run build",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",

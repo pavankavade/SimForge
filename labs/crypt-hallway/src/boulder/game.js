@@ -253,22 +253,30 @@ export function createGame({ camera, canvas, classType = "rogue", picker = false
     const keysHelp = document.createElement("div");
     keysHelp.style.opacity = "0.8";
     keysHelp.textContent = "WASD move · mouse look · shift run · space jump · E / Q class moves · 1/2/3 switch class · R restart";
-    const nav = document.createElement("div");
-    Object.assign(nav.style, { display: "flex", gap: "18px", flexWrap: "wrap", justifyContent: "center" });
-    const home = document.createElement("a");
-    home.href = "./";
-    home.textContent = "← All Game Modes";
-    home.style.color = "#cbbba2";
-    const other = document.createElement("a");
-    other.href = "?hall=crypt&play=1";
-    other.textContent = "← Hallway 1: the crypt";
-    Object.assign(other.style, { color: "#ffd84d" });
-    const explorer = document.createElement("a");
-    explorer.href = "?hall=explorer";
-    explorer.textContent = "3D Dungeon Floor →";
-    explorer.style.color = "#6ce88a";
-    nav.append(home, other, explorer);
-    menu.append(h, row, keysHelp, nav);
+    if (window.__SIMFORGE_PORTAL__) {
+      const nav = document.createElement("div");
+      Object.assign(nav.style, { display: "flex", gap: "18px", flexWrap: "wrap", justifyContent: "center" });
+      const home = document.createElement("a");
+      home.href = "./";
+      home.textContent = "← All Game Modes";
+      home.style.color = "#cbbba2";
+      const other = document.createElement("a");
+      other.href = "?mode=crypt&play=1";
+      other.textContent = "← Hallway 1: the crypt";
+      other.style.color = "#ffd84d";
+      const explorer = document.createElement("a");
+      explorer.href = "?mode=explorer";
+      explorer.textContent = "3D Dungeon Floor →";
+      explorer.style.color = "#6ce88a";
+      nav.append(home, other, explorer);
+      menu.append(h, row, keysHelp, nav);
+    } else {
+      const other = document.createElement("a");
+      other.href = "?play=1";
+      other.textContent = "← Hallway 1: the crypt";
+      Object.assign(other.style, { color: "#ffd84d" });
+      menu.append(h, row, keysHelp, other);
+    }
     document.body.append(menu);
   }
 

@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚔️</text></svg>" />
   <title>Evolution of a Dungeon Trap: Play</title>
   <style>
     html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
@@ -34,13 +33,8 @@
     <div class="err"></div>
   </div>
   <script>
-    // Landing page (/ with no route params), ?hall=explorer, and captures (?cam= film, ?shot= stills)
-    // never show the WebGPU trap-hall #loader.
-    const q = new URLSearchParams(location.search);
-    const hasRoute = ["hall", "play", "cam", "shot", "s", "lab", "mode", "class", "film"].some((k) => q.has(k));
-    if (!hasRoute || q.get("hall") === "explorer" || /[?&](cam|shot)=/.test(location.search)) {
-      document.getElementById("loader").remove();
-    }
+    // captures (?cam= film, ?shot= stills) never show the loader
+    if (/[?&](cam|shot)=/.test(location.search)) document.getElementById("loader").remove();
   </script>
   <script type="module" src="/src/main.js"></script>
 </body>

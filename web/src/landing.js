@@ -1,6 +1,6 @@
 /**
- * Lightweight landing page / game mode switcher rendered at bare `/`
- * before loading any WebGPU/WebGL renderer, character rig, or dungeon assets.
+ * Lightweight landing page rendered at bare `/` before loading any Three.js / WebGPU / R3F
+ * engine code or 3D textures.
  */
 export function renderLanding() {
   document.title = "SimForge — Choose Your Game Mode";
@@ -179,8 +179,8 @@ export function renderLanding() {
       .btn:hover { filter: brightness(1.06); }
       .btn:active { transform: scale(0.99); }
       .extras {
-        margin-top: 26px;
-        padding: 16px 20px;
+        margin-top: 22px;
+        padding: 14px 18px;
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -217,11 +217,10 @@ export function renderLanding() {
 
     <div class="wrap">
       <header class="hero">
-        <div class="eyebrow">SimForge Dungeon Arcade</div>
-        <h1>CHOOSE YOUR DUNGEON MODE</h1>
+        <div class="eyebrow">SimForge Arcade</div>
+        <h1>CHOOSE YOUR GAME MODE</h1>
         <p>
-          Pick a mode below to launch it cleanly — nothing loads until you choose.
-          Switch between free-roam 3D stone vaults and trap-dodge hallway challenges.
+          Select an experience below — no 3D engine or game assets load until you pick what to open.
         </p>
       </header>
 
@@ -231,14 +230,14 @@ export function renderLanding() {
             <span class="badge">New · Free-Roam 3D</span>
             <h2>3D Dungeon Floor</h2>
             <p>
-              Explore a procedural 8-room vaulted stone dungeon as the Paladin with taller archways,
-              flagged stone floors, and goblin, rogue, mage, barbarian &amp; bard mobs dashing through every room.
+              Roam a procedural multi-room stone dungeon as the Paladin with taller vaulted arches,
+              flagged stone paving, and goblin, rogue, mage, barbarian &amp; bard mobs running through every room.
             </p>
             <div class="tags">
               <span class="tag">Paladin 3rd / 1st Person</span>
               <span class="tag">Max 10 Rooms</span>
               <span class="tag">PBR Stone Vaults</span>
-              <span class="tag">WebGL / Three.js</span>
+              <span class="tag">Three.js / WebGL</span>
             </div>
           </div>
 
@@ -276,7 +275,7 @@ export function renderLanding() {
             <span class="badge">Episode 1 · Playable</span>
             <h2>Crypt Hall Traps</h2>
             <p>
-              Dash down the cursed crypt hallway past spike pits, swinging pendulums, flamers, and traps.
+              Dash down a trap-filled crypt past spike pits, swinging pendulums, flamers, and mimic chests.
               Play as Goblin, Rogue, Mage, or Paladin.
             </p>
             <div class="tags">
@@ -285,7 +284,7 @@ export function renderLanding() {
               <span class="tag">WebGPU</span>
             </div>
           </div>
-          <a class="btn" href="?hall=crypt&amp;play=1">Play Crypt Hall →</a>
+          <a class="btn" href="?mode=crypt&amp;play=1">Play Crypt Hall →</a>
         </article>
 
         <article class="card">
@@ -293,8 +292,8 @@ export function renderLanding() {
             <span class="badge">Episode 2 · Playable</span>
             <h2>Boulder Hallway</h2>
             <p>
-              Outrun or outsmart a hall-wide rolling boulder, ceiling crushers, gelatinous cube,
-              blast doors, and half-pipe hazards to the exit arch.
+              Outrun or counter a hall-wide rolling boulder, ceiling crushers, gelatinous cube,
+              blast doors, and half-pipe hazards.
             </p>
             <div class="tags">
               <span class="tag">Rolling Boulder</span>
@@ -302,16 +301,16 @@ export function renderLanding() {
               <span class="tag">WebGPU</span>
             </div>
           </div>
-          <a class="btn" href="?hall=boulder&amp;play=1">Play Boulder Hallway →</a>
+          <a class="btn" href="?mode=boulder&amp;play=1">Play Boulder Hallway →</a>
         </article>
       </section>
 
       <aside class="extras">
-        <span class="extras-title">Film &amp; Lab Modes (Direct Cameras):</span>
+        <span class="extras-title">Film &amp; Lab Views (Direct Cameras):</span>
         <div class="extras-links">
-          <a class="pill" href="?hall=crypt&amp;lab=1">Crypt Showcase / Walk</a>
-          <a class="pill" href="?hall=boulder">Boulder Film Rig</a>
-          <a class="pill" href="?hall=walls">Ep3 Crushing Walls</a>
+          <a class="pill" href="?mode=crypt&amp;lab=1">Crypt Showcase / Walk</a>
+          <a class="pill" href="?mode=boulder">Boulder Film Rig</a>
+          <a class="pill" href="?mode=walls">Ep3 Crushing Walls</a>
         </div>
       </aside>
     </div>
@@ -325,7 +324,7 @@ export function renderLanding() {
   launchBtn?.addEventListener("click", () => {
     const rooms = roomsSel instanceof HTMLSelectElement ? roomsSel.value : "8";
     const theme = themeSel instanceof HTMLSelectElement ? themeSel.value : "verdant";
-    const next = new URLSearchParams({ hall: "explorer", rooms, theme });
+    const next = new URLSearchParams({ mode: "explorer", rooms, theme });
     location.search = `?${next.toString()}`;
   });
 }

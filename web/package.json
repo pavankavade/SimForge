@@ -1,0 +1,21 @@
+{
+  "name": "simforge-web",
+  "private": true,
+  "type": "module",
+  "description": "SimForge interactive 3D web portal (3D Dungeon Floor + Playable Trap Hallways).",
+  "scripts": {
+    "dev": "vite --port 5195 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "deploy": "vite build && npx --yes wrangler@4 pages deploy dist --project-name simforge-game --branch main --commit-dirty=true"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^9.8.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.5"
+  }
+}
