@@ -13,9 +13,13 @@ import { THEMES, type ThemeName } from "./dungeon/themes";
 import { CELL_M, createDungeonView, type ScanSet } from "./dungeon/view";
 import { createWalker } from "./dungeon/walker";
 import { createMobSimulation, type MobAgent } from "./npcSim";
+import { createPaladin, createPaladinSfx, type CombatTarget, type CombatWorld, type Paladin, type PaladinSfx } from "./paladin";
 
-const WALK_CELLS = 2.6;
-const RUN_CELLS = 4.2;
+// A man in full plate: brisk walk, heavy run, and a slow advance behind the shield.
+const WALK_CELLS = 1.5;
+const RUN_CELLS = 2.7;
+const BLOCK_CELLS = 0.95;
+const FIRST_PERSON_FOV = 74;
 const LOOK_SENS = 0.0024;
 const TOUCH_LOOK_SENS = 0.0052;
 const EYE_HEIGHT_CELLS = 1.04;
@@ -79,9 +83,10 @@ interface WorldState {
   playerFloor: number;
   playerJumpY: number;
   playerJumpVy: number;
-  playerAnimFrame: number;
-  playerPose: AdventurerPose;
   time: number;
+  /** What the paladin's blade can strike: stone and the mobs. */
+  combat: CombatWorld;
+  targets: CombatTarget[];
 }
 
 interface HudInfo {
@@ -106,6 +111,8 @@ interface DungeonSceneProps {
   touchMoveRef: React.RefObject<{ forward: number; strafe: number }>;
   touchSprintRef: React.RefObject<boolean>;
   jumpQueueRef: React.RefObject<boolean>;
+  attackQueueRef: React.RefObject<boolean>;
+  touchBlockRef: React.RefObject<boolean>;
   onTouchDetected: () => void;
 }
 
@@ -120,7 +127,7 @@ function resolveThirdPersonCam(
   desiredDist: number
 ): { cx: number; cy: number; cz: number; tx: number; ty: number; tz: number } {
   const tx = px;
-  const ty = py + 1.38;
+  const ty = py + 1.5;
   const tz = pz;
   const dirX = Math.cos(pitch) * Math.sin(yaw);
   const dirY = Math.sin(pitch);
@@ -168,6 +175,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   touchMoveRef,
   touchSprintRef,
   jumpQueueRef,
+  attackQueueRef,
+  touchBlockRef,
   onTouchDetected,
 }) => {
   const { gl, scene, camera, size } = useThree();
@@ -178,7 +187,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const camDistRef = useRef<number>(3.1);
   const lookPointerRef = useRef<{ id: number; x: number; y: number; touch: boolean } | null>(null);
   const lastTouchDownRef = useRef(false);
-  const playerGroupRef = useRef<THREE.Group | null>(null);
+  const paladinRef = useRef<Paladin | null>(null);
+  const sfxRef = useRef<PaladinSfx | null>(null);
+  const mouseBlockRef = useRef(false);
+  const freeLookRef = useRef(0);
+  const prevYawRef = useRef(0);
+  const eyeRef = useRef(new THREE.Vector3());
   const mobGroupRefs = useRef<Array<THREE.Group | null>>([]);
   const [mobs, setMobs] = useState<MobAgent[]>([]);
   const [animTick, setAnimTick] = useState(0);
@@ -204,7 +218,31 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     };
   }, [gl, scene, camera]);
 
-  // Input listeners (WASD/Arrows + Shift + Space + Mouse/Touch drag look + Wheel zoom).
+  // The playable paladin: one rigged body for both first and third person.
+  useEffect(() => {
+    const paladin = createPaladin(gl);
+    paladin.materials.setEnvIntensity(0.45);
+    paladin.group.visible = false;
+    paladinRef.current = paladin;
+    scene.add(paladin.group, paladin.fx);
+    const sfx = createPaladinSfx();
+    sfxRef.current = sfx;
+    // Browsers only start audio after a gesture.
+    const unlock = () => sfx.unlock();
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      scene.remove(paladin.group, paladin.fx);
+      paladin.dispose();
+      sfx.dispose();
+      paladinRef.current = null;
+      sfxRef.current = null;
+    };
+  }, [gl, scene]);
+
+  // Input listeners (WASD/Arrows + Shift + Space + Mouse/Touch drag look + Wheel zoom + attack/block).
   useEffect(() => {
     const dom = gl.domElement;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -213,11 +251,22 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         const w = worldRef.current;
         if (w.playerJumpY <= 0.01) w.playerJumpVy = 4.6;
       }
+      if (e.code === "KeyF" && !e.repeat) attackQueueRef.current = true;
     };
+    // Mouse buttons: left swings (once the mouse is captured), right raises the shield.
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button === 2) mouseBlockRef.current = true;
+      if (e.button === 0 && document.pointerLockElement === dom) attackQueueRef.current = true;
+    };
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button === 2) mouseBlockRef.current = false;
+    };
+    const onContextMenu = (e: Event) => e.preventDefault();
     const onKeyUp = (e: KeyboardEvent) => keysRef.current.delete(e.code);
     const onBlur = () => {
       keysRef.current.clear();
       lookPointerRef.current = null;
+      mouseBlockRef.current = false;
     };
     const onClick = () => {
       if (lastTouchDownRef.current) return;
@@ -270,7 +319,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       } else {
         return;
       }
-      world.walker.yaw -= dx * sens;
+      // Hold C in third person to orbit the camera around the paladin without turning him.
+      if (!firstPerson && keysRef.current.has("KeyC")) freeLookRef.current -= dx * sens;
+      else world.walker.yaw -= dx * sens;
       const minPitch = firstPerson ? -1.1 : -0.35;
       const maxPitch = firstPerson ? 1.1 : 1.05;
       world.walker.pitch = Math.max(minPitch, Math.min(maxPitch, world.walker.pitch + (firstPerson ? -dy : dy) * sens));
@@ -289,7 +340,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     window.addEventListener("pointercancel", clearLookPointer);
     window.addEventListener("pointermove", onPointerMove);
     dom.addEventListener("wheel", onWheel, { passive: true });
+    dom.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mouseup", onMouseUp);
+    dom.addEventListener("contextmenu", onContextMenu);
     return () => {
+      dom.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+      dom.removeEventListener("contextmenu", onContextMenu);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
@@ -301,7 +358,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       window.removeEventListener("pointermove", onPointerMove);
       dom.removeEventListener("wheel", onWheel);
     };
-  }, [gl, firstPerson, onHudUpdate, onTouchDetected]);
+  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef]);
 
   // Build / rebuild the dungeon floor when seed, roomCount, or theme changes.
   useEffect(() => {
@@ -354,6 +411,31 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       const sim = createMobSimulation(dungeon, walker.x * CELL_M, walker.z * CELL_M);
 
       mobGroupRefs.current = sim.mobs.map(() => null);
+      const targets: CombatTarget[] = sim.mobs.map((m) => ({ id: m.id, x: m.wx, y: m.wy, z: m.wz, radius: 0.36 * m.scale, height: 1.62 * m.scale }));
+      const combat: CombatWorld = {
+        targets,
+        solid: (x, y, z) => {
+          const gx = x / CELL_M + dungeon.W / 2;
+          const gz = z / CELL_M + dungeon.H / 2;
+          const ix = Math.floor(gx);
+          const iz = Math.floor(gz);
+          if (ix < 0 || iz < 0 || ix >= dungeon.W || iz >= dungeon.H) return true;
+          const c = iz * dungeon.W + ix;
+          if (dungeon.grid[c] !== FLOOR) return true;
+          if (level.openAt && level.openAt(gx, gz) < 0.5) return true;
+          if (y > (level.heights[c] || 2.8) * CELL_M) return true;
+          return y < floorAt(dungeon, gx, gz) * CELL_M - 0.03;
+        },
+        onHit: (id, dirX, dirZ) => {
+          sim.hit(id, dirX, dirZ);
+          sfxRef.current?.hit();
+        },
+        onClang: () => sfxRef.current?.clang(),
+        onSwing: (swing) => sfxRef.current?.swing(swing),
+        onFootstep: () => sfxRef.current?.step(walker.speedNow > 2 ? 1 : 0),
+      };
+      freeLookRef.current = 0;
+      prevYawRef.current = walker.yaw;
       worldRef.current = {
         dungeon,
         level,
@@ -363,9 +445,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         playerFloor,
         playerJumpY: 0,
         playerJumpVy: 0,
-        playerAnimFrame: 0,
-        playerPose: "idle",
         time: 0,
+        combat,
+        targets,
       };
       setMobs(sim.mobs);
       onHudUpdate({
@@ -406,13 +488,18 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const stickMag = Math.hypot(tMove.forward, tMove.strafe);
     const sprinting =
       keys.has("ShiftLeft") || keys.has("ShiftRight") || touchSprintRef.current || stickMag > 0.88;
-    const speed = sprinting ? RUN_CELLS : WALK_CELLS;
+    const paladin = paladinRef.current;
+    const blocking = mouseBlockRef.current || keys.has("KeyQ") || touchBlockRef.current;
+    const swinging = paladin !== null && paladin.animator.state !== "none";
+    const speed = (blocking ? BLOCK_CELLS : sprinting ? RUN_CELLS : WALK_CELLS) * (swinging ? 0.72 : 1);
 
     if (jumpQueueRef.current) {
       jumpQueueRef.current = false;
       if (world.playerJumpY <= 0.01) world.playerJumpVy = 4.6;
     }
 
+    const x0 = walker.x;
+    const z0 = walker.z;
     walker.step(dt, forward, strafe, speed);
 
     // Smooth vertical stair/basin height + jump arc.
@@ -431,24 +518,47 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const py = world.playerFloor * CELL_M + world.playerJumpY;
     const pz = walker.z * CELL_M;
 
-    if (world.playerJumpY > 0.05) {
-      world.playerPose = "jump";
-      world.playerAnimFrame += dt * 30;
-    } else if (walker.speedNow > 0.35) {
-      world.playerPose = sprinting || walker.speedNow > 3.1 ? "run" : "walk";
-      world.playerAnimFrame += walker.speedNow * CELL_M * dt * 10.5;
-    } else {
-      world.playerPose = "idle";
-      world.playerAnimFrame += dt * 30;
-    }
-
-    if (playerGroupRef.current) {
-      playerGroupRef.current.position.set(px, py, pz);
-      playerGroupRef.current.rotation.y = walker.bodyYaw;
-    }
-
-    // Step all roaming NPCs/mobs and apply transforms directly to Three.js groups.
+    // Step all roaming NPCs/mobs first so the blade tests against where they are now.
     sim.step(dt, px, pz);
+    for (let i = 0; i < sim.mobs.length; i++) {
+      const t = world.targets[i];
+      t.x = sim.mobs[i].wx;
+      t.y = sim.mobs[i].wy;
+      t.z = sim.mobs[i].wz;
+    }
+
+    // The paladin always squares up to where the camera aims; the gait is driven by the
+    // distance actually covered (after wall collision), in his own frame.
+    if (paladin) {
+      const facing = walker.yaw + Math.PI;
+      const vx = dt > 0 ? ((walker.x - x0) * CELL_M) / dt : 0;
+      const vz = dt > 0 ? ((walker.z - z0) * CELL_M) / dt : 0;
+      const sinF = Math.sin(facing);
+      const cosF = Math.cos(facing);
+      paladin.group.visible = true;
+      paladin.group.position.set(px, py, pz);
+      paladin.group.rotation.y = facing;
+      paladin.setFirstPerson(firstPerson);
+      paladin.update(
+        dt,
+        {
+          moveX: vx * cosF - vz * sinF,
+          moveZ: vx * sinF + vz * cosF,
+          aimPitch: firstPerson ? walker.pitch : -walker.pitch * 0.45,
+          turnRate: dt > 0 ? (walker.yaw - prevYawRef.current) / dt : 0,
+          air: world.playerJumpY,
+          block: blocking,
+          attack: attackQueueRef.current,
+          firstPerson,
+        },
+        world.playerFloor * CELL_M,
+        world.combat
+      );
+    }
+    attackQueueRef.current = false;
+    prevYawRef.current = walker.yaw;
+    if (!keys.has("KeyC")) freeLookRef.current *= Math.exp(-dt * 7);
+
     for (let i = 0; i < sim.mobs.length; i++) {
       const m = sim.mobs[i];
       const g = mobGroupRefs.current[i];
@@ -460,7 +570,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
 
     // Update camera (3rd-person follow with wall/ceiling collision, or 1st-person eye).
     const persp = camera as THREE.PerspectiveCamera;
-    const desiredFov = responsiveFov(68, size.width, size.height);
+    const desiredFov = responsiveFov(firstPerson ? FIRST_PERSON_FOV : 68, size.width, size.height);
     if (Math.abs(persp.fov - desiredFov) > 0.2) {
       persp.fov = desiredFov;
       persp.updateProjectionMatrix();
@@ -468,13 +578,16 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const aspect = Math.max(0.35, size.width / Math.max(1, size.height));
     const distScale = aspect < 0.85 ? 1.24 : 1;
 
+    const kick = paladin ? paladin.shake.value : 0;
     if (firstPerson) {
-      const eyeY = (world.playerFloor + EYE_HEIGHT_CELLS + Math.sin(walker.bob) * 0.012) * CELL_M + world.playerJumpY;
-      persp.position.set(px, eyeY, pz);
+      // True first person: the camera sits at the paladin's eyes, so the arms, sword and
+      // shield in view are the same ones everyone else sees.
+      if (paladin) persp.position.copy(paladin.getEye(eyeRef.current));
+      else persp.position.set(px, (world.playerFloor + EYE_HEIGHT_CELLS) * CELL_M + world.playerJumpY, pz);
       persp.rotation.order = "YXZ";
-      persp.rotation.y = walker.yaw;
-      persp.rotation.x = walker.pitch;
-      persp.rotation.z = 0;
+      persp.rotation.y = walker.yaw + Math.sin(world.time * 61) * kick * 0.012;
+      persp.rotation.x = walker.pitch + Math.sin(world.time * 47) * kick * 0.016;
+      persp.rotation.z = Math.sin(world.time * 53) * kick * 0.02;
     } else {
       const cam = resolveThirdPersonCam(
         dungeon,
@@ -482,11 +595,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         px,
         world.playerFloor * CELL_M,
         pz,
-        walker.yaw,
+        walker.yaw + freeLookRef.current,
         walker.pitch,
         camDistRef.current * distScale
       );
-      persp.position.set(cam.cx, cam.cy, cam.cz);
+      persp.position.set(cam.cx, cam.cy + Math.sin(world.time * 47) * kick * 0.03, cam.cz);
       persp.up.set(0, 1, 0);
       persp.lookAt(cam.tx, cam.ty, cam.tz);
     }
@@ -494,7 +607,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
 
     // Update nearest shadow lamps + render multi-pass crypt frame.
     view.updateLights(dt, walker.x, walker.z, lamps, dungeon);
-    view.renderFrame(world.time, dt, px, py, pz, size.width, size.height);
+    // The carried lantern rides half a metre above the helm so it lights the steel without burning it out.
+    view.renderFrame(world.time, dt, px, py + 0.55, pz, size.width, size.height);
 
     // Throttle React pose/HUD ticks cleanly (~28 Hz for crisp animations, ~6 Hz for room badge & minimap).
     animTimerRef.current += dt;
@@ -546,22 +660,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     }
   }, 1);
 
-  // Use animTick to drive smooth pose frame updates on Paladin & NPCs.
+  // Use animTick to drive smooth pose frame updates on the NPCs (the paladin animates himself).
   void animTick;
-  const world = worldRef.current;
 
   return (
     <>
-      <group ref={playerGroupRef}>
-        <CharacterModel
-          classType="paladin"
-          scale={0.86}
-          pose={world ? world.playerPose : "idle"}
-          animFrame={world ? world.playerAnimFrame : 0}
-          expression="focus"
-          visible={!firstPerson}
-        />
-      </group>
       {mobs.map((m, idx) => (
         <group
           key={m.id}
@@ -632,6 +735,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const touchMoveRef = useRef<{ forward: number; strafe: number }>({ forward: 0, strafe: 0 });
   const touchSprintRef = useRef(false);
   const jumpQueueRef = useRef(false);
+  const attackQueueRef = useRef(false);
+  const touchBlockRef = useRef(false);
   const stickPointerRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
 
   const handleHudUpdate = useCallback((patch: Partial<HudInfo>) => {
@@ -740,6 +845,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           touchMoveRef={touchMoveRef}
           touchSprintRef={touchSprintRef}
           jumpQueueRef={jumpQueueRef}
+          attackQueueRef={attackQueueRef}
+          touchBlockRef={touchBlockRef}
           onTouchDetected={handleTouchDetected}
         />
       </Canvas>
@@ -900,8 +1007,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {hud.pointerLocked
-            ? "WASD / Arrows Move · Shift Sprint · Space Jump · Scroll Zoom · Esc Unlock Mouse"
-            : "Click or Drag to Look · WASD / Arrows Move · Shift Sprint · Space Jump · V Camera · M Map"}
+            ? "LMB Swing (click again to chain) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · Esc Unlock"
+            : "Click to capture the mouse · F Swing · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · M Map"}
         </div>
       ) : null}
 
@@ -1006,6 +1113,59 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             >
               RUN
             </button>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  touchBlockRef.current = true;
+                }}
+                onPointerUp={() => {
+                  touchBlockRef.current = false;
+                }}
+                onPointerCancel={() => {
+                  touchBlockRef.current = false;
+                }}
+                onPointerLeave={() => {
+                  touchBlockRef.current = false;
+                }}
+                style={{
+                  width: 58,
+                  height: 58,
+                  borderRadius: "50%",
+                  border: "2px solid rgba(160, 200, 255, 0.7)",
+                  background: "rgba(14, 22, 34, 0.76)",
+                  color: "#bcd8ff",
+                  fontWeight: 900,
+                  fontSize: 11,
+                  touchAction: "none",
+                }}
+              >
+                SHIELD
+              </button>
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  attackQueueRef.current = true;
+                }}
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: "50%",
+                  border: "2px solid rgba(255, 120, 100, 0.8)",
+                  background: "rgba(40, 12, 10, 0.78)",
+                  color: "#ffb4a6",
+                  fontWeight: 900,
+                  fontSize: 13,
+                  letterSpacing: "0.04em",
+                  touchAction: "none",
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.45)",
+                }}
+              >
+                SWING
+              </button>
+            </div>
             <button
               type="button"
               onPointerDown={(e) => {

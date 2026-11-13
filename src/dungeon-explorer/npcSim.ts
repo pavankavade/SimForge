@@ -24,6 +24,11 @@ export interface MobAgent {
   animFrame: number;
   path: Array<[number, number]>;
   waitTimer: number;
+  /** Seconds left reeling from a sword blow, and the knock-back velocity (cells/s). */
+  stun: number;
+  kx: number;
+  kz: number;
+  calm: Expression;
 }
 
 function mulberry32(seed: number) {
@@ -176,6 +181,10 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
         animFrame: Math.floor(rng() * 60),
         path: [],
         waitTimer: rng() * 0.25,
+        stun: 0,
+        kx: 0,
+        kz: 0,
+        calm: MOB_EXPR[classType] ?? "neutral",
       });
       placed++;
     }
@@ -202,6 +211,30 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
 
     for (let i = 0; i < mobs.length; i++) {
       const m = mobs[i];
+      if (m.stun > 0) {
+        // Struck: thrown back along the cut, sliding to a stop against whatever is behind.
+        m.stun -= dt;
+        P.x = m.cx + m.kx * dt;
+        P.y = m.cz + m.kz * dt;
+        collider.collide(P);
+        m.cx = P.x;
+        m.cz = P.y;
+        const drag = Math.exp(-dt * 5);
+        m.kx *= drag;
+        m.kz *= drag;
+        m.wx = (m.cx - d.W / 2) * CELL_M;
+        m.wz = (m.cz - d.H / 2) * CELL_M;
+        m.wy = floorAt(d, m.cx, m.cz) * CELL_M;
+        m.pose = m.stun > 0.35 ? "sprawl" : "cower";
+        m.expression = m.stun > 0.35 ? "pain" : "dazed";
+        m.animFrame += dt * 30;
+        if (m.stun <= 0) {
+          m.expression = m.calm;
+          m.path = [];
+          m.waitTimer = 0.2;
+        }
+        continue;
+      }
       if (m.waitTimer > 0) {
         m.waitTimer -= dt;
         m.pose = "idle";
@@ -295,5 +328,16 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
     }
   };
 
-  return { mobs, step };
+  /** A sword blow landed on mob `id`, travelling along (dirX, dirZ) in world space. */
+  const hit = (id: number, dirX: number, dirZ: number) => {
+    for (const m of mobs) {
+      if (m.id !== id) continue;
+      m.stun = 1.25;
+      m.kx = (dirX * 3.4) / CELL_M;
+      m.kz = (dirZ * 3.4) / CELL_M;
+      m.yaw = Math.atan2(-dirX, -dirZ);
+    }
+  };
+
+  return { mobs, step, hit };
 }
