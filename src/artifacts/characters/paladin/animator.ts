@@ -3,7 +3,7 @@
 // with the look direction, so first and third person see the same pose), and the sword arm runs
 // through springs so swings carry weight: the blade lags on the way in and overshoots on the stop.
 import * as THREE from "three";
-import { B, HIP_Y, LEG_LOWER, LEG_UPPER, REST, basisQuat, type BoneName, type Rig } from "./rig";
+import { B, DIM, EYE_LOCAL, REST, basisQuat, type BoneName, type Rig } from "./rig";
 
 export interface PaladinInput {
   /** Ground velocity in body space, m/s: x toward the character's left, z forward. */
@@ -294,9 +294,8 @@ const _ctl = new THREE.Vector3();
 const _w = new THREE.Vector3();
 const _p = new THREE.Vector3();
 const DOWN = new THREE.Vector3(0, -1, 0);
-const LEG_REACH = (LEG_UPPER + LEG_LOWER) * 0.988;
-/** Ankle relative to the ball of the foot, in the foot's frame. */
-const BALL_TO_ANKLE = new THREE.Vector3(0, REST.footL.y - REST.toeL.y, REST.footL.z - REST.toeL.z);
+/** Ankle relative to the ball of the foot, in the foot's frame (from the rest pose, set each update). */
+const BALL_TO_ANKLE = new THREE.Vector3();
 
 function quadThrough(out: V3, a: V3, mid: V3, b: V3, u: number): V3 {
   _ctl.copy(mid).multiplyScalar(2).addScaledVector(a, -0.5).addScaledVector(b, -0.5);
@@ -333,7 +332,7 @@ export class PaladinAnimator {
   private dirZ = 1;
   private stride = 0.5;
   private sf = 0.62;
-  private hipY = HIP_Y - 0.025;
+  private hipY = DIM.hipY - 0.025;
   private airBlend = 0;
   private fp = 0;
   private wasAir = false;
@@ -525,6 +524,8 @@ export class PaladinAnimator {
 
   update(dt: number, rig: Rig, input: PaladinInput): void {
     this.time += dt;
+    BALL_TO_ANKLE.set(0, REST.footL.y - REST.toeL.y, REST.footL.z - REST.toeL.z);
+    const legReach = (DIM.legUpper + DIM.legLower) * 0.988;
     const speed = Math.hypot(input.moveX, input.moveZ);
     const k6 = 1 - Math.exp(-dt * 6);
     const k10 = 1 - Math.exp(-dt * 10);
@@ -577,7 +578,7 @@ export class PaladinAnimator {
     const lunge = striking || this.state === "recover" ? P.lean * 0.35 : 0;
     const hipsX = sway;
     const hipsZ = 0.01 + this.run * 0.03 * forwardness + lunge;
-    let hipTarget = HIP_Y - 0.025 - P.drop;
+    let hipTarget = DIM.hipY - 0.025 - P.drop;
     for (const side of [1, -1]) {
       const f = side > 0 ? this.footL : this.footR;
       _q1.setFromEuler(_e.set(f.pitch, f.yaw, 0, "YXZ"));
@@ -585,7 +586,7 @@ export class PaladinAnimator {
       const ax = _a.x + f.x - (hipsX + side * REST.thighL.x);
       const az = _a.z + f.z - hipsZ;
       const ay = _a.y + f.y + REST.toeL.y;
-      const reach = ay + Math.sqrt(Math.max(0.04, LEG_REACH * LEG_REACH - ax * ax - az * az)) + (HIP_Y - REST.thighL.y);
+      const reach = ay + Math.sqrt(Math.max(0.04, legReach * legReach - ax * ax - az * az)) + (DIM.hipY - REST.thighL.y);
       if (reach < hipTarget) hipTarget = reach;
     }
     this.hipY += (hipTarget - this.hipY) * (1 - Math.exp(-dt * 20));
@@ -629,7 +630,7 @@ export class PaladinAnimator {
     // --- Arms ---------------------------------------------------------------------------------
     // Aim space: origin at the eyes (level head), pitched with the look direction.
     _aim.setFromAxisAngle(_x.set(1, 0, 0), -pitchUp * 0.9);
-    const eye = _c.set(0, 0.1, 0.085).add(rig.mp[B.head]);
+    const eye = _c.copy(EYE_LOCAL).add(rig.mp[B.head]);
 
     // Weapon sway: the arms trail a turn, and bob with the stride.
     const swayT = _a.set(-input.turnRate * 0.014, 0, 0);

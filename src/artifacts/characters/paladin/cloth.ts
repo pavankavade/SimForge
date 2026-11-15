@@ -95,6 +95,11 @@ export class Cloth {
     return rig.toModel(s.bone, _q, out).applyMatrix4(root.matrixWorld);
   }
 
+  /** Hang the cloth afresh on the next step, wherever the character is by then. */
+  invalidate(): void {
+    this.ready = false;
+  }
+
   /** Drop the cloth into a hanging rest state (first frame, teleports). */
   reset(rig: Rig, root: THREE.Object3D): void {
     const { cols, rows } = this.spec;

@@ -13,7 +13,26 @@ import { THEMES, type ThemeName } from "./dungeon/themes";
 import { CELL_M, createDungeonView, type ScanSet } from "./dungeon/view";
 import { createWalker } from "./dungeon/walker";
 import { createMobSimulation, type MobAgent } from "./npcSim";
-import { createPaladin, createPaladinSfx, type CombatTarget, type CombatWorld, type Paladin, type PaladinSfx } from "./paladin";
+import {
+  CharacterCustomizer,
+  initialEquipment,
+  initialSpec,
+  saveCharacter,
+  type CustomizerTab,
+  type PanelLayout,
+  type ShowcaseView,
+} from "./CharacterCustomizer";
+import {
+  createPaladin,
+  createPaladinSfx,
+  type ArmorEquipment,
+  type ArmorSlot,
+  type CombatTarget,
+  type CombatWorld,
+  type HumanSpec,
+  type Paladin,
+  type PaladinSfx,
+} from "../artifacts/characters/paladin";
 
 // A man in full plate: brisk walk, heavy run, and a slow advance behind the shield.
 const WALK_CELLS = 1.5;
@@ -101,11 +120,33 @@ interface HudInfo {
   loading: string | null;
 }
 
+/** Character-screen framing the panel controls: turntable spin, framed height (m), target lift (m). */
+interface Showcase {
+  spin: number;
+  zoom: number;
+  lift: number;
+}
+
+const SHOW_ZOOM: Record<ShowcaseView, number> = { body: 2.25, face: 0.52 };
+const SHOW_ZOOM_MIN = 0.42;
+const SHOW_ZOOM_MAX = 2.4;
+
 interface DungeonSceneProps {
   seed: number;
   roomCount: number;
   theme: ThemeName;
   firstPerson: boolean;
+  /** Who the paladin is; a change rebuilds the body (debounced). */
+  spec: HumanSpec;
+  equipment: ArmorEquipment;
+  /** The character screen is open: the paladin stands still and turns to a showcase camera. */
+  customizing: boolean;
+  showcaseRef: React.RefObject<Showcase>;
+  panel: PanelLayout;
+  onCharacterBusy: (busy: boolean) => void;
+  /** Render the inventory icons (once) and hand them back. */
+  iconsWanted: boolean;
+  onIcons: (icons: Partial<Record<ArmorSlot, string>>) => void;
   onHudUpdate: (patch: Partial<HudInfo>) => void;
   minimapCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   touchMoveRef: React.RefObject<{ forward: number; strafe: number }>;
@@ -170,6 +211,14 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   roomCount,
   theme,
   firstPerson,
+  spec,
+  equipment,
+  customizing,
+  showcaseRef,
+  panel,
+  onCharacterBusy,
+  iconsWanted,
+  onIcons,
   onHudUpdate,
   minimapCanvasRef,
   touchMoveRef,
@@ -198,6 +247,21 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const [animTick, setAnimTick] = useState(0);
   const animTimerRef = useRef(0);
   const hudTimerRef = useRef(0);
+  const customizingRef = useRef(customizing);
+  customizingRef.current = customizing;
+  const iconsDoneRef = useRef(false);
+  const equipmentRef = useRef(equipment);
+  equipmentRef.current = equipment;
+  // The showcase camera's own state while the character screen is open.
+  const showRef = useRef({
+    active: false,
+    yaw: 0,
+    maxDist: 2,
+    facing: 0,
+    fov: 40,
+    camPos: new THREE.Vector3(),
+    camTarget: new THREE.Vector3(),
+  });
 
   OUTPUT_HEIGHT.value = Math.max(480, size.height);
 
@@ -218,13 +282,61 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     };
   }, [gl, scene, camera]);
 
-  // The playable paladin: one rigged body for both first and third person.
+  // The playable paladin: one rigged body for both first and third person, baked from `spec`.
+  // A rebuild takes about half a second, so changes wait for a short pause (slider drags), the old
+  // body stays until the new one is ready, and a build that finishes after a newer one is dropped.
+  const specKey = useMemo(() => JSON.stringify({ ...spec, name: "" }), [spec]);
+  const specRef = useRef(spec);
+  specRef.current = spec;
+  const buildSerialRef = useRef(0);
+  const shownSerialRef = useRef(0);
+  const unmountedRef = useRef(false);
   useEffect(() => {
-    const paladin = createPaladin(gl);
-    paladin.materials.setEnvIntensity(0.45);
-    paladin.group.visible = false;
-    paladinRef.current = paladin;
-    scene.add(paladin.group, paladin.fx);
+    const serial = ++buildSerialRef.current;
+    const first = !paladinRef.current;
+    onCharacterBusy(true);
+    const timer = window.setTimeout(() => {
+      createPaladin(gl, { character: specRef.current })
+        .then((p) => {
+          if (unmountedRef.current || serial < shownSerialRef.current) {
+            p.dispose();
+            return;
+          }
+          shownSerialRef.current = serial;
+          p.materials.setEnvIntensity(0.45);
+          const eq = equipmentRef.current;
+          for (const slot of Object.keys(eq) as ArmorSlot[]) p.setEquipped(slot, eq[slot]);
+          const old = paladinRef.current;
+          if (old) {
+            p.group.position.copy(old.group.position);
+            p.group.rotation.copy(old.group.rotation);
+            p.group.visible = old.group.visible;
+            scene.remove(old.group, old.fx);
+            old.dispose();
+          } else {
+            p.group.visible = false;
+          }
+          paladinRef.current = p;
+          scene.add(p.group, p.fx);
+          if (serial === buildSerialRef.current) onCharacterBusy(false);
+        })
+        .catch((err: unknown) => {
+          console.error("paladin failed to load", err);
+          if (serial === buildSerialRef.current) onCharacterBusy(false);
+        });
+    }, first ? 0 : 220);
+    return () => window.clearTimeout(timer);
+  }, [gl, scene, specKey, onCharacterBusy]);
+
+  // Armour changes swap visibility only.
+  useEffect(() => {
+    const p = paladinRef.current;
+    if (!p) return;
+    for (const slot of Object.keys(equipment) as ArmorSlot[]) if (p.equipment[slot] !== equipment[slot]) p.setEquipped(slot, equipment[slot]);
+  }, [equipment]);
+
+  useEffect(() => {
+    unmountedRef.current = false;
     const sfx = createPaladinSfx();
     sfxRef.current = sfx;
     // Browsers only start audio after a gesture.
@@ -234,8 +346,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     return () => {
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
-      scene.remove(paladin.group, paladin.fx);
-      paladin.dispose();
+      unmountedRef.current = true;
+      const paladin = paladinRef.current;
+      if (paladin) {
+        scene.remove(paladin.group, paladin.fx);
+        paladin.dispose();
+      }
       sfx.dispose();
       paladinRef.current = null;
       sfxRef.current = null;
@@ -247,6 +363,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const dom = gl.domElement;
     const onKeyDown = (e: KeyboardEvent) => {
       if (!e.repeat) keysRef.current.add(e.code);
+      if (customizingRef.current) return;
       if (e.code === "Space" && worldRef.current) {
         const w = worldRef.current;
         if (w.playerJumpY <= 0.01) w.playerJumpVy = 4.6;
@@ -255,6 +372,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     };
     // Mouse buttons: left swings (once the mouse is captured), right raises the shield.
     const onMouseDown = (e: MouseEvent) => {
+      if (customizingRef.current) return;
       if (e.button === 2) mouseBlockRef.current = true;
       if (e.button === 0 && document.pointerLockElement === dom) attackQueueRef.current = true;
     };
@@ -269,7 +387,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       mouseBlockRef.current = false;
     };
     const onClick = () => {
-      if (lastTouchDownRef.current) return;
+      if (lastTouchDownRef.current || customizingRef.current) return;
       if (document.pointerLockElement !== dom) {
         try {
           const p = dom.requestPointerLock?.() as unknown as Promise<void> | undefined;
@@ -319,6 +437,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       } else {
         return;
       }
+      // Character screen: sideways drags spin the paladin on the spot, vertical ones pan up and down.
+      if (customizingRef.current) {
+        const sc = showcaseRef.current;
+        sc.spin += dx * (lookPointerRef.current?.touch ? 0.016 : 0.011);
+        sc.lift = Math.max(-0.9, Math.min(0.9, sc.lift + dy * 0.0028 * (sc.zoom / 1.4)));
+        return;
+      }
       // Hold C in third person to orbit the camera around the paladin without turning him.
       if (!firstPerson && keysRef.current.has("KeyC")) freeLookRef.current -= dx * sens;
       else world.walker.yaw -= dx * sens;
@@ -327,6 +452,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       world.walker.pitch = Math.max(minPitch, Math.min(maxPitch, world.walker.pitch + (firstPerson ? -dy : dy) * sens));
     };
     const onWheel = (e: WheelEvent) => {
+      if (customizingRef.current) {
+        const sc = showcaseRef.current;
+        sc.zoom = Math.max(SHOW_ZOOM_MIN, Math.min(SHOW_ZOOM_MAX, sc.zoom * Math.exp(e.deltaY * 0.0012)));
+        return;
+      }
       camDistRef.current = Math.max(1.6, Math.min(5.2, camDistRef.current + e.deltaY * 0.0025));
     };
 
@@ -358,7 +488,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       window.removeEventListener("pointermove", onPointerMove);
       dom.removeEventListener("wheel", onWheel);
     };
-  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef]);
+  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, showcaseRef]);
 
   // Build / rebuild the dungeon floor when seed, roomCount, or theme changes.
   useEffect(() => {
@@ -477,19 +607,67 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const dt = Math.min(rawDelta, 0.05);
     world.time += dt;
     const { dungeon, level, walker, sim, lamps } = world;
+    const persp = camera as THREE.PerspectiveCamera;
+    const show = showRef.current;
+    const sc = showcaseRef.current;
+    if (customizingRef.current && !show.active) {
+      // Open the character screen: find the most open direction around the paladin (preferring
+      // in front of him) for the camera, and glide there from wherever the camera is now.
+      const front = walker.yaw + Math.PI;
+      const fx = walker.x * CELL_M;
+      const fz = walker.z * CELL_M;
+      let best = front;
+      let bestDist = 1;
+      let bestScore = -Infinity;
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2;
+        const c = resolveThirdPersonCam(dungeon, level, fx, world.playerFloor * CELL_M, fz, front + a, 0.05, 4.4);
+        const dist = Math.hypot(c.cx - fx, c.cz - fz);
+        const score = Math.min(dist, 3.6) + 0.7 * Math.cos(a);
+        if (score > bestScore) {
+          bestScore = score;
+          best = front + a;
+          bestDist = dist;
+        }
+      }
+      show.active = true;
+      show.yaw = best;
+      show.maxDist = Math.max(0.9, bestDist - 0.15);
+      show.facing = front;
+      show.fov = persp.fov;
+      show.camPos.copy(persp.position);
+      persp.getWorldDirection(show.camTarget).multiplyScalar(2).add(persp.position);
+      sc.spin = 0;
+      sc.lift = 0;
+      if (document.pointerLockElement) document.exitPointerLock?.();
+      keysRef.current.clear();
+      mouseBlockRef.current = false;
+    } else if (!customizingRef.current && show.active) {
+      // Back to the game facing the way he was turned, with the camera behind him.
+      show.active = false;
+      walker.yaw = show.facing - Math.PI;
+      prevYawRef.current = walker.yaw;
+      freeLookRef.current = 0;
+      persp.clearViewOffset();
+    }
     const keys = keysRef.current;
     const kbForward =
       (keys.has("KeyW") || keys.has("ArrowUp") ? 1 : 0) - (keys.has("KeyS") || keys.has("ArrowDown") ? 1 : 0);
     const kbStrafe =
       (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0) - (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0);
     const tMove = touchMoveRef.current;
-    const forward = Math.max(-1, Math.min(1, kbForward + tMove.forward));
-    const strafe = Math.max(-1, Math.min(1, kbStrafe + tMove.strafe));
+    const still = show.active ? 0 : 1;
+    const forward = Math.max(-1, Math.min(1, kbForward + tMove.forward)) * still;
+    const strafe = Math.max(-1, Math.min(1, kbStrafe + tMove.strafe)) * still;
     const stickMag = Math.hypot(tMove.forward, tMove.strafe);
     const sprinting =
       keys.has("ShiftLeft") || keys.has("ShiftRight") || touchSprintRef.current || stickMag > 0.88;
     const paladin = paladinRef.current;
-    const blocking = mouseBlockRef.current || keys.has("KeyQ") || touchBlockRef.current;
+    const blocking = !show.active && (mouseBlockRef.current || keys.has("KeyQ") || touchBlockRef.current);
+    if (show.active) {
+      attackQueueRef.current = false;
+      jumpQueueRef.current = false;
+    }
     const swinging = paladin !== null && paladin.animator.state !== "none";
     const speed = (blocking ? BLOCK_CELLS : sprinting ? RUN_CELLS : WALK_CELLS) * (swinging ? 0.72 : 1);
 
@@ -529,8 +707,15 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
 
     // The paladin always squares up to where the camera aims; the gait is driven by the
     // distance actually covered (after wall collision), in his own frame.
+    if (show.active) {
+      // Turntable: ease toward the showcase camera plus the player's spin.
+      let d = show.yaw + sc.spin - show.facing;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      show.facing += d * (1 - Math.exp(-dt * 12));
+    }
+    const fp = firstPerson && !show.active;
     if (paladin) {
-      const facing = walker.yaw + Math.PI;
+      const facing = show.active ? show.facing : walker.yaw + Math.PI;
       const vx = dt > 0 ? ((walker.x - x0) * CELL_M) / dt : 0;
       const vz = dt > 0 ? ((walker.z - z0) * CELL_M) / dt : 0;
       const sinF = Math.sin(facing);
@@ -538,18 +723,18 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       paladin.group.visible = true;
       paladin.group.position.set(px, py, pz);
       paladin.group.rotation.y = facing;
-      paladin.setFirstPerson(firstPerson);
+      paladin.setFirstPerson(fp);
       paladin.update(
         dt,
         {
           moveX: vx * cosF - vz * sinF,
           moveZ: vx * sinF + vz * cosF,
-          aimPitch: firstPerson ? walker.pitch : -walker.pitch * 0.45,
-          turnRate: dt > 0 ? (walker.yaw - prevYawRef.current) / dt : 0,
+          aimPitch: show.active ? 0 : fp ? walker.pitch : -walker.pitch * 0.45,
+          turnRate: !show.active && dt > 0 ? (walker.yaw - prevYawRef.current) / dt : 0,
           air: world.playerJumpY,
           block: blocking,
           attack: attackQueueRef.current,
-          firstPerson,
+          firstPerson: fp,
         },
         world.playerFloor * CELL_M,
         world.combat
@@ -568,10 +753,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       }
     }
 
-    // Update camera (3rd-person follow with wall/ceiling collision, or 1st-person eye).
-    const persp = camera as THREE.PerspectiveCamera;
+    // Update camera (character showcase, 3rd-person follow with wall/ceiling collision, or 1st-person eye).
     const desiredFov = responsiveFov(firstPerson ? FIRST_PERSON_FOV : 68, size.width, size.height);
-    if (Math.abs(persp.fov - desiredFov) > 0.2) {
+    if (!show.active && Math.abs(persp.fov - desiredFov) > 0.2) {
       persp.fov = desiredFov;
       persp.updateProjectionMatrix();
     }
@@ -579,7 +763,43 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const distScale = aspect < 0.85 ? 1.24 : 1;
 
     const kick = paladin ? paladin.shake.value : 0;
-    if (firstPerson) {
+    let lightX = px;
+    let lightY = py + 0.55;
+    let lightZ = pz;
+    if (show.active) {
+      // Frame `zoom` metres of him (face .. head to toe) in the part of the screen the panel leaves
+      // free: the view offset slides the picture over, the distance stays inside the open space
+      // found on entry, and the lens makes up the rest.
+      const W = size.width;
+      const Hs = size.height;
+      const right = panel.side === "right";
+      const fracX = right ? Math.max(0.3, 1 - panel.size / W) : 1;
+      const fracY = right ? 1 : Math.max(0.3, 1 - panel.size / Hs);
+      persp.setViewOffset(W, Hs, right ? panel.size / 2 : 0, right ? 0 : panel.size / 2, W, Hs);
+      const floorY = world.playerFloor * CELL_M + world.playerJumpY;
+      const k = Math.max(0, Math.min(1, (sc.zoom - 0.45) / (2.25 - 0.45)));
+      const ty = Math.max(floorY + 0.25, Math.min(floorY + 1.8, floorY + 1.62 + (0.98 - 1.62) * k + sc.lift));
+      const dist = Math.min(show.maxDist, 0.75 + sc.zoom * 1.6);
+      const halfH = sc.zoom / 2 / fracY;
+      const halfW = (0.33 + sc.zoom * 0.18) / fracX;
+      const vfov = 2 * Math.atan(Math.max(halfH, halfW / aspect) / dist) * (180 / Math.PI);
+      const ease = 1 - Math.exp(-dt * 7);
+      show.fov += (Math.max(12, Math.min(80, vfov)) - show.fov) * ease;
+      show.camPos.lerp(
+        eyeRef.current.set(px + Math.sin(show.yaw) * dist, ty + 0.06 + 0.08 * k, pz + Math.cos(show.yaw) * dist),
+        ease
+      );
+      show.camTarget.lerp(eyeRef.current.set(px, ty, pz), ease);
+      persp.fov = show.fov;
+      persp.updateProjectionMatrix();      persp.position.copy(show.camPos);
+      persp.up.set(0, 1, 0);
+      persp.lookAt(show.camTarget);
+      // The lantern moves in front of him at head height, a little to one side: a soft key light
+      // on the face that doesn't burn out the top of the helm.
+      lightX = px + Math.sin(show.yaw + 0.5) * 1.5;
+      lightZ = pz + Math.cos(show.yaw + 0.5) * 1.5;
+      lightY = floorY - 0.15;
+    } else if (firstPerson) {
       // True first person: the camera sits at the paladin's eyes, so the arms, sword and
       // shield in view are the same ones everyone else sees.
       if (paladin) persp.position.copy(paladin.getEye(eyeRef.current));
@@ -608,7 +828,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     // Update nearest shadow lamps + render multi-pass crypt frame.
     view.updateLights(dt, walker.x, walker.z, lamps, dungeon);
     // The carried lantern rides half a metre above the helm so it lights the steel without burning it out.
-    view.renderFrame(world.time, dt, px, py + 0.55, pz, size.width, size.height);
+    view.renderFrame(world.time, dt, lightX, lightY, lightZ, size.width, size.height);
+    // Inventory icons: rendered off screen after the frame, once (they need the paladin built).
+    if (iconsWanted && !iconsDoneRef.current && paladin) {
+      iconsDoneRef.current = true;
+      onIcons(paladin.renderIcons(gl, 112));
+    }
 
     // Throttle React pose/HUD ticks cleanly (~28 Hz for crisp animations, ~6 Hz for room badge & minimap).
     animTimerRef.current += dt;
@@ -738,6 +963,36 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const attackQueueRef = useRef(false);
   const touchBlockRef = useRef(false);
   const stickPointerRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
+  // The character: who he is and what he wears, remembered between visits (CharacterCustomizer.tsx).
+  const [spec, setSpec] = useState<HumanSpec>(initialSpec);
+  const [equipment, setEquipment] = useState<ArmorEquipment>(initialEquipment);
+  const [customizing, setCustomizing] = useState(false);
+  const [characterBusy, setCharacterBusy] = useState(true);
+  const [customTab, setCustomTab] = useState<CustomizerTab>("face");
+  const [icons, setIcons] = useState<Partial<Record<ArmorSlot, string>>>({});
+  const iconsWanted = customizing && customTab === "gear";
+  // While the face or hair is being edited the helm comes off (without changing the loadout).
+  const shownEquipment = useMemo<ArmorEquipment>(
+    () => (customizing && (customTab === "face" || customTab === "hair") ? { ...equipment, helm: false } : equipment),
+    [customizing, customTab, equipment]
+  );
+  const customizingRef = useRef(false);
+  customizingRef.current = customizing;
+  const showcaseRef = useRef<Showcase>({ spin: 0, zoom: SHOW_ZOOM.face, lift: 0 });
+  useEffect(() => saveCharacter(spec, equipment), [spec, equipment]);
+  const handleCharacterBusy = useCallback((b: boolean) => setCharacterBusy(b), []);
+  const openCustomizer = useCallback((open: boolean) => {
+    if (open) {
+      showcaseRef.current.zoom = SHOW_ZOOM.face;
+      showcaseRef.current.lift = 0;
+      setCustomTab("face");
+    }
+    setCustomizing(open);
+  }, []);
+  const handleShowcaseView = useCallback((v: ShowcaseView) => {
+    showcaseRef.current.zoom = SHOW_ZOOM[v];
+    showcaseRef.current.lift = 0;
+  }, []);
 
   const handleHudUpdate = useCallback((patch: Partial<HudInfo>) => {
     setHud((prev) => ({ ...prev, ...patch }));
@@ -772,7 +1027,19 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Tab opens and closes the character screen (and never moves keyboard focus).
+      if (e.code === "Tab") {
+        e.preventDefault();
+        if (!e.repeat) openCustomizer(!customizingRef.current);
+        return;
+      }
       if (e.repeat) return;
+      if (customizingRef.current) {
+        if (e.code === "Escape") openCustomizer(false);
+        return;
+      }
+      // H lifts the helm off, so the face under it shows in third person.
+      if (e.code === "KeyH") setEquipment((eq) => ({ ...eq, helm: !eq.helm }));
       if (e.code === "KeyV") setFirstPerson((v) => !v);
       if (e.code === "KeyM") setShowMap((v) => !v);
       if (e.code === "KeyR") setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999);
@@ -783,12 +1050,19 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [openCustomizer]);
 
   const isPortrait = viewport.h > viewport.w;
   const isCompact = viewport.w < 760 || viewport.h < 520;
   const mobileMode = isTouchUI || isCompact;
   const mapPixels = isPortrait ? 94 : mobileMode ? 112 : 156;
+  // Character screen: panel on the right and the paladin on the left; on narrow portrait screens
+  // the panel takes the bottom half instead.
+  const panel: PanelLayout =
+    isPortrait && viewport.w < 700
+      ? { side: "bottom", size: Math.round(viewport.h * 0.5) }
+      : { side: "right", size: Math.round(Math.min(400, Math.max(280, viewport.w * 0.42))) };
+  const showGameHud = !customizing;
 
   const updateStick = (clientX: number, clientY: number) => {
     const s = stickPointerRef.current;
@@ -840,6 +1114,14 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           roomCount={roomCount}
           theme={theme}
           firstPerson={firstPerson}
+          spec={spec}
+          equipment={shownEquipment}
+          customizing={customizing}
+          showcaseRef={showcaseRef}
+          panel={panel}
+          onCharacterBusy={handleCharacterBusy}
+          iconsWanted={iconsWanted}
+          onIcons={setIcons}
           onHudUpdate={handleHudUpdate}
           minimapCanvasRef={minimapRef}
           touchMoveRef={touchMoveRef}
@@ -851,9 +1133,26 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         />
       </Canvas>
 
+      {customizing ? (
+        <CharacterCustomizer
+          spec={spec}
+          onSpec={setSpec}
+          equipment={equipment}
+          onEquipment={setEquipment}
+          busy={characterBusy}
+          layout={panel}
+          tab={customTab}
+          onTab={setCustomTab}
+          onView={handleShowcaseView}
+          onClose={() => openCustomizer(false)}
+          icons={icons}
+        />
+      ) : null}
+
       {/* Top-left compact HUD */}
       <div
         style={{
+          display: showGameHud ? undefined : "none",
           position: "fixed",
           top: "max(10px, env(safe-area-inset-top))",
           left: "max(10px, env(safe-area-inset-left))",
@@ -870,12 +1169,23 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           {hud.name}
         </div>
         <div style={{ fontSize: mobileMode ? 11 : 12, color: "#c9d2db", marginTop: 2 }}>
-          <b>Paladin</b> · {hud.roomLabel}
+          <b>{spec.name || "Paladin"}</b> · {hud.roomLabel}
         </div>
         <div style={{ fontSize: mobileMode ? 10 : 12, color: "#9fb0bf", marginTop: 1 }}>
           Rooms: <b>{hud.rooms}</b> (max 10) · Mobs: <b>{hud.mobs}</b> · {THEMES[theme].label}
         </div>
         <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={(e) => {
+              // Drop focus so Space (jump) does not press the button again.
+              e.currentTarget.blur();
+              openCustomizer(true);
+            }}
+            style={{ ...btnStyle, color: "#ffd84d" }}
+          >
+            {mobileMode ? "Character" : "Character (Tab)"}
+          </button>
           <button
             type="button"
             onClick={() => setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999)}
@@ -933,7 +1243,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       </div>
 
       {/* Dismissible Auto-Rotate / Landscape tip when holding phone upright */}
-      {isTouchUI && isPortrait && !rotateDismissed && !hud.loading ? (
+      {showGameHud && isTouchUI && isPortrait && !rotateDismissed && !hud.loading ? (
         <div
           style={{
             position: "fixed",
@@ -989,7 +1299,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       ) : null}
 
       {/* Desktop bottom controls hint (hidden when touch controls are visible) */}
-      {!isTouchUI ? (
+      {showGameHud && !isTouchUI ? (
         <div
           style={{
             position: "fixed",
@@ -1007,13 +1317,13 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {hud.pointerLocked
-            ? "LMB Swing (click again to chain) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · Esc Unlock"
-            : "Click to capture the mouse · F Swing · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · M Map"}
+            ? "LMB Swing (click again to chain) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · H Helm · Tab Character · Esc Unlock"
+            : "Click to capture the mouse · F Swing · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · H Helm · Tab Character · M Map"}
         </div>
       ) : null}
 
       {/* Touch Controls: Left virtual thumbstick + Right Jump / Run buttons */}
-      {isTouchUI && !hud.loading ? (
+      {showGameHud && isTouchUI && !hud.loading ? (
         <>
           <div
             onPointerDown={(e) => {
@@ -1193,7 +1503,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       ) : null}
 
       {/* Minimap (top-right on touch/mobile so right thumb action pad has clean space) */}
-      {showMap ? (
+      {showMap && showGameHud ? (
         <div
           style={{
             position: "fixed",

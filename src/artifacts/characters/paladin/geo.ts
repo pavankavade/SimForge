@@ -20,6 +20,11 @@ export interface Ring {
   rb?: number;
   /** Superellipse exponent: 2 = ellipse, higher = boxier, 1 = diamond. */
   n?: number;
+  /**
+   * Measured outline instead of the superellipse: radii from (x, z) at evenly spaced angles,
+   * starting at +Z and turning toward +X (rx / rf / rb are then only used for texture scale).
+   */
+  radial?: number[];
 }
 
 export interface LoftOpts {
@@ -39,6 +44,17 @@ const _v = new THREE.Vector3();
 export function ringPoint(r: Ring, a: number, inset: number, out: THREE.Vector3): THREE.Vector3 {
   const s = Math.sin(a);
   const c = Math.cos(a);
+  if (r.radial) {
+    const K = r.radial.length;
+    let f = (a / (Math.PI * 2)) * K;
+    f = ((f % K) + K) % K;
+    const i = Math.floor(f);
+    const k = f - i;
+    // Smooth (cosine) blend between samples so the outline has no creases.
+    const w = (1 - Math.cos(k * Math.PI)) / 2;
+    const R = Math.max(0.0005, r.radial[i] + (r.radial[(i + 1) % K] - r.radial[i]) * w - inset);
+    return out.set((r.x ?? 0) + s * R, r.y, (r.z ?? 0) + c * R);
+  }
   const e = 2 / (r.n ?? 2);
   const rx = Math.max(0.0005, r.rx - inset);
   const rz = Math.max(0.0005, (c >= 0 ? r.rf : r.rb ?? r.rf) - inset);

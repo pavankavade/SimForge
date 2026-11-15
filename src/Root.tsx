@@ -26,6 +26,7 @@ import { DURATION as LAVA_DURATION } from "./episodes/lava-bridge/timeline";
 import { ToonTest } from "./episodes/toon-test/ToonTest";
 import { CharacterLab, LAB_DURATION } from "./lab/CharacterLab";
 import { ProfileAvatar } from "./lab/ProfileAvatar";
+import { PaladinShowcase, SHOWCASE_DURATION } from "./lab/PaladinShowcase";
 import { slowFlightEpisode } from "./whatif/slow-flight";
 import { teleportEpisode } from "./whatif/teleport";
 import { reflexesEpisode } from "./whatif/reflexes";
@@ -153,6 +154,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="CastleWallThumbnail" component={CastleWallThumbnail} durationInFrames={CASTLE_WALL_DURATION} fps={30} width={1080} height={1920} />
       <Composition id="TornadoShelterThumbnail" component={TornadoShelterThumbnail} durationInFrames={TORNADO_DURATION} fps={30} width={1080} height={1920} defaultProps={{ variant: 0 }} />
       <Composition id="CharacterLab" component={CharacterLab} durationInFrames={LAB_DURATION} fps={30} width={1080} height={1920} />
+      <Composition id="PaladinShowcase" component={PaladinShowcase} durationInFrames={SHOWCASE_DURATION} fps={30} width={1080} height={1920} />
       <Composition id="ProfileAvatar" component={ProfileAvatar} durationInFrames={30} fps={30} width={1024} height={1024} defaultProps={{ classType: "paladin" }} />
       <Composition
         id={slowFlightEpisode.config.id}

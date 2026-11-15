@@ -33,7 +33,10 @@ export const BONE_NAMES = [
 
 export type BoneName = (typeof BONE_NAMES)[number];
 
-/** Rest position of every joint in model space (metres) and its parent. */
+/**
+ * Joint positions the armour was authored against (metres, model space) and each bone's parent.
+ * The live rest pose (`REST`) comes from the imported base human; see `setRest`.
+ */
 const DEF: Record<BoneName, { parent: BoneName | null; at: [number, number, number] }> = {
   hips: { parent: null, at: [0, 1.0, 0] },
   spine: { parent: "hips", at: [0, 1.1, 0] },
@@ -67,19 +70,57 @@ BONE_NAMES.forEach((n, i) => {
   B[n] = i;
 });
 
+/** Joint positions the armour pieces in build.ts were authored against (never changes). */
+export const AUTHOR: Record<BoneName, THREE.Vector3> = {} as Record<BoneName, THREE.Vector3>;
+/** The live rest pose: limbs straight down, every bone at identity. Set from the body by `setRest`. */
 export const REST: Record<BoneName, THREE.Vector3> = {} as Record<BoneName, THREE.Vector3>;
 BONE_NAMES.forEach((n) => {
-  REST[n] = new THREE.Vector3(DEF[n].at[0], DEF[n].at[1], DEF[n].at[2]);
+  AUTHOR[n] = new THREE.Vector3(DEF[n].at[0], DEF[n].at[1], DEF[n].at[2]);
+  REST[n] = AUTHOR[n].clone();
 });
 
-export const ARM_UPPER = REST.upperArmL.y - REST.foreArmL.y;
-export const ARM_FORE = REST.foreArmL.y - REST.handL.y;
-export const LEG_UPPER = REST.thighL.y - REST.shinL.y;
-export const LEG_LOWER = REST.shinL.y - REST.footL.y;
-export const ANKLE_Y = REST.footL.y;
-export const HIP_Y = REST.hips.y;
+export const PARENT: Record<BoneName, BoneName | null> = {} as Record<BoneName, BoneName | null>;
+BONE_NAMES.forEach((n) => {
+  PARENT[n] = DEF[n].parent;
+});
+
+/** Limb lengths and heights of the live rest pose (updated by `setRest`). */
+export const DIM = {
+  armUpper: 0,
+  armFore: 0,
+  legUpper: 0,
+  legLower: 0,
+  ankleY: 0,
+  hipY: 0,
+};
+
+function measure(): void {
+  DIM.armUpper = REST.upperArmL.y - REST.foreArmL.y;
+  DIM.armFore = REST.foreArmL.y - REST.handL.y;
+  DIM.legUpper = REST.thighL.y - REST.shinL.y;
+  DIM.legLower = REST.shinL.y - REST.footL.y;
+  DIM.ankleY = REST.footL.y;
+  DIM.hipY = REST.hips.y;
+}
+measure();
+
 /** Eye point in head-bone space. */
 export const EYE_LOCAL = new THREE.Vector3(0, 0.1, 0.085);
+
+/**
+ * Replace the rest pose (joint positions in model space, metres). Bones not given keep their
+ * offset from their parent. Call before building a Rig; every Rig made afterwards uses it.
+ */
+export function setRest(joints: Partial<Record<BoneName, THREE.Vector3>>, eye?: THREE.Vector3): void {
+  for (const n of BONE_NAMES) {
+    const j = joints[n];
+    const p = DEF[n].parent;
+    if (j) REST[n].copy(j);
+    else if (p !== null) REST[n].copy(AUTHOR[n]).sub(AUTHOR[p]).add(REST[p]);
+  }
+  if (eye) EYE_LOCAL.copy(eye);
+  measure();
+}
 
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();

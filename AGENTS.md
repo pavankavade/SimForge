@@ -307,6 +307,32 @@ Never use plain `meshStandardMaterial` boxes for people. Never fork the rig.
   - clipping weapons;
   - faces through hoods.
 
+### The realistic paladin (`src/artifacts/characters/paladin`)
+
+A second, realistic character: a rigged MakeHuman base human (CC0, exported by
+`scripts/blender/export-human.py` to `public/dungeon-explorer/assets/characters/`) with a
+fitted plate harness, mail, cloth, sword and shield, and the game's animation (walk, run, turn,
+three-cut combo, block, jump). The dungeon-explorer game plays him; videos use the same code.
+It is not the chibi cast: never mix the two in one shot.
+
+- **Who he is:** a `HumanSpec` (`spec.ts`: face morphs, build, skin, eyes, hair, beard).
+  `CHARACTERS` has Aldric, Garrick, Tomas and Rhys. The plates are refitted to every body.
+- **What he wears:** 16 pieces (`ARMOR_SLOTS`), each on or off on its own; the body part
+  underneath shows (`DEFAULT_EQUIPMENT` is full plate).
+- **In a video:** put `<PaladinActor>` (`PaladinActor.tsx`) in a `ThreeCanvas` Scene and drive it
+  by frame: `position(f)`, `yaw(f)` (0 faces +Z), `swings` (start frames; three close together
+  chain), `act(f)` (`block`, ...), `equipment`, `character`. Walking needs no input: the gait
+  follows how fast `position` moves. It replays the game simulation from frame 0 at a fixed step,
+  so every frame is deterministic. Key it to `BEATS` like any actor. He is about 1.8 m tall.
+- **Example:** `src/lab/PaladinShowcase.tsx` (composition `PaladinShowcase`: the shorts' hall,
+  walk in, combo, block). Check changes with
+  `node scripts/solo.mjs still PaladinShowcase out/misc/paladin-showcase/wip/f125.png --frame=125`.
+- **In plain three.js:** `createPaladin(renderer, { character })` returns the group to place and
+  `update(dt, input, floorY)`; `reset()` rewinds it; `renderIcons()` draws inventory icons.
+- **Changing the body or armour:** re-export the GLB with the Blender script (never edit the
+  asset by hand) and check the game's Paladin Lab (`npm run explorer`, then `?lab=paladin`;
+  `node scripts/paladin-shots.mjs <tag>` makes contact sheets) and the showcase still.
+
 ## 7. Sets and props
 
 - **Set:** start from `<DioramaHall>` (`src/artifacts/sets`). It is the cutaway hall used across the

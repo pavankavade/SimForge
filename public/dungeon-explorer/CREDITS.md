@@ -13,3 +13,5 @@ Dungeon Forge by Majid Manzarpour, MIT: the generator, room roles and post-proce
 "Dirt Floor" by eye-candy.xyz (Poly Haven, https://polyhaven.com/a/dirt_floor), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
 
 three.js: MIT, the three.js authors. https://github.com/mrdoob/three.js. Its notice, with the other libraries', is in THIRD-PARTY-NOTICES.md.
+
+Base human (body, eyes, eyebrows, eyelashes, short02 and short04 hair, young and middle-aged male skins, eye textures): MakeHuman (https://www.makehumancommunity.org), the MakeHuman system assets, licensed CC0 1.0 Universal. Exported with MPFB by scripts/blender/export-human.py; changed by Patch: one male body with face and build morphs, textures resized. MPFB itself is not distributed.

@@ -2,7 +2,17 @@
 // model, the rig and every animation outside the dungeon. Open the explorer with `?lab=paladin`.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { FX_LAYER, createPaladin, createPaladinSfx, type CombatWorld, type Paladin, type PaladinInput } from "./paladin";
+import {
+  CHARACTERS,
+  FX_LAYER,
+  characterByName,
+  createPaladin,
+  createPaladinSfx,
+  type ArmorSlot,
+  type CombatWorld,
+  type Paladin,
+  type PaladinInput,
+} from "../artifacts/characters/paladin";
 
 interface LabState {
   moveX: number;
@@ -18,6 +28,7 @@ interface LabState {
 
 interface LabApi {
   paladin: Paladin;
+  renderer: THREE.WebGLRenderer;
   wall: THREE.Object3D;
   dummy: THREE.Object3D;
   hits: { clang: number; hit: number };
@@ -25,6 +36,8 @@ interface LabApi {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   attack: () => void;
+  equip: (slot: ArmorSlot, on: boolean) => void;
+  setAllArmor: (on: boolean) => void;
   /** Advance `frames` fixed steps while paused (deterministic screenshots). */
   step: (frames: number, dt?: number) => void;
   view: (name: "front" | "back" | "left" | "right" | "three" | "close") => void;
@@ -54,7 +67,7 @@ function floorTexture(): THREE.Texture {
   return t;
 }
 
-export function mountPaladinLab(host: HTMLElement): LabApi {
+export async function mountPaladinLab(host: HTMLElement): Promise<LabApi> {
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -113,13 +126,19 @@ export function mountPaladinLab(host: HTMLElement): LabApi {
   key.position.set(-1.5, 4, 3);
   scene.add(key);
 
-  const paladin = createPaladin(renderer);
+  const params = new URLSearchParams(window.location.search);
+  const loading = document.createElement("div");
+  loading.textContent = "Loading character...";
+  loading.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);font:14px system-ui,sans-serif;color:#cfc8ba;";
+  host.appendChild(loading);
+  // `?head=classic` puts the earlier procedural head on the imported body, for comparison.
+  const paladin = await createPaladin(renderer, { character: characterByName(params.get("char")), classicHead: params.get("head") === "classic" });
+  loading.remove();
   scene.add(paladin.group, paladin.fx);
   const skeleton = new THREE.SkeletonHelper(paladin.rig.root);
   skeleton.visible = false;
   scene.add(skeleton);
 
-  const params = new URLSearchParams(window.location.search);
   const state: LabState = {
     moveX: 0,
     moveZ: 0,
@@ -220,6 +239,7 @@ export function mountPaladinLab(host: HTMLElement): LabApi {
 
   const api: LabApi = {
     paladin,
+    renderer,
     wall,
     dummy,
     hits,
@@ -233,6 +253,12 @@ export function mountPaladinLab(host: HTMLElement): LabApi {
       for (let i = 0; i < frames; i++) tick(dt);
       render();
     },
+    equip: (slot: ArmorSlot, on: boolean) => {
+      paladin.setEquipped(slot, on);
+    },
+    setAllArmor: (on: boolean) => {
+      paladin.setAllArmor(on);
+    },
     view: (name) => {
       const t = controls.target.set(0, 1.0, 0);
       const pos: Record<string, [number, number, number]> = {
@@ -241,9 +267,9 @@ export function mountPaladinLab(host: HTMLElement): LabApi {
         left: [3.6, 1.25, 0.2],
         right: [-3.6, 1.25, 0.2],
         three: [1.9, 1.55, 3.1],
-        close: [0.7, 1.5, 1.5],
+        close: [0.42, 1.64, 1.15],
       };
-      if (name === "close") t.set(0, 1.35, 0);
+      if (name === "close") t.set(0, 1.60, 0);
       camera.position.set(pos[name][0], pos[name][1], pos[name][2]);
       controls.update();
     },
@@ -292,10 +318,51 @@ export function mountPaladinLab(host: HTMLElement): LabApi {
   button("Bones", () => {
     state.bones = !state.bones;
   });
+  // Who is under the armour: each name reloads the lab with that character.
+  for (const key of Object.keys(CHARACTERS)) {
+    button(CHARACTERS[key].name, () => {
+      const q = new URLSearchParams(window.location.search);
+      q.set("char", key);
+      window.location.search = q.toString();
+    });
+  }
+  button("Full Plate", () => paladin.setAllArmor(true));
+  button("Helm Off", () => {
+    paladin.setAllArmor(true);
+    paladin.setEquipped("helm", false);
+  });
+  button("Arming Doublet", () => {
+    paladin.setAllArmor(false);
+    paladin.setEquipped("doublet", true);
+  });
+  button("Bare", () => {
+    paladin.setAllArmor(false);
+    paladin.setEquipped("doublet", false);
+  });
+  const armorBtn = (label: string, slot: ArmorSlot) => {
+    button(label, () => {
+      paladin.setEquipped(slot, !paladin.equipment[slot]);
+    });
+  };
+  armorBtn("Helm", "helm");
+  armorBtn("Gorget", "gorget");
+  armorBtn("Chest", "cuirass");
+  armorBtn("Shoulders", "pauldrons");
+  armorBtn("Arms", "arms");
+  armorBtn("Gauntlets", "gauntlets");
+  armorBtn("Waist", "waist");
+  armorBtn("Cuisses", "cuisses");
+  armorBtn("Greaves", "greaves");
+  armorBtn("Sabatons", "sabatons");
+  armorBtn("Mail", "mail");
+  armorBtn("Doublet", "doublet");
+  armorBtn("Cape", "cape");
+  armorBtn("Tabard", "tabard");
+  armorBtn("Sword", "sword");
+  armorBtn("Shield", "shield");
   for (const v of ["front", "back", "left", "three", "close"] as const) button(v, () => api.view(v));
   host.appendChild(panel);
   renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
 
-  (window as unknown as { __paladinLab: LabApi }).__paladinLab = api;
-  return api;
+  (window as unknown as { __paladinLab: LabApi }).__paladinLab = api;  return api;
 }

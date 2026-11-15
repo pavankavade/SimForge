@@ -1,0 +1,483 @@
+{
+ "source": "MakeHuman (CC0) via MPFB, scripts/blender/export-human.py",
+ "macro": {
+  "gender": 1.0,
+  "age": 0.5,
+  "muscle": 0.7,
+  "weight": 0.5,
+  "proportions": 1.0,
+  "height": 0.5,
+  "cupsize": 0.5,
+  "firmness": 0.5,
+  "race": {
+   "asian": 0.0,
+   "caucasian": 1.0,
+   "african": 0.0
+  }
+ },
+ "builds": {
+  "b_muscle": {
+   "muscle": 1.0
+  },
+  "b_heavy": {
+   "weight": 0.8
+  },
+  "b_lean": {
+   "weight": 0.25
+  }
+ },
+ "boneMap": {
+  "pelvis": "hips",
+  "spine_01": "spine",
+  "spine_02": null,
+  "spine_03": "chest",
+  "neck_01": "neck",
+  "head": "head",
+  "clavicle_l": "clavL",
+  "upperarm_l": "upperArmL",
+  "lowerarm_l": "foreArmL",
+  "hand_l": "handL",
+  "clavicle_r": "clavR",
+  "upperarm_r": "upperArmR",
+  "lowerarm_r": "foreArmR",
+  "hand_r": "handR",
+  "thigh_l": "thighL",
+  "calf_l": "shinL",
+  "foot_l": "footL",
+  "ball_l": "toeL",
+  "thigh_r": "thighR",
+  "calf_r": "shinR",
+  "foot_r": "footR",
+  "ball_r": "toeR"
+ },
+ "face": [
+  "jawWidth",
+  "jawSquare",
+  "chin",
+  "chinWidth",
+  "cheekbones",
+  "cheekHollow",
+  "brow",
+  "eyeSize",
+  "eyeSpacing",
+  "eyeTilt",
+  "hooded",
+  "noseSize",
+  "noseWidth",
+  "noseBridge",
+  "noseTip",
+  "lips",
+  "mouthWidth",
+  "earSize",
+  "skullWidth"
+ ],
+ "morphs": {
+  "body": [
+   "b_muscle",
+   "b_heavy",
+   "b_lean",
+   "f_jawWidth_p",
+   "f_jawWidth_n",
+   "f_jawSquare_p",
+   "f_jawSquare_n",
+   "f_chin_p",
+   "f_chin_n",
+   "f_chinWidth_p",
+   "f_chinWidth_n",
+   "f_cheekbones_p",
+   "f_cheekbones_n",
+   "f_cheekHollow_p",
+   "f_cheekHollow_n",
+   "f_brow_p",
+   "f_brow_n",
+   "f_eyeSize_p",
+   "f_eyeSize_n",
+   "f_eyeSpacing_p",
+   "f_eyeSpacing_n",
+   "f_eyeTilt_p",
+   "f_eyeTilt_n",
+   "f_hooded_p",
+   "f_hooded_n",
+   "f_noseSize_p",
+   "f_noseSize_n",
+   "f_noseWidth_p",
+   "f_noseWidth_n",
+   "f_noseBridge_p",
+   "f_noseBridge_n",
+   "f_noseTip_p",
+   "f_noseTip_n",
+   "f_lips_p",
+   "f_lips_n",
+   "f_mouthWidth_p",
+   "f_mouthWidth_n",
+   "f_earSize_p",
+   "f_earSize_n",
+   "f_skullWidth_p",
+   "f_skullWidth_n"
+  ],
+  "eyes": [
+   "f_jawSquare_p",
+   "f_brow_p",
+   "f_brow_n",
+   "f_eyeSpacing_p",
+   "f_eyeSpacing_n",
+   "f_skullWidth_p",
+   "f_skullWidth_n"
+  ],
+  "brows": [
+   "f_jawSquare_p",
+   "f_brow_p",
+   "f_brow_n",
+   "f_eyeSize_p",
+   "f_eyeSize_n",
+   "f_eyeSpacing_p",
+   "f_eyeSpacing_n",
+   "f_eyeTilt_p",
+   "f_eyeTilt_n",
+   "f_hooded_p",
+   "f_hooded_n",
+   "f_noseSize_n",
+   "f_noseWidth_p",
+   "f_noseBridge_p",
+   "f_earSize_p",
+   "f_earSize_n",
+   "f_skullWidth_p",
+   "f_skullWidth_n"
+  ],
+  "lashes": [
+   "b_heavy",
+   "f_jawSquare_p",
+   "f_eyeSize_p",
+   "f_eyeSize_n",
+   "f_eyeSpacing_p",
+   "f_eyeSpacing_n",
+   "f_earSize_p",
+   "f_earSize_n",
+   "f_skullWidth_p",
+   "f_skullWidth_n"
+  ],
+  "hair_short02": [
+   "b_muscle",
+   "b_heavy",
+   "b_lean",
+   "f_jawWidth_p",
+   "f_jawWidth_n",
+   "f_jawSquare_p",
+   "f_jawSquare_n",
+   "f_cheekbones_p",
+   "f_cheekbones_n",
+   "f_cheekHollow_p",
+   "f_cheekHollow_n",
+   "f_brow_p",
+   "f_brow_n",
+   "f_eyeSize_p",
+   "f_eyeSize_n",
+   "f_eyeSpacing_p",
+   "f_eyeSpacing_n",
+   "f_earSize_p",
+   "f_earSize_n",
+   "f_skullWidth_p",
+   "f_skullWidth_n"
+  ],
+  "hair_short04": [
+   "b_muscle",
+   "b_heavy",
+   "b_lean",
+   "f_jawWidth_p",
+   "f_jawWidth_n",
+   "f_jawSquare_p",
+   "f_jawSquare_n",
+   "f_cheekbones_p",
+   "f_cheekbones_n",
+   "f_cheekHollow_p",
+   "f_cheekHollow_n",
+   "f_brow_p",
+   "f_brow_n",
+   "f_eyeSpacing_p",
+   "f_earSize_p",
+   "f_earSize_n",
+   "f_skullWidth_p",
+   "f_skullWidth_n"
+  ]
+ },
+ "textures": {
+  "skin_young.jpg": "human/skin_young.jpg",
+  "skin_middleage.jpg": "human/skin_middleage.jpg",
+  "eye_brown.png": "human/eye_brown.png",
+  "eye_blue.png": "human/eye_blue.png",
+  "eye_green.png": "human/eye_green.png",
+  "eye_grey.png": "human/eye_grey.png",
+  "brows.png": "human/brows.png",
+  "lashes.png": "human/lashes.png",
+  "hair_short02.png": "human/hair_short02.png",
+  "hair_short02_normal.jpg": "human/hair_short02_normal.jpg",
+  "hair_short04.png": "human/hair_short04.png"
+ },
+ "bindJoints": {
+  "Root": [
+   0.0,
+   -0.0003,
+   0.0
+  ],
+  "pelvis": [
+   0.0,
+   0.9526,
+   0.0068
+  ],
+  "spine_01": [
+   0.0,
+   1.0381,
+   -0.0252
+  ],
+  "spine_02": [
+   0.0,
+   1.0972,
+   -0.0156
+  ],
+  "spine_03": [
+   0.0,
+   1.1579,
+   -0.0237
+  ],
+  "clavicle_l": [
+   0.0231,
+   1.4283,
+   0.0272
+  ],
+  "upperarm_l": [
+   0.2161,
+   1.3999,
+   0.0219
+  ],
+  "lowerarm_l": [
+   0.3811,
+   1.21,
+   0.0192
+  ],
+  "hand_l": [
+   0.5139,
+   1.0836,
+   0.2065
+  ],
+  "index_01_l": [
+   0.5447,
+   1.0434,
+   0.3125
+  ],
+  "index_02_l": [
+   0.5481,
+   1.0272,
+   0.336
+  ],
+  "index_03_l": [
+   0.5475,
+   1.0096,
+   0.3551
+  ],
+  "middle_01_l": [
+   0.563,
+   1.0306,
+   0.2936
+  ],
+  "middle_02_l": [
+   0.5707,
+   1.0022,
+   0.3175
+  ],
+  "middle_03_l": [
+   0.5735,
+   0.9795,
+   0.3368
+  ],
+  "pinky_01_l": [
+   0.5725,
+   1.0106,
+   0.2537
+  ],
+  "pinky_02_l": [
+   0.5791,
+   0.9901,
+   0.2628
+  ],
+  "pinky_03_l": [
+   0.5813,
+   0.9745,
+   0.2699
+  ],
+  "ring_01_l": [
+   0.5713,
+   1.0217,
+   0.2748
+  ],
+  "ring_02_l": [
+   0.581,
+   0.9945,
+   0.2913
+  ],
+  "ring_03_l": [
+   0.586,
+   0.9722,
+   0.3063
+  ],
+  "thumb_01_l": [
+   0.516,
+   1.0776,
+   0.2559
+  ],
+  "thumb_02_l": [
+   0.4924,
+   1.0686,
+   0.2791
+  ],
+  "thumb_03_l": [
+   0.4781,
+   1.0552,
+   0.3146
+  ],
+  "clavicle_r": [
+   -0.0231,
+   1.4283,
+   0.0272
+  ],
+  "upperarm_r": [
+   -0.2161,
+   1.3999,
+   0.0219
+  ],
+  "lowerarm_r": [
+   -0.3811,
+   1.21,
+   0.0192
+  ],
+  "hand_r": [
+   -0.5139,
+   1.0836,
+   0.2065
+  ],
+  "index_01_r": [
+   -0.5447,
+   1.0434,
+   0.3125
+  ],
+  "index_02_r": [
+   -0.5481,
+   1.0272,
+   0.336
+  ],
+  "index_03_r": [
+   -0.5475,
+   1.0096,
+   0.3551
+  ],
+  "middle_01_r": [
+   -0.563,
+   1.0306,
+   0.2936
+  ],
+  "middle_02_r": [
+   -0.5707,
+   1.0022,
+   0.3175
+  ],
+  "middle_03_r": [
+   -0.5735,
+   0.9795,
+   0.3368
+  ],
+  "pinky_01_r": [
+   -0.5725,
+   1.0106,
+   0.2537
+  ],
+  "pinky_02_r": [
+   -0.5791,
+   0.9901,
+   0.2628
+  ],
+  "pinky_03_r": [
+   -0.5813,
+   0.9745,
+   0.2699
+  ],
+  "ring_01_r": [
+   -0.5713,
+   1.0217,
+   0.2748
+  ],
+  "ring_02_r": [
+   -0.581,
+   0.9945,
+   0.2913
+  ],
+  "ring_03_r": [
+   -0.586,
+   0.9722,
+   0.3063
+  ],
+  "thumb_01_r": [
+   -0.516,
+   1.0776,
+   0.2559
+  ],
+  "thumb_02_r": [
+   -0.4924,
+   1.0686,
+   0.2791
+  ],
+  "thumb_03_r": [
+   -0.4781,
+   1.0552,
+   0.3146
+  ],
+  "neck_01": [
+   0.0,
+   1.5034,
+   0.0149
+  ],
+  "head": [
+   0.0,
+   1.6,
+   0.0467
+  ],
+  "thigh_l": [
+   0.1098,
+   0.9464,
+   -0.0037
+  ],
+  "calf_l": [
+   0.1462,
+   0.5161,
+   0.0308
+  ],
+  "foot_l": [
+   0.1966,
+   0.0723,
+   0.0187
+  ],
+  "ball_l": [
+   0.1994,
+   0.0083,
+   0.1465
+  ],
+  "thigh_r": [
+   -0.1098,
+   0.9464,
+   -0.0037
+  ],
+  "calf_r": [
+   -0.1462,
+   0.5161,
+   0.0308
+  ],
+  "foot_r": [
+   -0.1966,
+   0.0723,
+   0.0187
+  ],
+  "ball_r": [
+   -0.1994,
+   0.0083,
+   0.1465
+  ]
+ }
+}

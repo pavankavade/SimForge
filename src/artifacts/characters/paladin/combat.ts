@@ -168,6 +168,17 @@ export class BladeFx {
     (this.sparkGeo.getAttribute("color") as THREE.BufferAttribute).needsUpdate = true;
   }
 
+  /** No trail and no sparks (back to the state it was built in). */
+  clear(): void {
+    this.trailAge.fill(9);
+    this.samples.fill(0);
+    this.sparkLife.fill(0);
+    this.head = 0;
+    this.nextSpark = 0;
+    this.seed = 1;
+    this.update(0);
+  }
+
   dispose(): void {
     this.trailGeo.dispose();
     this.sparkGeo.dispose();
@@ -230,5 +241,11 @@ export class BladeSweep {
     this.prevBase.copy(base);
     this.prevTip.copy(tip);
     return result;
+  }
+
+  reset(): void {
+    this.live = false;
+    this.serial = -1;
+    this.struck.length = 0;
   }
 }

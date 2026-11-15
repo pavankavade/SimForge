@@ -1,6 +1,238 @@
 // Paladin materials: PBR steel, riveted mail, cloth, leather and gilt, all from procedural textures
 // (no external files). A small generated environment gives the metal something to reflect.
 import * as THREE from "three";
+import { paintBodySkin, paintEye, paintHair, type HeadTextures } from "./facePaint";
+import type { HumanAsset } from "./humanAsset";
+import type { HumanSpec, RGB } from "./spec";
+
+/** Textures of the imported base human for one character, with the tints that recolour them. */
+export interface HumanTextures {
+  skin: THREE.Texture;
+  eye: THREE.Texture;
+  brows: THREE.Texture;
+  lashes: THREE.Texture;
+  hairCrop: THREE.Texture;
+  hairCropNormal: THREE.Texture;
+  hairSwept: THREE.Texture;
+  /** Linear multipliers taking each texture's average to the character's colour. */
+  skinTint: THREE.Color;
+  hairTint: { crop: THREE.Color; swept: THREE.Color; brows: THREE.Color };
+}
+
+/** A copy of an alpha-card texture with white RGB (so `color` sets its colour), same alpha. */
+function whiten(t: THREE.Texture): THREE.Texture {
+  const img = t.image as HTMLImageElement;
+  const c = document.createElement("canvas");
+  c.width = img.width;
+  c.height = img.height;
+  const g = c.getContext("2d");
+  if (!g) return t;
+  g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height);
+  for (let i = 0; i < d.data.length; i += 4) {
+    d.data[i] = 255;
+    d.data[i + 1] = 255;
+    d.data[i + 2] = 255;
+  }
+  g.putImageData(d, 0, 0);
+  const out = new THREE.CanvasTexture(c);
+  out.flipY = false;
+  out.colorSpace = THREE.SRGBColorSpace;
+  out.anisotropy = t.anisotropy;
+  t.dispose();
+  return out;
+}
+
+/** Average colour (sRGB 0..1) of the opaque, non-black texels of an image. */
+function meanColor(img: CanvasImageSource): RGB {
+  const c = document.createElement("canvas");
+  c.width = 32;
+  c.height = 32;
+  const g = c.getContext("2d");
+  if (!g) return [0.5, 0.5, 0.5];
+  g.drawImage(img, 0, 0, 32, 32);
+  const d = g.getImageData(0, 0, 32, 32).data;
+  let r = 0;
+  let gg = 0;
+  let b = 0;
+  let w = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3] / 255;
+    if (a < 0.5 || d[i] + d[i + 1] + d[i + 2] < 30) continue;
+    r += d[i] * a;
+    gg += d[i + 1] * a;
+    b += d[i + 2] * a;
+    w += a;
+  }
+  return w > 0 ? [r / w / 255, gg / w / 255, b / w / 255] : [0.5, 0.5, 0.5];
+}
+
+/** Linear-space multiplier that turns `from` (sRGB) into `to` (sRGB). */
+function tintFrom(from: RGB, to: RGB, lo = 0.15, hi = 1.8): THREE.Color {
+  const a = new THREE.Color().setRGB(from[0], from[1], from[2], THREE.SRGBColorSpace);
+  const b = new THREE.Color().setRGB(to[0], to[1], to[2], THREE.SRGBColorSpace);
+  const k = (x: number, y: number) => Math.max(lo, Math.min(hi, y / Math.max(1e-3, x)));
+  return new THREE.Color(k(a.r, b.r), k(a.g, b.g), k(a.b, b.b));
+}
+
+const EYE_SWATCHES: Array<[string, RGB]> = [
+  ["eye_brown.png", [0.3, 0.18, 0.09]],
+  ["eye_blue.png", [0.33, 0.48, 0.66]],
+  ["eye_green.png", [0.3, 0.5, 0.3]],
+  ["eye_grey.png", [0.43, 0.45, 0.43]],
+];
+
+/** Load the textures one character needs (skin by age, eyes by colour) and work out the tints. */
+export async function loadHumanTextures(a: HumanAsset, spec: HumanSpec): Promise<HumanTextures> {
+  const loader = new THREE.TextureLoader();
+  const url = (file: string) => a.base + (a.meta.textures[file] || file);
+  const get = async (file: string, color = true) => {
+    const t = await loader.loadAsync(url(file));
+    // glTF UVs start at the top left.
+    t.flipY = false;
+    t.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+    t.anisotropy = 4;
+    t.needsUpdate = true;
+    return t;
+  };
+  const d2 = (x: RGB, y: RGB) => (x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2 + (x[2] - y[2]) ** 2;
+  const eyeFile = EYE_SWATCHES.slice().sort((p, q) => d2(p[1], spec.eyeColor) - d2(q[1], spec.eyeColor))[0][0];
+  const [skin, eye, browsRaw, lashesRaw, hairCrop, hairCropNormal, hairSwept] = await Promise.all([
+    get(spec.age > 0.6 ? "skin_middleage.jpg" : "skin_young.jpg"),
+    get(eyeFile),
+    get("brows.png"),
+    get("lashes.png"),
+    get("hair_short02.png"),
+    get("hair_short02_normal.jpg", false),
+    get("hair_short04.png"),
+  ]);
+  // Brows and lashes are black cards; keep their alpha and make them white so a colour tints them.
+  const brows = whiten(browsRaw);
+  const lashes = whiten(lashesRaw);
+  const hair = spec.hair.color;
+  const grey: RGB = [0.62, 0.61, 0.59];
+  const g = spec.hair.grey;
+  const hairColor: RGB = [hair[0] + (grey[0] - hair[0]) * g, hair[1] + (grey[1] - hair[1]) * g, hair[2] + (grey[2] - hair[2]) * g];
+  return {
+    skin,
+    eye,
+    brows,
+    lashes,
+    hairCrop,
+    hairCropNormal,
+    hairSwept,
+    skinTint: tintFrom(meanColor(skin.image as CanvasImageSource), spec.skin, 0.2, 1.4),
+    hairTint: {
+      crop: tintFrom(meanColor(hairCrop.image as CanvasImageSource), hairColor, 0.05, 6),
+      swept: tintFrom(meanColor(hairSwept.image as CanvasImageSource), hairColor, 0.05, 6),
+      brows: new THREE.Color().setRGB(hairColor[0] * 0.8, hairColor[1] * 0.8, hairColor[2] * 0.8, THREE.SRGBColorSpace),
+    },
+  };
+}
+
+/** Hair painted into a skin texture (see body.ts SkinPaint). */
+export interface PaintLayer {
+  mask: Float32Array;
+  color: RGB;
+  amount: number;
+  grain: number;
+}
+
+/**
+ * A copy of the skin texture with short hair (stubble, beards, buzz cuts) painted in UV space:
+ * each layer's per-vertex mask is drawn triangle by triangle, blurred, and used to lay a grainy
+ * strand pattern of the hair colour over the skin. `tint` is the skin material's colour, which
+ * the paint is divided by so the hair keeps its own colour.
+ */
+export function paintSkin(base: THREE.Texture, geo: THREE.BufferGeometry, layers: PaintLayer[], tint: THREE.Color): THREE.Texture {
+  const img = base.image as HTMLImageElement;
+  const W = img.width;
+  const H = img.height;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const g = canvas.getContext("2d");
+  if (!g) return base;
+  g.drawImage(img, 0, 0);
+  const uv = geo.getAttribute("uv") as THREE.BufferAttribute;
+  const idx = geo.getIndex() as THREE.BufferAttribute;
+  // Strand grain: short dark dashes, tiled.
+  const grain = document.createElement("canvas");
+  grain.width = 128;
+  grain.height = 128;
+  const gg = grain.getContext("2d");
+  const rnd = mulberry(7);
+  for (const layer of layers) {
+    const mask = document.createElement("canvas");
+    mask.width = W;
+    mask.height = H;
+    const mg = mask.getContext("2d");
+    if (!mg || !gg) continue;
+    for (let t = 0; t < idx.count; t += 3) {
+      const a = idx.getX(t);
+      const b = idx.getX(t + 1);
+      const c = idx.getX(t + 2);
+      const m = (layer.mask[a] + layer.mask[b] + layer.mask[c]) / 3;
+      if (m < 0.01) continue;
+      mg.fillStyle = `rgba(255,255,255,${Math.min(1, m)})`;
+      mg.beginPath();
+      mg.moveTo(uv.getX(a) * W, uv.getY(a) * H);
+      mg.lineTo(uv.getX(b) * W, uv.getY(b) * H);
+      mg.lineTo(uv.getX(c) * W, uv.getY(c) * H);
+      mg.closePath();
+      mg.fill();
+    }
+    const soft = document.createElement("canvas");
+    soft.width = W;
+    soft.height = H;
+    const sg = soft.getContext("2d");
+    if (!sg) continue;
+    sg.filter = `blur(${Math.round(W / 400)}px)`;
+    sg.drawImage(mask, 0, 0);
+    sg.filter = "none";
+    // Colour in the skin's space: divide out the material tint.
+    const col = new THREE.Color().setRGB(layer.color[0], layer.color[1], layer.color[2], THREE.SRGBColorSpace);
+    col.setRGB(Math.min(1, col.r / tint.r), Math.min(1, col.g / tint.g), Math.min(1, col.b / tint.b));
+    const css = `#${col.getHexString(THREE.SRGBColorSpace)}`;
+    gg.clearRect(0, 0, 128, 128);
+    gg.fillStyle = css;
+    gg.globalAlpha = 1 - layer.grain;
+    gg.fillRect(0, 0, 128, 128);
+    gg.globalAlpha = 1;
+    gg.strokeStyle = css;
+    gg.lineWidth = 1;
+    for (let k = 0; k < 900 * layer.grain; k++) {
+      const x = rnd() * 128;
+      const y = rnd() * 128;
+      const l = 1.5 + rnd() * 3;
+      const ang = Math.PI / 2 + (rnd() - 0.5) * 0.9;
+      gg.beginPath();
+      gg.moveTo(x, y);
+      gg.lineTo(x + Math.cos(ang) * l, y + Math.sin(ang) * l);
+      gg.stroke();
+    }
+    const pattern = sg.createPattern(grain, "repeat");
+    if (!pattern) continue;
+    sg.globalCompositeOperation = "source-in";
+    sg.fillStyle = pattern;
+    sg.fillRect(0, 0, W, H);
+    sg.globalCompositeOperation = "source-over";
+    g.globalAlpha = layer.amount;
+    g.drawImage(soft, 0, 0);
+    g.globalAlpha = 1;
+  }
+  const out = new THREE.CanvasTexture(canvas);
+  out.flipY = false;
+  out.colorSpace = THREE.SRGBColorSpace;
+  out.anisotropy = base.anisotropy;
+  return out;
+}
+
+/** Harness materials re-used on layers cut from the skin, with finer texture repeats for its UVs. */
+export const FIT_KEYS = ["mail", "quilt", "wool", "braies", "leather", "steel"] as const;
+type FitKey = `${(typeof FIT_KEYS)[number]}Fit`;
+
+export type HumanMaterials = Record<"skin" | "eye" | "brows" | "lashes" | "hairCrop" | "hairSwept" | FitKey, THREE.MeshStandardMaterial>;
 
 function mulberry(seed: number): () => number {
   let a = seed >>> 0;
@@ -118,14 +350,16 @@ function steelMaps(): MapSet {
       scratch[i] = Math.max(scratch[i], depth * (1 - Math.abs(s / len - 0.5) * 1.6));
     }
   }
+  // Hammered plate: broad, shallow planishing marks and fine scratches. (Deep dents read as crumpled
+  // foil on the large flat plates.)
   const height = new Float32Array(S * S);
-  for (let i = 0; i < height.length; i++) height[i] = dents[i] * 0.55 + fine[i] * 0.07 - scratch[i] * 0.06;
+  for (let i = 0; i < height.length; i++) height[i] = dents[i] * 0.16 + fine[i] * 0.035 - scratch[i] * 0.05;
   return {
     map: dataTex(
       S,
       (i, px, o) => {
-        const patina = Math.max(0, 0.52 - blotch[i]) * 1.7;
-        const v = 0.82 + blotch[i] * 0.2 - patina * 0.3 + scratch[i] * 0.08;
+        const patina = Math.max(0, 0.48 - blotch[i]) * 1.4;
+        const v = 0.84 + blotch[i] * 0.14 - patina * 0.26 + scratch[i] * 0.08;
         px[o] = u8(v * (1 - patina * 0.04));
         px[o + 1] = u8(v * (1 - patina * 0.12));
         px[o + 2] = u8(v * (1 - patina * 0.24));
@@ -135,14 +369,14 @@ function steelMaps(): MapSet {
     orm: dataTex(
       S,
       (i, px, o) => {
-        const patina = Math.max(0, 0.52 - blotch[i]) * 1.7;
+        const patina = Math.max(0, 0.48 - blotch[i]) * 1.4;
         px[o] = 255;
-        px[o + 1] = u8(0.36 + blotch[i] * 0.3 + patina * 0.55 + scratch[i] * 0.28 + fine[i] * 0.14);
+        px[o + 1] = u8(0.26 + blotch[i] * 0.22 + patina * 0.5 + scratch[i] * 0.3 + fine[i] * 0.1);
         px[o + 2] = u8(1 - patina * 0.35);
       },
       false
     ),
-    normal: normalTex(S, height, 5.5),
+    normal: normalTex(S, height, 4),
   };
 }
 
@@ -247,6 +481,36 @@ function leatherMaps(): MapSet {
       false
     ),
     normal: normalTex(S, h, 2.6),
+  };
+}
+
+function braiesMaps(): MapSet {
+  const S = 256;
+  const weave = fbm(S, 24, 2, 63);
+  const height = new Float32Array(S * S);
+  for (let i = 0; i < height.length; i++) height[i] = weave[i] * 0.12;
+  return {
+    map: dataTex(
+      S,
+      (i, px, o) => {
+        // Natural unbleached linen (light ecru)
+        const w = weave[i] * 0.08 - 0.04;
+        px[o] = u8(0.68 + w);
+        px[o + 1] = u8(0.63 + w);
+        px[o + 2] = u8(0.55 + w);
+      },
+      true
+    ),
+    orm: dataTex(
+      S,
+      (i, px, o) => {
+        px[o] = 255;
+        px[o + 1] = u8(0.92);
+        px[o + 2] = 0;
+      },
+      false
+    ),
+    normal: normalTex(S, height, 3.2),
   };
 }
 
@@ -434,30 +698,98 @@ function buildEnvironment(renderer: THREE.WebGLRenderer): THREE.Texture {
   return target.texture;
 }
 
-export type MatKey = "steel" | "mail" | "gold" | "leather" | "dark" | "cloth";
+export type MatKey =
+  | "steel"
+  | "mail"
+  | "gold"
+  | "leather"
+  | "dark"
+  | "cloth"
+  | "skin"
+  | "faceSkin"
+  | "hair"
+  | "eye"
+  | "braies"
+  | "quilt"
+  | "wool";
 
 export interface PaladinMaterials {
   skinned: Record<MatKey, THREE.MeshStandardMaterial>;
+  /** The imported base human's own materials (skin, eyes, brows, lashes, hair caps). */
+  human: HumanMaterials;
   blade: THREE.MeshStandardMaterial;
   shieldFace: THREE.MeshStandardMaterial;
   shieldBack: THREE.MeshStandardMaterial;
   cape: THREE.MeshStandardMaterial;
   tabard: THREE.MeshStandardMaterial;
   all: THREE.MeshStandardMaterial[];
+  /** Put the painted head skin (built with the head mesh) on the face material. */
+  setHeadTextures: (t: HeadTextures) => void;
+  /** Paint short hair into the imported skin (see paintSkin). */
+  paintHumanSkin: (geo: THREE.BufferGeometry, layers: PaintLayer[]) => void;
   setEnvIntensity: (v: number) => void;
   dispose: () => void;
 }
 
-export function createPaladinMaterials(renderer: THREE.WebGLRenderer): PaladinMaterials {
+export function createPaladinMaterials(renderer: THREE.WebGLRenderer, spec: HumanSpec, ht: HumanTextures): PaladinMaterials {
   const env = buildEnvironment(renderer);
   const steel = steelMaps();
   const mail = mailMaps();
   const leather = leatherMaps();
   const weave = weaveNormal(24, 0.25, 8);
-  const textures: THREE.Texture[] = [env, steel.map, steel.orm, steel.normal, mail.map, mail.orm, mail.normal, leather.map, leather.orm, leather.normal, weave];
+  const braies = braiesMaps();
+  const bodySkin = paintBodySkin(spec);
+  const eye = paintEye(spec);
+  const hair = paintHair(spec);
+  // Fine pores for all skin, and a coarser weave for wool and quilted linen.
+  const pores = weaveNormal(40, 0.9, 77);
+  pores.repeat.set(6, 6);
+  const facePores = pores.clone();
+  facePores.repeat.set(14, 14);
+  facePores.needsUpdate = true;
+  const coarse = weave.clone();
+  coarse.repeat.set(10, 10);
+  coarse.needsUpdate = true;
+  const textures: THREE.Texture[] = [
+    env,
+    steel.map,
+    steel.orm,
+    steel.normal,
+    mail.map,
+    mail.orm,
+    mail.normal,
+    leather.map,
+    leather.orm,
+    leather.normal,
+    weave,
+    braies.map,
+    braies.orm,
+    braies.normal,
+    bodySkin.map,
+    bodySkin.orm,
+    eye,
+    hair,
+    pores,
+    facePores,
+    coarse,
+  ];
 
   const std = (p: THREE.MeshStandardMaterialParameters) =>
     new THREE.MeshStandardMaterial({ envMap: env, envMapIntensity: 1, side: THREE.DoubleSide, ...p });
+  // Skin: a soft reddish sheen at grazing angles stands in for light scattering under the surface.
+  const skinMat = (p: THREE.MeshPhysicalMaterialParameters) =>
+    new THREE.MeshPhysicalMaterial({
+      envMap: env,
+      envMapIntensity: 0.35,
+      side: THREE.DoubleSide,
+      roughness: 1,
+      metalness: 0,
+      sheen: 0.35,
+      sheenRoughness: 0.5,
+      sheenColor: new THREE.Color(spec.skin[0], spec.skin[1] * 0.55, spec.skin[2] * 0.45),
+      specularIntensity: 0.45,
+      ...p,
+    });
 
   const skinned: Record<MatKey, THREE.MeshStandardMaterial> = {
     steel: std({
@@ -466,8 +798,8 @@ export function createPaladinMaterials(renderer: THREE.WebGLRenderer): PaladinMa
       roughnessMap: steel.orm,
       metalnessMap: steel.orm,
       normalMap: steel.normal,
-      normalScale: new THREE.Vector2(0.55, 0.55),
-      roughness: 0.66,
+      normalScale: new THREE.Vector2(0.4, 0.4),
+      roughness: 0.62,
       metalness: 1,
     }),
     mail: std({
@@ -499,13 +831,70 @@ export function createPaladinMaterials(renderer: THREE.WebGLRenderer): PaladinMa
     }),
     dark: std({ color: 0x050506, roughness: 1, metalness: 0, envMapIntensity: 0 }),
     cloth: std({ color: 0x6a1216, roughness: 0.92, metalness: 0, normalMap: weave, envMapIntensity: 0.3 }),
+    skin: skinMat({ map: bodySkin.map, roughnessMap: bodySkin.orm, normalMap: pores, normalScale: new THREE.Vector2(0.25, 0.25) }),
+    faceSkin: skinMat({ normalMap: facePores, normalScale: new THREE.Vector2(0.22, 0.22) }),
+    hair: std({
+      map: hair,
+      alphaTest: 0.5,
+      vertexColors: true,
+      roughness: 0.6,
+      metalness: 0,
+      envMapIntensity: 0.3,
+    }),
+    eye: std({ map: eye, roughness: 0.08, metalness: 0, envMapIntensity: 1.2 }),
+    braies: std({
+      map: braies.map,
+      roughnessMap: braies.orm,
+      normalMap: braies.normal,
+      normalScale: new THREE.Vector2(0.65, 0.65),
+      roughness: 0.9,
+      metalness: 0,
+      envMapIntensity: 0.25,
+    }),
+    quilt: std({ color: 0x5b1a1c, roughness: 0.95, metalness: 0, normalMap: coarse, normalScale: new THREE.Vector2(0.9, 0.9), envMapIntensity: 0.2 }),
+    wool: std({ color: 0x2f2a25, roughness: 1, metalness: 0, normalMap: coarse, normalScale: new THREE.Vector2(0.7, 0.7), envMapIntensity: 0.15 }),
   };
+  textures.push(ht.skin, ht.eye, ht.brows, ht.lashes, ht.hairCrop, ht.hairCropNormal, ht.hairSwept);
+  const card = (map: THREE.Texture, color: THREE.Color, cut: number, p: THREE.MeshStandardMaterialParameters = {}) =>
+    std({ map, color, alphaTest: cut, roughness: 0.75, metalness: 0, envMapIntensity: 0.25, ...p });
+  const human = {} as HumanMaterials;
+  Object.assign(human, {
+    skin: skinMat({
+      map: ht.skin,
+      color: ht.skinTint,
+      roughness: 0.62,
+      normalMap: facePores,
+      normalScale: new THREE.Vector2(0.14, 0.14),
+      side: THREE.FrontSide,
+    }),
+    // The cornea is the transparent part of the eye texture.
+    eye: std({ map: ht.eye, alphaTest: 0.5, roughness: 0.12, metalness: 0, envMapIntensity: 1.1, side: THREE.FrontSide }),
+    brows: card(ht.brows, ht.hairTint.brows, 0.3),
+    lashes: card(ht.lashes, new THREE.Color(0.05, 0.04, 0.035), 0.3),
+    hairCrop: card(ht.hairCrop, ht.hairTint.crop, 0.42, { normalMap: ht.hairCropNormal, normalScale: new THREE.Vector2(0.6, 0.6), roughness: 0.55 }),
+    hairSwept: card(ht.hairSwept, ht.hairTint.swept, 0.42, { roughness: 0.55 }),
+  });
+
   mail.map.repeat.set(5, 5);
   mail.orm.repeat.set(5, 5);
   mail.normal.repeat.set(5, 5);
   leather.map.repeat.set(3, 3);
   leather.orm.repeat.set(3, 3);
   leather.normal.repeat.set(3, 3);
+  // The skin's UV atlas spans the whole figure, so layers cut from it repeat their textures finer.
+  for (const key of FIT_KEYS) {
+    const m = skinned[key].clone();
+    for (const slot of ["map", "normalMap", "roughnessMap", "metalnessMap"] as const) {
+      const t = m[slot];
+      if (!t) continue;
+      const c = t.clone();
+      c.repeat.copy(t.repeat).multiplyScalar(key === "mail" ? 5.2 : 3);
+      c.needsUpdate = true;
+      textures.push(c);
+      m[slot] = c;
+    }
+    human[`${key}Fit` as FitKey] = m;
+  }
 
   const blade = std({
     color: 0xe2e6ec,
@@ -531,17 +920,34 @@ export function createPaladinMaterials(renderer: THREE.WebGLRenderer): PaladinMa
   const cape = std({ map: capeMap, roughness: 0.9, metalness: 0, normalMap: clothWeave, normalScale: new THREE.Vector2(0.6, 0.6), envMapIntensity: 0.3 });
   const tabard = std({ map: tabardMap, roughness: 0.9, metalness: 0, normalMap: clothWeave, normalScale: new THREE.Vector2(0.6, 0.6), envMapIntensity: 0.3 });
 
-  const all = [skinned.steel, skinned.mail, skinned.gold, skinned.leather, skinned.dark, skinned.cloth, blade, shieldFaceMat, shieldBackMat, cape, tabard];
+  const all = Object.keys(skinned)
+    .map((k) => skinned[k as MatKey])
+    .concat(Object.keys(human).map((k) => human[k as keyof HumanMaterials]))
+    .concat([blade, shieldFaceMat, shieldBackMat, cape, tabard]);
   const base = all.map((m) => m.envMapIntensity);
 
   return {
     skinned,
+    human,
     blade,
     shieldFace: shieldFaceMat,
     shieldBack: shieldBackMat,
     cape,
     tabard,
     all,
+    setHeadTextures(t: HeadTextures) {
+      skinned.faceSkin.map = t.map;
+      skinned.faceSkin.roughnessMap = t.orm;
+      skinned.faceSkin.needsUpdate = true;
+      textures.push(t.map, t.orm);
+    },
+    paintHumanSkin(geo: THREE.BufferGeometry, layers: PaintLayer[]) {
+      if (!layers.length) return;
+      const painted = paintSkin(ht.skin, geo, layers, ht.skinTint);
+      human.skin.map = painted;
+      human.skin.needsUpdate = true;
+      textures.push(painted);
+    },
     setEnvIntensity(v: number) {
       all.forEach((m, i) => {
         m.envMapIntensity = base[i] * v;

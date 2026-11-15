@@ -18,6 +18,8 @@ const MIME = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".png": "image/png",
+  ".glb": "model/gltf-binary",
+  ".json": "application/json; charset=utf-8",
   ".md": "text/markdown; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
   ".map": "application/json; charset=utf-8",
