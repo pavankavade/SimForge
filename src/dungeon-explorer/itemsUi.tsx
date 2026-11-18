@@ -3,6 +3,7 @@
 // double-tap does the quick move the screen defines (equip, use, take, stash).
 import React, { useEffect, useRef, useState } from "react";
 import { RARITY, def, fitsAt, itemOf, type GearSlot, type Grid, type ItemInst } from "./items";
+import { modLine } from "./stats";
 
 export type Icons = Record<string, string | undefined>;
 
@@ -86,6 +87,15 @@ export const ItemTooltip: React.FC<{ item: ItemInst; hint?: string; x: number; y
       {it.damage ? line("Weapon damage", String(it.damage)) : null}
       {it.block ? line("Block", `${it.block}%`) : null}
       {it.heal ? line("Restores", `${it.heal} health`) : null}
+      {item.mods?.length ? (
+        <div style={{ margin: "6px 0 2px" }}>
+          {item.mods.map((m) => (
+            <div key={m[0]} style={{ fontSize: 12, color: "#8fd0ff", marginTop: 2 }}>
+              {modLine(m)}
+            </div>
+          ))}
+        </div>
+      ) : null}
       {line("Weight", `${it.weight.toFixed(it.weight < 0.1 ? 2 : 1)} kg`)}
       {line("Value", `${it.value * (item.qty ?? 1)} gold`)}
       <div style={{ fontSize: 11, color: "#8f8676", fontStyle: "italic", marginTop: 8 }}>{it.note}</div>

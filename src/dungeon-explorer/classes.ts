@@ -1,5 +1,7 @@
 // The classes a player can pick at the start. Only the fighter is playable now (the realistic
-// human in plate with sword and shield); the others are planned and shown as coming soon.
+// human in plate with sword and shield); the others are planned and shown as coming soon. Each has
+// base attributes summing to 105 (an average of 15; stats.ts): gear adds the rest.
+import type { Attributes } from "./stats";
 
 export type ClassId = "fighter" | "rogue" | "wizard" | "ranger" | "cleric";
 
@@ -17,11 +19,14 @@ export interface HeroClass {
   available: boolean;
   /** Accent colour (CSS). */
   color: string;
+  /** Base attributes (before gear). */
+  attributes: Attributes;
 }
 
 export const CLASSES: HeroClass[] = [
   {
     id: "fighter",
+    attributes: { str: 15, vig: 15, agi: 15, dex: 15, wil: 15, kno: 15, res: 15 },
     name: "Fighter",
     tagline: "Steel, plate and a steady shield arm",
     blurb: "A sell-sword who holds the line. Takes a beating in heavy armour, blocks with the shield and cuts back with the sword in chained swings.",
@@ -37,6 +42,7 @@ export const CLASSES: HeroClass[] = [
   },
   {
     id: "rogue",
+    attributes: { str: 9, vig: 10, agi: 21, dex: 23, wil: 10, kno: 10, res: 22 },
     name: "Rogue",
     tagline: "Quick hands, quicker knives",
     blurb: "Moves quietly, picks locks and strikes from behind with twin daggers. Light armour, so every hit taken counts.",
@@ -50,6 +56,7 @@ export const CLASSES: HeroClass[] = [
   },
   {
     id: "wizard",
+    attributes: { str: 6, vig: 8, agi: 15, dex: 17, wil: 20, kno: 25, res: 14 },
     name: "Wizard",
     tagline: "Fire, frost and forbidden words",
     blurb: "Casts from a distance with a staff and a book of spells. Fragile up close, devastating if the line holds.",
@@ -63,6 +70,7 @@ export const CLASSES: HeroClass[] = [
   },
   {
     id: "ranger",
+    attributes: { str: 12, vig: 11, agi: 19, dex: 21, wil: 10, kno: 12, res: 20 },
     name: "Ranger",
     tagline: "The arrow you never see",
     blurb: "Fights from range with a longbow, tracks what moves in the dark and sets traps for what follows.",
@@ -76,6 +84,7 @@ export const CLASSES: HeroClass[] = [
   },
   {
     id: "cleric",
+    attributes: { str: 13, vig: 14, agi: 12, dex: 12, wil: 23, kno: 19, res: 12 },
     name: "Cleric",
     tagline: "Mace in one hand, faith in the other",
     blurb: "Mends wounds with prayer and breaks bones with a mace. Keeps a party standing longer than anyone.",

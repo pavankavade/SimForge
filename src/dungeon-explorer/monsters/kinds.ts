@@ -373,6 +373,6 @@ export function rollDrops(rand: () => number, kind: MobKind, rarity: Rarity): Dr
     else if (def(id).category === "ammo") out.push({ id, qty: 4 + Math.floor(rand() * 9) });
     else out.push({ id, rarity: rollsRarity(id) ? rollWeaponRarity(rand, rarity) : undefined });
   }
-  if (kind.boss && kind.family === "skeleton") out.push({ id: BOSS_WEARS[Math.floor(rand() * BOSS_WEARS.length)] });
+  if (kind.boss && kind.family === "skeleton") out.push({ id: BOSS_WEARS[Math.floor(rand() * BOSS_WEARS.length)], rarity: rollWeaponRarity(rand, rarity) });
   return out;
 }

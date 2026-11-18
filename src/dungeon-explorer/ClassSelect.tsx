@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from "react";
 import { CLASSES, classById, type ClassId } from "./classes";
 import type { PanelLayout } from "./CharacterCustomizer";
+import { ATTRIBUTES, ATTRIBUTE_INFO } from "./stats";
 
 const GOLD = "#ffd84d";
 const LINE = "rgba(214,186,128,0.22)";
@@ -159,6 +160,21 @@ export const ClassSelect: React.FC<ClassSelectProps> = ({ name, current, layout,
                 <React.Fragment key={k}>
                   <span style={{ color: "#8f8676" }}>{k}</span>
                   <span style={{ color: "#f1ead9" }}>{v}</span>
+                </React.Fragment>
+              ))}
+            </div>
+            {/* Base attributes (gear adds to them; there are no levels). */}
+            <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", marginTop: 10 }}>ATTRIBUTES</div>
+            <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: "3px 8px", alignItems: "center", marginTop: 4, fontSize: 11 }}>
+              {ATTRIBUTES.map((k) => (
+                <React.Fragment key={k}>
+                  <span style={{ color: "#a69c88" }} title={ATTRIBUTE_INFO[k].does}>
+                    {ATTRIBUTE_INFO[k].name}
+                  </span>
+                  <span style={{ height: 5, background: "rgba(214,186,128,0.12)", borderRadius: 3, overflow: "hidden" }}>
+                    <span style={{ display: "block", height: "100%", width: `${Math.min(100, (c.attributes[k] / 30) * 100)}%`, background: c.available ? c.color : "#8f8676" }} />
+                  </span>
+                  <span style={{ color: "#f1ead9", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{c.attributes[k]}</span>
                 </React.Fragment>
               ))}
             </div>

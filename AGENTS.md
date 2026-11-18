@@ -775,3 +775,50 @@ The game has exactly one ladder, lowest first:
    - **A Patch asset**, only when it matches the realistic fighter. KayKit/Kenney characters are
      chibi toys and do not.
 6. Check it in the game: `npm run explorer`. Look at it close up, in a fight, and dying.
+
+## 16. Character stats in the game (`src/dungeon-explorer/stats.ts`)
+
+Stats follow Dark and Darker's shape with our own numbers. **There are no levels: a character grows
+only through gear.**
+
+- **Seven attributes**, always these and in this order: Strength, Vigor, Agility, Dexterity, Will,
+  Knowledge, Resourcefulness (`ATTRIBUTES`). Never add, rename or drop one.
+- **Class base.** Every class in `classes.ts` has base `attributes` that sum to 105 (an average of 15).
+  The Fighter is 15 in each. At 15 every curve is neutral: 100 health and no bonus.
+- **Derived stats** come only from `computeStats(base, equipped)`. Each one runs an attribute (or a
+  weighted pair) through a piecewise curve in `stats.ts`:
+
+  | Derived stat | From |
+  | --- | --- |
+  | Health | 0.25 Strength + 0.75 Vigor |
+  | Physical power (and its damage bonus) | Strength |
+  | Magical power (and its damage bonus) | Will |
+  | Magic resistance | Will |
+  | Move speed | Agility |
+  | Action speed | 0.25 Agility + 0.75 Dexterity |
+  | Interaction speed | 0.25 Dexterity + 0.75 Resourcefulness |
+  | Spell casting speed and memory capacity | Knowledge |
+  | Cooldown reduction | Resourcefulness (capped at 65%) |
+
+  Armour rating and magic resistance both turn into damage reduction through `reductionOf`. Tune
+  numbers in the curves, never at the call site.
+- **What reads them:**
+  - `maxHealth`;
+  - `swordDamage` and `bowDamage`: (weapon + weapon damage) × (1 + physical bonus);
+  - `physicalReduction` for blades, lunges and arrows;
+  - `magicalReduction` for bolts (acid ignores both);
+  - `moveSpeed`;
+  - `actionSpeed` for swings and the bow draw;
+  - `interactionSpeed` for bandages.
+
+  New mechanics read `Stats` the same way. Spells will use `magicalBonus`, `castingSpeed` and
+  `memoryCapacity`: each spell costs its tier in memory, and charges restore by resting. Never add a
+  parallel stat.
+- **Gear modifiers.**
+  - Weapons and armour roll a rarity when they drop (`rollsRarity`), then `MOD_COUNT[rarity]` distinct
+    modifiers (`rollMods`): common 0, uncommon 1, rare 2, epic 3, legendary 4, unique and artifact 5.
+  - Rarer pieces roll slightly larger values.
+  - Modifiers live on the instance (`ItemInst.mods`) and show in the tooltip (`modLine`).
+  - A new modifier goes in `MOD_INFO` (label, range, weapon/armour) and is summed in `computeStats`.
+- **Show it.** The inventory sheet shows the attributes (gear-raised ones in green) and every derived
+  line (`statLines`). The class screen shows each class's base attributes.

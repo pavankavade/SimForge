@@ -8,6 +8,7 @@
 // base rarity; a weapon instance rolls its own (`ItemInst.rarity`), which scales its damage, block
 // and price (`itemOf`). Monsters carry a rarity too, and drop a mana crystal of it.
 import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
+import type { ModId } from "./stats";
 
 /** The rarity ladder, lowest first. */
 export const RARITIES = ["common", "uncommon", "rare", "epic", "legendary", "unique", "artifact"] as const;
@@ -69,20 +70,20 @@ export interface ItemDef {
 }
 
 const ARMOR: Array<Omit<ItemDef, "id" | "category" | "value" | "slot"> & { slot: ArmorSlot }> = [
-  { slot: "helm", name: "Great helm", note: "Closed helm with a mail aventail", kind: "Head", w: 2, h: 2, rarity: "rare", armor: 32, weight: 2.5 },
-  { slot: "gorget", name: "Gorget", note: "Steel collar over the throat", kind: "Neck", w: 2, h: 1, rarity: "uncommon", armor: 14, weight: 0.8 },
-  { slot: "cuirass", name: "Breastplate", note: "Cuirass, backplate and plackart", kind: "Chest", w: 2, h: 3, rarity: "epic", armor: 68, weight: 8 },
-  { slot: "pauldrons", name: "Pauldrons", note: "Domed shoulder plates", kind: "Shoulders", w: 2, h: 2, rarity: "rare", armor: 24, weight: 2.2 },
-  { slot: "arms", name: "Arm harness", note: "Rerebraces, couters and vambraces", kind: "Arms", w: 2, h: 2, rarity: "uncommon", armor: 22, weight: 2.5 },
-  { slot: "gauntlets", name: "Gauntlets", note: "Fingered plate gauntlets, leather palms", kind: "Hands", w: 2, h: 2, rarity: "uncommon", armor: 18, weight: 1.1 },
+  { slot: "helm", name: "Great helm", note: "Closed helm with a mail aventail", kind: "Head", w: 2, h: 2, rarity: "common", armor: 32, weight: 2.5 },
+  { slot: "gorget", name: "Gorget", note: "Steel collar over the throat", kind: "Neck", w: 2, h: 1, rarity: "common", armor: 14, weight: 0.8 },
+  { slot: "cuirass", name: "Breastplate", note: "Cuirass, backplate and plackart", kind: "Chest", w: 2, h: 3, rarity: "common", armor: 68, weight: 8 },
+  { slot: "pauldrons", name: "Pauldrons", note: "Domed shoulder plates", kind: "Shoulders", w: 2, h: 2, rarity: "common", armor: 24, weight: 2.2 },
+  { slot: "arms", name: "Arm harness", note: "Rerebraces, couters and vambraces", kind: "Arms", w: 2, h: 2, rarity: "common", armor: 22, weight: 2.5 },
+  { slot: "gauntlets", name: "Gauntlets", note: "Fingered plate gauntlets, leather palms", kind: "Hands", w: 2, h: 2, rarity: "common", armor: 18, weight: 1.1 },
   { slot: "waist", name: "Fauld & belt", note: "Hip lames, tassets, belt and scabbard", kind: "Waist", w: 2, h: 2, rarity: "common", armor: 16, weight: 2 },
-  { slot: "cuisses", name: "Cuisses", note: "Thigh plates and poleyns", kind: "Thighs", w: 2, h: 2, rarity: "uncommon", armor: 26, weight: 2.6 },
-  { slot: "greaves", name: "Greaves", note: "Closed shin plates", kind: "Shins", w: 2, h: 2, rarity: "uncommon", armor: 22, weight: 2 },
+  { slot: "cuisses", name: "Cuisses", note: "Thigh plates and poleyns", kind: "Thighs", w: 2, h: 2, rarity: "common", armor: 26, weight: 2.6 },
+  { slot: "greaves", name: "Greaves", note: "Closed shin plates", kind: "Shins", w: 2, h: 2, rarity: "common", armor: 22, weight: 2 },
   { slot: "sabatons", name: "Sabatons", note: "Laminated steel shoes", kind: "Feet", w: 2, h: 2, rarity: "common", armor: 16, weight: 1.4 },
-  { slot: "mail", name: "Mail hauberk", note: "Riveted mail shirt and chausses", kind: "Mail", w: 2, h: 3, rarity: "rare", armor: 40, weight: 9 },
+  { slot: "mail", name: "Mail hauberk", note: "Riveted mail shirt and chausses", kind: "Mail", w: 2, h: 3, rarity: "common", armor: 40, weight: 9 },
   { slot: "doublet", name: "Arming doublet", note: "Quilted coat and hose, worn under the mail", kind: "Under", w: 2, h: 3, rarity: "common", armor: 10, weight: 2 },
-  { slot: "cape", name: "Cape", note: "Order cape", kind: "Back", w: 2, h: 3, rarity: "uncommon", armor: 4, weight: 1.5 },
-  { slot: "tabard", name: "Tabard", note: "Order tabard", kind: "Over", w: 2, h: 3, rarity: "rare", armor: 3, weight: 0.6 },
+  { slot: "cape", name: "Cape", note: "Order cape", kind: "Back", w: 2, h: 3, rarity: "common", armor: 4, weight: 1.5 },
+  { slot: "tabard", name: "Tabard", note: "Order tabard", kind: "Over", w: 2, h: 3, rarity: "common", armor: 3, weight: 0.6 },
   { slot: "sword", name: "Arming sword", note: "Single-handed, double-edged", kind: "Main hand", w: 1, h: 4, rarity: "common", armor: 0, weight: 1.3, damage: 38 },
   { slot: "shield", name: "Heater shield", note: "Oak, rawhide and the order's sun", kind: "Off hand", w: 2, h: 3, rarity: "common", armor: 0, weight: 3.5, block: 70 },
 ];
@@ -176,14 +177,16 @@ export interface ItemInst {
   id: string;
   /** Coins only. */
   qty?: number;
-  /** A weapon's own rarity (it rolled one), instead of its def's. */
+  /** A weapon's or armour piece's own rarity (it rolled one), instead of its def's. */
   rarity?: Rarity;
+  /** Stat modifiers it rolled with its rarity (stats.ts): [modifier, amount]. */
+  mods?: Array<[ModId, number]>;
 }
 
-/** Weapons roll their own rarity when they drop (the arming sword, the shield, the trophy weapons). */
+/** Weapons and armour roll their own rarity when they drop (and gear rolls modifiers with it). */
 export const rollsRarity = (id: string): boolean => {
   const c = def(id).category;
-  return c === "weapon" || c === "trophy";
+  return c === "weapon" || c === "trophy" || c === "armor";
 };
 
 /**
@@ -199,6 +202,7 @@ export function itemOf(it: ItemInst): ItemDef {
     ...d,
     rarity: it.rarity,
     damage: d.damage !== undefined ? Math.round(d.damage * k) : undefined,
+    armor: d.armor ? Math.round(d.armor * k) : d.armor,
     block: d.block !== undefined ? Math.min(95, Math.round(d.block * k)) : undefined,
     value: Math.max(1, Math.round((d.value * p) / 5) * 5),
   };

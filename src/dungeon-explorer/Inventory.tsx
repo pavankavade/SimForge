@@ -5,6 +5,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { RARITY, arrowsIn, def, fitsAt, itemOf, placeItem, removeItem, type GearSlot, type ItemInst } from "./items";
 import { DragGhost, GOLD, GridView, ItemIcon, ItemTooltip, PANEL_BG, PANEL_BORDER, btn, useItemDrag, type DragFrom, type DragState, type DropTarget, type Icons } from "./itemsUi";
+import { ATTRIBUTES, ATTRIBUTE_INFO, statLines, type Attributes, type Stats } from "./stats";
 import { BAG_H, BAG_W, BELT_SLOTS, allItems, beltable, equipFromBag, fromBelt, sortBag, toBelt, unequipToBag, type PlayerInv } from "./playerInv";
 
 export { ITEMS, RARITY } from "./items";
@@ -48,6 +49,9 @@ export interface InventoryScreenProps {
   name: string;
   /** His class's name (Fighter). */
   heroClass: string;
+  /** His stats now (class base plus gear) and the class's base attributes (stats.ts). */
+  stats: Stats;
+  base: Attributes;
   inv: PlayerInv;
   onInv: (inv: PlayerInv) => void;
   /** Drink or eat an item from the bag (it is used up). */
@@ -62,7 +66,7 @@ export interface InventoryScreenProps {
   onClose: () => void;
 }
 
-export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClass, inv, onInv, onUse, icons, viewport, compact, touch, onModelRect, onClose }) => {
+export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClass, stats: sheet, base, inv, onInv, onUse, icons, viewport, compact, touch, onModelRect, onClose }) => {
   const [toast, setToast] = useState<string | null>(null);
   const modelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -171,15 +175,38 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
   const weight = wornSlots.reduce((a, s) => a + wornDef(s).weight, 0);
   const carried = inv.bag.items.reduce((a, p) => a + def(p.item.id).weight, 0);
   const stats: Array<[string, string]> = [
-    ["Armor rating", String(armor)],
+    ["Health", String(sheet.maxHealth)],
+    ["Armor rating", `${sheet.armorRating} (${Math.round(sheet.physicalReduction * 100)}%)`],
+    ["Magic resist", `${Math.round(sheet.magicResist)} (${Math.round(sheet.magicalReduction * 100)}%)`],
     ["Worn weight", `${weight.toFixed(1)} kg`],
     ["Bag weight", `${carried.toFixed(1)} kg`],
-    ["Main hand", swordInst ? `${itemOf(swordInst).damage} dmg` : "Fists"],
+    ["Main hand", swordInst ? `${Math.round(sheet.swordDamage)} dmg` : "Fists"],
     ["Off hand", shieldInst ? `${itemOf(shieldInst).block}% block` : "Empty"],
-    ["Ranged", bowInst ? `${itemOf(bowInst).damage} dmg · ${arrowsIn(inv.bag)} arrows` : "Empty"],
+    ["Ranged", bowInst ? `${Math.round(sheet.bowDamage)} dmg · ${arrowsIn(inv.bag)} arrows` : "Empty"],
     ["Gold", String(inv.gold)],
   ];
   void allItems;
+  void armor;
+  // The seven attributes: what he has, and how much of it his gear gives.
+  const Attrs = (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 10 }}>
+      {ATTRIBUTES.map((k) => {
+        const gear = sheet.attributes[k] - base[k];
+        return (
+          <div key={k} title={`${ATTRIBUTE_INFO[k].name}: ${ATTRIBUTE_INFO[k].does}`} style={{ textAlign: "center", padding: "4px 0", border: "1px solid rgba(214,186,128,0.14)", borderRadius: 3, background: "rgba(10,9,8,0.6)" }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.1em", color: "#8f8676" }}>{ATTRIBUTE_INFO[k].short}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: gear > 0 ? "#7fd88a" : gear < 0 ? "#ff8a7a" : "#f1ead9", fontVariantNumeric: "tabular-nums" }}>{sheet.attributes[k]}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+  const Derived = statLines(sheet).map(([k, v]) => (
+    <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: "1px solid rgba(214,186,128,0.06)" }}>
+      <span style={{ color: "#a69c88" }}>{k}</span>
+      <span style={{ color: "#f1ead9", fontVariantNumeric: "tabular-nums" }}>{v}</span>
+    </div>
+  ));
 
   // ---- Parts ----
 
@@ -420,6 +447,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
               {LEFT.concat(RIGHT).map((s) => SlotBox(s))}
             </div>
             <div style={{ height: 10 }} />
+            {Attrs}
             {StatsStrip}
             <div style={{ display: "flex", justifyContent: "center" }}>{Bag}</div>
             {Belt}
@@ -432,14 +460,19 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
             <div style={{ width: 230, flex: "0 0 230px", alignSelf: "flex-start", background: PANEL_BG, border: PANEL_BORDER, padding: "14px 16px", pointerEvents: "auto" }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: GOLD }}>{name || heroClass}</div>
               <div style={{ fontSize: 12, color: "#8f8676", marginBottom: 12 }}>{heroClass} · Sell-sword of the Wayfarer's Rest</div>
-              <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", marginBottom: 4 }}>STATS</div>
-              {StatsRows}
+              <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", marginBottom: 4 }}>ATTRIBUTES</div>
+              {Attrs}
+              <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", marginBottom: 2 }}>STATS</div>
+              {Derived}
+              <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", margin: "10px 0 2px" }}>CARRYING</div>
+              {StatsRows.slice(3)}
             </div>
           ) : null}
           {column(LEFT)}
           {modelSpace}
           {column(RIGHT)}
           <div style={{ flex: "0 0 auto", alignSelf: "flex-start", background: PANEL_BG, border: PANEL_BORDER, padding: "12px 14px", pointerEvents: "auto" }}>
+            {!wide ? Attrs : null}
             {!wide ? StatsStrip : null}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
               <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676" }}>BAG</div>

@@ -23,11 +23,12 @@ import { createDoors, doorwayProps, type Doors } from "./doorView";
 import { rollChest, rollMobLoot, type Container } from "./loot";
 import { LootScreen } from "./LootScreen";
 import { BELT_SLOTS, arrowCount, equipFromBag, loadInventory, normalizeInventory, saveInventory, spendArrow, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
-import { def, itemOf, removeItem } from "./items";
+import { def, removeItem } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
 import { ShopScreen } from "./ShopScreen";
-import { armorOf, armorReduction, createMobSimulation, type MobAgent, type MobEvent } from "./mobSim";
+import { createMobSimulation, type MobAgent, type MobEvent } from "./mobSim";
+import { computeStats, type Stats } from "./stats";
 import { createMonsterSfx, type MonsterSfx } from "./monsters/monsterSfx";
 import { BOW_TIP, arrowGeometry, bowGeometry } from "./monsters/props";
 import { POOL_SIZE, createMobBodies, type MobBodies } from "./mobBodies";
@@ -258,6 +259,8 @@ interface DungeonSceneProps {
   equipment: ArmorEquipment;
   /** One cut of the sword in hand (its rarity counts), or the fists' without one. */
   weaponDamage: number;
+  /** His stats (class base plus gear, stats.ts): health, defences, speeds. */
+  stats: Stats;
   /** The recurve bow is in hand (key 2): hold attack to draw, let go to loose. */
   bowInHand: boolean;
   /** A full draw's arrow (the bow's rarity counts). */
@@ -395,6 +398,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   spec,
   equipment,
   weaponDamage,
+  stats,
   bowInHand,
   bowDamage,
   arrows,
@@ -473,6 +477,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const monsterSfxRef = useRef<MonsterSfx | null>(null);
   const weaponDamageRef = useRef(weaponDamage);
   weaponDamageRef.current = weaponDamage;
+  const statsRef = useRef(stats);
+  statsRef.current = stats;
   const bowRef = useRef({ inHand: bowInHand, damage: bowDamage, arrows, onShot: onArrowShot });
   bowRef.current = { inHand: bowInHand, damage: bowDamage, arrows, onShot: onArrowShot };
   /** How long the bowstring has been drawn (s); 0 when it is not. */
@@ -635,8 +641,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (pal) pal.shake.value = Math.min(1, pal.shake.value + 0.25);
       return;
     }
-    // Acid eats through boots and plate alike; everything else is softened by armour.
-    const armour = hit.how === "acid" ? 0 : armorReduction(armorOf(equipmentRef.current));
+    // Acid eats through boots and plate alike; a bolt is magic (magic resistance takes some off);
+    // everything else is softened by armour.
+    const st = statsRef.current;
+    const armour = hit.how === "acid" ? 0 : hit.how === "bolt" ? st.magicalReduction : st.physicalReduction;
     const dmg = hit.damage * (hit.how === "acid" ? 1 : 0.9 + w.rand() * 0.2) * (1 - armour);
     w.hp = Math.max(0, w.hp - dmg);
     if (hit.how === "acid") monsterSfxRef.current?.sizzle();
@@ -946,8 +954,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       time: 0,
       combat,
       targets,
-      hp: 100,
-      maxHp: 100,
+      hp: statsRef.current.maxHealth,
+      maxHp: statsRef.current.maxHealth,
       dead: false,
       deadT: 0,
       lastSerial: paladinRef.current ? paladinRef.current.animator.swingSerial : 0,
@@ -965,8 +973,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       rooms: 0,
       mobs: 0,
       roomLabel: Town.areaName(spot.x, spot.z, walker.y),
-      hp: 100,
-      maxHp: 100,
+      hp: statsRef.current.maxHealth,
+      maxHp: statsRef.current.maxHealth,
       dead: false,
       deathCause: null,
       runLeft: RUN_SECONDS,
@@ -1139,8 +1147,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         time: 0,
         combat,
         targets,
-        hp: 100,
-        maxHp: 100,
+        hp: statsRef.current.maxHealth,
+        maxHp: statsRef.current.maxHealth,
         dead: false,
         deadT: 0,
         lastSerial: paladinRef.current ? paladinRef.current.animator.swingSerial : 0,
@@ -1159,8 +1167,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         rooms: dungeon.rooms.length,
         mobs: sim.mobs.length,
         roomLabel: "Entrance",
-        hp: 100,
-        maxHp: 100,
+        hp: statsRef.current.maxHealth,
+        maxHp: statsRef.current.maxHealth,
         dead: false,
         deathCause: null,
         runLeft: RUN_SECONDS,
@@ -1308,7 +1316,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       jumpQueueRef.current = false;
     }
     const swinging = paladin !== null && paladin.animator.state !== "none";
-    const speed = (blocking ? BLOCK_CELLS : sprinting && drawRef.current <= 0 ? RUN_CELLS : WALK_CELLS) * (swinging ? 0.72 : 1) * (drawRef.current > 0 ? 0.55 : 1);
+    const speed =
+      (blocking ? BLOCK_CELLS : sprinting && drawRef.current <= 0 ? RUN_CELLS : WALK_CELLS) *
+      (swinging ? 0.72 : 1) *
+      (drawRef.current > 0 ? 0.55 : 1) *
+      (1 + statsRef.current.moveSpeed);
 
     // A jump needs his feet on the ground, a moment since the last landing, and no shield up or swing under way.
     world.jumpRest = Math.max(0, world.jumpRest - dt);
@@ -1425,8 +1437,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       paladin.group.rotation.y = facing;
       paladin.group.rotation.x = -(Math.PI / 2) * fall * fall;
       paladin.setFirstPerson(fp);
+      // Action speed quickens his swings (the rest of the body keeps its pace).
       paladin.update(
-        dt,
+        paladin.animator.state !== "none" ? dt * (1 + statsRef.current.actionSpeed) : dt,
         {
           moveX: vx * cosF - vz * sinF,
           moveZ: vx * sinF + vz * cosF,
@@ -1454,7 +1467,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     {
       const bow = bowRef.current;
       const ready = bow.inHand && world.place === "dungeon" && active && !world.dead && !show.active && paladin !== null;
-      if (ready && attackHeldRef.current && bow.arrows > 0) drawRef.current = Math.min(1.5, drawRef.current + dt);
+      if (ready && attackHeldRef.current && bow.arrows > 0) drawRef.current = Math.min(1.5, drawRef.current + dt * (1 + statsRef.current.actionSpeed));
       else if (drawRef.current > 0) {
         if (ready && !attackHeldRef.current && drawRef.current >= 0.16 && bow.arrows > 0 && paladin) {
           const power = Math.max(0.2, Math.min(1, (drawRef.current - 0.1) / 0.7));
@@ -1557,6 +1570,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       const open = stashOpenRef.current;
       Town.ROOMS.forEach((r, ri) => r.chests.forEach((_, ci) => town.setChestOpen(ri, ci, !!open && open.room === ri && open.slot === ci)));
       town.update(dt, world.time, eyeRef.current.set(px, world.playerFloor * CELL_M, pz));
+    }
+    // His health follows his gear (a Vigor ring on, a breastplate off): the same share of it stays.
+    if (world.maxHp !== statsRef.current.maxHealth && !world.dead) {
+      world.hp = (world.hp * statsRef.current.maxHealth) / world.maxHp;
+      world.maxHp = statsRef.current.maxHealth;
+      onHudUpdate({ hp: Math.round(world.hp), maxHp: world.maxHp });
     }
     if (healQueueRef.current > 0) {
       if (!world.dead) {
@@ -2077,7 +2096,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       return;
     }
     const d = def(r.used.id);
-    if (d.healOver) regenQueueRef.current = { amount: d.heal ?? 0, seconds: d.healOver };
+    // Interaction speed: a quicker hand ties the bandage faster.
+    if (d.healOver) regenQueueRef.current = { amount: d.heal ?? 0, seconds: d.healOver / (1 + Math.max(-0.5, statsNowRef.current.interactionSpeed)) };
     else healQueueRef.current += d.heal ?? 0;
     setInv(r.inv);
   }, []);
@@ -2090,6 +2110,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   /** Leave this floor without escaping: what was found here is lost. */
   const abandonRun = useCallback(() => setInv(runStartRef.current), []);
   const equipment = useMemo(() => wornOf(inv), [inv]);
+  // His stats: the class's base attributes plus everything he wears (no levels: gear is growth).
+  const stats = useMemo(() => computeStats(classById(heroClass).attributes, inv.equipped), [heroClass, inv.equipped]);
+  const statsNowRef = useRef(stats);
+  statsNowRef.current = stats;
   // What he holds: the sword and shield (key 1) or the bow (key 2) stay in their slots but are only
   // in hand once taken up. He arrives everywhere with everything put away.
   const [drawn, setDrawn] = useState({ melee: false, bow: false });
@@ -2457,9 +2481,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           firstPerson={firstPerson}
           spec={spec}
           equipment={shownEquipment}
-          weaponDamage={inv.equipped.sword ? itemOf(inv.equipped.sword).damage ?? 30 : 6}
+          weaponDamage={stats.swordDamage}
+          stats={stats}
           bowInHand={bowInHand}
-          bowDamage={inv.equipped.bow ? itemOf(inv.equipped.bow).damage ?? 30 : 0}
+          bowDamage={stats.bowDamage}
           arrows={arrows}
           onArrowShot={handleArrowShot}
           crosshairRef={crosshairRef}
@@ -2535,6 +2560,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         <InventoryScreen
           name={spec.name}
           heroClass={className}
+          stats={stats}
+          base={classById(heroClass).attributes}
           inv={inv}
           onInv={setInv}
           onUse={(item) => {
