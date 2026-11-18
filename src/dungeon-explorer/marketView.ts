@@ -1,7 +1,7 @@
-// The entrance market in 3D: one stall per merchant (timber counter, striped awning on posts, a
+// The market in 3D (down the town's street): one stall per merchant (timber counter, striped awning on posts, a
 // painted sign, a lantern) dressed with CC0 props from Patch's asset library (Poly Haven models,
 // assets/models/market/), and a merchant behind each counter: the same realistic human as the
-// paladin, out of armour. The stalls are rebuilt for every floor; the merchants are built once.
+// paladin, out of armour. The stalls are built for the town (none below); the merchants once.
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
@@ -132,8 +132,8 @@ export interface MarketStall {
 export interface Market {
   /** The stalls on this floor (in plan order). */
   stalls: MarketStall[];
-  /** Rebuild the stalls for a new floor. */
-  setFloor: (d: DungeonData, plans: StallPlan[], cellM: number) => void;
+  /** Rebuild the stalls (plans in cells about the grid's middle; the town passes a 0 x 0 grid). */
+  setFloor: (d: Pick<DungeonData, "W" | "H">, plans: StallPlan[], cellM: number) => void;
   /** The stall the paladin can trade at from here (facing it, close enough), or -1. */
   reachable: (x: number, z: number, facing: number) => number;
   /** Inside a stall (counter, posts, awning)? World metres; the camera keeps out. */
@@ -341,7 +341,7 @@ export function createMarket(gl: THREE.WebGLRenderer, scene: THREE.Scene): Marke
     stalls.length = 0;
   };
 
-  const buildStall = (plan: StallPlan, d: DungeonData, cellM: number) => {
+  const buildStall = (plan: StallPlan, d: Pick<DungeonData, "W" | "H">, cellM: number) => {
     const m = MERCHANTS[plan.merchant];
     const toWorld = (cx: number, cz: number) => new THREE.Vector3((cx - d.W / 2) * cellM, plan.floor * cellM, (cz - d.H / 2) * cellM);
     const base = toWorld(plan.x, plan.z);

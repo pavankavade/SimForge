@@ -33,6 +33,16 @@ export function renderLanding() {
         max-width: 1080px;
         margin: 0 auto;
       }
+      .who {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 4px 0 2px;
+        font-size: 14px;
+      }
+      .who-label { color: #b9ab90; }
+      .who-name { color: #ffd84d; font-weight: 800; font-family: Georgia, "Times New Roman", serif; font-size: 17px; }
       .hero {
         text-align: center;
         margin-bottom: 22px;
@@ -254,46 +264,28 @@ export function renderLanding() {
 
         <article class="card featured">
           <div>
-            <span class="badge">New · Free-Roam 3D</span>
-            <h2>3D Dungeon Floor</h2>
+            <span class="badge">New · Dungeon Crawler</span>
+            <h2>Dungeon Crawler</h2>
             <p>
-              Roam a procedural multi-room stone dungeon as the Paladin with taller vaulted arches,
-              flagged stone paving, and goblin, rogue, mage, barbarian &amp; bard mobs running through every room.
+              Wake in the Wayfarer's Rest, rent a room upstairs to stash your loot, trade on the market
+              street, then step onto the teleporter at the Gate of the Deep. Fight through a fresh dungeon
+              floor and escape through a portal before it closes, or lose what you found.
             </p>
             <div class="tags">
-              <span class="tag">Paladin 3rd / 1st Person</span>
-              <span class="tag">Max 10 Rooms</span>
-              <span class="tag">PBR Stone Vaults</span>
+              <span class="tag">Tavern &amp; Market Hub</span>
+              <span class="tag">Extraction Runs</span>
+              <span class="tag">Rentable Stash Rooms</span>
               <span class="tag">Three.js / WebGL</span>
             </div>
           </div>
 
-          <div class="opts">
-            <label>
-              Rooms
-              <select id="exp-rooms">
-                <option value="5">5 rooms</option>
-                <option value="6">6 rooms</option>
-                <option value="7">7 rooms</option>
-                <option value="8" selected>8 rooms</option>
-                <option value="9">9 rooms</option>
-                <option value="10">10 rooms</option>
-              </select>
-            </label>
-            <label>
-              Atmosphere
-              <select id="exp-theme">
-                <option value="verdant" selected>Verdant Crypt</option>
-                <option value="ancient">Ancient Moss</option>
-                <option value="molten">Molten Depth</option>
-                <option value="frost">Frost Vault</option>
-                <option value="grim">Grim Basalt</option>
-              </select>
-            </label>
+          <div class="who">
+            <span class="who-label">You play as</span>
+            <span class="who-name" id="crawler-name">a new adventurer</span>
           </div>
 
           <button type="button" id="launch-explorer" class="btn">
-            Play 3D Dungeon Floor →
+            Start Dungeon Crawler →
           </button>
         </article>
 
@@ -345,13 +337,18 @@ export function renderLanding() {
 
   document.body.append(root);
 
+  // The player this browser plays as (a random name, made on the first start; profile.ts).
+  const nameEl = document.getElementById("crawler-name");
+  try {
+    const p = JSON.parse(localStorage.getItem("simforge.explorer.profile.v1") || "null");
+    if (p && typeof p.name === "string" && nameEl) nameEl.textContent = p.name;
+    else if (nameEl) nameEl.textContent = "a new adventurer (a name is drawn for you)";
+  } catch {
+    // Blocked storage: a guest.
+  }
+
   const launchBtn = document.getElementById("launch-explorer");
-  const roomsSel = document.getElementById("exp-rooms");
-  const themeSel = document.getElementById("exp-theme");
   launchBtn?.addEventListener("click", () => {
-    const rooms = roomsSel instanceof HTMLSelectElement ? roomsSel.value : "8";
-    const theme = themeSel instanceof HTMLSelectElement ? themeSel.value : "verdant";
-    const next = new URLSearchParams({ mode: "explorer", rooms, theme });
-    location.search = `?${next.toString()}`;
+    location.search = `?${new URLSearchParams({ mode: "explorer" }).toString()}`;
   });
 }

@@ -25,7 +25,7 @@ export interface FloorDressing {
 const R = (set: string, name: string) => `${set}/${name}`;
 
 /** The lid of a chest model, hung on a pivot at its back edge (null until loaded). */
-function hingeLid(chest: THREE.Object3D): THREE.Object3D | null {
+export function hingeLid(chest: THREE.Object3D): THREE.Object3D | null {
   const lid = chest.getObjectByName("treasure_chest_lid");
   if (!lid) return null;
   chest.updateMatrixWorld(true);

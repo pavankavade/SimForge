@@ -9,6 +9,10 @@ export interface PauseMenuProps {
   onInventory: () => void;
   onCharacter: () => void;
   onNewSeed: () => void;
+  /** Below: give up the run and go back up to town (what was found on this floor is lost). */
+  onTown?: () => void;
+  /** He is in town: the dungeon options set up the next dive. */
+  inTown?: boolean;
   onTheme: () => void;
   themeLabel: string;
   rooms: number;
@@ -112,10 +116,11 @@ export const PauseMenu: React.FC<PauseMenuProps> = (p) => (
         Inventory
       </Big>
       <Big onClick={p.onCharacter}>Character</Big>
+      {p.onTown ? <Big onClick={p.onTown}>Return to town</Big> : null}
 
       <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", margin: "14px 0 8px" }}>DUNGEON</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-        <Small onClick={p.onNewSeed}>New floor</Small>
+        {p.inTown ? null : <Small onClick={p.onNewSeed}>New floor</Small>}
         <Small onClick={p.onTheme}>Theme: {p.themeLabel}</Small>
         <Small onClick={p.onCamera}>{p.firstPerson ? "Third person" : "First person"}{p.touch ? "" : " (V)"}</Small>
         <Small onClick={p.onMap}>{p.showMap ? "Hide map" : "Show map"}{p.touch ? "" : " (M)"}</Small>
@@ -135,7 +140,9 @@ export const PauseMenu: React.FC<PauseMenuProps> = (p) => (
         </label>
       </div>
       <div style={{ fontSize: 11, color: "#8f8676", marginTop: 8, lineHeight: 1.4 }}>
-        A new floor, theme or room count abandons this run: what you found here is lost. Escape through a portal to keep it.
+        {p.inTown
+          ? "Theme and room count shape your next dive. Step onto the teleporter in the gate hall to go down."
+          : "A new floor, theme or room count (or going back to town) abandons this run: what you found here is lost. Escape through a portal to keep it."}
       </div>
 
       {p.backHref ? (

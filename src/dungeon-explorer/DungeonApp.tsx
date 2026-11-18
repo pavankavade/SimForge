@@ -4,14 +4,18 @@ import * as THREE from "three";
 import { OUTPUT_HEIGHT } from "../engine/viewport";
 import { buildCrypt, type CryptLamp } from "./dungeon/crypt";
 import { floorAt } from "./dungeon/floors";
-import { FLOOR, generateDungeon, type DungeonData } from "./dungeon/generator";
+import { FLOOR, generateDungeon, type DungeonData, type DungeonRoom } from "./dungeon/generator";
 import { buildLevel, type LevelData } from "./dungeon/level";
 import { ashlar } from "./dungeon/masonry";
 import { THEMES, type ThemeName } from "./dungeon/themes";
 import { CELL_M, createDungeonView, type ScanSet } from "./dungeon/view";
 import { createWalker } from "./dungeon/walker";
-import { planMarket, stallPoint, stallProps } from "./dungeon/market";
+import { stallPoint } from "./dungeon/market";
 import { createMarket, type Market } from "./marketView";
+import * as Town from "./town/layout";
+import { createTown, type Town as TownView } from "./town/townView";
+import { loadTown, saveTown, withRented, withStash, type TownSave } from "./town/townSave";
+import { createCloudSync, fetchCloud, loadProfile, saveProfile } from "./profile";
 import { MERCHANTS, css } from "./merchants";
 import { MODULES, pieceProps, planFloor, type FloorPlan } from "./dungeon/rooms";
 import { buildDressing, type FloorDressing } from "./roomView";
@@ -86,12 +90,69 @@ async function enterLandscapeMode(): Promise<void> {
   }
 }
 
+/** Where the paladin is: in town (tavern, market, gate hall) or down in a dungeon floor. */
+export type Place = "town" | "dungeon";
+
+/** What the game loop needs of his feet, in town or below (x and z in cells of CELL_M). */
+interface Walker {
+  x: number;
+  z: number;
+  yaw: number;
+  pitch: number;
+  speedNow: number;
+  step: (dt: number, forward: number, strafe: number, speed: number) => void;
+  room: () => DungeonRoom | null;
+}
+
+type Sim = ReturnType<typeof createMobSimulation>;
+type SimLike = Pick<Sim, "mobs" | "step" | "hit">;
+/** Town has no men to fight. */
+const NO_SIM: SimLike = { mobs: [], step: () => {}, hit: () => null };
+
+/**
+ * Where the camera may go (world metres): open air with `top` metres under the lid and `bottom`
+ * over the floor, and the height kept inside the space it is in.
+ */
+interface CamSpace {
+  open: (x: number, y: number, z: number, top: number, bottom: number) => boolean;
+  clampY: (x: number, y: number, z: number) => number;
+}
+
+function dungeonSpace(d: DungeonData, level: LevelData): CamSpace {
+  const cellOf = (x: number, z: number) => {
+    const gx = x / CELL_M + d.W / 2;
+    const gz = z / CELL_M + d.H / 2;
+    const ix = Math.max(0, Math.min(d.W - 1, Math.floor(gx)));
+    const iz = Math.max(0, Math.min(d.H - 1, Math.floor(gz)));
+    return { gx, gz, c: iz * d.W + ix };
+  };
+  return {
+    open(x, y, z, top, bottom) {
+      const { gx, gz, c } = cellOf(x, z);
+      if (d.grid[c] !== FLOOR) return false;
+      if (level.openAt && level.openAt(gx, gz) < 0.58) return false;
+      return y <= (level.heights[c] || 2.8) * CELL_M - top && y >= floorAt(d, gx, gz) * CELL_M + bottom;
+    },
+    clampY(x, y, z) {
+      const { gx, gz, c } = cellOf(x, z);
+      return Math.max(floorAt(d, gx, gz) * CELL_M + 0.35, Math.min((level.heights[c] || 2.8) * CELL_M - 0.28, y));
+    },
+  };
+}
+
+function townSpace(t: TownView): CamSpace {
+  return { open: (x, y, z, top, bottom) => t.air(x, y, z, top, bottom), clampY: Town.clampAirY };
+}
+
 interface WorldState {
-  dungeon: DungeonData;
-  level: LevelData;
-  lamps: CryptLamp[];
-  walker: ReturnType<typeof createWalker>;
-  sim: ReturnType<typeof createMobSimulation>;
+  place: Place;
+  /** The dungeon floor (null in town). */
+  floor: { dungeon: DungeonData; level: LevelData; lamps: CryptLamp[] } | null;
+  space: CamSpace;
+  /** The floor height under his feet now (cells). */
+  groundAt: () => number;
+  walker: Walker;
+  sim: SimLike;
   playerFloor: number;
   playerJumpY: number;
   playerJumpVy: number;
@@ -135,9 +196,9 @@ interface HudInfo {
   interact: Interact | null;
 }
 
-/** Something within reach: a stall, a door, a chest or a fallen man. */
+/** Something within reach: a stall, a door, a chest, a fallen man; in town a room, a stash, the teleporter. */
 interface Interact {
-  kind: "trade" | "door" | "chest" | "corpse" | "portal";
+  kind: "trade" | "door" | "chest" | "corpse" | "portal" | "rent" | "roomdoor" | "stash" | "teleport";
   /** Merchant index, door index or container id. */
   key: string;
   verb: string;
@@ -202,24 +263,22 @@ interface DungeonSceneProps {
   escapeQueueRef: React.RefObject<boolean>;
   /** A floor is built and he stands at the entrance (the run starts). */
   onFloorReady: () => void;
+  /** In town or below; where he appears in town (the tavern at the start, the dais back from a dive). */
+  place: Place;
+  arrival: "tavern" | "gate";
+  /** Bumped on every arrival in town (so coming back to it places him again). */
+  townVisit: number;
+  /** Rooms he rents upstairs, a room door to work (set by E), and the stash chest open (-1: none). */
+  rentedRef: React.RefObject<boolean[]>;
+  roomDoorQueueRef: React.RefObject<number>;
+  stashOpenRef: React.RefObject<{ room: number; slot: number } | null>;
 }
 
 /** Over-the-shoulder camera: the pivot sits this far right of his head, at about ear height. */
 const SHOULDER_OFFSET = 0.52;
 const SHOULDER_HEIGHT = 1.58;
-
-/** Is this point (metres) open air inside the dungeon, `margin` metres clear of floor and vault? */
-function openAir(d: DungeonData, level: LevelData, x: number, y: number, z: number, margin: number): boolean {
-  const gx = x / CELL_M + d.W / 2;
-  const gz = z / CELL_M + d.H / 2;
-  const ix = Math.max(0, Math.min(d.W - 1, Math.floor(gx)));
-  const iz = Math.max(0, Math.min(d.H - 1, Math.floor(gz)));
-  if (d.grid[iz * d.W + ix] !== FLOOR) return false;
-  if (level.openAt && level.openAt(gx, gz) < 0.58) return false;
-  const ceilY = (level.heights[iz * d.W + ix] || 2.8) * CELL_M - margin;
-  const flY = floorAt(d, gx, gz) * CELL_M + margin;
-  return y <= ceilY && y >= flY;
-}
+/** The market's stalls in town are planned straight in world cells (no grid to centre on). */
+const TOWN_ORIGIN = { W: 0, H: 0 };
 
 /**
  * Third-person camera. The pivot is `shoulder` metres to the right of his head (over the right
@@ -227,8 +286,7 @@ function openAir(d: DungeonData, level: LevelData, x: number, y: number, z: numb
  * `shoulderWant`); the camera then backs off from the pivot until it meets stone.
  */
 function resolveThirdPersonCam(
-  d: DungeonData,
-  level: LevelData,
+  space: CamSpace,
   px: number,
   py: number,
   pz: number,
@@ -246,7 +304,7 @@ function resolveThirdPersonCam(
   let sideMax = shoulderWant;
   for (let i = 1; i <= 8; i++) {
     const s = (shoulderWant * i) / 8 + 0.18;
-    if (!openAir(d, level, px + rx * s, headY, pz + rz * s, 0.2) || solid?.(px + rx * s, headY, pz + rz * s)) {
+    if (!space.open(px + rx * s, headY, pz + rz * s, 0.2, 0.2) || solid?.(px + rx * s, headY, pz + rz * s)) {
       sideMax = Math.max(0, (shoulderWant * (i - 1)) / 8 - 0.05);
       break;
     }
@@ -266,28 +324,14 @@ function resolveThirdPersonCam(
     const x = tx + dirX * t;
     const y = ty + dirY * t;
     const z = tz + dirZ * t;
-    const gx = x / CELL_M + d.W / 2;
-    const gz = z / CELL_M + d.H / 2;
-    const ix = Math.max(0, Math.min(d.W - 1, Math.floor(gx)));
-    const iz = Math.max(0, Math.min(d.H - 1, Math.floor(gz)));
-    const open = level.openAt ? level.openAt(gx, gz) : d.grid[iz * d.W + ix] === FLOOR ? 1 : 0;
-    const ceilY = (level.heights[iz * d.W + ix] || 2.8) * CELL_M - 0.25;
-    const flY = floorAt(d, gx, gz) * CELL_M + 0.35;
-    if (open < 0.58 || d.grid[iz * d.W + ix] !== FLOOR || y > ceilY || y < flY || solid?.(x, y, z)) {
+    if (!space.open(x, y, z, 0.25, 0.35) || solid?.(x, y, z)) {
       safeDist = Math.max(0.55, (desiredDist * (i - 1)) / STEPS - 0.15);
       break;
     }
   }
   const cx = tx + dirX * safeDist;
-  let cy = ty + dirY * safeDist;
   const cz = tz + dirZ * safeDist;
-  const gx = cx / CELL_M + d.W / 2;
-  const gz = cz / CELL_M + d.H / 2;
-  const ix = Math.max(0, Math.min(d.W - 1, Math.floor(gx)));
-  const iz = Math.max(0, Math.min(d.H - 1, Math.floor(gz)));
-  const ceilY = (level.heights[iz * d.W + ix] || 2.8) * CELL_M - 0.28;
-  const flY = floorAt(d, gx, gz) * CELL_M + 0.35;
-  cy = Math.max(flY, Math.min(ceilY, cy));
+  const cy = space.clampY(cx, ty + dirY * safeDist, cz);
   return { cx, cy, cz, tx, ty, tz, sideMax };
 }
 
@@ -324,6 +368,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   clockRunning,
   escapeQueueRef,
   onFloorReady,
+  place,
+  arrival,
+  townVisit,
+  rentedRef,
+  roomDoorQueueRef,
+  stashOpenRef,
 }) => {
   const { gl, scene, camera, size } = useThree();
   const marketRef = useRef<Market | null>(null);
@@ -331,6 +381,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const dressingRef = useRef<FloorDressing | null>(null);
   const doorsRef = useRef<Doors | null>(null);
   const portalsRef = useRef<Portals | null>(null);
+  const townRef = useRef<TownView | null>(null);
   const clockRunningRef = useRef(clockRunning);
   clockRunningRef.current = clockRunning;
   const floorReadyRef = useRef(onFloorReady);
@@ -395,8 +446,14 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     // The entrance market (stalls per floor; the merchants are built once, in the background).
     const market = createMarket(gl, scene);
     marketRef.current = market;
+    // The town over the dungeon (built once; hidden while he is below).
+    const town = createTown(gl, scene);
+    town.setActive(false);
+    townRef.current = town;
 
     return () => {
+      town.dispose();
+      townRef.current = null;
       market.dispose();
       marketRef.current = null;
       dressingRef.current?.dispose();
@@ -497,6 +554,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       doors: () => doorsRef.current,
       portals: () => portalsRef.current,
       dressing: () => dressingRef.current,
+      town: () => townRef.current,
+      layout: Town,
       containers: () => containersRef.current,
       loadModel,
       attack: () => {
@@ -701,8 +760,96 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     };
   }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, showcaseRef]);
 
-  // Build / rebuild the dungeon floor when seed, roomCount, or theme changes.
+  // In town: the dungeon put away, the town shown, and he stands in the tavern or on the dais.
+  const placedVisitRef = useRef(-1);
+  const enterTown = useCallback(() => {
+    const view = viewRef.current;
+    const town = townRef.current;
+    if (!view || !town) return;
+    placedVisitRef.current = townVisit;
+    view.clearCrypt();
+    view.group.visible = false;
+    dressingRef.current?.dispose();
+    dressingRef.current = null;
+    doorsRef.current?.dispose();
+    doorsRef.current = null;
+    portalsRef.current?.dispose();
+    portalsRef.current = null;
+    planRef.current = null;
+    bodiesRef.current?.clear();
+    containersRef.current.clear();
+    chestIdsRef.current = [];
+    interactKeyRef.current = "";
+    town.setActive(true);
+    town.setRented(rentedRef.current);
+    marketRef.current?.setFloor(TOWN_ORIGIN, Town.townStalls(), CELL_M);
+    // Lamplight and firelight in town: his own lantern turned down, the crypt's cold fill off.
+    view.carriedLight.intensity = 0.7;
+    view.hemiLight.intensity = 0.12;
+    const walker = Town.createTownWalker(() => town.dynamicSolids());
+    const spot = Town.SPAWN[arrival];
+    walker.place(spot.x, spot.z, spot.yaw);
+    const targets: CombatTarget[] = [];
+    const combat: CombatWorld = {
+      targets,
+      solid: (x, y, z) => town.solid(x, y, z),
+      onHit: () => {},
+      onClang: () => sfxRef.current?.clang(),
+      onSwing: (swing) => sfxRef.current?.swing(swing),
+      onFootstep: () => sfxRef.current?.step(walker.speedNow > 2 ? 1 : 0),
+    };
+    freeLookRef.current = 0;
+    prevYawRef.current = walker.yaw;
+    let rs = (townVisit * 7919 + 12345) >>> 0;
+    worldRef.current = {
+      place: "town",
+      floor: null,
+      space: townSpace(town),
+      groundAt: () => walker.y / CELL_M,
+      walker,
+      sim: NO_SIM,
+      playerFloor: walker.y / CELL_M,
+      playerJumpY: 0,
+      playerJumpVy: 0,
+      time: 0,
+      combat,
+      targets,
+      hp: 100,
+      maxHp: 100,
+      dead: false,
+      deadT: 0,
+      lastSerial: paladinRef.current ? paladinRef.current.animator.swingSerial : 0,
+      rand: () => (rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296,
+      runT: 0,
+      escaped: false,
+    };
+    paladinRef.current?.reset();
+    onHudUpdate({
+      loading: null,
+      name: "The Wayfarer's Rest",
+      rooms: 0,
+      mobs: 0,
+      roomLabel: Town.areaName(spot.x, spot.z, walker.y),
+      hp: 100,
+      maxHp: 100,
+      dead: false,
+      deathCause: null,
+      runLeft: RUN_SECONDS,
+      portalsOpen: 0,
+      escaped: false,
+      interact: null,
+    });
+  }, [townVisit, arrival, onHudUpdate, containersRef, rentedRef]);
+
+  // The town as soon as he is in it (once per visit; menu changes to the next dive don't move him).
   useEffect(() => {
+    if (place !== "town" || placedVisitRef.current === townVisit) return;
+    enterTown();
+  }, [place, townVisit, enterTown]);
+
+  // Build a dungeon floor when he goes down (and again when seed, rooms or theme change below).
+  useEffect(() => {
+    if (place !== "dungeon") return;
     let cancelled = false;
 
     const run = async () => {
@@ -738,14 +885,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (cancelled) return;
 
       const dungeon = generateDungeon({ seed, rooms: roomCount, loops: 0.35, decor: 0.6, theme });
-      // The market: stalls round the entrance hall, planned from where he will stand, and solid
-      // before the crypt is built (so the wall pilasters beside them become corbels).
+      // Where he will stand: the room plan keeps its pieces clear of it.
       const probe = createWalker(dungeon);
       probe.start();
-      const stalls = planMarket(dungeon, MERCHANTS.length, { x: probe.x + dungeon.W / 2, z: probe.z + dungeon.H / 2 });
-      for (const p of stallProps(dungeon, stalls)) dungeon.props.push(p);
-      // Every other room gets a theme and its furnishings, the corridors clutter and chests
-      // (rooms.ts); solid before the crypt is built, like the stalls.
+      // Every room past the entrance gets a theme and its furnishings, the corridors clutter and
+      // chests (rooms.ts); solid before the crypt is built.
       const plan = planFloor(dungeon, { x: probe.x + dungeon.W / 2, z: probe.z + dungeon.H / 2 });
       for (const p of pieceProps(dungeon, plan.pieces)) dungeon.props.push(p);
       // A fire pit burns: an ember lamp in it, lit and shadowed like the crypt's own.
@@ -761,7 +905,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (cancelled) return;
 
       const lamps = buildCrypt(view, dungeon, level);
-      marketRef.current?.setFloor(dungeon, stalls, CELL_M);
+      // Down here there is no market (the stalls are in town), and the town is put away.
+      marketRef.current?.setFloor(dungeon, [], CELL_M);
+      townRef.current?.setActive(false);
+      placedVisitRef.current = -1;
+      view.group.visible = true;
+      view.carriedLight.intensity = 2.8;
+      view.hemiLight.intensity = 0.65;
       dressingRef.current?.dispose();
       doorsRef.current?.dispose();
       dressingRef.current = buildDressing(scene, dungeon, plan.pieces, CELL_M);
@@ -831,9 +981,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       freeLookRef.current = 0;
       prevYawRef.current = walker.yaw;
       worldRef.current = {
-        dungeon,
-        level,
-        lamps,
+        place: "dungeon",
+        floor: { dungeon, level, lamps },
+        space: dungeonSpace(dungeon, level),
+        groundAt: () => floorAt(dungeon, walker.x + dungeon.W / 2, walker.z + dungeon.H / 2),
         walker,
         sim,
         playerFloor,
@@ -879,7 +1030,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [seed, roomCount, theme, life, onHudUpdate, scene, containersRef]);
+  }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef]);
 
   useFrame((_, rawDelta) => {
     const view = viewRef.current;
@@ -888,7 +1039,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
 
     const dt = Math.min(rawDelta, 0.05);
     world.time += dt;
-    const { dungeon, level, walker, sim, lamps } = world;
+    const { walker, sim, space } = world;
+    const fl = world.floor;
+    const town = world.place === "town" ? townRef.current : null;
     const persp = camera as THREE.PerspectiveCamera;
     const show = showRef.current;
     const sc = showcaseRef.current;
@@ -903,7 +1056,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       let bestScore = -Infinity;
       for (let i = 0; i < 24; i++) {
         const a = (i / 24) * Math.PI * 2;
-        const c = resolveThirdPersonCam(dungeon, level, fx, world.playerFloor * CELL_M, fz, front + a, 0.05, 4.4);
+        const c = resolveThirdPersonCam(space, fx, world.playerFloor * CELL_M, fz, front + a, 0.05, 4.4);
         const dist = Math.hypot(c.cx - fx, c.cz - fz);
         const score = Math.min(dist, 3.6) + 0.7 * Math.cos(a);
         if (score > bestScore) {
@@ -944,7 +1097,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       }
     }
     // The run clock; at ten minutes the dungeon takes whoever is still inside.
-    if (clockRunningRef.current && !world.dead && !world.escaped) {
+    if (fl && clockRunningRef.current && !world.dead && !world.escaped) {
       world.runT += dt;
       if (world.runT >= RUN_SECONDS) {
         world.runT = RUN_SECONDS;
@@ -996,6 +1149,18 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         walker.z += ((dz / dd) * (0.62 - dd)) / CELL_M;
       }
     }
+    // So are the townsfolk.
+    if (town) {
+      for (const n of town.npcSpots()) {
+        const dx = walker.x * CELL_M - n.x;
+        const dz = walker.z * CELL_M - n.z;
+        const dd = Math.hypot(dx, dz);
+        if (dd < 0.6 && dd > 1e-4 && world.playerFloor * CELL_M < 1) {
+          walker.x += ((dx / dd) * (0.6 - dd)) / CELL_M;
+          walker.z += ((dz / dd) * (0.6 - dd)) / CELL_M;
+        }
+      }
+    }
     // Shut doors stop him.
     if (doorsRef.current) {
       const at = { x: walker.x * CELL_M, z: walker.z * CELL_M };
@@ -1005,7 +1170,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     }
 
     // Smooth vertical stair/basin height + jump arc.
-    const targetFloor = floorAt(dungeon, walker.x + dungeon.W / 2, walker.z + dungeon.H / 2);
+    const targetFloor = world.groundAt();
     world.playerFloor += (targetFloor - world.playerFloor) * (1 - Math.exp(-dt * 12));
     if (world.playerJumpY > 0 || world.playerJumpVy !== 0) {
       world.playerJumpY += world.playerJumpVy * dt;
@@ -1088,6 +1253,16 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       doorsRef.current?.toggle(doorQueueRef.current, { x: px, z: pz });
       doorQueueRef.current = -1;
     }
+    if (roomDoorQueueRef.current >= 0) {
+      townRef.current?.toggleDoor(roomDoorQueueRef.current);
+      roomDoorQueueRef.current = -1;
+    }
+    if (town) {
+      town.setRented(rentedRef.current);
+      const open = stashOpenRef.current;
+      Town.ROOMS.forEach((r, ri) => r.chests.forEach((_, ci) => town.setChestOpen(ri, ci, !!open && open.room === ri && open.slot === ci)));
+      town.update(dt, world.time, eyeRef.current.set(px, world.playerFloor * CELL_M, pz));
+    }
     if (healQueueRef.current > 0) {
       if (!world.dead) {
         world.hp = Math.min(world.maxHp, world.hp + healQueueRef.current);
@@ -1137,6 +1312,30 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         const empty = box.seen && box.grid.items.length === 0 ? " (empty)" : "";
         consider({ kind: box.kind, key: box.id, verb: box.kind === "chest" ? "Search" : "Loot", label: `${box.name}${empty}` }, dist - 0.2);
       });
+      if (town) {
+        const rented = rentedRef.current;
+        const feet = world.playerFloor * CELL_M;
+        // The teleporter: anywhere on the dais near its middle.
+        if (feet > Town.DAIS.h * 0.6 && Math.hypot(px - Town.DAIS.x, pz - Town.DAIS.z) < Town.DAIS_REACH) {
+          consider({ kind: "teleport", key: "0", verb: "Descend into", label: "the dungeon" }, 0.5);
+        }
+        if (feet > Town.UPPER_Y - 0.4) {
+          Town.ROOMS.forEach((r, ri) => {
+            const dx = (r.door.x0 + r.door.x1) / 2;
+            const dz = Town.ROOMS_Z + 0.1;
+            const dist = Math.hypot(dx - px, dz - pz);
+            if (dist < 1.7 && look(dx, dz) > 0.3) {
+              if (!rented[ri]) consider({ kind: "rent", key: String(ri), verb: `Rent ${r.name} for`, label: `${r.rent} gold` }, dist + 0.3);
+              else consider({ kind: "roomdoor", key: String(ri), verb: town.doorOpen(ri) ? "Close" : "Open", label: `${r.name} (yours)` }, dist + 0.3);
+            }
+            if (!rented[ri]) return;
+            r.chests.forEach((c, ci) => {
+              const d2 = Math.hypot(c.x - px, c.z - pz);
+              if (d2 < 1.6 && look(c.x, c.z) > 0.25 && pz > Town.ROOMS_Z + 0.2) consider({ kind: "stash", key: `${ri}:${ci}`, verb: "Open", label: `stash chest ${ci + 1}` }, d2);
+            });
+          });
+        }
+      }
       const portals = portalsRef.current;
       if (portals) {
         portals.centres.forEach((c, i) => {
@@ -1232,8 +1431,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       // Narrow portrait screens get less offset so he stays in frame.
       const shoulderWant = SHOULDER_OFFSET * (aspect < 0.85 ? 0.6 : 1);
       const cam = resolveThirdPersonCam(
-        dungeon,
-        level,
+        space,
         px,
         world.playerFloor * CELL_M,
         pz,
@@ -1264,7 +1462,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     bodiesRef.current?.update(dt, sim.mobs, { x: px, y: py, z: pz }, persp, size, platesRef.current);
 
     // Update nearest shadow lamps + render multi-pass crypt frame.
-    view.updateLights(dt, walker.x, walker.z, lamps, dungeon);
+    if (fl) view.updateLights(dt, walker.x, walker.z, fl.lamps, fl.dungeon);
     // The carried lantern rides half a metre above the helm so it lights the steel without burning it out.
     view.renderFrame(world.time, dt, lightX, lightY, lightZ, size.width, size.height);
     // Inventory icons: rendered off screen after the frame, once (they need the paladin built).
@@ -1279,7 +1477,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       hudTimerRef.current = 0;
       const room = walker.room();
       const mod = room && planRef.current ? MODULES[planRef.current.modules[room.id]] : null;
-      const label = room ? `${mod ? mod.name : room.type} (Room ${room.id + 1})` : "Corridor";
+      const label = town ? Town.areaName(px, pz, world.playerFloor * CELL_M) : room ? `${mod ? mod.name : room.type} (Room ${room.id + 1})` : "Corridor";
       const portalsNow = portalsRef.current;
       onHudUpdate({
         roomLabel: label,
@@ -1289,7 +1487,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       });
 
       const canvas = minimapCanvasRef.current;
-      if (canvas) {
+      const mapCtx = canvas && town ? canvas.getContext("2d") : null;
+      if (canvas && mapCtx && town) town.drawMap(mapCtx, canvas.width, canvas.height, px, pz, world.playerFloor * CELL_M, world.time);
+      const dungeon = fl?.dungeon;
+      if (canvas && dungeon) {
         const ctx = canvas.getContext("2d");
         if (ctx) {
           const cw = canvas.width;
@@ -1407,15 +1608,15 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [rotateDismissed, setRotateDismissed] = useState(false);
   const [stickOffset, setStickOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [hud, setHud] = useState<HudInfo>({
-    name: "Forging Dungeon...",
+    name: "The Wayfarer's Rest",
     rooms: initialRooms,
     mobs: 0,
-    roomLabel: "Entrance",
+    roomLabel: "Common room",
     theme: "verdant",
     seed: initialSeed,
     firstPerson: false,
     pointerLocked: false,
-    loading: "Initializing...",
+    loading: "Opening the tavern doors...",
     hp: 100,
     maxHp: 100,
     dead: false,
@@ -1443,8 +1644,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const attackQueueRef = useRef(false);
   const touchBlockRef = useRef(false);
   const stickPointerRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
-  // The character: who he is and what he wears, remembered between visits (CharacterCustomizer.tsx).
-  const [spec, setSpec] = useState<HumanSpec>(initialSpec);
+  // The player: a random adventurer's name and an id his saves are kept under (profile.ts).
+  const profile = useMemo(loadProfile, []);
+  // The character: who he is and what he wears, remembered between visits (CharacterCustomizer.tsx);
+  // the name is the player's.
+  const [spec, setSpec] = useState<HumanSpec>(() => ({ ...initialSpec(), name: profile.name }));
   // What he carries: gold, the pieces he wears and the bag (playerInv.ts); the body shows what is worn.
   const [inv, setInv] = useState<PlayerInv>(() => loadInventory(initialEquipment()));
   useEffect(() => saveInventory(inv), [inv]);
@@ -1466,6 +1670,77 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   }, [hud.pointerLocked]);
   const handleFloorReady = useCallback(() => {
     runStartRef.current = invRef.current;
+  }, []);
+  // In town or below, where he comes up in town, and each arrival there (it places him again).
+  const [place, setPlace] = useState<Place>("town");
+  const [arrival, setArrival] = useState<"tavern" | "gate">("tavern");
+  const [townVisit, setTownVisit] = useState(0);
+  // The rooms he rents upstairs and what their chests hold (town/townSave.ts).
+  const [townSave, setTownSave] = useState<TownSave>(loadTown);
+  useEffect(() => saveTown(townSave), [townSave]);
+  // The server's copy: fetched once at the start (the newer of it and this browser's wins), then
+  // what he has in town is sent up whenever it changes (never mid-dive: only what he extracted).
+  const cloud = useMemo(() => createCloudSync(profile.id), [profile.id]);
+  useEffect(() => () => cloud.dispose(), [cloud]);
+  const [cloudReady, setCloudReady] = useState(false);
+  useEffect(() => {
+    let on = true;
+    fetchCloud(profile.id).then((c) => {
+      if (!on) return;
+      if (c && c.updated > profile.updated) {
+        profile.updated = c.updated;
+        profile.name = c.name || profile.name;
+        saveProfile(profile);
+        setInv(c.inventory);
+        setTownSave((t) => ({ rented: t.rented.map((_, i) => !!c.town.rented?.[i]), stash: t.stash.map((row, r) => row.map((g, k) => c.town.stash?.[r]?.[k] ?? g)) }));
+        setSpec((sp) => ({ ...sp, name: profile.name }));
+      }
+      setCloudReady(true);
+    });
+    return () => {
+      on = false;
+    };
+  }, [profile]);
+  const syncedRef = useRef("");
+  useEffect(() => {
+    if (!cloudReady || place !== "town") return;
+    const name = (spec.name || profile.name).slice(0, 40);
+    const key = JSON.stringify([name, inv, townSave]);
+    if (key === syncedRef.current) return;
+    const first = syncedRef.current === "";
+    syncedRef.current = key;
+    if (name !== profile.name || !first || !profile.updated) {
+      profile.name = name;
+      profile.updated = Date.now();
+      saveProfile(profile);
+    }
+    cloud.push({ name, inventory: inv, town: townSave, updated: profile.updated });
+  }, [cloudReady, place, inv, townSave, spec.name, profile, cloud]);
+  const rentedRef = useRef(townSave.rented);
+  rentedRef.current = townSave.rented;
+  const roomDoorQueueRef = useRef(-1);
+  const stashOpenRef = useRef<{ room: number; slot: number } | null>(null);
+  const [stashAt, setStashAt] = useState<{ room: number; slot: number } | null>(null);
+  // A line across the screen for a few seconds (rent paid, back from a dive), and the teleport flash.
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 3600);
+    return () => window.clearTimeout(t);
+  }, [toast]);
+  const [flashKey, setFlashKey] = useState(0);
+  // A greeting by name once the tavern is up.
+  const welcomedRef = useRef(false);
+  useEffect(() => {
+    if (hud.loading || welcomedRef.current || place !== "town") return;
+    welcomedRef.current = true;
+    setToast(`Welcome to the Wayfarer's Rest, ${spec.name || profile.name}. The gate to the dungeon is at the end of the market street.`);
+  }, [hud.loading, place, spec.name, profile]);
+  const goToTown = useCallback((at: "tavern" | "gate") => {
+    setArrival(at);
+    setTownVisit((v) => v + 1);
+    setPlace("town");
+    setFlashKey((k) => k + 1);
   }, []);
   /** Leave this floor without escaping: what was found here is lost. */
   const abandonRun = useCallback(() => setInv(runStartRef.current), []);
@@ -1494,6 +1769,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [screen, setScreen] = useState<Screen>("play");
   const screenRef = useRef<Screen>("play");
   screenRef.current = screen;
+  stashOpenRef.current = screen === "loot" && stashAt ? stashAt : null;
   const customizing = screen === "character";
   const showcasing = screen === "inventory" || customizing;
   const [characterBusy, setCharacterBusy] = useState(true);
@@ -1540,7 +1816,14 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       }
     }
   }, [openScreen]);
-  // E (or the touch button): trade at a stall, open or close a door, search a chest or a fallen man.
+  // Down through the teleporter: a fresh floor every dive.
+  const descend = useCallback(() => {
+    setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999);
+    setPlace("dungeon");
+    setFlashKey((k) => k + 1);
+  }, []);
+  // E (or the touch button): trade at a stall, open or close a door, search a chest or a fallen man;
+  // in town rent a room, work its door, open a stash chest, or step onto the teleporter.
   const interactNow = useCallback(
     (it: Interact | null) => {
       if (!it) return;
@@ -1549,15 +1832,33 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         openScreen("shop");
       } else if (it.kind === "door") doorQueueRef.current = Number(it.key);
       else if (it.kind === "portal") escapeQueueRef.current = true;
-      else {
+      else if (it.kind === "teleport") descend();
+      else if (it.kind === "roomdoor") roomDoorQueueRef.current = Number(it.key);
+      else if (it.kind === "rent") {
+        const ri = Number(it.key);
+        const room = Town.ROOMS[ri];
+        if (invRef.current.gold < room.rent) {
+          setToast(`Not enough gold: ${room.name} is ${room.rent} gold.`);
+          return;
+        }
+        setInv((v) => ({ ...v, gold: v.gold - room.rent }));
+        setTownSave((t) => withRented(t, ri));
+        setToast(`${room.name} is yours. Its three chests keep what you leave in them between dives.`);
+      } else if (it.kind === "stash") {
+        const [room, slot] = it.key.split(":").map(Number);
+        setStashAt({ room, slot });
+        setLootId(null);
+        openScreen("loot");
+      } else {
         const box = containersRef.current.get(it.key);
         if (!box) return;
         box.seen = true;
+        setStashAt(null);
         setLootId(it.key);
         openScreen("loot");
       }
     },
-    [openScreen]
+    [openScreen, descend]
   );
   const handleShowcaseView = useCallback((v: ShowcaseView) => {
     showcaseRef.current.zoom = SHOW_ZOOM[v];
@@ -1680,9 +1981,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       ? { left: 0, top: 0, width: viewport.w - panel.size, height: viewport.h }
       : { left: 0, top: 0, width: viewport.w, height: viewport.h - panel.size };
   const nextSeed = () => setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999);
-  // From the menu these leave the floor mid-run (abandoned); after an escape they are free.
+  // Below, these leave the floor mid-run (abandoned); in town they only set up the next dive.
   const leaveFloor = (go: () => void) => {
-    if (!hud.escaped) abandonRun();
+    if (place === "dungeon" && !hud.escaped) abandonRun();
     go();
   };
   const nextTheme = () => {
@@ -1707,6 +2008,18 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     return { gold: inv.gold - start.gold, items };
   })();
   const clock = (sec: number) => `${Math.floor(sec / 60)}:${(sec % 60 < 10 ? "0" : "") + (sec % 60)}`;
+  const haul = (g: { gold: number; items: number }) =>
+    `${g.gold > 0 ? `${g.gold} gold` : ""}${g.gold > 0 && g.items > 0 ? " and " : ""}${g.items > 0 ? `${g.items} item${g.items > 1 ? "s" : ""}` : ""}`;
+  // Out through a portal: back on the dais in town with what he carried.
+  const runGainRef = useRef(runGain);
+  runGainRef.current = runGain;
+  const escapedNow = hud.escaped && !hud.dead && place === "dungeon";
+  useEffect(() => {
+    if (!escapedNow) return;
+    const g = runGainRef.current;
+    setToast(g.gold > 0 || g.items > 0 ? `Back through the gate. You keep ${haul(g)} from the dungeon.` : "Back through the gate, empty-handed.");
+    goToTown("gate");
+  }, [escapedNow, goToTown]);
   const runElapsed = RUN_SECONDS - hud.runLeft;
   const portalsIn = Math.max(0, PORTALS_FROM - runElapsed);
 
@@ -1785,9 +2098,15 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onTouchDetected={handleTouchDetected}
           trading={screen === "shop" ? shopMerchant : -1}
           tradeFrame={tradeFrame}
-          clockRunning={screen !== "menu" && screen !== "character"}
+          clockRunning={place === "dungeon" && screen !== "menu" && screen !== "character"}
           escapeQueueRef={escapeQueueRef}
           onFloorReady={handleFloorReady}
+          place={place}
+          arrival={arrival}
+          townVisit={townVisit}
+          rentedRef={rentedRef}
+          roomDoorQueueRef={roomDoorQueueRef}
+          stashOpenRef={stashOpenRef}
         />
       </Canvas>
 
@@ -1826,7 +2145,23 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         <ShopScreen merchant={MERCHANTS[shopMerchant]} inv={inv} onInv={setInv} icons={allIcons} compact={shopCompact} touch={isTouchUI} onClose={resume} />
       ) : null}
 
-      {screen === "loot" && lootId && containersRef.current.get(lootId)
+      {screen === "loot" && stashAt ? (
+        <LootScreen
+          title={`${Town.ROOMS[stashAt.room].name} · Chest ${stashAt.slot + 1}`}
+          subtitle="Your stash · kept between dives"
+          container={townSave.stash[stashAt.room][stashAt.slot]}
+          onContainer={(g) => setTownSave((t) => withStash(t, stashAt.room, stashAt.slot, g))}
+          inv={inv}
+          onInv={setInv}
+          icons={allIcons}
+          viewport={viewport}
+          compact={isPortrait || viewport.w < 760}
+          touch={isTouchUI}
+          onClose={resume}
+        />
+      ) : null}
+
+      {screen === "loot" && !stashAt && lootId && containersRef.current.get(lootId)
         ? (() => {
             const box = containersRef.current.get(lootId) as Container;
             return (
@@ -1858,6 +2193,16 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onInventory={() => openScreen("inventory")}
           onCharacter={() => openScreen("character")}
           onNewSeed={() => leaveFloor(nextSeed)}
+          inTown={place === "town"}
+          onTown={
+            place === "dungeon" && !hud.dead
+              ? () => {
+                  abandonRun();
+                  openScreen("play");
+                  goToTown("gate");
+                }
+              : undefined
+          }
           onTheme={nextTheme}
           themeLabel={THEMES[theme].label}
           rooms={roomCount}
@@ -1892,7 +2237,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         <div style={{ fontSize: mobileMode ? 11 : 12, color: "#c9d2db", marginTop: 2 }}>
           <b>{spec.name || "Paladin"}</b> · {hud.roomLabel} · <b style={{ color: "#ffd84d" }}>{inv.gold}</b> gold
         </div>
-        <div style={{ fontSize: mobileMode ? 10 : 12, color: "#9fb0bf", marginTop: 1 }}>
+        <div style={{ fontSize: mobileMode ? 10 : 12, color: "#9fb0bf", marginTop: 1, display: place === "dungeon" ? undefined : "none" }}>
           Men: <b>{hud.mobs}</b> · Portals: <b style={{ color: hud.portalsOpen ? "#c9a8ff" : undefined }}>{hud.portalsOpen}</b> / {PORTAL_COUNT}
           {mobileMode ? (
             <>
@@ -2005,7 +2350,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       ) : null}
 
       {/* The run clock, top centre on desktop (inside the top-left panel on small screens). */}
-      {showGameHud && !mobileMode && !hud.loading ? (
+      {showGameHud && !mobileMode && !hud.loading && place === "dungeon" ? (
         <div
           style={{
             position: "fixed",
@@ -2269,13 +2614,19 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             >
               {hud.interact.kind === "trade"
                 ? "TRADE"
-                : hud.interact.kind === "door"
+                : hud.interact.kind === "door" || hud.interact.kind === "roomdoor"
                   ? hud.interact.verb.toUpperCase()
                   : hud.interact.kind === "chest"
                     ? "SEARCH"
                     : hud.interact.kind === "portal"
                       ? "ESCAPE"
-                      : "LOOT"}
+                      : hud.interact.kind === "rent"
+                        ? "RENT"
+                        : hud.interact.kind === "stash"
+                          ? "OPEN"
+                          : hud.interact.kind === "teleport"
+                            ? "DESCEND"
+                            : "LOOT"}
             </button>
           ) : (
             <span style={{ display: "inline-block", minWidth: 22, padding: "2px 6px", textAlign: "center", border: "1px solid #e8dcc0", borderRadius: 3, fontSize: 12, fontWeight: 800, color: "#f3e6c4" }}>E</span>
@@ -2360,16 +2711,17 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
               <div style={{ color: "#f0b0a0" }}>{hud.deathCause}.</div>
             ) : null}
             {runGain.gold > 0 || runGain.items > 0
-              ? `Lost with you: ${runGain.gold > 0 ? `${runGain.gold} gold` : ""}${runGain.gold > 0 && runGain.items > 0 ? " and " : ""}${runGain.items > 0 ? `${runGain.items} item${runGain.items > 1 ? "s" : ""}` : ""} found on this floor.`
+              ? `Lost with you: ${haul(runGain)} found on this floor.`
               : "You had found nothing yet."}
           </div>
           <button
             type="button"
             onClick={(e) => {
               e.currentTarget.blur();
-              // Back to what he carried in; the floor (and its chests) stand as they were.
+              // Back to what he carried in, waking on the dais in town.
               setInv(runStartRef.current);
               setLife((l) => l + 1);
+              goToTown("gate");
             }}
             style={{
               background: "rgba(30,27,23,0.95)",
@@ -2383,57 +2735,52 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
               cursor: "pointer",
             }}
           >
-            RESPAWN
+            RETURN TO TOWN
           </button>
         </div>
       ) : null}
 
-      {/* Escaped through a portal: the run's haul is his; the next floor waits. */}
-      {hud.escaped && !hud.dead ? (
+      {/* A teleport: a violet flash as the runes take him (down or back up). */}
+      {flashKey > 0 ? (
         <div
+          key={`flash-${flashKey}`}
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 19,
-            background: "radial-gradient(ellipse at center, rgba(60,30,120,0.55), rgba(6,4,14,0.94))",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 18,
-            animation: "simforgeDied 1s ease-out",
+            pointerEvents: "none",
+            zIndex: 18,
+            background: "radial-gradient(ellipse at center, rgba(220,200,255,0.95), rgba(110,70,220,0.85) 45%, rgba(10,4,24,0.95) 100%)",
+            animation: "simforgeFlash 1.1s ease-out forwards",
+          }}
+        />
+      ) : null}
+      <style>{"@keyframes simforgeFlash { 0% { opacity: 1; } 35% { opacity: 0.9; } 100% { opacity: 0; } } @keyframes simforgeToast { from { opacity: 0; } to { opacity: 1; } }"}</style>
+
+      {/* A line of news: rent paid, back from a dive. */}
+      {toast ? (
+        <div
+          key={toast}
+          style={{
+            position: "fixed",
+            left: "50%",
+            top: mobileMode ? "28%" : "22%",
+            transform: "translateX(-50%)",
+            zIndex: 17,
+            maxWidth: "min(560px, calc(100vw - 32px))",
+            padding: "10px 18px",
+            background: "rgba(10, 9, 8, 0.86)",
+            border: "1px solid rgba(214,186,128,0.45)",
+            borderRadius: 4,
+            color: "#f3e6c4",
+            fontFamily: "Georgia, 'Times New Roman', serif",
+            fontSize: mobileMode ? 14 : 16,
+            textAlign: "center",
+            lineHeight: 1.45,
+            pointerEvents: "none",
+            animation: "simforgeToast 0.4s ease-out",
           }}
         >
-          <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: mobileMode ? 36 : 60, letterSpacing: "0.12em", color: "#c9a8ff", textShadow: "0 0 28px rgba(140,92,255,0.7)" }}>
-            ESCAPED
-          </div>
-          <div style={{ fontSize: 14, color: "#ddd3f2", textAlign: "center", lineHeight: 1.6, padding: "0 16px" }}>
-            Out with {clock(hud.runLeft)} to spare.
-            <br />
-            {runGain.gold > 0 || runGain.items > 0
-              ? `You keep ${runGain.gold > 0 ? `${runGain.gold} gold` : ""}${runGain.gold > 0 && runGain.items > 0 ? " and " : ""}${runGain.items > 0 ? `${runGain.items} item${runGain.items > 1 ? "s" : ""}` : ""} from this floor.`
-              : "You came out empty-handed."}
-          </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.currentTarget.blur();
-              nextSeed();
-            }}
-            style={{
-              background: "rgba(30,24,44,0.95)",
-              color: "#eee6ff",
-              border: "1px solid rgba(201,168,255,0.5)",
-              borderRadius: 3,
-              padding: "10px 26px",
-              fontSize: 15,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              cursor: "pointer",
-            }}
-          >
-            NEXT FLOOR
-          </button>
+          {toast}
         </div>
       ) : null}
 
@@ -2459,7 +2806,15 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             style={{ width: mapPixels, height: mapPixels, display: "block" }}
           />
           <div style={{ fontSize: 10, color: "#9fb0bf", textAlign: "center", marginTop: 2 }}>
-            <span style={{ color: "#ffd84d" }}>●</span> You &nbsp; <span style={{ color: "#6ce88a" }}>●</span> Men &nbsp; <span style={{ color: "#ff5a4a" }}>●</span> Hostile
+            {place === "town" ? (
+              <>
+                <span style={{ color: "#ffd84d" }}>●</span> You &nbsp; <span style={{ color: "#6ce88a" }}>●</span> Folk &nbsp; <span style={{ color: "#c9a8ff" }}>◯</span> Gate
+              </>
+            ) : (
+              <>
+                <span style={{ color: "#ffd84d" }}>●</span> You &nbsp; <span style={{ color: "#6ce88a" }}>●</span> Men &nbsp; <span style={{ color: "#ff5a4a" }}>●</span> Hostile
+              </>
+            )}
             {hud.portalsOpen ? (
               <>
                 {" "}

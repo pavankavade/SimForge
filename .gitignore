@@ -45,3 +45,6 @@ oc_help.*
 
 # Large videos under public/ (render-sized; media/demo.mp4 stays tracked)
 public/**/*.mp4
+
+# Local Cloudflare Pages dev state
+.wrangler/

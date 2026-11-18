@@ -361,6 +361,7 @@ export function createDungeonView(
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   carriedLight: THREE.PointLight;
+  hemiLight: THREE.HemisphereLight;
   setMasonry: (data: { stone: ProceduralTextureData }) => void;
   setScans: (scans: { wall: ScanSet; floor: ScanSet; plaster: ScanSet }) => void;
   setLevel: (d: DungeonData, level: LevelData) => void;
@@ -1371,6 +1372,7 @@ export function createDungeonView(
     candleParts: { sconce: G.sconce, wax: G.standWax, flame: G.flame, waxMaterial: matWax, flameMaterial: matFlame },
     haloMaterial,
     carriedLight: carried,
+    hemiLight: hemi,
     markSolid() {
       extraChildren = group.children.slice(baseCount);
       group.traverse((o) => {

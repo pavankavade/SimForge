@@ -77,7 +77,7 @@ export interface RoomModule {
 }
 
 export const MODULES: Record<ModuleId, RoomModule> = {
-  market: { id: "market", name: "Market", walls: [], repeatFrom: 0, maxWalls: 0, centre: [], chests: [0, 0] },
+  market: { id: "market", name: "Entrance hall", walls: [], repeatFrom: 0, maxWalls: 0, centre: [], chests: [0, 0] },
   barracks: { id: "barracks", name: "Barracks", walls: ["bed", "bed", "weaponRack", "bed", "barrel", "bed", "crate"], repeatFrom: 3, maxWalls: 8, centre: ["messTable"], chests: [1, 1] },
   storeroom: { id: "storeroom", name: "Storeroom", walls: ["crateStack", "barrelPair", "shelves", "sundries", "crate", "barrel", "crateStack"], repeatFrom: 0, maxWalls: 9, centre: [], chests: [1, 2] },
   library: { id: "library", name: "Library", walls: ["bookshelf", "bookshelf", "cabinet", "commode", "bookshelf", "shelves"], repeatFrom: 0, maxWalls: 7, centre: ["studyTable"], chests: [0, 1] },
@@ -158,7 +158,7 @@ interface Box {
   z1: number;
 }
 
-/** Plan the furnishings of every room but the market (planned by market.ts) and the corridors. */
+/** Plan the furnishings of every room but the entrance (left bare where he arrives) and the corridors. */
 export function planFloor(d: DungeonData, start: { x: number; z: number }, keepClear: Box[] = []): FloorPlan {
   const rand = rng((d.seed ^ 0x2f6b13a7) >>> 0);
   const modules = assignModules(d, rand);

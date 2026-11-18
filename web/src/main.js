@@ -1,7 +1,7 @@
 // Canonical SimForge web portal router:
 // - Bare `/` (no mode/route query params): renders the lightweight landing selector (loads zero 3D code).
 // - `?mode=vardhan` (or `/vardhan`): Vardhan's Stumble Guys Sandbox.
-// - `?mode=explorer` (or legacy `?hall=explorer`): 3D Dungeon Floor (Paladin roam + running mobs).
+// - `?mode=explorer` (or legacy `?hall=explorer`): the Dungeon Crawler (starts in the tavern).
 // - `?mode=crypt` / `?play=1` / `?cam=` / `?shot=` (or legacy `?hall=crypt`): Episode 1 Crypt Hallway.
 // - `?mode=boulder` (or `?hall=boulder`): Episode 2 Boulder Hallway.
 // - `?mode=walls` (or `?hall=walls`): Episode 3 Crushing Walls.
@@ -31,7 +31,7 @@ if (!hasRoute) {
   }
   createRoot(mount).render(createElement(VardhanStumbleApp));
 } else if (mode === "explorer") {
-  document.title = "SimForge — 3D Dungeon Floor (Paladin)";
+  document.title = "SimForge — Dungeon Crawler";
   const [{ createElement }, { createRoot }, { DungeonApp }] = await Promise.all([
     import("react"),
     import("react-dom/client"),
