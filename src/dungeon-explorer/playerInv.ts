@@ -3,17 +3,19 @@
 // time he starts in the basic kit (padding, sword, shield) with a little gold. An earlier save (a
 // purse of owned slots) is carried over.
 import { ARMOR_SLOTS, type ArmorEquipment, type ArmorSlot } from "../artifacts/characters/paladin";
-import { addItem, def, emptyGrid, fitsAt, newItem, placeItem, removeItem, sortGrid, type Grid, type ItemInst } from "./items";
+import { addItem, def, emptyGrid, fitsAt, newItem, placeItem, removeItem, sortGrid, type GearSlot, type Grid, type ItemInst } from "./items";
 
 export const BAG_W = 12;
 export const BAG_H = 8;
 
 export interface PlayerInv {
   gold: number;
-  equipped: Partial<Record<ArmorSlot, ItemInst>>;
+  equipped: Partial<Record<GearSlot, ItemInst>>;
   bag: Grid;
   /** The two belt slots (keys 3 and 4): a draught, a bandage, food, ready to use. */
   belt: Array<ItemInst | null>;
+  /** The starting purse this save has been given (older saves are topped up to it once). */
+  granted?: number;
 }
 
 export const BELT_SLOTS = 2;
@@ -22,7 +24,7 @@ export const BELT_SLOTS = 2;
 export const beltable = (id: string) => !!def(id).heal;
 
 export const BASIC_KIT: ArmorSlot[] = ["doublet", "sword", "shield"];
-const START_GOLD = 300;
+export const START_GOLD = 10000;
 const KEY = "simforge.explorer.inventory.v3";
 
 function fresh(): PlayerInv {
@@ -31,7 +33,7 @@ function fresh(): PlayerInv {
   let bag = emptyGrid(BAG_W, BAG_H);
   bag = addItem(bag, newItem("apple")) ?? bag;
   bag = addItem(bag, newItem("bandage")) ?? bag;
-  return { gold: START_GOLD, equipped, bag, belt: [newItem("potion"), newItem("bandage")] };
+  return { gold: START_GOLD, equipped, bag, belt: [newItem("potion"), newItem("bandage")], granted: START_GOLD };
 }
 
 /** An older save has no belt: the first draught and the first bandage (or food) in the bag go on it. */
@@ -56,7 +58,7 @@ export function loadInventory(wornBefore: ArmorEquipment): PlayerInv {
     if (raw) {
       const s = JSON.parse(raw) as PlayerInv;
       if (s && s.bag && Array.isArray(s.bag.items)) {
-        return withBelt({ gold: Math.max(0, Math.floor(s.gold || 0)), equipped: s.equipped || {}, bag: { w: BAG_W, h: BAG_H, items: s.bag.items }, belt: s.belt });
+        return withGrant(withBelt({ gold: Math.max(0, Math.floor(s.gold || 0)), equipped: s.equipped || {}, bag: { w: BAG_W, h: BAG_H, items: s.bag.items }, belt: s.belt, granted: s.granted }));
       }
     }
     // The purse of the first market build: the slots he owned, worn or in the bag.
@@ -114,7 +116,7 @@ export function equipFromBag(inv: PlayerInv, uid: string): PlayerInv | null {
 }
 
 /** Take a piece off into the bag (at a cell, or the first gap); null when it doesn't fit. */
-export function unequipToBag(inv: PlayerInv, slot: ArmorSlot, at?: { x: number; y: number }): PlayerInv | null {
+export function unequipToBag(inv: PlayerInv, slot: GearSlot, at?: { x: number; y: number }): PlayerInv | null {
   const it = inv.equipped[slot];
   if (!it) return null;
   let bag: Grid | null;
@@ -135,13 +137,36 @@ export const sortBag = (inv: PlayerInv): PlayerInv => ({ ...inv, bag: sortGrid(i
 
 /** Every item he has (worn, on the belt and carried), for weights and counts. */
 export function allItems(inv: PlayerInv): ItemInst[] {
-  const worn = ARMOR_SLOTS.map((s) => inv.equipped[s]).filter((x): x is ItemInst => !!x);
+  const worn = (ARMOR_SLOTS as readonly GearSlot[]).concat(["bow"]).map((s) => inv.equipped[s]).filter((x): x is ItemInst => !!x);
   const belt = (inv.belt || []).filter((x): x is ItemInst => !!x);
   return worn.concat(belt, inv.bag.items.map((p) => p.item));
 }
 
 /** A saved inventory from anywhere (the server, an older save) with a belt in place. */
-export const normalizeInventory = (inv: PlayerInv): PlayerInv => withBelt(inv);
+/** A save from before the purse was raised gets the new starting purse once (never less than it has). */
+function withGrant(inv: PlayerInv): PlayerInv {
+  if ((inv.granted ?? 0) >= START_GOLD) return inv;
+  return { ...inv, gold: Math.max(inv.gold, START_GOLD), granted: START_GOLD };
+}
+
+export const normalizeInventory = (inv: PlayerInv): PlayerInv => withGrant(withBelt(inv));
+
+/** Arrows he carries (every stack in the bag). */
+export const arrowCount = (inv: PlayerInv): number => inv.bag.items.reduce((a, p) => a + (p.item.id === "arrows" ? (p.item.qty ?? 1) : 0), 0);
+
+/** One arrow off the smallest stack (an emptied stack goes); null with none left. */
+export function spendArrow(inv: PlayerInv): PlayerInv | null {
+  let best: { uid: string; qty: number } | null = null;
+  for (const p of inv.bag.items) {
+    if (p.item.id !== "arrows") continue;
+    const q = p.item.qty ?? 1;
+    if (!best || q < best.qty) best = { uid: p.item.uid, qty: q };
+  }
+  if (!best) return null;
+  const b = best;
+  const items = b.qty <= 1 ? inv.bag.items.filter((p) => p.item.uid !== b.uid) : inv.bag.items.map((p) => (p.item.uid === b.uid ? { ...p, item: { ...p.item, qty: b.qty - 1 } } : p));
+  return { ...inv, bag: { ...inv.bag, items } };
+}
 
 /** Put a bag item on belt slot `i`; what was there goes back to the bag (where this came from if it fits). */
 export function toBelt(inv: PlayerInv, uid: string, i: number): PlayerInv | null {

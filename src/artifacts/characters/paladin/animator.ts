@@ -30,6 +30,8 @@ export interface PaladinInput {
   seatY?: number;
   /** What the arms do (overrides the guard/relaxed arms; switches ease over ~0.3 s). */
   arms?: ArmsPose;
+  /** Close the left hand round a grip ("sword": a bow's handle) whatever is equipped. */
+  gripL?: "relaxed" | "sword" | "strap";
 }
 
 export type Stance = "stand" | "sit" | "crouch";

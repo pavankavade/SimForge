@@ -101,7 +101,7 @@ export interface Projectile {
   vy: number;
   vz: number;
   damage: number;
-  /** Who loosed it. */
+  /** Who loosed it: a monster's id, or 0 for the fighter (his arrows hit monsters, not him). */
   from: number;
   /** Seconds left; an arrow stuck in a wall stays a while. */
   life: number;
@@ -125,6 +125,7 @@ export type MobEvent =
   | { type: "loose"; mob: MobAgent; projectile: "arrow" | "bolt" }
   | { type: "impact"; projectile: Projectile; wall: boolean }
   | { type: "split"; mob: MobAgent }
+  | { type: "struck"; mob: MobAgent; result: "blocked" | "hit" | "killed" }
   | { type: "hop"; mob: MobAgent };
 
 function mulberry32(seed: number) {
@@ -564,8 +565,23 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
         p.x += (p.vx * dt) / n;
         p.y += (p.vy * dt) / n;
         p.z += (p.vz * dt) / n;
+        // His own arrows: the first monster whose body it passes through takes it.
+        if (p.from === 0) {
+          for (const m of mobs) {
+            if (m.dead) continue;
+            const hy = Math.max(m.wy + 0.1, Math.min(m.wy + m.height, p.y));
+            if (Math.hypot(p.x - m.wx, p.y - hy, p.z - m.wz) < m.radius + 0.06) {
+              p.dead = true;
+              const sp = Math.hypot(p.vx, p.vz) || 1;
+              const result = hit(m.id, p.vx / sp, p.vz / sp, p.damage);
+              if (result) events.push({ type: "struck", mob: m, result });
+              break;
+            }
+          }
+          if (p.dead) break;
+        }
         // The fighter: a capsule from his feet to his crown.
-        if (!pl.dead) {
+        if (!pl.dead && p.from !== 0) {
           const hy = Math.max(pl.wy + 0.2, Math.min(pl.wy + 1.65, p.y));
           if (Math.hypot(p.x - pl.wx, p.y - hy, p.z - pl.wz) < PLAYER_R) {
             p.dead = true;
@@ -855,5 +871,10 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
     return "hit";
   };
 
-  return { mobs, projectiles, puddles, events, step, hit };
+  /** The fighter looses an arrow from (x, y, z) with velocity (vx, vy, vz), metres and m/s. */
+  const shoot = (x: number, y: number, z: number, vx: number, vy: number, vz: number, damage: number) => {
+    projectiles.push({ id: nextShot++, kind: "arrow", x, y, z, vx, vy, vz, damage, from: 0, life: 3, stuck: false, dead: false });
+  };
+
+  return { mobs, projectiles, puddles, events, step, hit, shoot };
 }

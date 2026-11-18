@@ -3,8 +3,7 @@
 // takes up its real footprint. Items move by drag and drop (mouse or finger); right-click, or a
 // double-click / double-tap, puts a piece on or takes it off, and drinks or eats what can be used.
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { ArmorSlot } from "../artifacts/characters/paladin";
-import { RARITY, def, fitsAt, itemOf, placeItem, removeItem, type ItemInst } from "./items";
+import { RARITY, arrowsIn, def, fitsAt, itemOf, placeItem, removeItem, type GearSlot, type ItemInst } from "./items";
 import { DragGhost, GOLD, GridView, ItemIcon, ItemTooltip, PANEL_BG, PANEL_BORDER, btn, useItemDrag, type DragFrom, type DragState, type DropTarget, type Icons } from "./itemsUi";
 import { BAG_H, BAG_W, BELT_SLOTS, allItems, beltable, equipFromBag, fromBelt, sortBag, toBelt, unequipToBag, type PlayerInv } from "./playerInv";
 
@@ -18,11 +17,15 @@ export interface FrameRect {
   height: number;
 }
 
-// Head to waist (and the sword) on his left; what goes over and under, the legs (and the shield) on his right.
-const LEFT: ArmorSlot[] = ["helm", "gorget", "pauldrons", "cuirass", "arms", "gauntlets", "waist", "sword"];
-const RIGHT: ArmorSlot[] = ["cape", "tabard", "mail", "doublet", "cuisses", "greaves", "sabatons", "shield"];
-const WEAPONS: ArmorSlot[] = ["sword", "shield"];
-const SLOT_KIND: Record<ArmorSlot, string> = {
+// Head to waist (and the sword and bow) on his left; what goes over and under, the legs (and the
+// shield) on his right.
+const LEFT: GearSlot[] = ["helm", "gorget", "pauldrons", "cuirass", "arms", "gauntlets", "waist", "sword", "bow"];
+const RIGHT: GearSlot[] = ["cape", "tabard", "mail", "doublet", "cuisses", "greaves", "sabatons", "shield"];
+const WEAPONS: GearSlot[] = ["sword", "shield", "bow"];
+/** The rows in the tallest column (the slots are sized to fit it). */
+const ROWS = LEFT.length;
+const SLOT_KIND: Record<GearSlot, string> = {
+  bow: "Ranged",
   helm: "Head",
   gorget: "Neck",
   cuirass: "Chest",
@@ -137,8 +140,8 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
   const wide = !compact && vw >= 1100;
   const topBar = compact ? 44 : 54;
   const slot = compact
-    ? Math.max(34, Math.min(58, Math.floor((vw - 24 - 7 * 5) / 8)))
-    : Math.max(28, Math.min(70, Math.floor((vh - topBar - 28) / 8) - 7));
+    ? Math.max(30, Math.min(58, Math.floor((vw - 24 - 8 * 5) / 9)))
+    : Math.max(28, Math.min(70, Math.floor((vh - topBar - 36) / ROWS) - 7));
   const cell = compact
     ? Math.max(20, Math.min(42, Math.floor((vw - 28) / BAG_W)))
     : Math.max(18, Math.min(50, Math.floor(Math.min((vw * (wide ? 0.36 : 0.44) - 30) / BAG_W, (vh - topBar - (wide ? 90 : 170)) / BAG_H))));
@@ -159,11 +162,13 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
 
   // ---- Stats ----
 
-  const wornSlots = (Object.keys(inv.equipped) as ArmorSlot[]).filter((s) => inv.equipped[s]);
-  const armor = wornSlots.reduce((a, s) => a + (def(s).armor ?? 0), 0);
+  const wornSlots = (Object.keys(inv.equipped) as GearSlot[]).filter((s) => inv.equipped[s]);
+  const wornDef = (s: GearSlot) => def((inv.equipped[s] as ItemInst).id);
+  const armor = wornSlots.reduce((a, s) => a + (wornDef(s).armor ?? 0), 0);
+  const bowInst = inv.equipped.bow;
   const swordInst = inv.equipped.sword;
   const shieldInst = inv.equipped.shield;
-  const weight = wornSlots.reduce((a, s) => a + def(s).weight, 0);
+  const weight = wornSlots.reduce((a, s) => a + wornDef(s).weight, 0);
   const carried = inv.bag.items.reduce((a, p) => a + def(p.item.id).weight, 0);
   const stats: Array<[string, string]> = [
     ["Armor rating", String(armor)],
@@ -171,13 +176,14 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
     ["Bag weight", `${carried.toFixed(1)} kg`],
     ["Main hand", swordInst ? `${itemOf(swordInst).damage} dmg` : "Fists"],
     ["Off hand", shieldInst ? `${itemOf(shieldInst).block}% block` : "Empty"],
+    ["Ranged", bowInst ? `${itemOf(bowInst).damage} dmg · ${arrowsIn(inv.bag)} arrows` : "Empty"],
     ["Gold", String(inv.gold)],
   ];
   void allItems;
 
   // ---- Parts ----
 
-  const SlotBox = (s: ArmorSlot) => {
+  const SlotBox = (s: GearSlot) => {
     const item = inv.equipped[s];
     const it = item ? itemOf(item) : null;
     const target = drag !== null && drag.from.kind === "grid" && def(drag.item.id).slot === s;
@@ -211,7 +217,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
           touchAction: "none",
         }}
       >
-        <ItemIcon id={s} icons={icons} w={slot - 8} h={slot - 8} ghost={!item} />
+        <ItemIcon id={item ? item.id : s === "bow" ? "recurve_bow" : s} icons={icons} w={slot - 8} h={slot - 8} ghost={!item} />
         {!item ? (
           <div style={{ position: "absolute", left: 0, right: 0, bottom: 2, fontSize: 9, color: "#6b6355", textAlign: "center", letterSpacing: "0.04em", textTransform: "uppercase", pointerEvents: "none" }}>
             {SLOT_KIND[s]}
@@ -325,11 +331,11 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
     </div>
   );
 
-  const column = (slots: ArmorSlot[]) => (
+  const column = (slots: GearSlot[]) => (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, justifyContent: "center", pointerEvents: "auto" }}>
       {slots.map((s, i) => (
         <React.Fragment key={s}>
-          {i === slots.length - 1 ? <div style={{ height: 4 }} /> : null}
+          {WEAPONS.indexOf(s) >= 0 && (i === 0 || WEAPONS.indexOf(slots[i - 1]) < 0) ? <div style={{ height: 4 }} /> : null}
           {SlotBox(s)}
         </React.Fragment>
       ))}
@@ -410,7 +416,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
               touchAction: "pan-y",
             }}
           >
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(8, ${slot}px)`, gap: 5, justifyContent: "center" }}>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(9, ${slot}px)`, gap: 5, justifyContent: "center" }}>
               {LEFT.concat(RIGHT).map((s) => SlotBox(s))}
             </div>
             <div style={{ height: 10 }} />

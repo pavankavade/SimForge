@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { RARITY, addItem, def, itemOf, newItem, removeItem, type ItemDef, type ItemInst } from "./items";
 import { ItemIcon, type Icons } from "./itemsUi";
-import { buysItem, css, priceOf, sellPriceOf, type Merchant } from "./merchants";
+import { buyQty, buysItem, css, priceOf, sellPriceOf, type Merchant } from "./merchants";
 import type { PlayerInv } from "./playerInv";
 
 const GOLD = "#ffd84d";
@@ -73,10 +73,11 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, ic
     if (tab === "buy") {
       const price = priceOf(r.id);
       if (inv.gold < price) return setNote("Not enough gold.");
-      const bag = addItem(inv.bag, newItem(r.id));
+      const n = buyQty(r.id);
+      const bag = addItem(inv.bag, newItem(r.id, n > 1 ? n : undefined));
       if (!bag) return setNote("No room in your bag.");
       onInv({ ...inv, gold: inv.gold - price, bag });
-      setNote(`Bought the ${name} for ${price} gold.`);
+      setNote(n > 1 ? `Bought ${n} ${name} for ${price} gold.` : `Bought the ${name} for ${price} gold.`);
     } else if (r.item) {
       const gold = sellPriceOf(r.item);
       onInv({ ...inv, gold: inv.gold + gold, bag: removeItem(inv.bag, r.item.uid) });

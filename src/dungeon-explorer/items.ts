@@ -33,7 +33,12 @@ export const RARITY_POWER: Record<Rarity, number> = { common: 1, uncommon: 1.08,
 /** A rolled weapon's price at each rarity, against its common self. */
 export const RARITY_PRICE: Record<Rarity, number> = { common: 1, uncommon: 1.7, rare: 2.8, epic: 4.6, legendary: 8, unique: 13, artifact: 22 };
 
-export type ItemCategory = "armor" | "weapon" | "valuable" | "trophy" | "consumable" | "coins" | "crystal" | "material";
+export type ItemCategory = "armor" | "weapon" | "valuable" | "trophy" | "consumable" | "coins" | "crystal" | "material" | "ammo";
+
+/** Where a piece is worn or held: an armour slot on the rig, or the bow (the game's ranged slot). */
+export type GearSlot = ArmorSlot | "bow";
+/** Arrows come in stacks of this many. */
+export const ARROW_STACK = 30;
 
 export interface ItemDef {
   id: string;
@@ -50,8 +55,8 @@ export interface ItemDef {
   weight: number;
   /** What a merchant asks for it (gold); they pay two fifths. */
   value: number;
-  /** Wearable: the paladin's armour slot. */
-  slot?: ArmorSlot;
+  /** Wearable: the fighter's armour slot (or the bow slot). */
+  slot?: GearSlot;
   armor?: number;
   damage?: number;
   block?: number;
@@ -113,7 +118,9 @@ const OTHER: ItemDef[] = [
   { id: "grave_dust", name: "Grave dust", note: "Ash of bone that held a spell too long", kind: "Monster part", category: "material", w: 1, h: 1, rarity: "uncommon", weight: 0.1, value: 18 },
   { id: "spell_page", name: "Scorched spell page", note: "Half a cantrip in a hand nobody reads now", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "rare", weight: 0.05, value: 46 },
   { id: "candle", name: "Black candle", note: "Tallow and soot, burnt to the knuckle", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "common", weight: 0.2, value: 7 },
-  { id: "arrows", name: "Bundle of arrows", note: "Bone heads, grey fletching", kind: "Monster part", category: "material", w: 1, h: 2, rarity: "common", weight: 0.4, value: 9 },
+  // The fighter's ranged kit: a recurve bow (the bow slot, key 2) and arrows, a stack to a cell pair.
+  { id: "recurve_bow", name: "Recurve bow", note: "Ash and horn, the tips bent forward; a strong draw", kind: "Ranged", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 1.1, value: 160, damage: 34 },
+  { id: "arrows", name: "Arrows", note: "Bodkin heads, grey goose fletching. Thirty to a bundle.", kind: "Ammunition", category: "ammo", w: 1, h: 2, rarity: "common", weight: 0.03, value: 2, stack: ARROW_STACK },
   { id: "signet", name: "Signet ring", note: "A knight's seal; the house died with him", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "rare", weight: 0.02, value: 85 },
   { id: "slime_gel", name: "Slime gel", note: "Cold, clear, and it will not stop wobbling", kind: "Monster part", category: "material", w: 1, h: 1, rarity: "common", weight: 0.4, value: 6 },
   { id: "acid_gland", name: "Acid gland", note: "Keep it away from your steel", kind: "Monster part", category: "material", w: 1, h: 1, rarity: "uncommon", weight: 0.3, value: 26 },
@@ -238,11 +245,31 @@ export function firstFit(g: Grid, id: string, ignore?: string): { x: number; y: 
   return null;
 }
 
-/** A copy of the grid with the item placed at the first free spot, or null if it doesn't fit. */
+/**
+ * A copy of the grid with the item placed at the first free spot, or null if it doesn't fit.
+ * Ammunition tops up the stacks already there first (up to `stack` each), then takes a new spot.
+ */
 export function addItem(g: Grid, item: ItemInst): Grid | null {
+  const d = def(item.id);
+  if (d.category === "ammo" && d.stack) {
+    let left = item.qty ?? 1;
+    const items = g.items.map((p) => {
+      if (left <= 0 || p.item.id !== item.id || (p.item.qty ?? 1) >= (d.stack ?? 1)) return p;
+      const take = Math.min(left, (d.stack ?? 1) - (p.item.qty ?? 1));
+      left -= take;
+      return { ...p, item: { ...p.item, qty: (p.item.qty ?? 1) + take } };
+    });
+    const topped = { ...g, items };
+    if (left <= 0) return topped;
+    const p = firstFit(topped, item.id);
+    return p ? { ...topped, items: topped.items.concat([{ item: { ...item, qty: left }, x: p.x, y: p.y }]) } : null;
+  }
   const p = firstFit(g, item.id);
   return p ? { ...g, items: g.items.concat([{ item, x: p.x, y: p.y }]) } : null;
 }
+
+/** Arrows in a grid (every stack). */
+export const arrowsIn = (g: Grid): number => g.items.reduce((a, p) => a + (p.item.id === "arrows" ? (p.item.qty ?? 1) : 0), 0);
 
 export const removeItem = (g: Grid, uid: string): Grid => ({ ...g, items: g.items.filter((p) => p.item.uid !== uid) });
 
@@ -261,4 +288,5 @@ export function sortGrid(g: Grid): Grid {
   return out;
 }
 
-export const gridWeight = (g: Grid) => g.items.reduce((a, p) => a + def(p.item.id).weight * (p.item.qty ? p.item.qty / 100 : 1), 0);
+export const gridWeight = (g: Grid) =>
+  g.items.reduce((a, p) => a + def(p.item.id).weight * (p.item.qty ? (def(p.item.id).category === "ammo" ? p.item.qty : p.item.qty / 100) : 1), 0);

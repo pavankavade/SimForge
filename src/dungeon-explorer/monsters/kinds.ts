@@ -4,7 +4,7 @@
 // (slime, acid slime, and the Bloated Slime, which bursts into slimelets). Later floors add
 // families (goblins, orcs, ...) here: a kind, its numbers, its drops.
 import type { ArmorSlot } from "../../artifacts/characters/paladin";
-import { RARITY, bumpRarity, crystalId, rarityRank, rollsRarity, type Rarity } from "../items";
+import { RARITY, bumpRarity, crystalId, def, rarityRank, rollsRarity, type Rarity } from "../items";
 
 export type MobFamily = "skeleton" | "slime";
 
@@ -369,6 +369,8 @@ export function rollDrops(rand: () => number, kind: MobKind, rarity: Rarity): Dr
       1
     );
     if (id === "coins") out.push({ id, qty: Math.max(1, Math.round(PURSE[rarity] * (0.6 + rand() * 0.8))) });
+    // A few of an archer's arrows survive (the fighter can shoot them).
+    else if (def(id).category === "ammo") out.push({ id, qty: 4 + Math.floor(rand() * 9) });
     else out.push({ id, rarity: rollsRarity(id) ? rollWeaponRarity(rand, rarity) : undefined });
   }
   if (kind.boss && kind.family === "skeleton") out.push({ id: BOSS_WEARS[Math.floor(rand() * BOSS_WEARS.length)] });

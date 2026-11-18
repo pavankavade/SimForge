@@ -11,7 +11,7 @@ import { randomSpec } from "./CharacterCustomizer";
 import { SEE_THROUGH } from "./dungeon/view";
 import type { AcidPuddle, MobAgent, Projectile } from "./mobSim";
 import { rarityColor } from "./monsters/kinds";
-import { arrowGeometry, bowGeometry, crystalGeometry, crystalMaterial, glowTexture, staffGeometry } from "./monsters/props";
+import { BOW_TIP, arrowGeometry, bowGeometry, crystalGeometry, crystalMaterial, glowTexture, staffGeometry } from "./monsters/props";
 import { attachBones, type SkeletonBones } from "./monsters/skeletonBody";
 import { createSlimeBody, type SlimeBody } from "./monsters/slimeBody";
 
@@ -338,6 +338,7 @@ export async function createMobBodies(
           // Without a sword the arms hang and swing; a fallen one's arms go slack.
           relaxed: m.dead || (w !== "sword" && !arms),
           arms,
+          gripL: w === "bow" && !m.dead ? "sword" : undefined,
         },
         m.wy,
         m.dead ? undefined : s.world
@@ -346,14 +347,14 @@ export async function createMobBodies(
 
     // The bow in the left fist; the string to the right hand while drawing, straight otherwise.
     if (m.kind.weapon === "bow" && !m.dead) {
-      const hl = s.p.rig.bone("handL").getWorldPosition(_a);
-      const hr = s.p.rig.bone("handR").getWorldPosition(_b);
+      const hl = s.p.rig.bone("handL").localToWorld(_a.copy(s.p.bodyRig.grip.L));
+      const hr = s.p.rig.bone("handR").localToWorld(_b.copy(s.p.bodyRig.grip.R));
       s.bow.position.copy(hl);
-      s.bow.rotation.set(0, m.yaw, -0.12);
+      s.bow.rotation.set(0, m.yaw + Math.PI, 0.12);
       s.bow.scale.setScalar(m.scale);
       s.bow.updateMatrixWorld(true);
-      const top = _v.set(0, 0.625, 0.05).applyMatrix4(s.bow.matrixWorld).clone();
-      const bot = _c.set(0, -0.625, 0.05).applyMatrix4(s.bow.matrixWorld).clone();
+      const top = _v.set(0, BOW_TIP.y, BOW_TIP.z).applyMatrix4(s.bow.matrixWorld).clone();
+      const bot = _c.set(0, -BOW_TIP.y, BOW_TIP.z).applyMatrix4(s.bow.matrixWorld).clone();
       const drawn = m.aimT > 0;
       const mid = drawn ? hr.clone() : top.clone().lerp(bot, 0.5);
       segment(s.bowString[0], top, mid);

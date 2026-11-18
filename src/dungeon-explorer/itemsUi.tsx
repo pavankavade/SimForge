@@ -2,8 +2,7 @@
 // one drag-and-drop controller. Items move by drag (mouse or finger); right-click, double-click or a
 // double-tap does the quick move the screen defines (equip, use, take, stash).
 import React, { useEffect, useRef, useState } from "react";
-import type { ArmorSlot } from "../artifacts/characters/paladin";
-import { RARITY, def, fitsAt, itemOf, type Grid, type ItemInst } from "./items";
+import { RARITY, def, fitsAt, itemOf, type GearSlot, type Grid, type ItemInst } from "./items";
 
 export type Icons = Record<string, string | undefined>;
 
@@ -97,7 +96,7 @@ export const ItemTooltip: React.FC<{ item: ItemInst; hint?: string; x: number; y
 
 // ---- Drag and drop ------------------------------------------------------------------------------
 
-export type DragFrom = { kind: "grid"; grid: string } | { kind: "slot"; slot: ArmorSlot } | { kind: "belt"; index: number };
+export type DragFrom = { kind: "grid"; grid: string } | { kind: "slot"; slot: GearSlot } | { kind: "belt"; index: number };
 
 export interface DragState {
   item: ItemInst;
@@ -110,7 +109,7 @@ export interface DragState {
   cell: number;
 }
 
-export type DropTarget = { kind: "grid"; grid: string; x: number; y: number } | { kind: "slot"; slot: ArmorSlot } | { kind: "belt"; index: number } | { kind: "body" } | null;
+export type DropTarget = { kind: "grid"; grid: string; x: number; y: number } | { kind: "slot"; slot: GearSlot } | { kind: "belt"; index: number } | { kind: "body" } | null;
 
 /** What lies under the pointer: a grid cell (for the piece's top-left), an equipment slot or his body. */
 export function dropTargetAt(d: Pick<DragState, "x" | "y" | "gx" | "gy" | "item">): DropTarget {
@@ -127,7 +126,7 @@ export function dropTargetAt(d: Pick<DragState, "x" | "y" | "gx" | "gy" | "item"
     const y = Math.round((d.y - d.gy - r.top) / cell);
     return { kind: "grid", grid: tag.slice(5), x: Math.max(0, Math.min(w - it.w, x)), y: Math.max(0, Math.min(h - it.h, y)) };
   }
-  if (tag.startsWith("slot:")) return { kind: "slot", slot: tag.slice(5) as ArmorSlot };
+  if (tag.startsWith("slot:")) return { kind: "slot", slot: tag.slice(5) as GearSlot };
   if (tag.startsWith("belt:")) return { kind: "belt", index: Number(tag.slice(5)) || 0 };
   if (tag === "body") return { kind: "body" };
   return null;

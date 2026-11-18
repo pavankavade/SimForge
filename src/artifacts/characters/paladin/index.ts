@@ -354,7 +354,7 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
   const update = (dt: number, input: PaladinInput, floorY: number, world?: CombatWorld): void => {
     group.updateMatrixWorld(true);
     animator.update(dt, rig, input);
-    bodyRig.update(rig, equipment.shield ? "strap" : "relaxed", equipment.sword ? "sword" : "relaxed", dt);
+    bodyRig.update(rig, input.gripL ?? (equipment.shield ? "strap" : "relaxed"), equipment.sword ? "sword" : "relaxed", dt);
     group.updateMatrixWorld(true);
 
     if (equipment.cape) cape.step(dt, rig, group, floorY);

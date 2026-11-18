@@ -82,23 +82,30 @@ export function crystalMesh(r: Rarity): THREE.Mesh {
 
 // ---- The archer's bow and arrows -------------------------------------------------------------
 
+/** Where the string is tied on a bow (bow space): at y = ±y, `z` toward the archer from the grip. */
+export const BOW_TIP = { y: 0.625, z: 0.15 };
+
 let bowGeo: { limbs: THREE.BufferGeometry; string: THREE.BufferGeometry } | null = null;
-/** A recurve of horn and bone, held at the grip (origin), limbs along ±Y, belly toward +Z. */
+/**
+ * A recurve bow held at the grip (the origin), limbs along ±Y, the archer toward +Z: the limbs
+ * sweep back toward him, and the last hand's width of each tip curls away again (the recurve).
+ * Face +Z at the archer (yaw + π) and hang the string from BOW_TIP.
+ */
 export function bowGeometry() {
   if (bowGeo) return bowGeo;
   const pts: THREE.Vector3[] = [];
-  for (let i = 0; i <= 16; i++) {
-    const t = i / 16 - 0.5;
-    const y = t * 1.25;
-    // Bent back away from the archer (-Z), with the tips recurving forward.
-    const z = -0.16 * (1 - Math.pow(2 * t, 2)) + 0.05 * Math.pow(Math.abs(2 * t), 6);
-    pts.push(new THREE.Vector3(0, y, z));
+  for (let i = 0; i <= 24; i++) {
+    const t = i / 24 - 0.5;
+    const u = Math.abs(2 * t);
+    const curl = Math.max(0, (u - 0.72) / 0.28);
+    pts.push(new THREE.Vector3(0, t * 2 * BOW_TIP.y, 0.24 * u * u - 0.09 * curl * curl));
   }
-  const limbs = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, 0.013, 6, false);
-  const grip = new THREE.CylinderGeometry(0.02, 0.02, 0.12, 8);
-  grip.translate(0, 0, -0.16);
+  const limbs = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.012, 6, false);
+  // Thicker at the riser, a leather wrap where the hand goes.
+  const riser = new THREE.CylinderGeometry(0.019, 0.019, 0.3, 8);
+  const wrap = new THREE.CylinderGeometry(0.023, 0.023, 0.1, 8);
   const str = new THREE.CylinderGeometry(0.0022, 0.0022, 1.0, 4);
-  bowGeo = { limbs: merge([limbs, grip]), string: str };
+  bowGeo = { limbs: merge([limbs, riser, wrap]), string: str };
   return bowGeo;
 }
 

@@ -3,7 +3,7 @@
 // acid gland and the rings. icons.ts renders each on its small off-screen renderer.
 import * as THREE from "three";
 import { crystalId, RARITIES } from "../items";
-import { arrowGeometry, bowGeometry, crystalGeometry, crystalMaterial, staffGeometry } from "./props";
+import { BOW_TIP, arrowGeometry, bowGeometry, crystalGeometry, crystalMaterial, staffGeometry } from "./props";
 import { boneGeometry, skullObject } from "./skeletonBody";
 
 const boneMat = () => new THREE.MeshStandardMaterial({ color: 0xd6c8a6, roughness: 0.75 });
@@ -67,6 +67,16 @@ export const PROC_ICONS: Record<string, () => THREE.Object3D> = {
     const m = new THREE.Mesh(bowGeometry().limbs, new THREE.MeshStandardMaterial({ color: 0xb9a88a, roughness: 0.7 }));
     m.rotation.set(0, Math.PI / 2, 0.15);
     return m;
+  },
+  recurve_bow: () => {
+    const o = new THREE.Group();
+    o.add(new THREE.Mesh(bowGeometry().limbs, new THREE.MeshStandardMaterial({ color: 0x6b4426, roughness: 0.55 })));
+    const s = new THREE.Mesh(bowGeometry().string, new THREE.MeshStandardMaterial({ color: 0xd8cfb8, roughness: 0.9 }));
+    s.scale.set(1, BOW_TIP.y * 2, 1);
+    s.position.z = BOW_TIP.z;
+    o.add(s);
+    o.rotation.set(0, Math.PI / 2, 0.15);
+    return o;
   },
   bone_staff: () => {
     const g = staffGeometry();

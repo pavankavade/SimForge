@@ -22,13 +22,14 @@ import { buildDressing, type FloorDressing } from "./roomView";
 import { createDoors, doorwayProps, type Doors } from "./doorView";
 import { rollChest, rollMobLoot, type Container } from "./loot";
 import { LootScreen } from "./LootScreen";
-import { BELT_SLOTS, equipFromBag, loadInventory, normalizeInventory, saveInventory, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
+import { BELT_SLOTS, arrowCount, equipFromBag, loadInventory, normalizeInventory, saveInventory, spendArrow, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
 import { def, itemOf, removeItem } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
 import { ShopScreen } from "./ShopScreen";
 import { armorOf, armorReduction, createMobSimulation, type MobAgent, type MobEvent } from "./mobSim";
 import { createMonsterSfx, type MonsterSfx } from "./monsters/monsterSfx";
+import { BOW_TIP, arrowGeometry, bowGeometry } from "./monsters/props";
 import { POOL_SIZE, createMobBodies, type MobBodies } from "./mobBodies";
 import { HealthBar } from "./HealthBar";
 import { PORTAL_COUNT, PORTAL_REACH, PORTALS_FROM, RUN_SECONDS, createPortals, planPortals, type Portals } from "./portals";
@@ -62,6 +63,24 @@ import {
 const WALK_CELLS = 1.5;
 const RUN_CELLS = 2.7;
 const BLOCK_CELLS = 0.95;
+
+// Scratch vectors for the bow in his hand.
+const bowAim = new THREE.Vector3();
+const bowNock = new THREE.Vector3();
+const bowTop = new THREE.Vector3();
+const bowBot = new THREE.Vector3();
+const bowMid = new THREE.Vector3();
+const bowDir = new THREE.Vector3();
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+/** Stretch a unit-long cylinder (along Y) between two world points: a bowstring segment. */
+function stretch(mesh: THREE.Mesh, a: THREE.Vector3, b: THREE.Vector3) {
+  bowDir.subVectors(b, a);
+  const len = bowDir.length();
+  mesh.position.copy(a).addScaledVector(bowDir, 0.5);
+  mesh.quaternion.setFromUnitVectors(Y_AXIS, bowDir.normalize());
+  mesh.scale.set(1, Math.max(1e-3, len), 1);
+}
 const FIRST_PERSON_FOV = 74;
 const LOOK_SENS = 0.0024;
 const TOUCH_LOOK_SENS = 0.0052;
@@ -114,9 +133,9 @@ interface Walker {
 }
 
 type Sim = ReturnType<typeof createMobSimulation>;
-type SimLike = Pick<Sim, "mobs" | "projectiles" | "puddles" | "events" | "step" | "hit">;
+type SimLike = Pick<Sim, "mobs" | "projectiles" | "puddles" | "events" | "step" | "hit" | "shoot">;
 /** Town has no monsters to fight. */
-const NO_SIM: SimLike = { mobs: [], projectiles: [], puddles: [], events: [], step: () => {}, hit: () => null };
+const NO_SIM: SimLike = { mobs: [], projectiles: [], puddles: [], events: [], step: () => {}, hit: () => null, shoot: () => {} };
 
 /**
  * Where the camera may go (world metres): open air with `top` metres under the lid and `bottom`
@@ -239,6 +258,16 @@ interface DungeonSceneProps {
   equipment: ArmorEquipment;
   /** One cut of the sword in hand (its rarity counts), or the fists' without one. */
   weaponDamage: number;
+  /** The recurve bow is in hand (key 2): hold attack to draw, let go to loose. */
+  bowInHand: boolean;
+  /** A full draw's arrow (the bow's rarity counts). */
+  bowDamage: number;
+  /** Arrows in the bag. */
+  arrows: number;
+  /** An arrow left the string (take one from the bag). */
+  onArrowShot: () => void;
+  /** The aiming mark in the middle of the screen (shown with the bow in hand; tightens on the draw). */
+  crosshairRef: React.RefObject<HTMLDivElement | null>;
   /** The inventory or character screen is open: the paladin stands still and turns to a showcase camera. */
   customizing: boolean;
   /** The game has the controls (no menu or screen open). */
@@ -267,6 +296,8 @@ interface DungeonSceneProps {
   touchSprintRef: React.RefObject<boolean>;
   jumpQueueRef: React.RefObject<boolean>;
   attackQueueRef: React.RefObject<boolean>;
+  /** Attack is held down (mouse, F or the touch button): the bow draws while it is. */
+  attackHeldRef: React.RefObject<boolean>;
   touchBlockRef: React.RefObject<boolean>;
   onTouchDetected: () => void;
   /** The merchant being traded with (-1: none), and where the trade panel leaves the view free. */
@@ -364,6 +395,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   spec,
   equipment,
   weaponDamage,
+  bowInHand,
+  bowDamage,
+  arrows,
+  onArrowShot,
+  crosshairRef,
   customizing,
   playing,
   showcaseRef,
@@ -383,6 +419,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   touchSprintRef,
   jumpQueueRef,
   attackQueueRef,
+  attackHeldRef,
   touchBlockRef,
   onTouchDetected,
   trading,
@@ -436,6 +473,38 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const monsterSfxRef = useRef<MonsterSfx | null>(null);
   const weaponDamageRef = useRef(weaponDamage);
   weaponDamageRef.current = weaponDamage;
+  const bowRef = useRef({ inHand: bowInHand, damage: bowDamage, arrows, onShot: onArrowShot });
+  bowRef.current = { inHand: bowInHand, damage: bowDamage, arrows, onShot: onArrowShot };
+  /** How long the bowstring has been drawn (s); 0 when it is not. */
+  const drawRef = useRef(0);
+  // The recurve bow in his left hand, its string (two segments, to his right hand on the draw) and
+  // the nocked arrow, placed each frame.
+  const bowViewRef = useRef<{ bow: THREE.Mesh; s1: THREE.Mesh; s2: THREE.Mesh; nocked: THREE.Mesh } | null>(null);
+  useEffect(() => {
+    const wood = new THREE.MeshStandardMaterial({ color: 0x6b4426, roughness: 0.55, metalness: 0 });
+    const gut = new THREE.MeshStandardMaterial({ color: 0xd8cfb8, roughness: 0.9 });
+    const shaft = new THREE.MeshStandardMaterial({ color: 0x9a7f5a, roughness: 0.75 });
+    const g = bowGeometry();
+    const bow = new THREE.Mesh(g.limbs, wood);
+    const s1 = new THREE.Mesh(g.string, gut);
+    const s2 = new THREE.Mesh(g.string, gut);
+    const nocked = new THREE.Mesh(arrowGeometry(), shaft);
+    for (const o of [bow, s1, s2, nocked]) {
+      o.visible = false;
+      o.castShadow = true;
+      o.frustumCulled = false;
+    }
+    bow.rotation.order = "YXZ";
+    scene.add(bow, s1, s2, nocked);
+    bowViewRef.current = { bow, s1, s2, nocked };
+    return () => {
+      scene.remove(bow, s1, s2, nocked);
+      wood.dispose();
+      gut.dispose();
+      shaft.dispose();
+      bowViewRef.current = null;
+    };
+  }, [scene]);
   const mouseBlockRef = useRef(false);
   const freeLookRef = useRef(0);
   const prevYawRef = useRef(0);
@@ -682,23 +751,34 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (!e.repeat) keysRef.current.add(e.code);
       if (!playingRef.current) return;
       if (e.code === "Space" && !e.repeat) jumpQueueRef.current = true;
-      if (e.code === "KeyF" && !e.repeat) attackQueueRef.current = true;
+      if (e.code === "KeyF" && !e.repeat) {
+        attackQueueRef.current = true;
+        attackHeldRef.current = true;
+      }
     };
     // Mouse buttons: left swings (once the mouse is captured), right raises the shield.
     const onMouseDown = (e: MouseEvent) => {
       if (!playingRef.current) return;
       if (e.button === 2) mouseBlockRef.current = true;
-      if (e.button === 0 && document.pointerLockElement === dom) attackQueueRef.current = true;
+      if (e.button === 0 && document.pointerLockElement === dom) {
+        attackQueueRef.current = true;
+        attackHeldRef.current = true;
+      }
     };
     const onMouseUp = (e: MouseEvent) => {
       if (e.button === 2) mouseBlockRef.current = false;
+      if (e.button === 0) attackHeldRef.current = false;
     };
     const onContextMenu = (e: Event) => e.preventDefault();
-    const onKeyUp = (e: KeyboardEvent) => keysRef.current.delete(e.code);
+    const onKeyUp = (e: KeyboardEvent) => {
+      keysRef.current.delete(e.code);
+      if (e.code === "KeyF") attackHeldRef.current = false;
+    };
     const onBlur = () => {
       keysRef.current.clear();
       lookPointerRef.current = null;
       mouseBlockRef.current = false;
+      attackHeldRef.current = false;
     };
     const onClick = () => {
       if (lastTouchDownRef.current || !playingRef.current) return;
@@ -804,7 +884,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       window.removeEventListener("pointermove", onPointerMove);
       dom.removeEventListener("wheel", onWheel);
     };
-  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, jumpQueueRef, showcaseRef]);
+  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, attackHeldRef, jumpQueueRef, showcaseRef]);
 
   // In town: the dungeon put away, the town shown, and he stands in the tavern or on the dais.
   const placedVisitRef = useRef(-1);
@@ -1120,6 +1200,15 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       } else if (e.type === "hop") {
         if (near(e.mob.wx, e.mob.wz, 9)) ms?.plop(e.mob.scale);
       } else if (e.type === "split") ms?.squelch(2.2);
+      else if (e.type === "struck") {
+        // His arrow found a monster: a shield takes it, bone cracks, jelly squelches.
+        if (e.result === "blocked") sfxRef.current?.clang();
+        else if (e.mob.family === "slime") ms?.squelch(e.mob.scale * (e.result === "killed" ? 1.6 : 1));
+        else {
+          ms?.boneHit();
+          if (e.result === "killed") ms?.collapse();
+        }
+      }
     }
   };
 
@@ -1219,7 +1308,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       jumpQueueRef.current = false;
     }
     const swinging = paladin !== null && paladin.animator.state !== "none";
-    const speed = (blocking ? BLOCK_CELLS : sprinting ? RUN_CELLS : WALK_CELLS) * (swinging ? 0.72 : 1);
+    const speed = (blocking ? BLOCK_CELLS : sprinting && drawRef.current <= 0 ? RUN_CELLS : WALK_CELLS) * (swinging ? 0.72 : 1) * (drawRef.current > 0 ? 0.55 : 1);
 
     // A jump needs his feet on the ground, a moment since the last landing, and no shield up or swing under way.
     world.jumpRest = Math.max(0, world.jumpRest - dt);
@@ -1345,10 +1434,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           turnRate: !show.active && dt > 0 ? (walker.yaw - prevYawRef.current) / dt : 0,
           air: world.playerJumpY,
           block: blocking,
-          attack: active && attackQueueRef.current,
+          attack: active && attackQueueRef.current && !bowRef.current.inHand,
           firstPerson: fp,
           // Nothing drawn: off-duty arms in third person (first person keeps the bare fists up in view).
-          relaxed: world.dead || (!fp && !show.active && !equipmentRef.current.sword && !equipmentRef.current.shield),
+          // The bow hangs in the left hand until it is drawn.
+          relaxed: world.dead || (!fp && !show.active && !equipmentRef.current.sword && !equipmentRef.current.shield && drawRef.current <= 0),
+          arms: !world.dead && !show.active && drawRef.current > 0 ? "bow" : undefined,
+          gripL: bowRef.current.inHand && !show.active ? "sword" : undefined,
         },
         world.playerFloor * CELL_M,
         world.combat
@@ -1356,6 +1448,82 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     }
     attackQueueRef.current = false;
     prevYawRef.current = walker.yaw;
+
+    // The bow: hold to draw (slower on his feet, the view narrowing), let go to loose. A longer draw
+    // flies faster and hits harder; the arrow goes where the middle of the screen points.
+    {
+      const bow = bowRef.current;
+      const ready = bow.inHand && world.place === "dungeon" && active && !world.dead && !show.active && paladin !== null;
+      if (ready && attackHeldRef.current && bow.arrows > 0) drawRef.current = Math.min(1.5, drawRef.current + dt);
+      else if (drawRef.current > 0) {
+        if (ready && !attackHeldRef.current && drawRef.current >= 0.16 && bow.arrows > 0 && paladin) {
+          const power = Math.max(0.2, Math.min(1, (drawRef.current - 0.1) / 0.7));
+          // Where the eye looks: march along the view until a wall or a monster.
+          const e = persp.matrixWorld.elements;
+          const fx = -e[8];
+          const fy = -e[9];
+          const fz = -e[10];
+          const fl = Math.hypot(fx, fy, fz) || 1;
+          let tx = persp.position.x;
+          let ty = persp.position.y;
+          let tz = persp.position.z;
+          for (let k = 0; k < 240; k++) {
+            tx += (fx / fl) * 0.25;
+            ty += (fy / fl) * 0.25;
+            tz += (fz / fl) * 0.25;
+            if (k > 4 && world.combat.solid?.(tx, ty, tz)) break;
+            if (k > 4 && sim.mobs.some((m) => !m.dead && Math.hypot(tx - m.wx, tz - m.wz) < m.radius && ty > m.wy && ty < m.wy + m.height)) break;
+          }
+          const hand = paladin.rig.bone("handL").localToWorld(bowAim.copy(paladin.bodyRig.grip.L));
+          const dx = tx - hand.x;
+          const dy = ty - hand.y;
+          const dz = tz - hand.z;
+          const dist = Math.hypot(dx, dy, dz) || 1;
+          const sp = 24 + 26 * power;
+          // Aimed a touch high so the drop brings it onto the mark.
+          const lift = (0.5 * 3.2 * dist) / sp;
+          sim.shoot(hand.x + (dx / dist) * 0.35, hand.y + (dy / dist) * 0.35, hand.z + (dz / dist) * 0.35, (dx / dist) * sp, (dy / dist) * sp + lift, (dz / dist) * sp, bow.damage * (0.35 + 0.65 * power));
+          monsterSfxRef.current?.twang();
+          bow.onShot();
+        }
+        drawRef.current = 0;
+      }
+      const vis = bowViewRef.current;
+      if (vis) {
+        const show3d = bow.inHand && paladin !== null && !world.escaped && !show.active;
+        vis.bow.visible = vis.s1.visible = vis.s2.visible = show3d;
+        vis.nocked.visible = show3d && drawRef.current > 0;
+        if (show3d && paladin) {
+          paladin.group.updateMatrixWorld(true);
+          // In the closed left fist; the string comes back to the right hand's grip.
+          const hl = paladin.rig.bone("handL").localToWorld(bowAim.copy(paladin.bodyRig.grip.L));
+          const hr = paladin.rig.bone("handR").localToWorld(bowNock.copy(paladin.bodyRig.grip.R));
+          vis.bow.position.copy(hl);
+          vis.bow.rotation.set(0, paladin.group.rotation.y + Math.PI, drawRef.current > 0 ? 0.08 : 0.2);
+          vis.bow.updateMatrixWorld(true);
+          const top = bowTop.set(0, BOW_TIP.y, BOW_TIP.z).applyMatrix4(vis.bow.matrixWorld);
+          const bot = bowBot.set(0, -BOW_TIP.y, BOW_TIP.z).applyMatrix4(vis.bow.matrixWorld);
+          const mid = drawRef.current > 0 ? hr : bowMid.copy(top).lerp(bot, 0.5);
+          stretch(vis.s1, top, mid);
+          stretch(vis.s2, mid, bot);
+          if (drawRef.current > 0) {
+            bowDir.copy(hl).sub(hr).normalize();
+            vis.nocked.position.copy(hr).addScaledVector(bowDir, 0.36);
+            vis.nocked.quaternion.setFromUnitVectors(Z_AXIS, bowDir);
+          }
+        }
+      }
+      const ch = crosshairRef.current;
+      if (ch) {
+        const on = bow.inHand && world.place === "dungeon" && !show.active && !world.dead;
+        ch.style.display = on ? "block" : "none";
+        if (on) {
+          const k = Math.min(1, drawRef.current / 0.8);
+          ch.style.transform = `translate(-50%, -50%) scale(${1.6 - 0.9 * k})`;
+          ch.style.opacity = bow.arrows > 0 ? String(0.55 + 0.45 * k) : "0.3";
+        }
+      }
+    }
 
     // E: a door to work, a draught to drink.
     if (doorQueueRef.current >= 0) {
@@ -1511,7 +1679,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     else if (!keys.has("KeyC")) freeLookRef.current *= Math.exp(-dt * 7);
 
     // Update camera (character showcase, 3rd-person follow with wall/ceiling collision, or 1st-person eye).
-    const desiredFov = responsiveFov(firstPerson ? FIRST_PERSON_FOV : 68, size.width, size.height);
+    const drawZoom = 1 - 0.16 * Math.min(1, drawRef.current / 0.7);
+    const desiredFov = responsiveFov(firstPerson ? FIRST_PERSON_FOV : 68, size.width, size.height) * drawZoom;
     if (!show.active && Math.abs(persp.fov - desiredFov) > 0.2) {
       persp.fov = desiredFov;
       persp.updateProjectionMatrix();
@@ -1788,6 +1957,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const touchSprintRef = useRef(false);
   const jumpQueueRef = useRef(false);
   const attackQueueRef = useRef(false);
+  const attackHeldRef = useRef(false);
+  const crosshairRef = useRef<HTMLDivElement | null>(null);
   const touchBlockRef = useRef(false);
   const stickPointerRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
   // The player: a random adventurer's name and an id his saves are kept under (profile.ts).
@@ -1880,13 +2051,22 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   }, [toast]);
   const [flashKey, setFlashKey] = useState(0);
   const [doorFadeKey, setDoorFadeKey] = useState(0);
-  /** Keys 1 and 2: draw or put away the sword or the shield (if he has one in that slot). */
-  const toggleDraw = useCallback((which: "sword" | "shield") => {
-    if (!invRef.current.equipped[which]) {
-      setToast(which === "sword" ? "Nothing in your main hand slot to draw." : "No shield in your off hand slot.");
+  /**
+   * Key 1 takes up (or puts away) the sword and shield, key 2 the recurve bow; taking up one puts
+   * the other away.
+   */
+  const toggleDraw = useCallback((which: "melee" | "bow") => {
+    const eq = invRef.current.equipped;
+    if (which === "melee" && !eq.sword && !eq.shield) {
+      setToast("Nothing in your main or off hand slot to take up.");
       return;
     }
-    setDrawn((d) => ({ ...d, [which]: !d[which] }));
+    if (which === "bow" && !eq.bow) {
+      setToast("No bow in your ranged slot. The weaponsmith sells a recurve bow and arrows.");
+      return;
+    }
+    if (which === "bow" && arrowCount(invRef.current) === 0) setToast("No arrows in your bag.");
+    setDrawn((d) => (which === "melee" ? { melee: !d.melee, bow: false } : { melee: false, bow: !d.bow }));
   }, []);
   /** Keys 3 and 4: use what is on that belt slot (the next of its kind in the bag takes its place). */
   const applyBeltSlot = useCallback((i: number) => {
@@ -1910,10 +2090,13 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   /** Leave this floor without escaping: what was found here is lost. */
   const abandonRun = useCallback(() => setInv(runStartRef.current), []);
   const equipment = useMemo(() => wornOf(inv), [inv]);
-  // What he holds: the sword (key 1) and the shield (key 2) stay in their slots but are only in hand
-  // once drawn. He arrives everywhere with both put away.
-  const [drawn, setDrawn] = useState({ sword: false, shield: false });
-  const handleArrive = useCallback(() => setDrawn({ sword: false, shield: false }), []);
+  // What he holds: the sword and shield (key 1) or the bow (key 2) stay in their slots but are only
+  // in hand once taken up. He arrives everywhere with everything put away.
+  const [drawn, setDrawn] = useState({ melee: false, bow: false });
+  const handleArrive = useCallback(() => setDrawn({ melee: false, bow: false }), []);
+  const arrows = arrowCount(inv);
+  const bowInHand = drawn.bow && !!inv.equipped.bow;
+  const handleArrowShot = useCallback(() => setInv((v) => spendArrow(v) ?? v), []);
   const tavernDoorQueueRef = useRef<"in" | "out" | null>(null);
   const regenQueueRef = useRef<{ amount: number; seconds: number } | null>(null);
   // The merchant he is trading with (index into MERCHANTS), and the chest or man being searched.
@@ -1961,7 +2144,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   // While the face or hair is being edited the helm comes off (without changing the loadout).
   // In play the weapons show only when drawn; the inventory and character screens show the whole kit.
   const shownEquipment = useMemo<ArmorEquipment>(() => {
-    const held = showcasing ? equipment : { ...equipment, sword: equipment.sword && drawn.sword, shield: equipment.shield && drawn.shield };
+    const held = showcasing ? equipment : { ...equipment, sword: equipment.sword && drawn.melee, shield: equipment.shield && drawn.melee };
     return customizing && (customTab === "face" || customTab === "hair") ? { ...held, helm: false } : held;
   }, [customizing, showcasing, customTab, equipment, drawn]);
   const showcaseRef = useRef<Showcase>({ spin: 0, zoom: SHOW_ZOOM.body, lift: 0 });
@@ -2142,8 +2325,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         });
       }
       if (e.code === "KeyV") setFirstPerson((v) => !v);
-      if (e.code === "Digit1") toggleDraw("sword");
-      if (e.code === "Digit2") toggleDraw("shield");
+      if (e.code === "Digit1") toggleDraw("melee");
+      if (e.code === "Digit2") toggleDraw("bow");
       if (e.code === "Digit3") applyBeltSlot(0);
       if (e.code === "Digit4") applyBeltSlot(1);
       if (e.code === "KeyM") setShowMap((v) => !v);
@@ -2275,6 +2458,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           spec={spec}
           equipment={shownEquipment}
           weaponDamage={inv.equipped.sword ? itemOf(inv.equipped.sword).damage ?? 30 : 6}
+          bowInHand={bowInHand}
+          bowDamage={inv.equipped.bow ? itemOf(inv.equipped.bow).damage ?? 30 : 0}
+          arrows={arrows}
+          onArrowShot={handleArrowShot}
+          crosshairRef={crosshairRef}
           customizing={showcasing}
           playing={screen === "play"}
           showcaseRef={showcaseRef}
@@ -2294,6 +2482,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           touchSprintRef={touchSprintRef}
           jumpQueueRef={jumpQueueRef}
           attackQueueRef={attackQueueRef}
+          attackHeldRef={attackHeldRef}
           touchBlockRef={touchBlockRef}
           onTouchDetected={handleTouchDetected}
           trading={screen === "shop" ? shopMerchant : -1}
@@ -2622,8 +2811,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {hud.pointerLocked
-            ? "1 Sword · 2 Shield · 3 / 4 Belt · LMB Swing · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Esc Menu"
-            : "Click to capture the mouse · 1 Sword · 2 Shield · 3 / 4 Belt · F Swing · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Esc Menu"}
+            ? "1 Sword & shield · 2 Bow · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Esc Menu"
+            : "Click to capture the mouse · 1 Sword & shield · 2 Bow · 3 / 4 Belt · F Swing (hold to draw the bow) · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Esc Menu"}
         </div>
       ) : null}
 
@@ -2763,6 +2952,13 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   attackQueueRef.current = true;
+                  attackHeldRef.current = true;
+                }}
+                onPointerUp={() => {
+                  attackHeldRef.current = false;
+                }}
+                onPointerCancel={() => {
+                  attackHeldRef.current = false;
                 }}
                 style={{
                   width: 72,
@@ -2857,7 +3053,16 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         </div>
       ) : null}
 
-      {/* Nameplates over hostile or wounded men (positioned by the scene every frame). */}
+      {/* The bow's aiming mark (shown and tightened by the scene every frame). */}
+      <div
+        ref={crosshairRef}
+        style={{ position: "fixed", left: "50%", top: "50%", zIndex: 9, display: "none", pointerEvents: "none", width: 22, height: 22, transform: "translate(-50%, -50%)" }}
+      >
+        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid rgba(255,240,200,0.85)", boxShadow: "0 0 3px rgba(0,0,0,0.9)" }} />
+        <div style={{ position: "absolute", left: "50%", top: "50%", width: 3, height: 3, marginLeft: -1.5, marginTop: -1.5, borderRadius: "50%", background: "#fff4d0", boxShadow: "0 0 2px #000" }} />
+      </div>
+
+      {/* Nameplates over hostile or wounded monsters (positioned by the scene every frame). */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9, display: showGameHud ? "block" : "none" }}>
         {Array.from({ length: POOL_SIZE }).map((_, i) => (
           <div
@@ -2889,8 +3094,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {[
-            { key: "1", id: inv.equipped.sword ? "sword" : null, on: drawn.sword && !!inv.equipped.sword, act: () => toggleDraw("sword"), count: 0 },
-            { key: "2", id: inv.equipped.shield ? "shield" : null, on: drawn.shield && !!inv.equipped.shield, act: () => toggleDraw("shield"), count: 0 },
+            { key: "1", id: inv.equipped.sword ? "sword" : inv.equipped.shield ? "shield" : null, on: drawn.melee && !!(inv.equipped.sword || inv.equipped.shield), act: () => toggleDraw("melee"), count: 0 },
+            { key: "2", id: inv.equipped.bow ? inv.equipped.bow.id : null, on: bowInHand, act: () => toggleDraw("bow"), count: inv.equipped.bow ? arrows : 0 },
             ...Array.from({ length: BELT_SLOTS }, (_, i) => {
               const b = (inv.belt || [])[i] ?? null;
               const count = b ? 1 + inv.bag.items.filter((q) => q.item.id === b.id).length : 0;

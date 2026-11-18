@@ -46,7 +46,7 @@ export const MERCHANTS: Merchant[] = [
     shop: "The Tempered Edge",
     cloth: 0x2a3440,
     trim: 0xc8ccd2,
-    stock: ["sword", "shield"],
+    stock: ["sword", "shield", "recurve_bow", "arrows"],
     greeting: "Steel that holds an edge. Oak that holds a line.",
     empty: "",
   },
@@ -89,7 +89,13 @@ export const MERCHANTS: Merchant[] = [
 export const css = (hex: number) => `#${("000000" + hex.toString(16)).slice(-6)}`;
 
 /** What a merchant asks for an item (gold). */
-export const priceOf = (id: string): number => def(id).value;
+export const priceOf = (id: string): number => def(id).value * buyQty(id);
+
+/** How many come in one purchase: arrows by the stack, everything else one at a time. */
+export const buyQty = (id: string): number => {
+  const d = def(id);
+  return d.category === "ammo" ? (d.stack ?? 1) : 1;
+};
 
 /** What a merchant pays for it (two fifths of its value, at its own rarity). */
 export const sellPriceOf = (item: ItemInst): number => Math.max(1, Math.round(itemOf(item).value * 0.4)) * (item.qty ?? 1);
