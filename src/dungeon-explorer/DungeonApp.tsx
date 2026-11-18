@@ -43,6 +43,8 @@ import {
 import { ITEMS, InventoryScreen, type FrameRect } from "./Inventory";
 import { ItemIcon } from "./itemsUi";
 import { PauseMenu } from "./PauseMenu";
+import { ClassSelect } from "./ClassSelect";
+import { classById, type ClassId } from "./classes";
 import {
   createPaladin,
   createPaladinSfx,
@@ -1659,7 +1661,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   return null;
 };
 
-type Screen = "play" | "menu" | "inventory" | "character" | "shop" | "loot";
+type Screen = "play" | "menu" | "inventory" | "character" | "shop" | "loot" | "class";
 
 export interface DungeonAppProps {
   backHref?: string;
@@ -1736,6 +1738,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   // The character: who he is and what he wears, remembered between visits (CharacterCustomizer.tsx);
   // the name is the player's.
   const [spec, setSpec] = useState<HumanSpec>(() => ({ ...initialSpec(), name: profile.name }));
+  // His class (only the fighter is playable for now), picked on the class screen the game opens on.
+  const [heroClass, setHeroClass] = useState<ClassId>(() => (profile.cls && classById(profile.cls).available ? profile.cls : "fighter"));
+  const className = classById(heroClass).name;
   // What he carries: gold, the pieces he wears and the bag (playerInv.ts); the body shows what is worn.
   const [inv, setInv] = useState<PlayerInv>(() => loadInventory(initialEquipment()));
   useEffect(() => saveInventory(inv), [inv]);
@@ -1781,6 +1786,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         setInv(normalizeInventory(c.inventory));
         setTownSave((t) => ({ rented: t.rented.map((_, i) => !!c.town.rented?.[i]), stash: t.stash.map((row, r) => row.map((g, k) => c.town.stash?.[r]?.[k] ?? g)) }));
         setSpec((sp) => ({ ...sp, name: profile.name }));
+        if (c.cls && classById(c.cls).available) setHeroClass(c.cls);
       }
       setCloudReady(true);
     });
@@ -1792,7 +1798,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   useEffect(() => {
     if (!cloudReady || place !== "town") return;
     const name = (spec.name || profile.name).slice(0, 40);
-    const key = JSON.stringify([name, inv, townSave]);
+    const key = JSON.stringify([name, heroClass, inv, townSave]);
     if (key === syncedRef.current) return;
     const first = syncedRef.current === "";
     syncedRef.current = key;
@@ -1801,8 +1807,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       profile.updated = Date.now();
       saveProfile(profile);
     }
-    cloud.push({ name, inventory: inv, town: townSave, updated: profile.updated });
-  }, [cloudReady, place, inv, townSave, spec.name, profile, cloud]);
+    cloud.push({ name, cls: heroClass, inventory: inv, town: townSave, updated: profile.updated });
+  }, [cloudReady, place, inv, townSave, spec.name, profile, cloud, heroClass]);
   const rentedRef = useRef(townSave.rented);
   rentedRef.current = townSave.rented;
   const roomDoorQueueRef = useRef(-1);
@@ -1838,13 +1844,6 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     else healQueueRef.current += d.heal ?? 0;
     setInv(r.inv);
   }, []);
-  // A greeting by name once the tavern is up.
-  const welcomedRef = useRef(false);
-  useEffect(() => {
-    if (hud.loading || welcomedRef.current || place !== "town") return;
-    welcomedRef.current = true;
-    setToast(`Welcome to the Wayfarer's Rest, ${spec.name || profile.name}. The gate to the dungeon is at the end of the market street.`);
-  }, [hud.loading, place, spec.name, profile]);
   const goToTown = useCallback((at: "tavern" | "gate") => {
     setArrival(at);
     setTownVisit((v) => v + 1);
@@ -1881,12 +1880,19 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     };
   }, []);
   // What has the screen: the game, the Esc menu, the inventory (Tab) or the character screen.
-  const [screen, setScreen] = useState<Screen>("play");
-  const screenRef = useRef<Screen>("play");
+  const [screen, setScreen] = useState<Screen>("class");
+  const screenRef = useRef<Screen>("class");
   screenRef.current = screen;
   stashOpenRef.current = screen === "loot" && stashAt ? stashAt : null;
   const customizing = screen === "character";
-  const showcasing = screen === "inventory" || customizing;
+  const showcasing = screen === "inventory" || screen === "class" || customizing;
+  // A greeting by name once the tavern is up.
+  const welcomedRef = useRef(false);
+  useEffect(() => {
+    if (hud.loading || welcomedRef.current || place !== "town" || screen !== "play") return;
+    welcomedRef.current = true;
+    setToast(`Welcome to the Wayfarer's Rest, ${spec.name || profile.name}. The gate to the dungeon is at the end of the market street.`);
+  }, [hud.loading, place, spec.name, profile, screen]);
   const [characterBusy, setCharacterBusy] = useState(true);
   const [customTab, setCustomTab] = useState<CustomizerTab>("face");
   const [icons, setIcons] = useState<Partial<Record<ArmorSlot, string>>>({});
@@ -1901,7 +1907,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     const held = showcasing ? equipment : { ...equipment, sword: equipment.sword && drawn.sword, shield: equipment.shield && drawn.shield };
     return customizing && (customTab === "face" || customTab === "hair") ? { ...held, helm: false } : held;
   }, [customizing, showcasing, customTab, equipment, drawn]);
-  const showcaseRef = useRef<Showcase>({ spin: 0, zoom: SHOW_ZOOM.face, lift: 0 });
+  const showcaseRef = useRef<Showcase>({ spin: 0, zoom: SHOW_ZOOM.body, lift: 0 });
   useEffect(() => saveCharacter(spec, equipment), [spec, equipment]);
   const handleCharacterBusy = useCallback((b: boolean) => setCharacterBusy(b), []);
   const openScreen = useCallback((next: Screen) => {
@@ -2041,6 +2047,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // The class screen takes no shortcuts (Enter is its own).
+      if (screenRef.current === "class") {
+        if (e.code === "Tab") e.preventDefault();
+        return;
+      }
       // Tab opens and closes the inventory (and never moves keyboard focus).
       if (e.code === "Tab") {
         e.preventDefault();
@@ -2209,7 +2220,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           customizing={showcasing}
           playing={screen === "play"}
           showcaseRef={showcaseRef}
-          frame={customizing ? panelFrame : inventoryFrame}
+          frame={customizing || screen === "class" ? panelFrame : inventoryFrame}
           onCharacterBusy={handleCharacterBusy}
           iconsWanted={iconsWanted}
           onIcons={setIcons}
@@ -2257,9 +2268,26 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         />
       ) : null}
 
+      {screen === "class" && !hud.loading ? (
+        <ClassSelect
+          name={spec.name || profile.name}
+          current={heroClass}
+          layout={panel}
+          touch={isTouchUI}
+          busy={characterBusy}
+          onPick={(id) => {
+            setHeroClass(id);
+            profile.cls = id;
+            saveProfile(profile);
+            resume();
+          }}
+        />
+      ) : null}
+
       {screen === "inventory" ? (
         <InventoryScreen
           name={spec.name}
+          heroClass={className}
           inv={inv}
           onInv={setInv}
           onUse={(item) => {
@@ -2369,7 +2397,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           {hud.name}
         </div>
         <div style={{ fontSize: mobileMode ? 11 : 12, color: "#c9d2db", marginTop: 2 }}>
-          <b>{spec.name || "Paladin"}</b> · {hud.roomLabel} · <b style={{ color: "#ffd84d" }}>{inv.gold}</b> gold
+          <b>{spec.name || className}</b> · {className} · {hud.roomLabel} · <b style={{ color: "#ffd84d" }}>{inv.gold}</b> gold
         </div>
         <div style={{ fontSize: mobileMode ? 10 : 12, color: "#9fb0bf", marginTop: 1, display: place === "dungeon" ? undefined : "none" }}>
           Men: <b>{hud.mobs}</b> · Portals: <b style={{ color: hud.portalsOpen ? "#c9a8ff" : undefined }}>{hud.portalsOpen}</b> / {PORTAL_COUNT}

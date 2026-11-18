@@ -55,8 +55,9 @@ export async function onRequestPut({ params, env, request }) {
   // An older copy never overwrites a newer one (two tabs, or a slow request arriving late).
   const prev = await env.PROFILES.get(c.key, "json");
   if (prev && typeof prev.updated === "number" && prev.updated > save.updated) return json({ ok: true, kept: "newer" });
-  const stored = { name: save.name, inventory: save.inventory, town: save.town, updated: save.updated, seen: Date.now() };
+  const cls = typeof save.cls === "string" && save.cls.length <= 16 ? save.cls : undefined;
+  const stored = { name: save.name, cls, inventory: save.inventory, town: save.town, updated: save.updated, seen: Date.now() };
   // The name rides along as metadata, so the KV listing shows who each player is.
-  await env.PROFILES.put(c.key, JSON.stringify(stored), { metadata: { name: save.name, updated: save.updated } });
+  await env.PROFILES.put(c.key, JSON.stringify(stored), { metadata: { name: save.name, cls, updated: save.updated } });
   return json({ ok: true });
 }

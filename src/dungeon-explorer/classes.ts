@@ -1,0 +1,92 @@
+// The classes a player can pick at the start. Only the fighter is playable now (the realistic
+// human in plate with sword and shield); the others are planned and shown as coming soon.
+
+export type ClassId = "fighter" | "rogue" | "wizard" | "ranger" | "cleric";
+
+export interface HeroClass {
+  id: ClassId;
+  name: string;
+  /** One line under the name. */
+  tagline: string;
+  blurb: string;
+  /** What he starts with. */
+  kit: string[];
+  /** A few plain facts for the card. */
+  traits: Array<[string, string]>;
+  /** Playable now (the others are planned). */
+  available: boolean;
+  /** Accent colour (CSS). */
+  color: string;
+}
+
+export const CLASSES: HeroClass[] = [
+  {
+    id: "fighter",
+    name: "Fighter",
+    tagline: "Steel, plate and a steady shield arm",
+    blurb: "A sell-sword who holds the line. Takes a beating in heavy armour, blocks with the shield and cuts back with the sword in chained swings.",
+    kit: ["Arming sword", "Heater shield", "Arming doublet", "Healing draught and a bandage on the belt"],
+    traits: [
+      ["Health", "100"],
+      ["Armour", "Heavy plate and mail"],
+      ["Weapons", "Sword and shield"],
+      ["Strength", "Blocking, combos"],
+    ],
+    available: true,
+    color: "#e0b25a",
+  },
+  {
+    id: "rogue",
+    name: "Rogue",
+    tagline: "Quick hands, quicker knives",
+    blurb: "Moves quietly, picks locks and strikes from behind with twin daggers. Light armour, so every hit taken counts.",
+    kit: ["Twin daggers", "Leather jerkin", "Lockpicks"],
+    traits: [
+      ["Armour", "Light leather"],
+      ["Weapons", "Daggers"],
+    ],
+    available: false,
+    color: "#7fc29b",
+  },
+  {
+    id: "wizard",
+    name: "Wizard",
+    tagline: "Fire, frost and forbidden words",
+    blurb: "Casts from a distance with a staff and a book of spells. Fragile up close, devastating if the line holds.",
+    kit: ["Oak staff", "Spellbook", "Robes"],
+    traits: [
+      ["Armour", "Cloth"],
+      ["Weapons", "Staff and spells"],
+    ],
+    available: false,
+    color: "#8fa8ff",
+  },
+  {
+    id: "ranger",
+    name: "Ranger",
+    tagline: "The arrow you never see",
+    blurb: "Fights from range with a longbow, tracks what moves in the dark and sets traps for what follows.",
+    kit: ["Longbow", "Quiver of arrows", "Hunting knife"],
+    traits: [
+      ["Armour", "Leather and mail"],
+      ["Weapons", "Bow"],
+    ],
+    available: false,
+    color: "#c9a06a",
+  },
+  {
+    id: "cleric",
+    name: "Cleric",
+    tagline: "Mace in one hand, faith in the other",
+    blurb: "Mends wounds with prayer and breaks bones with a mace. Keeps a party standing longer than anyone.",
+    kit: ["Flanged mace", "Holy symbol", "Mail shirt"],
+    traits: [
+      ["Armour", "Mail"],
+      ["Weapons", "Mace and prayers"],
+    ],
+    available: false,
+    color: "#f0e3a8",
+  },
+];
+
+export const classById = (id: ClassId | undefined): HeroClass => CLASSES.find((c) => c.id === id) ?? CLASSES[0];

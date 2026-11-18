@@ -5,6 +5,7 @@
 // so the server copy is what he extracted, never a half-finished run.
 //
 // `?player=<id>` on the URL takes over an existing profile (the same player on another device).
+import type { ClassId } from "./classes";
 import type { PlayerInv } from "./playerInv";
 import type { TownSave } from "./town/townSave";
 
@@ -17,11 +18,14 @@ export interface Profile {
   created: number;
   /** When his town save last changed here (ms); the newer of this and the server's copy wins. */
   updated: number;
+  /** The class he last played (picked on the class screen at the start). */
+  cls?: ClassId;
 }
 
 /** What the server keeps for a player. */
 export interface CloudSave {
   name: string;
+  cls?: ClassId;
   inventory: PlayerInv;
   town: TownSave;
   updated: number;
@@ -77,7 +81,7 @@ export function loadProfile(): Profile {
     if (raw) {
       const s = JSON.parse(raw) as Partial<Profile>;
       if (s && typeof s.id === "string" && ID_RE.test(s.id) && typeof s.name === "string") {
-        p = { id: s.id, name: s.name.slice(0, 40) || randomHeroName(), created: Number(s.created) || Date.now(), updated: Number(s.updated) || 0 };
+        p = { id: s.id, name: s.name.slice(0, 40) || randomHeroName(), created: Number(s.created) || Date.now(), updated: Number(s.updated) || 0, cls: s.cls };
       }
     }
   } catch {

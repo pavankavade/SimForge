@@ -48,7 +48,7 @@ export const HealthBar: React.FC<HealthBarProps> = ({ name, hp, maxHp, compact }
           marginBottom: 3,
         }}
       >
-        {name || "Paladin"}
+        {name || "Fighter"}
       </div>
       <div style={{ display: "flex", alignItems: "center" }}>
         <Socket size={sock}>

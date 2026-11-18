@@ -43,6 +43,8 @@ const SLOT_KIND: Record<ArmorSlot, string> = {
 
 export interface InventoryScreenProps {
   name: string;
+  /** His class's name (Fighter). */
+  heroClass: string;
   inv: PlayerInv;
   onInv: (inv: PlayerInv) => void;
   /** Drink or eat an item from the bag (it is used up). */
@@ -57,7 +59,7 @@ export interface InventoryScreenProps {
   onClose: () => void;
 }
 
-export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, inv, onInv, onUse, icons, viewport, compact, touch, onModelRect, onClose }) => {
+export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClass, inv, onInv, onUse, icons, viewport, compact, touch, onModelRect, onClose }) => {
   const [toast, setToast] = useState<string | null>(null);
   const modelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -289,7 +291,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, inv, onI
     >
       <div style={{ fontSize: compact ? 15 : 18, fontWeight: 800, letterSpacing: "0.2em", color: "#e8d9b0" }}>INVENTORY</div>
       <div style={{ fontSize: 12, color: "#8f8676" }}>
-        <span style={{ color: GOLD, fontWeight: 700 }}>{name || "Paladin"}</span> · Paladin
+        <span style={{ color: GOLD, fontWeight: 700 }}>{name || heroClass}</span> · {heroClass}
       </div>
       <div style={{ flex: 1 }} />
       <button type="button" onClick={onClose} style={btn}>
@@ -420,8 +422,8 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, inv, onI
         <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 14, padding: "14px 18px 16px" }}>
           {wide ? (
             <div style={{ width: 230, flex: "0 0 230px", alignSelf: "flex-start", background: PANEL_BG, border: PANEL_BORDER, padding: "14px 16px", pointerEvents: "auto" }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: GOLD }}>{name || "Paladin"}</div>
-              <div style={{ fontSize: 12, color: "#8f8676", marginBottom: 12 }}>Paladin · Knight of the Order</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: GOLD }}>{name || heroClass}</div>
+              <div style={{ fontSize: 12, color: "#8f8676", marginBottom: 12 }}>{heroClass} · Sell-sword of the Wayfarer's Rest</div>
               <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", marginBottom: 4 }}>STATS</div>
               {StatsRows}
             </div>

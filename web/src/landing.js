@@ -242,6 +242,26 @@ export function renderLanding() {
       </header>
 
       <section class="grid">
+        <article class="card featured" style="border-color: #f59e0b; box-shadow: 0 0 24px rgba(245, 158, 11, 0.25);">
+          <div>
+            <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">New · Counter-Strike Gun Game</span>
+            <h2>🔫 Vardhan's CS Gun Game</h2>
+            <p>
+              First-person Counter-Strike Arms Race! Eliminate enemy bots across the Dust 2 arena to level up through
+              Glock, MP5-SD, AK-47, AWP Sniper with scope zoom, and the Golden Knife!
+            </p>
+            <div class="tags">
+              <span class="tag">FPS Mouse Look</span>
+              <span class="tag">5 Weapon Tiers</span>
+              <span class="tag">Headshots &amp; Recoil</span>
+              <span class="tag">Dust 2 Crate Arena</span>
+            </div>
+          </div>
+          <a class="btn" href="./vardhan" style="background: #f59e0b; color: #0f172a; font-weight: 800;">
+            Play CS Gun Game →
+          </a>
+        </article>
+
         <article class="card featured" style="border-color: #38bdf8; box-shadow: 0 0 24px rgba(56, 189, 248, 0.25);">
           <div>
             <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Vardhan's Game · Stumble Guys</span>
@@ -258,7 +278,7 @@ export function renderLanding() {
             </div>
           </div>
           <a class="btn" href="./vardhan" style="background: #38bdf8; color: #0f172a; font-weight: 800;">
-            Play Vardhan's Stumble Sandbox →
+            Play Stumble Sandbox →
           </a>
         </article>
 
@@ -267,11 +287,12 @@ export function renderLanding() {
             <span class="badge">New · Dungeon Crawler</span>
             <h2>Dungeon Crawler</h2>
             <p>
-              Wake in the Wayfarer's Rest, rent a room upstairs to stash your loot, trade on the market
-              street, then step onto the teleporter at the Gate of the Deep. Fight through a fresh dungeon
-              floor and escape through a portal before it closes, or lose what you found.
+              Choose your class, wake in the Wayfarer's Rest, rent a room upstairs to stash your loot and
+              trade on the market street, then step onto the teleporter at the Gate of the Deep. Fight
+              through a fresh dungeon floor and escape through a portal before it closes, or lose what you found.
             </p>
             <div class="tags">
+              <span class="tag">Fighter (more classes soon)</span>
               <span class="tag">Tavern &amp; Market Hub</span>
               <span class="tag">Extraction Runs</span>
               <span class="tag">Rentable Stash Rooms</span>

@@ -40,7 +40,8 @@ interface Row {
 }
 
 export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, icons, onClose, compact, touch }) => {
-  const [tab, setTab] = useState<Tab>("buy");
+  // A merchant with nothing for sale opens on the sell tab (they all buy loot).
+  const [tab, setTab] = useState<Tab>(merchant.stock.length ? "buy" : "sell");
   const [pick, setPick] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
@@ -148,12 +149,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, ic
         </div>
       </div>
 
-      {empty ? (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "#6e675b" }}>
-          <div style={{ fontSize: 13, letterSpacing: "0.2em" }}>NOTHING FOR SALE</div>
-          <div style={{ fontSize: 12 }}>Come back once {first} has new stock.</div>
-        </div>
-      ) : (
+      {
         <>
           <div style={{ display: "flex", borderBottom: `1px solid ${LINE}` }}>
             {tabBtn("buy", "BUY")}
@@ -161,7 +157,9 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, ic
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "6px 8px", minHeight: 0 }}>
             {rows.length === 0 ? (
-              <div style={{ padding: 24, textAlign: "center", fontSize: 12, color: "#6e675b" }}>Nothing in your bag {first} would buy. Worn pieces must come off first.</div>
+              <div style={{ padding: 24, textAlign: "center", fontSize: 12, color: "#6e675b" }}>
+                {tab === "buy" ? `Nothing for sale until ${first} has new stock. ${first} still buys what you bring up.` : `Nothing in your bag to sell. Worn pieces and the belt must go back in the bag first.`}
+              </div>
             ) : null}
             {rows.map((r) => {
               const item = def(r.id);
@@ -236,7 +234,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, ic
             </div>
           ) : null}
         </>
-      )}
+      }
 
       {/* The purse. */}
       <div style={{ padding: compact ? "8px 16px" : "12px 24px", borderTop: `1px solid ${LINE}`, display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.25)" }}>
