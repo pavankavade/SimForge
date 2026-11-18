@@ -189,7 +189,8 @@ export function createWalker(d: DungeonData) {
       w.bob = 0;
       w.speedNow = 0;
     },
-    step(dt: number, forward: number, strafe: number, speed: number) {
+    /** `airborne`: off the ground, he keeps his way and steers only a little. */
+    step(dt: number, forward: number, strafe: number, speed: number, airborne = false) {
       const len = Math.hypot(forward, strafe);
       const f = len > 1 ? forward / len : forward;
       const s = len > 1 ? strafe / len : strafe;
@@ -197,7 +198,7 @@ export function createWalker(d: DungeonData) {
       const cos = Math.cos(w.yaw);
       const tx = (-sin * f + cos * s) * speed;
       const tz = (-cos * f - sin * s) * speed;
-      const k = 1 - Math.exp(-dt * (len > 0 ? 12 : 16));
+      const k = 1 - Math.exp(-dt * (airborne ? 1.2 : len > 0 ? 12 : 16));
       w.vx += (tx - w.vx) * k;
       w.vz += (tz - w.vz) * k;
       if (Math.abs(w.vx) < 0.002) w.vx = 0;

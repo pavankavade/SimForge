@@ -37,6 +37,8 @@ export interface ItemDef {
   block?: number;
   /** Hit points it gives back when used. */
   heal?: number;
+  /** ...over this many seconds (a bandage), rather than at once. */
+  healOver?: number;
   /** How many fit in one cell (coins). */
   stack?: number;
 }
@@ -67,6 +69,7 @@ const priceFor = (a: { rarity: Rarity; armor?: number; damage?: number; block?: 
 const OTHER: ItemDef[] = [
   { id: "coins", name: "Gold coins", note: "Struck with a king nobody remembers", kind: "Coins", category: "coins", w: 1, h: 1, rarity: "common", weight: 0.01, value: 1, stack: 999 },
   { id: "potion", name: "Healing draught", note: "Bitter, red, and it works", kind: "Drink", category: "consumable", w: 1, h: 1, rarity: "uncommon", weight: 0.3, value: 30, heal: 40 },
+  { id: "bandage", name: "Linen bandage", note: "Boiled linen; slow, but it stops the bleeding", kind: "Bandage", category: "consumable", w: 1, h: 1, rarity: "common", weight: 0.1, value: 14, heal: 35, healOver: 6 },
   { id: "apple", name: "Apple", note: "A little wrinkled", kind: "Food", category: "consumable", w: 1, h: 1, rarity: "common", weight: 0.2, value: 2, heal: 8 },
   { id: "ruby", name: "Ruby", note: "Cut and polished, the size of a thumbnail", kind: "Gem", category: "valuable", w: 1, h: 1, rarity: "rare", weight: 0.02, value: 90 },
   { id: "sapphire", name: "Star sapphire", note: "A pale star moves in it", kind: "Gem", category: "valuable", w: 1, h: 1, rarity: "epic", weight: 0.02, value: 170 },

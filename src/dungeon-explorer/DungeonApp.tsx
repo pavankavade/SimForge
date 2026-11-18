@@ -22,7 +22,7 @@ import { buildDressing, type FloorDressing } from "./roomView";
 import { createDoors, doorwayProps, type Doors } from "./doorView";
 import { rollChest, rollCorpse, type Container } from "./loot";
 import { LootScreen } from "./LootScreen";
-import { equipFromBag, loadInventory, saveInventory, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
+import { BELT_SLOTS, equipFromBag, loadInventory, normalizeInventory, saveInventory, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
 import { def, removeItem } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
@@ -41,6 +41,7 @@ import {
   type ShowcaseView,
 } from "./CharacterCustomizer";
 import { ITEMS, InventoryScreen, type FrameRect } from "./Inventory";
+import { ItemIcon } from "./itemsUi";
 import { PauseMenu } from "./PauseMenu";
 import {
   createPaladin,
@@ -62,6 +63,11 @@ const FIRST_PERSON_FOV = 74;
 const LOOK_SENS = 0.0024;
 const TOUCH_LOOK_SENS = 0.0052;
 const EYE_HEIGHT_CELLS = 1.04;
+/** Jump: take-off speed (m/s) and gravity (m/s^2): about 0.4 m up, 0.45 s in the air. */
+const JUMP_V = 3.5;
+const GRAVITY = 15.5;
+/** Seconds after landing before he can jump again. */
+const JUMP_REST = 0.32;
 
 function responsiveFov(baseVfov: number, width: number, height: number): number {
   const aspect = Math.max(0.35, width / Math.max(1, height));
@@ -100,7 +106,7 @@ interface Walker {
   yaw: number;
   pitch: number;
   speedNow: number;
-  step: (dt: number, forward: number, strafe: number, speed: number) => void;
+  step: (dt: number, forward: number, strafe: number, speed: number, airborne?: boolean) => void;
   room: () => DungeonRoom | null;
 }
 
@@ -171,6 +177,10 @@ interface WorldState {
   runT: number;
   escaped: boolean;
   rand: () => number;
+  /** Seconds before he can jump again (after a landing). */
+  jumpRest: number;
+  /** A bandage at work: hit points still to come back and how fast (per second). */
+  regen: { left: number; rate: number };
 }
 
 interface HudInfo {
@@ -198,7 +208,7 @@ interface HudInfo {
 
 /** Something within reach: a stall, a door, a chest, a fallen man; in town a room, a stash, the teleporter. */
 interface Interact {
-  kind: "trade" | "door" | "chest" | "corpse" | "portal" | "rent" | "roomdoor" | "stash" | "teleport";
+  kind: "trade" | "door" | "chest" | "corpse" | "portal" | "rent" | "roomdoor" | "stash" | "teleport" | "tavernDoor";
   /** Merchant index, door index or container id. */
   key: string;
   verb: string;
@@ -271,6 +281,12 @@ interface DungeonSceneProps {
   /** Rooms he rents upstairs, a room door to work (set by E), and the stash chest open (-1: none). */
   rentedRef: React.RefObject<boolean[]>;
   roomDoorQueueRef: React.RefObject<number>;
+  /** Set by E at the tavern's front door: "out" to the square, "in" to the common room. */
+  tavernDoorQueueRef: React.RefObject<"in" | "out" | null>;
+  /** A bandage applied: so many hit points over so many seconds. */
+  regenQueueRef: React.RefObject<{ amount: number; seconds: number } | null>;
+  /** He has arrived somewhere (town or a new floor): weapons go back in their sheaths. */
+  onArrive: () => void;
   stashOpenRef: React.RefObject<{ room: number; slot: number } | null>;
 }
 
@@ -374,7 +390,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   rentedRef,
   roomDoorQueueRef,
   stashOpenRef,
+  tavernDoorQueueRef,
+  regenQueueRef,
+  onArrive,
 }) => {
+  const arriveRef = useRef(onArrive);
+  arriveRef.current = onArrive;
+  const townWalkerRef = useRef<Town.TownWalker | null>(null);
   const { gl, scene, camera, size } = useThree();
   const marketRef = useRef<Market | null>(null);
   // The floor's furnishings and doors, the room plan, and what E would do (as last told to the HUD).
@@ -556,13 +578,17 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       dressing: () => dressingRef.current,
       town: () => townRef.current,
       layout: Town,
+      gl,
+      scene,
+      camera,
+      view: () => viewRef.current,
       containers: () => containersRef.current,
       loadModel,
       attack: () => {
         attackQueueRef.current = true;
       },
     };
-  }, [attackQueueRef, containersRef]);
+  }, [attackQueueRef, containersRef, gl, scene, camera]);
 
   useEffect(() => {
     let disposed = false;
@@ -632,10 +658,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const onKeyDown = (e: KeyboardEvent) => {
       if (!e.repeat) keysRef.current.add(e.code);
       if (!playingRef.current) return;
-      if (e.code === "Space" && worldRef.current) {
-        const w = worldRef.current;
-        if (w.playerJumpY <= 0.01) w.playerJumpVy = 4.6;
-      }
+      if (e.code === "Space" && !e.repeat) jumpQueueRef.current = true;
       if (e.code === "KeyF" && !e.repeat) attackQueueRef.current = true;
     };
     // Mouse buttons: left swings (once the mouse is captured), right raises the shield.
@@ -758,7 +781,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       window.removeEventListener("pointermove", onPointerMove);
       dom.removeEventListener("wheel", onWheel);
     };
-  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, showcaseRef]);
+  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, jumpQueueRef, showcaseRef]);
 
   // In town: the dungeon put away, the town shown, and he stands in the tavern or on the dais.
   const placedVisitRef = useRef(-1);
@@ -789,6 +812,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const walker = Town.createTownWalker(() => town.dynamicSolids());
     const spot = Town.SPAWN[arrival];
     walker.place(spot.x, spot.z, spot.yaw);
+    townWalkerRef.current = walker;
+    // Only the zone he is in is drawn; the dungeon's lamp shadows are off up here.
+    view.setShadows(false);
+    const zone = Town.zoneAt(spot.x, spot.z);
+    town.setZone(zone);
+    marketRef.current?.setVisible(zone === "out");
     const targets: CombatTarget[] = [];
     const combat: CombatWorld = {
       targets,
@@ -822,8 +851,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       rand: () => (rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296,
       runT: 0,
       escaped: false,
+      jumpRest: 0,
+      regen: { left: 0, rate: 0 },
     };
     paladinRef.current?.reset();
+    arriveRef.current();
     onHudUpdate({
       loading: null,
       name: "The Wayfarer's Rest",
@@ -911,6 +943,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       placedVisitRef.current = -1;
       view.group.visible = true;
       view.carriedLight.intensity = 2.8;
+      view.setShadows(true);
+      marketRef.current?.setVisible(true);
       view.hemiLight.intensity = 0.65;
       dressingRef.current?.dispose();
       doorsRef.current?.dispose();
@@ -1001,7 +1035,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         rand,
         runT: 0,
         escaped: false,
+        jumpRest: 0,
+        regen: { left: 0, rate: 0 },
       };
+      arriveRef.current();
       // Stand him up fresh at the entrance (pose, cloth) after a respawn or a new floor.
       paladinRef.current?.reset();
       onHudUpdate({
@@ -1121,7 +1158,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const sprinting =
       keys.has("ShiftLeft") || keys.has("ShiftRight") || touchSprintRef.current || stickMag > 0.88;
     const paladin = paladinRef.current;
-    const blocking = active && (mouseBlockRef.current || keys.has("KeyQ") || touchBlockRef.current);
+    const blocking = active && equipmentRef.current.shield && (mouseBlockRef.current || keys.has("KeyQ") || touchBlockRef.current);
     blockingRef.current = blocking;
     if (!active) {
       attackQueueRef.current = false;
@@ -1130,14 +1167,18 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const swinging = paladin !== null && paladin.animator.state !== "none";
     const speed = (blocking ? BLOCK_CELLS : sprinting ? RUN_CELLS : WALK_CELLS) * (swinging ? 0.72 : 1);
 
+    // A jump needs his feet on the ground, a moment since the last landing, and no shield up or swing under way.
+    world.jumpRest = Math.max(0, world.jumpRest - dt);
+    const grounded = world.playerJumpY <= 0.001 && world.playerJumpVy === 0;
     if (jumpQueueRef.current) {
       jumpQueueRef.current = false;
-      if (world.playerJumpY <= 0.01) world.playerJumpVy = 4.6;
+      if (grounded && world.jumpRest <= 0 && !blocking && !swinging) world.playerJumpVy = JUMP_V;
     }
 
     const x0 = walker.x;
     const z0 = walker.z;
-    walker.step(dt, forward, strafe, speed);
+    // In the air he keeps the way he was going (only a little steering).
+    walker.step(dt, forward, strafe, speed, !grounded || world.playerJumpVy > 0);
     // Men are solid: the paladin is eased out of anyone standing in his way.
     for (const m of sim.mobs) {
       if (m.dead) continue;
@@ -1174,10 +1215,18 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     world.playerFloor += (targetFloor - world.playerFloor) * (1 - Math.exp(-dt * 12));
     if (world.playerJumpY > 0 || world.playerJumpVy !== 0) {
       world.playerJumpY += world.playerJumpVy * dt;
-      world.playerJumpVy -= 13.5 * dt;
+      world.playerJumpVy -= GRAVITY * dt;
       if (world.playerJumpY <= 0) {
+        // Landing: the plate comes down hard (a jolt and a heavy step), then a moment to recover.
+        const impact = -world.playerJumpVy;
         world.playerJumpY = 0;
         world.playerJumpVy = 0;
+        world.jumpRest = JUMP_REST;
+        if (impact > 2.5) {
+          const pal = paladinRef.current;
+          if (pal) pal.shake.value = Math.min(1, pal.shake.value + 0.12);
+          sfxRef.current?.step(1);
+        }
       }
     }
 
@@ -1239,7 +1288,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           block: blocking,
           attack: active && attackQueueRef.current,
           firstPerson: fp,
-          relaxed: world.dead,
+          // Nothing drawn: off-duty arms in third person (first person keeps the bare fists up in view).
+          relaxed: world.dead || (!fp && !show.active && !equipmentRef.current.sword && !equipmentRef.current.shield),
         },
         world.playerFloor * CELL_M,
         world.combat
@@ -1258,6 +1308,24 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       roomDoorQueueRef.current = -1;
     }
     if (town) {
+      const through = tavernDoorQueueRef.current;
+      const tw = townWalkerRef.current;
+      if (through && tw) {
+        tavernDoorQueueRef.current = null;
+        const spot = through === "out" ? Town.SPAWN.doorOut : Town.SPAWN.doorIn;
+        tw.place(spot.x, spot.z, spot.yaw);
+        world.playerFloor = tw.y / CELL_M;
+        world.playerJumpY = 0;
+        world.playerJumpVy = 0;
+        prevYawRef.current = tw.yaw;
+        freeLookRef.current = 0;
+      }
+      // The zone follows him (the door above, or anything else that moves him).
+      const zoneHere = Town.zoneAt(walker.x * CELL_M, walker.z * CELL_M);
+      if (zoneHere !== town.zone()) {
+        town.setZone(zoneHere);
+        marketRef.current?.setVisible(zoneHere === "out");
+      }
       town.setRented(rentedRef.current);
       const open = stashOpenRef.current;
       Town.ROOMS.forEach((r, ri) => r.chests.forEach((_, ci) => town.setChestOpen(ri, ci, !!open && open.room === ri && open.slot === ci)));
@@ -1269,6 +1337,18 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         onHudUpdate({ hp: world.hp });
       }
       healQueueRef.current = 0;
+    }
+    const regen = regenQueueRef.current;
+    if (regen) {
+      regenQueueRef.current = null;
+      world.regen = { left: regen.amount, rate: regen.amount / regen.seconds };
+    }
+    if (world.regen.left > 0 && !world.dead) {
+      const add = Math.min(world.regen.left, world.regen.rate * dt);
+      world.regen.left -= add;
+      world.hp = Math.min(world.maxHp, world.hp + add);
+      if (Math.floor(world.hp) !== Math.floor(world.hp - add) || world.regen.left <= 0) onHudUpdate({ hp: Math.round(world.hp) });
+      if (world.hp >= world.maxHp) world.regen.left = 0;
     }
     const market = marketRef.current;
     const doorsNow = doorsRef.current;
@@ -1315,6 +1395,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (town) {
         const rented = rentedRef.current;
         const feet = world.playerFloor * CELL_M;
+        // The front door, from inside or out.
+        const zoneNow = town.zone();
+        const ds = Town.DOOR_SPOT[zoneNow];
+        const dd = Math.hypot(ds.x - px, ds.z - pz);
+        if (dd < Town.DOOR_SPOT.reach && feet < 1 && look(ds.x, zoneNow === "in" ? Town.TAVERN.z0 - 1 : Town.TAVERN.z0 + 1) > 0.2) {
+          consider({ kind: "tavernDoor", key: zoneNow === "in" ? "out" : "in", verb: zoneNow === "in" ? "Leave" : "Enter", label: "the Wayfarer's Rest" }, dd);
+        }
         // The teleporter: anywhere on the dais near its middle.
         if (feet > Town.DAIS.h * 0.6 && Math.hypot(px - Town.DAIS.x, pz - Town.DAIS.z) < Town.DAIS_REACH) {
           consider({ kind: "teleport", key: "0", verb: "Descend into", label: "the dungeon" }, 0.5);
@@ -1691,7 +1778,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         profile.updated = c.updated;
         profile.name = c.name || profile.name;
         saveProfile(profile);
-        setInv(c.inventory);
+        setInv(normalizeInventory(c.inventory));
         setTownSave((t) => ({ rented: t.rented.map((_, i) => !!c.town.rented?.[i]), stash: t.stash.map((row, r) => row.map((g, k) => c.town.stash?.[r]?.[k] ?? g)) }));
         setSpec((sp) => ({ ...sp, name: profile.name }));
       }
@@ -1729,6 +1816,28 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     return () => window.clearTimeout(t);
   }, [toast]);
   const [flashKey, setFlashKey] = useState(0);
+  const [doorFadeKey, setDoorFadeKey] = useState(0);
+  /** Keys 1 and 2: draw or put away the sword or the shield (if he has one in that slot). */
+  const toggleDraw = useCallback((which: "sword" | "shield") => {
+    if (!invRef.current.equipped[which]) {
+      setToast(which === "sword" ? "Nothing in your main hand slot to draw." : "No shield in your off hand slot.");
+      return;
+    }
+    setDrawn((d) => ({ ...d, [which]: !d[which] }));
+  }, []);
+  /** Keys 3 and 4: use what is on that belt slot (the next of its kind in the bag takes its place). */
+  const applyBeltSlot = useCallback((i: number) => {
+    if (runOverRef.current) return;
+    const r = spendBelt(invRef.current, i);
+    if (!r) {
+      setToast(`Nothing on belt slot ${i + 3}. Put a draught or a bandage there in the inventory (Tab).`);
+      return;
+    }
+    const d = def(r.used.id);
+    if (d.healOver) regenQueueRef.current = { amount: d.heal ?? 0, seconds: d.healOver };
+    else healQueueRef.current += d.heal ?? 0;
+    setInv(r.inv);
+  }, []);
   // A greeting by name once the tavern is up.
   const welcomedRef = useRef(false);
   useEffect(() => {
@@ -1745,6 +1854,12 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   /** Leave this floor without escaping: what was found here is lost. */
   const abandonRun = useCallback(() => setInv(runStartRef.current), []);
   const equipment = useMemo(() => wornOf(inv), [inv]);
+  // What he holds: the sword (key 1) and the shield (key 2) stay in their slots but are only in hand
+  // once drawn. He arrives everywhere with both put away.
+  const [drawn, setDrawn] = useState({ sword: false, shield: false });
+  const handleArrive = useCallback(() => setDrawn({ sword: false, shield: false }), []);
+  const tavernDoorQueueRef = useRef<"in" | "out" | null>(null);
+  const regenQueueRef = useRef<{ amount: number; seconds: number } | null>(null);
   // The merchant he is trading with (index into MERCHANTS), and the chest or man being searched.
   const [shopMerchant, setShopMerchant] = useState(0);
   const [lootId, setLootId] = useState<string | null>(null);
@@ -1775,15 +1890,17 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [characterBusy, setCharacterBusy] = useState(true);
   const [customTab, setCustomTab] = useState<CustomizerTab>("face");
   const [icons, setIcons] = useState<Partial<Record<ArmorSlot, string>>>({});
-  const iconsWanted = screen === "inventory" || screen === "shop" || screen === "loot";
+  // Icons are wanted from the start: the hotbar shows the sword, the shield and the belt.
+  const iconsWanted = true;
   const allIcons = useMemo(() => ({ ...itemPics, ...icons }), [itemPics, icons]);
   const [inventoryFrame, setInventoryFrame] = useState<FrameRect>(() => ({ left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }));
   const lockLostAtRef = useRef(-1e9);
   // While the face or hair is being edited the helm comes off (without changing the loadout).
-  const shownEquipment = useMemo<ArmorEquipment>(
-    () => (customizing && (customTab === "face" || customTab === "hair") ? { ...equipment, helm: false } : equipment),
-    [customizing, customTab, equipment]
-  );
+  // In play the weapons show only when drawn; the inventory and character screens show the whole kit.
+  const shownEquipment = useMemo<ArmorEquipment>(() => {
+    const held = showcasing ? equipment : { ...equipment, sword: equipment.sword && drawn.sword, shield: equipment.shield && drawn.shield };
+    return customizing && (customTab === "face" || customTab === "hair") ? { ...held, helm: false } : held;
+  }, [customizing, showcasing, customTab, equipment, drawn]);
   const showcaseRef = useRef<Showcase>({ spin: 0, zoom: SHOW_ZOOM.face, lift: 0 });
   useEffect(() => saveCharacter(spec, equipment), [spec, equipment]);
   const handleCharacterBusy = useCallback((b: boolean) => setCharacterBusy(b), []);
@@ -1833,6 +1950,14 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       } else if (it.kind === "door") doorQueueRef.current = Number(it.key);
       else if (it.kind === "portal") escapeQueueRef.current = true;
       else if (it.kind === "teleport") descend();
+      else if (it.kind === "tavernDoor") {
+        // The screen goes dark, he steps through while it is, and the other side fades in.
+        setDoorFadeKey((k) => k + 1);
+        const to = it.key === "out" ? "out" : "in";
+        window.setTimeout(() => {
+          tavernDoorQueueRef.current = to;
+        }, 230);
+      }
       else if (it.kind === "roomdoor") roomDoorQueueRef.current = Number(it.key);
       else if (it.kind === "rent") {
         const ri = Number(it.key);
@@ -1949,11 +2074,15 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         });
       }
       if (e.code === "KeyV") setFirstPerson((v) => !v);
+      if (e.code === "Digit1") toggleDraw("sword");
+      if (e.code === "Digit2") toggleDraw("shield");
+      if (e.code === "Digit3") applyBeltSlot(0);
+      if (e.code === "Digit4") applyBeltSlot(1);
       if (e.code === "KeyM") setShowMap((v) => !v);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [openScreen, resume, interactNow]);
+  }, [openScreen, resume, interactNow, toggleDraw, applyBeltSlot]);
 
   const isPortrait = viewport.h > viewport.w;
   const isCompact = viewport.w < 760 || viewport.h < 520;
@@ -1995,12 +2124,14 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     const start = runStartRef.current;
     const had = new Set<string>();
     for (const q of start.bag.items) had.add(q.item.uid);
+    for (const b of start.belt || []) if (b) had.add(b.uid);
     for (const k of Object.keys(start.equipped) as ArmorSlot[]) {
       const it = start.equipped[k];
       if (it) had.add(it.uid);
     }
     let items = 0;
     for (const q of inv.bag.items) if (!had.has(q.item.uid)) items++;
+    for (const b of inv.belt || []) if (b && !had.has(b.uid)) items++;
     for (const k of Object.keys(inv.equipped) as ArmorSlot[]) {
       const it = inv.equipped[k];
       if (it && !had.has(it.uid)) items++;
@@ -2107,6 +2238,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           rentedRef={rentedRef}
           roomDoorQueueRef={roomDoorQueueRef}
           stashOpenRef={stashOpenRef}
+          tavernDoorQueueRef={tavernDoorQueueRef}
+          regenQueueRef={regenQueueRef}
+          onArrive={handleArrive}
         />
       </Canvas>
 
@@ -2402,8 +2536,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {hud.pointerLocked
-            ? "LMB Swing (click again to chain) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Esc Menu"
-            : "Click to capture the mouse · F Swing · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Esc Menu"}
+            ? "1 Sword · 2 Shield · 3 / 4 Belt · LMB Swing · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Esc Menu"
+            : "Click to capture the mouse · 1 Sword · 2 Shield · 3 / 4 Belt · F Swing · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Esc Menu"}
         </div>
       ) : null}
 
@@ -2593,7 +2727,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           style={{
             position: "fixed",
             left: "50%",
-            bottom: isTouchUI ? "calc(max(18px, env(safe-area-inset-bottom)) + 176px)" : 74,
+            bottom: isTouchUI ? "calc(max(18px, env(safe-area-inset-bottom)) + 176px)" : 144,
             transform: "translateX(-50%)",
             zIndex: 13,
             display: "flex",
@@ -2614,7 +2748,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             >
               {hud.interact.kind === "trade"
                 ? "TRADE"
-                : hud.interact.kind === "door" || hud.interact.kind === "roomdoor"
+                : hud.interact.kind === "door" || hud.interact.kind === "roomdoor" || hud.interact.kind === "tavernDoor"
                   ? hud.interact.verb.toUpperCase()
                   : hud.interact.kind === "chest"
                     ? "SEARCH"
@@ -2654,6 +2788,69 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           </div>
         ))}
       </div>
+
+      {/* The hotbar: 1 sword, 2 shield (lit when in hand), 3 and 4 the belt (with how many are left). */}
+      {showGameHud && !hud.loading && !hud.dead ? (
+        <div
+          style={{
+            position: "fixed",
+            zIndex: 11,
+            display: "flex",
+            gap: 6,
+            ...(isTouchUI
+              ? { left: "max(18px, env(safe-area-inset-left))", bottom: "calc(max(18px, env(safe-area-inset-bottom)) + 124px)" }
+              : { left: "50%", transform: "translateX(-50%)", bottom: 82 }),
+          }}
+        >
+          {[
+            { key: "1", id: inv.equipped.sword ? "sword" : null, on: drawn.sword && !!inv.equipped.sword, act: () => toggleDraw("sword"), count: 0 },
+            { key: "2", id: inv.equipped.shield ? "shield" : null, on: drawn.shield && !!inv.equipped.shield, act: () => toggleDraw("shield"), count: 0 },
+            ...Array.from({ length: BELT_SLOTS }, (_, i) => {
+              const b = (inv.belt || [])[i] ?? null;
+              const count = b ? 1 + inv.bag.items.filter((q) => q.item.id === b.id).length : 0;
+              return { key: String(i + 3), id: b ? b.id : null, on: false, act: () => applyBeltSlot(i), count };
+            }),
+          ].map((h) => (
+            <button
+              type="button"
+              key={h.key}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                e.currentTarget.blur();
+                h.act();
+              }}
+              title={h.id ? def(h.id).name : "Empty"}
+              style={{
+                position: "relative",
+                width: isTouchUI ? 44 : 50,
+                height: isTouchUI ? 44 : 50,
+                padding: 0,
+                borderRadius: 4,
+                background: h.on ? "radial-gradient(circle at 50% 40%, rgba(255,216,77,0.28), rgba(14,12,8,0.9) 75%)" : "rgba(10,9,8,0.78)",
+                border: h.on ? "2px solid #ffd84d" : "1px solid rgba(214,186,128,0.35)",
+                boxShadow: h.on ? "0 0 12px rgba(255,216,77,0.35)" : "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                touchAction: "none",
+              }}
+            >
+              {h.id ? <ItemIcon id={h.id} icons={allIcons} w={isTouchUI ? 34 : 39} h={isTouchUI ? 34 : 39} ghost={!h.on && Number(h.key) <= 2} /> : null}
+              <span style={{ position: "absolute", left: 3, top: 1, fontSize: 10, fontWeight: 800, color: "#e8dcc0", textShadow: "0 1px 2px #000", pointerEvents: "none" }}>{h.key}</span>
+              {h.count > 1 ? (
+                <span style={{ position: "absolute", right: 3, bottom: 1, fontSize: 10, fontWeight: 700, color: "#f3e6c4", textShadow: "0 1px 2px #000", pointerEvents: "none" }}>×{h.count}</span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Through the tavern's front door: a quick fade to black and back. */}
+      {doorFadeKey > 0 ? (
+        <div key={`door-${doorFadeKey}`} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 18, background: "#000", animation: "simforgeDoor 0.7s ease-in-out forwards" }} />
+      ) : null}
+      <style>{"@keyframes simforgeDoor { 0% { opacity: 0; } 32% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }"}</style>
 
       {/* The paladin's health, bottom centre (above the thumb controls on touch screens). */}
       {showGameHud && !hud.loading ? (

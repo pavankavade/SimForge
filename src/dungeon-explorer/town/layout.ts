@@ -133,11 +133,10 @@ export type Region =
 const flat = (x0: number, x1: number, z0: number, z1: number, y = 0): Region => ({ kind: "flat", x0, x1, z0, z1, y });
 
 export const REGIONS: Region[] = [
-  // Tavern ground floor (round the stair foot) and the doorway.
+  // Tavern ground floor (round the stair foot). The front door is shut: E there takes him through.
   flat(TAVERN.x0, STAIR.x1, TAVERN.z0, STAIR.z0),
   flat(TAVERN.x0, STAIR.x1, STAIR.z1, TAVERN.z1),
   flat(STAIR.x1, TAVERN.x1, TAVERN.z0, TAVERN.z1),
-  flat(FRONT_DOOR.x0, FRONT_DOOR.x1, -0.45, TAVERN.z0),
   // The stair and the upper storey: gallery and the three rooms.
   { kind: "rampZ", x0: STAIR.x0, x1: STAIR.x1, z0: STAIR.z0, z1: STAIR.z1, y0: 0, y1: UPPER_Y },
   flat(TAVERN.x0, UPPER_X1, GALLERY_Z, ROOMS_Z, UPPER_Y),
@@ -206,6 +205,8 @@ const T = 0.4; // outer wall thickness
 export const STRUCTURE: Solid[] = [
   // Tavern shell.
   ...wallX(TAVERN.z0 - T, TAVERN.z0, TAVERN.x0 - T, TAVERN.x1 + T, 0, TAVERN_TOP, [{ a: FRONT_DOOR.x0, b: FRONT_DOOR.x1, top: FRONT_DOOR.top }]),
+  // The front door, shut.
+  S(FRONT_DOOR.x0, FRONT_DOOR.x1, TAVERN.z0 - T, TAVERN.z0, 0, FRONT_DOOR.top),
   S(TAVERN.x0 - T, TAVERN.x1 + T, TAVERN.z1, TAVERN.z1 + T, 0, TAVERN_TOP),
   S(TAVERN.x0 - T, TAVERN.x0, TAVERN.z0, TAVERN.z1, 0, TAVERN_TOP),
   S(TAVERN.x1, TAVERN.x1 + T, TAVERN.z0, TAVERN.z1, 0, TAVERN_TOP),
@@ -219,8 +220,8 @@ export const STRUCTURE: Solid[] = [
   // Upstairs: the loft wall over the kitchen, the rooms' front wall and the partitions.
   S(UPPER_X1, UPPER_X1 + 0.2, GALLERY_Z, TAVERN.z1, UPPER_Y, TAVERN_TOP),
   ...wallX(ROOMS_Z, ROOMS_Z + 0.2, TAVERN.x0, UPPER_X1, UPPER_Y, TAVERN_TOP, ROOMS.map((r) => ({ a: r.door.x0, b: r.door.x1, top: UPPER_Y + 2.25 }))),
-  S(-5.3, -5.1, ROOMS_Z, TAVERN.z1, UPPER_Y, TAVERN_TOP),
-  S(-0.5, -0.3, ROOMS_Z, TAVERN.z1, UPPER_Y, TAVERN_TOP),
+  S(-5.3, -5.1, ROOMS_Z + 0.2, TAVERN.z1, UPPER_Y, TAVERN_TOP),
+  S(-0.5, -0.3, ROOMS_Z + 0.2, TAVERN.z1, UPPER_Y, TAVERN_TOP),
   // Gallery and stair railings (waist high).
   S(STAIR.x1, UPPER_X1, GALLERY_Z - 0.06, GALLERY_Z + 0.06, UPPER_Y, UPPER_Y + 1.0),
   S(STAIR.x1 - 0.06, STAIR.x1 + 0.06, STAIR.z0 + 0.6, GALLERY_Z, 0.9, UPPER_Y + 1.0),
@@ -347,7 +348,6 @@ export const AIR: Air[] = [
   { x0: TAVERN.x0, x1: TAVERN.x1, z0: TAVERN.z0, z1: GALLERY_Z, y0: 0, y1: TAVERN_TOP },
   { x0: TAVERN.x0, x1: TAVERN.x1, z0: GALLERY_Z, z1: TAVERN.z1, y0: 0, y1: SLAB_Y },
   { x0: TAVERN.x0, x1: UPPER_X1, z0: GALLERY_Z, z1: TAVERN.z1, y0: UPPER_Y, y1: TAVERN_TOP },
-  { x0: FRONT_DOOR.x0, x1: FRONT_DOOR.x1, z0: -0.45, z1: TAVERN.z0, y0: 0, y1: FRONT_DOOR.top },
   { x0: SQUARE.x0, x1: SQUARE.x1, z0: SQUARE.z0, z1: SQUARE.z1 - 0.4, y0: 0, y1: SKY },
   { x0: STREET.x0, x1: STREET.x1, z0: STREET.z0, z1: STREET.z1, y0: 0, y1: SKY },
   { x0: GATEWAY.x0, x1: GATEWAY.x1, z0: GATEWAY.z0, z1: GATEWAY.z1, y0: 0, y1: GATEWAY.top },
@@ -416,9 +416,18 @@ export function areaName(x: number, z: number, y: number): string {
 /** Whether a point is inside the tavern (NPCs there are only drawn when he can see in). */
 export const inTavern = (x: number, z: number) => x > TAVERN.x0 && x < TAVERN.x1 && z > TAVERN.z0 - 0.5 && z < TAVERN.z1;
 
+/** The zone a point is in: the tavern is drawn on its own, the outside on its own. */
+export const zoneAt = (x: number, z: number): "in" | "out" => (inTavern(x, z) && z > TAVERN.z0 ? "in" : "out");
+
+/** Where E works the front door from either side (m), and how near is near enough. */
+export const DOOR_SPOT = { in: { x: 0, z: TAVERN.z0 + 0.7 }, out: { x: 0, z: TAVERN.z0 - 1.2 }, reach: 1.7 };
+
 /** Where he stands on arrival: in the common room at the start, on the dais back from a dive. */
 export const SPAWN = {
   tavern: { x: -0.4, z: 2.2, yaw: Math.PI },
+  /** Just inside the front door (facing in) and just outside it (facing the street). */
+  doorIn: { x: 0, z: TAVERN.z0 + 1.0, yaw: Math.PI },
+  doorOut: { x: 0, z: TAVERN.z0 - 2.7, yaw: 0 },
   gate: { x: DAIS.x, z: DAIS.z + 1.2, yaw: Math.PI },
 };
 
@@ -609,7 +618,8 @@ export function createTownWalker(extraSolids: () => Solid[]) {
       w.vz = 0;
       w.speedNow = 0;
     },
-    step(dt: number, forward: number, strafe: number, speed: number) {
+    /** `airborne`: off the ground, he keeps his way and steers only a little. */
+    step(dt: number, forward: number, strafe: number, speed: number, airborne = false) {
       const len = Math.hypot(forward, strafe);
       const f = len > 1 ? forward / len : forward;
       const s = len > 1 ? strafe / len : strafe;
@@ -617,7 +627,7 @@ export function createTownWalker(extraSolids: () => Solid[]) {
       const cos = Math.cos(w.yaw);
       const tx = (-sin * f + cos * s) * speed;
       const tz = (-cos * f - sin * s) * speed;
-      const k = 1 - Math.exp(-dt * (len > 0 ? 12 : 16));
+      const k = 1 - Math.exp(-dt * (airborne ? 1.2 : len > 0 ? 12 : 16));
       w.vx += (tx - w.vx) * k;
       w.vz += (tz - w.vz) * k;
       if (Math.abs(w.vx) < 0.002) w.vx = 0;

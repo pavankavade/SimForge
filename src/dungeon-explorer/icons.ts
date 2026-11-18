@@ -1,6 +1,6 @@
 // Pictures of the items that are not part of the paladin's kit (his pieces are rendered off his own
 // body). Valuables and trophies are rendered from their Patch models on a small off-screen
-// renderer; coins, the draught and the gems are drawn.
+// renderer; coins, the draught, the bandage and the gems are drawn.
 import * as THREE from "three";
 import { loadModel } from "./props3d";
 
@@ -87,6 +87,29 @@ function drawn(id: string): string | null {
     g.lineTo(64, 100);
     g.lineTo(84, 48);
     g.stroke();
+  } else if (id === "bandage") {
+    // A roll of linen with its loose end trailing, a strip of red cloth tie.
+    g.fillStyle = "#e9e2d0";
+    g.fillRect(38, 66, 70, 22);
+    g.fillStyle = "#d6ccb4";
+    for (let x = 42; x < 106; x += 9) g.fillRect(x, 66, 2, 22);
+    const roll = g.createRadialGradient(46, 60, 4, 54, 64, 34);
+    roll.addColorStop(0, "#fffaf0");
+    roll.addColorStop(0.7, "#e2d8c2");
+    roll.addColorStop(1, "#a8987a");
+    g.fillStyle = roll;
+    g.beginPath();
+    g.ellipse(52, 62, 30, 32, 0, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = "rgba(120,100,70,0.55)";
+    g.lineWidth = 2;
+    for (const r of [8, 15, 22]) {
+      g.beginPath();
+      g.ellipse(52, 62, r, r * 1.07, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.fillStyle = "#b8282a";
+    g.fillRect(48, 28, 8, 68);
   } else return null;
   return c.toDataURL("image/png");
 }
@@ -98,7 +121,7 @@ export function itemIcons(): Promise<Record<string, string>> {
   if (made) return made;
   made = (async () => {
     const out: Record<string, string> = {};
-    for (const id of ["coins", "potion", "ruby", "sapphire"]) {
+    for (const id of ["coins", "potion", "bandage", "ruby", "sapphire"]) {
       const u = drawn(id);
       if (u) out[id] = u;
     }

@@ -1,6 +1,7 @@
 // The merchants of the entrance market and what they deal in. The armourer and the weaponsmith sell
 // the paladin's own kit (a new piece each time) and buy what he finds below (pieces of armour,
-// weapons, trophies and valuables); the alchemist, the arcanist and the woodsmith have nothing yet.
+// weapons, trophies and valuables); the alchemist sells draughts, bandages and food for the belt;
+// the arcanist and the woodsmith have nothing yet.
 import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
 import { def, type ItemCategory } from "./items";
 
@@ -60,9 +61,9 @@ export const MERCHANTS: Merchant[] = [
     shop: "Marrow's Tinctures",
     cloth: 0x2e5a34,
     trim: 0xb7d36a,
-    stock: [],
-    buys: [],
-    greeting: "Mind the green ones.",
+    stock: ["potion", "bandage", "apple"],
+    buys: ["consumable"],
+    greeting: "Mind the green ones. The red ones mend you; the linen stops the bleeding.",
     empty: "My shelves are bare until the next caravan. Come back later.",
   },
   {

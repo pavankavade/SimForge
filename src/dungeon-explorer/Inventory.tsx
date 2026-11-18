@@ -6,7 +6,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ArmorSlot } from "../artifacts/characters/paladin";
 import { RARITY, def, fitsAt, placeItem, removeItem, type ItemInst } from "./items";
 import { DragGhost, GOLD, GridView, ItemIcon, ItemTooltip, PANEL_BG, PANEL_BORDER, btn, useItemDrag, type DragFrom, type DragState, type DropTarget, type Icons } from "./itemsUi";
-import { BAG_H, BAG_W, allItems, equipFromBag, sortBag, unequipToBag, type PlayerInv } from "./playerInv";
+import { BAG_H, BAG_W, BELT_SLOTS, allItems, beltable, equipFromBag, fromBelt, sortBag, toBelt, unequipToBag, type PlayerInv } from "./playerInv";
 
 export { ITEMS, RARITY } from "./items";
 
@@ -68,6 +68,12 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, inv, onI
 
   const quick = (item: ItemInst, from: DragFrom) => {
     const d = def(item.id);
+    if (from.kind === "belt") {
+      const next = fromBelt(inv, from.index);
+      if (next) onInv(next);
+      else setToast("No room in the bag");
+      return;
+    }
     if (from.kind === "slot") {
       const next = unequipToBag(inv, from.slot);
       if (next) onInv(next);
@@ -84,7 +90,27 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, inv, onI
   const drop = (d: DragState, t: DropTarget) => {
     if (!t) return;
     const it = def(d.item.id);
+    if (t.kind === "belt") {
+      if (d.from.kind === "belt") {
+        const belt = inv.belt.slice();
+        const a = d.from.index;
+        [belt[a], belt[t.index]] = [belt[t.index], belt[a]];
+        return onInv({ ...inv, belt });
+      }
+      if (d.from.kind !== "grid") return setToast("Only draughts, bandages and food go on the belt");
+      if (!beltable(d.item.id)) return setToast(`The ${it.name.toLowerCase()} doesn't go on the belt`);
+      const next = toBelt(inv, d.item.uid, t.index);
+      if (next) onInv(next);
+      else setToast("No room in the bag for what was on the belt");
+      return;
+    }
     if (t.kind === "grid") {
+      if (d.from.kind === "belt") {
+        const next = fromBelt(inv, d.from.index, t);
+        if (next) onInv(next);
+        else setToast("It doesn't fit there");
+        return;
+      }
       if (!fitsAt(inv.bag, d.item.id, t.x, t.y, d.item.uid)) return setToast("It doesn't fit there");
       if (d.from.kind === "slot") {
         const next = unequipToBag(inv, d.from.slot, t);
@@ -308,9 +334,51 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, inv, onI
 
   const Bag = <GridView id="bag" grid={inv.bag} cell={cell} icons={icons} dnd={dnd} />;
 
+  // The belt: two slots for what he uses in a hurry (keys 3 and 4).
+  const beltSize = Math.max(34, Math.min(54, cell + 10));
+  const Belt = (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+      <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676" }}>BELT</div>
+      {Array.from({ length: BELT_SLOTS }, (_, i) => {
+        const item = (inv.belt || [])[i] ?? null;
+        const it = item ? def(item.id) : null;
+        const target = drag !== null && drag.from.kind !== "slot" && beltable(drag.item.id);
+        return (
+          <div
+            key={i}
+            data-drop={`belt:${i}`}
+            {...(item ? dnd.bind(item, { kind: "belt", index: i }, cell) : {})}
+            title={item ? undefined : `Belt slot ${i + 3}: empty`}
+            style={{
+              position: "relative",
+              width: beltSize,
+              height: beltSize,
+              boxSizing: "border-box",
+              borderRadius: 3,
+              background: it ? `radial-gradient(circle at 50% 40%, ${RARITY[it.rarity].color}22, rgba(18,16,14,0.95) 70%)` : "rgba(14,13,12,0.9)",
+              border: target ? `2px solid ${GOLD}` : "1px solid rgba(214,186,128,0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: item ? "grab" : "default",
+              opacity: drag && item && drag.item.uid === item.uid ? 0.3 : 1,
+              touchAction: "none",
+            }}
+          >
+            {item ? <ItemIcon id={item.id} icons={icons} w={beltSize - 10} h={beltSize - 10} /> : null}
+            <div style={{ position: "absolute", left: 3, top: 1, fontSize: 10, fontWeight: 800, color: "#d8c9a8", pointerEvents: "none" }}>{i + 3}</div>
+          </div>
+        );
+      })}
+      <div style={{ fontSize: 11, color: "#6e675b" }}>{touch ? "Tap the slots on the bar to use" : "Keys 3 and 4 use them"}</div>
+    </div>
+  );
+
   const hover = dnd.hover;
   const hint = hover
-    ? hover.from.kind === "slot"
+    ? hover.from.kind === "belt"
+      ? "Right-click to put it back in the bag · Drag to move"
+      : hover.from.kind === "slot"
       ? "Right-click to take it off · Drag to move"
       : def(hover.item.id).slot
         ? "Right-click to put it on · Drag to move"
@@ -344,6 +412,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, inv, onI
             <div style={{ height: 10 }} />
             {StatsStrip}
             <div style={{ display: "flex", justifyContent: "center" }}>{Bag}</div>
+            {Belt}
             {BagButtons}
           </div>
         </>
@@ -369,6 +438,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, inv, onI
               </div>
             </div>
             {Bag}
+            {Belt}
             {BagButtons}
           </div>
         </div>

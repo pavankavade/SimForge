@@ -139,6 +139,8 @@ export interface Market {
   /** Inside a stall (counter, posts, awning)? World metres; the camera keeps out. */
   solidAt: (x: number, y: number, z: number) => boolean;
   update: (dt: number, player: THREE.Vector3, trading: number) => void;
+  /** Hide the stalls, their keepers and lamps (in the tavern the street is not drawn). */
+  setVisible: (on: boolean) => void;
   dispose: () => void;
 }
 
@@ -316,11 +318,13 @@ export function createMarket(gl: THREE.WebGLRenderer, scene: THREE.Scene): Marke
     }
   })();
 
+  let shown = true;
+  const lampPower = new Map<THREE.PointLight, number>();
   function placeKeeper(i: number) {
     const k = keepers[i];
     if (!k.p) return;
     const st = stalls.find((s) => s.merchant === MERCHANTS[i].id);
-    k.p.group.visible = !!st;
+    k.p.group.visible = !!st && shown;
     if (!st) return;
     k.p.reset();
     k.yaw = st.facing;
@@ -533,6 +537,12 @@ export function createMarket(gl: THREE.WebGLRenderer, scene: THREE.Scene): Marke
       floorSerial++;
       clearFloor();
       for (const p of plans) buildStall(p, d, cellM);
+      if (!shown) {
+        for (const l of lights) {
+          lampPower.set(l, l.intensity);
+          l.intensity = 0;
+        }
+      }
       for (let i = 0; i < keepers.length; i++) placeKeeper(i);
     },
     reachable(x, z, facing) {
@@ -562,7 +572,21 @@ export function createMarket(gl: THREE.WebGLRenderer, scene: THREE.Scene): Marke
       }
       return false;
     },
+    setVisible(on) {
+      if (on === shown) return;
+      shown = on;
+      root.visible = on;
+      // Lamps go dark rather than away, so the shaders' light count stays the same.
+      for (const l of lights) {
+        if (!on) {
+          lampPower.set(l, l.intensity);
+          l.intensity = 0;
+        } else l.intensity = lampPower.get(l) ?? l.intensity;
+      }
+      for (let i = 0; i < keepers.length; i++) placeKeeper(i);
+    },
     update(dt, player, trading) {
+      if (!shown) return;
       for (const o of perFloor) {
         o.traverse((c) => {
           if (c.userData.spin) c.rotation.y += dt * 0.6;

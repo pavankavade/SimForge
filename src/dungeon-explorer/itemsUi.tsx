@@ -97,7 +97,7 @@ export const ItemTooltip: React.FC<{ item: ItemInst; hint?: string; x: number; y
 
 // ---- Drag and drop ------------------------------------------------------------------------------
 
-export type DragFrom = { kind: "grid"; grid: string } | { kind: "slot"; slot: ArmorSlot };
+export type DragFrom = { kind: "grid"; grid: string } | { kind: "slot"; slot: ArmorSlot } | { kind: "belt"; index: number };
 
 export interface DragState {
   item: ItemInst;
@@ -110,7 +110,7 @@ export interface DragState {
   cell: number;
 }
 
-export type DropTarget = { kind: "grid"; grid: string; x: number; y: number } | { kind: "slot"; slot: ArmorSlot } | { kind: "body" } | null;
+export type DropTarget = { kind: "grid"; grid: string; x: number; y: number } | { kind: "slot"; slot: ArmorSlot } | { kind: "belt"; index: number } | { kind: "body" } | null;
 
 /** What lies under the pointer: a grid cell (for the piece's top-left), an equipment slot or his body. */
 export function dropTargetAt(d: Pick<DragState, "x" | "y" | "gx" | "gy" | "item">): DropTarget {
@@ -128,6 +128,7 @@ export function dropTargetAt(d: Pick<DragState, "x" | "y" | "gx" | "gy" | "item"
     return { kind: "grid", grid: tag.slice(5), x: Math.max(0, Math.min(w - it.w, x)), y: Math.max(0, Math.min(h - it.h, y)) };
   }
   if (tag.startsWith("slot:")) return { kind: "slot", slot: tag.slice(5) as ArmorSlot };
+  if (tag.startsWith("belt:")) return { kind: "belt", index: Number(tag.slice(5)) || 0 };
   if (tag === "body") return { kind: "body" };
   return null;
 }

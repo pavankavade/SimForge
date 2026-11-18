@@ -30,6 +30,9 @@ export interface Town {
   npcSpots: () => Array<{ x: number; z: number }>;
   /** Show the town (and its lights) or hide it while he is below. */
   setActive: (on: boolean) => void;
+  /** Which zone is drawn: inside the tavern, or outside (square, street, gate hall). */
+  setZone: (zone: "in" | "out") => void;
+  zone: () => "in" | "out";
   update: (dt: number, time: number, player: THREE.Vector3) => void;
   /** The minimap: the storey he is on, round where he stands. */
   drawMap: (ctx: CanvasRenderingContext2D, cw: number, ch: number, px: number, pz: number, py: number, time: number) => void;
@@ -110,7 +113,9 @@ class Builder {
         if (!merged) continue;
         owned.push(merged);
         const m = new THREE.Mesh(merged, mat);
-        m.castShadow = b.shadow;
+        // Walls and floors only take shadows: a point light's shadow redraws every caster six
+        // times a frame, and the characters and furniture are what need to cast.
+        m.castShadow = false;
         m.receiveShadow = true;
         parent.add(m);
       }
@@ -316,6 +321,17 @@ function skyTexture(): THREE.CanvasTexture {
   });
 }
 
+/** Boards running up and down (the planks texture turned a quarter; its normal map left off, since turning it would light the grooves wrongly). */
+function uprightPlanks(set: SurfaceSet): SurfaceSet {
+  for (const t of [set.map, set.roughnessMap]) {
+    if (!t) continue;
+    t.center.set(0.5, 0.5);
+    t.rotation = Math.PI / 2;
+  }
+  set.normalMap?.dispose();
+  return { ...set, normalMap: null };
+}
+
 const surface = (set: SurfaceSet, extra: THREE.MeshStandardMaterialParameters = {}) => {
   const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0, ...extra });
   m.map = set.map;
@@ -364,6 +380,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     timber: own(surface(texSet(makeWood({ size: 256, planks: 3, base: "#3e2716", baseAlt: "#35210f", seam: "#160c05", seed: 21 })), { roughness: 0.82 })),
     boards: own(surface(texSet(makeWood({ size: 512, planks: 6, base: "#7a5232", baseAlt: "#6b4629", seam: "#26160a", seed: 4 })), { roughness: 0.78 })),
     panel: own(surface(texSet(makeWood({ size: 256, planks: 5, base: "#5a3a20", baseAlt: "#4e321b", seam: "#1d1008", seed: 8 })), { roughness: 0.8 })),
+    doorWood: own(surface(texSet(uprightPlanks(makeWood({ size: 256, planks: 5, base: "#5e3c20", baseAlt: "#4f321a", seam: "#160b04", seed: 33 }))), { roughness: 0.78 })),
     stone: own(surface(texSet(makeMasonry({ size: 512, rows: 6, cols: 3, base: "#7b756b", baseAlt: "#6a645b", mortar: "#2f2b26", seed: 3 })))),
     darkStone: own(surface(texSet(makeMasonry({ size: 512, rows: 5, cols: 2, base: "#4f4c48", baseAlt: "#45423e", mortar: "#1e1c1a", seed: 13 })))),
     cobbles: own(surface(texSet(makeFlagstone({ size: 512, cells: 9, base: "#58534c", baseAlt: "#68625a", grout: "#24221f", seed: 17 })))),
@@ -372,7 +389,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     iron: own(new THREE.MeshStandardMaterial({ color: 0x232325, roughness: 0.5, metalness: 0.85 })),
     soot: own(new THREE.MeshStandardMaterial({ color: 0x0b0908, roughness: 1 })),
     void: own(new THREE.MeshBasicMaterial({ color: 0x010101 })),
-    glassWarm: own(new THREE.MeshStandardMaterial({ color: 0x2a1a08, emissive: 0xffa448, emissiveIntensity: 1.25, roughness: 0.3 })),
+    glassWarm: own(new THREE.MeshStandardMaterial({ color: 0x2a1a08, emissive: 0xffa448, emissiveIntensity: 0.75, roughness: 0.3 })),
     glassNight: own(new THREE.MeshStandardMaterial({ color: 0x0c1220, emissive: 0x1a2a48, emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.2 })),
     glassDark: own(new THREE.MeshStandardMaterial({ color: 0x0a0c12, roughness: 0.25, metalness: 0.3 })),
     flame: own(new THREE.MeshBasicMaterial({ color: 0xffb860, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, depthWrite: false })),
@@ -388,13 +405,24 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     [M.timber, 1.6],
     [M.boards, 2.4],
     [M.panel, 1.2],
+    [M.doorWood, 1.1],
     [M.stone, 2.6],
     [M.darkStone, 3.2],
     [M.cobbles, 3.2],
     [M.flags, 4],
     [M.slate, 1.6],
   ]);
-  const B = new Builder(tiles);
+  // Two zones drawn one at a time: inside the tavern (both floors), and outside (the square, the
+  // street and the gate hall). The front door between them is shut; walking through it swaps them.
+  const inside = new THREE.Group();
+  inside.name = "tavern";
+  const outside = new THREE.Group();
+  outside.name = "outside";
+  group.add(inside, outside);
+  const Bin = new Builder(tiles);
+  const Bout = new Builder(tiles);
+  let B = Bin;
+  let G: THREE.Group = inside;
   const solidMat = (s: L.Solid): THREE.Material => {
     if (s.z1 <= L.GATEWAY.z1 + 0.01) return M.darkStone;
     if (s.y0 >= L.TAVERN_TOP - 0.01) return M.panel;
@@ -413,12 +441,12 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     const m = new THREE.Mesh(flameGeo, M.flame);
     m.position.set(x, y + 0.12 * size, z);
     m.scale.setScalar(size);
-    group.add(m);
+    G.add(m);
     flames.push({ m, base: size, seed: flames.length * 1.7 });
     const c = new THREE.Mesh(coreGeo, M.flameCore);
     c.position.set(x, y + 0.04 * size, z);
     c.scale.setScalar(size);
-    group.add(c);
+    G.add(c);
   };
   const fire = (x: number, y: number, z: number, r: number) => {
     for (let i = 0; i < 7; i++) {
@@ -427,31 +455,82 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       flame(x + Math.sin(a) * d, y, z + Math.cos(a) * d, 2.4 - d * 1.4);
     }
   };
-  const M3 = (path: string, at: [number, number, number], o: { yaw?: number; pitch?: number; roll?: number; scale?: number } = {}) => placeModel(group, path, at, o, live);
+  const M3 = (path: string, at: [number, number, number], o: { yaw?: number; pitch?: number; roll?: number; scale?: number } = {}) => placeModel(G, path, at, o, live);
+  /**
+   * A plank door on a wall face: (x, y, z) the foot of the doorway's middle on the face, (nx, nz) the
+   * way out (along an axis). A timber surround stands proud of the face, the leaves (boards running
+   * up, two iron straps from the hinge side, a ring pull) sit back inside it. `leaves: 0` builds the
+   * surround alone (round a doorway with a hung door of its own).
+   */
+  const plankDoor = (Bx: Builder, x: number, y: number, z: number, nx: number, nz: number, w: number, h: number, leaves: 0 | 1 | 2, opts: { step?: boolean; canopy?: boolean } = {}) => {
+    const tx = -nz;
+    const tz = nx;
+    const box = (mat: THREE.Material, u0: number, u1: number, v0: number, v1: number, d0: number, d1: number) => {
+      const xa = x + tx * u0 + nx * d0;
+      const xb = x + tx * u1 + nx * d1;
+      const za = z + tz * u0 + nz * d0;
+      const zb = z + tz * u1 + nz * d1;
+      Bx.box(mat, Math.min(xa, xb), Math.max(xa, xb), y + v0, y + v1, Math.min(za, zb), Math.max(za, zb));
+    };
+    const half = w / 2;
+    const F = 0.16;
+    box(M.timber, -half - F, -half, 0, h + F, 0, 0.12);
+    box(M.timber, half, half + F, 0, h + F, 0, 0.12);
+    box(M.timber, -half, half, h, h + F, 0, 0.12);
+    box(M.timber, -half - F - 0.05, half + F + 0.05, h + F, h + F + 0.09, 0, 0.17);
+    const lw = leaves ? w / leaves : 0;
+    for (let i = 0; i < leaves; i++) {
+      const u0 = -half + i * lw;
+      const u1 = u0 + lw;
+      const hingeLeft = leaves === 1 || i === 0;
+      box(M.doorWood, u0 + 0.006, u1 - 0.006, 0.01, h, -0.02, 0.05);
+      for (const v of [0.2 * h, 0.8 * h]) {
+        const a = hingeLeft ? u0 + 0.03 : u1 - 0.03 - lw * 0.74;
+        box(M.iron, a, a + lw * 0.74, v - 0.035, v + 0.035, 0.05, 0.066);
+      }
+      const hu = hingeLeft ? u1 - 0.15 : u0 + 0.15;
+      box(M.iron, hu - 0.045, hu + 0.045, h * 0.47 - 0.07, h * 0.47 + 0.07, 0.05, 0.068);
+      box(M.iron, hu - 0.07, hu + 0.07, h * 0.47 - 0.17, h * 0.47 - 0.145, 0.068, 0.09);
+      box(M.iron, hu - 0.07, hu - 0.05, h * 0.47 - 0.17, h * 0.47 - 0.06, 0.068, 0.09);
+      box(M.iron, hu + 0.05, hu + 0.07, h * 0.47 - 0.17, h * 0.47 - 0.06, 0.068, 0.09);
+    }
+    if (opts.step) box(M.stone, -half - 0.25, half + 0.25, 0, 0.05, 0, 0.42);
+    if (opts.canopy) {
+      box(M.slate, -half - 0.4, half + 0.4, h + 0.5, h + 0.6, 0, 0.78);
+      for (const u of [-half - 0.22, half + 0.12]) box(M.timber, u, u + 0.1, h + 0.27, h + 0.5, 0.0, 0.7);
+    }
+  };
 
   // ---- The tavern shell --------------------------------------------------------------------------
+  const T0 = L.TAVERN;
   for (const s of L.STRUCTURE) {
-    // The street's and hall's shells are built below with their own facades.
+    // The street's and hall's shells are built below with their own facades (the hall's here).
     if (s.z1 <= L.TAVERN.z0 - L.SQUARE.z1 + 0.01 && s.z0 < L.TAVERN.z0 - 0.5) {
-      if (s.z1 <= L.GATEWAY.z1 + 0.01) B.box(s.y0 >= L.HALL_TOP - 0.01 ? M.darkStone : M.stone, s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
+      if (s.z1 <= L.GATEWAY.z1 + 0.01) Bout.box(s.y0 >= L.HALL_TOP - 0.01 ? M.darkStone : M.stone, s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
       continue;
     }
-    // Stair treads are wood.
+    if (s.z1 <= L.TAVERN.z0 - 0.5) continue;
+    // Stair treads are wood, with a nosing standing proud of each.
     if (s.x0 === L.STAIR.x0 && s.x1 === L.STAIR.x1 && !s.walk && s.z1 <= L.STAIR.z1 + 1e-6) {
-      B.box(M.panel, s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
-      B.box(M.timber, s.x0, s.x1, s.y1 - 0.06, s.y1, s.z0, s.z1 + 0.03);
+      Bin.box(M.panel, s.x0, s.x1, s.y0, s.y1 - 0.03, s.z0, s.z1);
+      Bin.box(M.timber, s.x0, s.x1, s.y1 - 0.06, s.y1, s.z0 - 0.02, s.z1 + 0.03);
       continue;
     }
-    // Railings are drawn as rails and balusters below.
+    // Railings are drawn as rails and balusters below; the upper floor's slab below too.
     if (s.y1 - s.y0 <= 1.01 && s.y0 >= L.UPPER_Y - 0.01 && s.z1 - s.z0 < 0.2) continue;
     if (s.x1 - s.x0 < 0.2 && s.y0 > 0.5 && s.y1 < L.UPPER_Y + 1.1) continue;
-    B.box(solidMat(s), s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
+    if (s.y0 >= L.SLAB_Y - 0.01 && s.y1 <= L.UPPER_Y + 0.01) continue;
+    Bin.box(solidMat(s), s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
+    // The outer walls and the roof's underside are seen from outside too.
+    const outer = s.x0 <= T0.x0 - 0.39 || s.x1 >= T0.x1 + 0.39 || s.z0 >= T0.z1 - 0.01 || s.y0 >= L.TAVERN_TOP - 0.01;
+    if (outer) Bout.box(solidMat(s), s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
   }
   const T = L.TAVERN;
   // Floors: boards in the tavern, boards on the upper storey.
-  B.box(M.boards, T.x0, T.x1, -0.12, 0, T.z0 - 0.45, T.z1);
-  B.box(M.boards, L.STAIR.x1, L.UPPER_X1, L.UPPER_Y - 0.03, L.UPPER_Y, L.GALLERY_Z, T.z1);
-  B.box(M.boards, T.x0, L.STAIR.x1, L.UPPER_Y - 0.03, L.UPPER_Y, L.GALLERY_Z, T.z1);
+  B.box(M.boards, T.x0, T.x1, -0.12, 0, T.z0 - 0.4, T.z1);
+  // The upper floor: boards on top of a timber slab (one box each, so no faces lie on each other).
+  B.box(M.panel, T.x0, T.x1, L.SLAB_Y, L.UPPER_Y - 0.04, L.GALLERY_Z, T.z1);
+  B.box(M.boards, T.x0, T.x1, L.UPPER_Y - 0.04, L.UPPER_Y, L.GALLERY_Z, T.z1);
   // Ceiling beams under the roof and under the upper floor; the gallery's fascia and its posts.
   for (let x = T.x0 + 1.2; x < T.x1; x += 2.3) B.box(M.timber, x - 0.13, x + 0.13, L.TAVERN_TOP - 0.3, L.TAVERN_TOP, T.z0, T.z1);
   for (const z of [8.7, 10.6, 12.5]) B.box(M.timber, T.x0, T.x1, L.SLAB_Y - 0.26, L.SLAB_Y, z - 0.12, z + 0.12);
@@ -487,8 +566,8 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     B.box(M.panel, T.x0, T.x0 + 0.05, 0, y1, T.z0, T.z1);
     B.box(M.panel, T.x1 - 0.05, T.x1, 0, y1, T.z0, L.GALLERY_Z - 0.1);
     B.box(M.panel, T.x0, L.KITCHEN.x0 - 0.1, 0, y1, T.z1 - 0.05, T.z1);
-    B.box(M.panel, T.x0, L.FRONT_DOOR.x0, 0, y1, T.z0, T.z0 + 0.05);
-    B.box(M.panel, L.FRONT_DOOR.x1, T.x1, 0, y1, T.z0, T.z0 + 0.05);
+    B.box(M.panel, T.x0, L.FRONT_DOOR.x0 - 0.16, 0, y1, T.z0, T.z0 + 0.05);
+    B.box(M.panel, L.FRONT_DOOR.x1 + 0.16, T.x1, 0, y1, T.z0, T.z0 + 0.05);
     for (const x of [-6.1, -2.9, 2.9, 6.1]) {
       B.box(M.timber, x - 0.12, x + 0.12, y1, L.TAVERN_TOP, T.z0, T.z0 + 0.07);
       if (x < L.KITCHEN.x0 - 0.3) B.box(M.timber, x - 0.12, x + 0.12, y1, L.SLAB_Y, T.z1 - 0.07, T.z1);
@@ -497,12 +576,8 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       B.box(M.timber, T.x0, T.x0 + 0.07, y1, z > L.GALLERY_Z ? L.SLAB_Y : L.TAVERN_TOP, z - 0.12, z + 0.12);
       B.box(M.timber, T.x1 - 0.07, T.x1, y1, z > L.GALLERY_Z ? L.SLAB_Y : L.TAVERN_TOP, z - 0.12, z + 0.12);
     }
-    // The door frame inside and out.
-    for (const x of [L.FRONT_DOOR.x0 - 0.12, L.FRONT_DOOR.x1 + 0.12]) B.box(M.timber, x - 0.12, x + 0.12, 0, L.FRONT_DOOR.top, T.z0 - 0.5, T.z0 + 0.1);
-    B.box(M.timber, L.FRONT_DOOR.x0 - 0.24, L.FRONT_DOOR.x1 + 0.24, L.FRONT_DOOR.top, L.FRONT_DOOR.top + 0.24, T.z0 - 0.5, T.z0 + 0.1);
-    // Door leaves, swung open against the inside of the front wall.
-    B.box(M.panel, L.FRONT_DOOR.x0 - 0.24 - 1.1, L.FRONT_DOOR.x0 - 0.24, 0.02, L.FRONT_DOOR.top - 0.05, T.z0 + 0.1, T.z0 + 0.17);
-    B.box(M.panel, L.FRONT_DOOR.x1 + 0.24, L.FRONT_DOOR.x1 + 0.24 + 1.1, 0.02, L.FRONT_DOOR.top - 0.05, T.z0 + 0.1, T.z0 + 0.17);
+    // The front door from inside: two shut leaves in a timber surround.
+    plankDoor(Bin, 0, 0, T.z0, 0, 1, L.FRONT_DOOR.x1 - L.FRONT_DOOR.x0, L.FRONT_DOOR.top, 2);
   }
   // Windows: the front and back walls (warm outside, moonlit glass inside).
   const windowAt = (x: number, y0: number, y1: number, zWall: number, outward: number, w = 1.1) => {
@@ -513,8 +588,10 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     B.box(M.timber, x - 0.03, x + 0.03, y0, y1, Math.min(zo, zo + outward * 0.03), Math.max(zo, zo + outward * 0.03));
   };
   for (const x of [-8.1, -4.5, 4.5, 8.1]) {
-    windowAt(x, 1.2, 2.4, T.z0 - 0.4, -1);
-    windowAt(x, 4.4, 5.7, T.z0 - 0.4, -1);
+    B = Bout;
+    windowAt(x, 1.2, 2.4, T.z0 - 0.44, -1);
+    windowAt(x, 4.4, 5.7, T.z0 - 0.44, -1);
+    B = Bin;
     // Inside: night glass.
     B.box(M.glassNight, x - 0.55, x + 0.55, 4.4, 5.7, T.z0 + 0.0, T.z0 + 0.02);
     if (Math.abs(x) > 5) B.box(M.glassNight, x - 0.55, x + 0.55, 1.2, 2.4, T.z0 + 0.0, T.z0 + 0.02);
@@ -527,14 +604,18 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   }
 
   // The facade outside: stone plinth, timber frame, the jetty line, the sign and two lanterns.
+  B = Bout;
+  G = outside;
   {
     const zf = T.z0 - 0.4;
-    B.box(M.stone, T.x0 - 0.5, L.FRONT_DOOR.x0 - 0.24, 0, 1.0, zf - 0.12, zf);
-    B.box(M.stone, L.FRONT_DOOR.x1 + 0.24, T.x1 + 0.5, 0, 1.0, zf - 0.12, zf);
     const D = L.FRONT_DOOR;
-    B.box(M.plasterOut, T.x0 - 0.42, D.x0 - 0.24, 1.0, L.TAVERN_TOP, zf - 0.04, zf);
-    B.box(M.plasterOut, D.x1 + 0.24, T.x1 + 0.42, 1.0, L.TAVERN_TOP, zf - 0.04, zf);
-    B.box(M.plasterOut, D.x0 - 0.24, D.x1 + 0.24, D.top + 0.24, L.TAVERN_TOP, zf - 0.04, zf);
+    B.box(M.stone, T.x0 - 0.5, D.x0 - 0.16, 0, 1.0, zf - 0.12, zf);
+    B.box(M.stone, D.x1 + 0.16, T.x1 + 0.5, 0, 1.0, zf - 0.12, zf);
+    B.box(M.plasterOut, T.x0 - 0.42, D.x0 - 0.16, 1.0, L.TAVERN_TOP, zf - 0.04, zf);
+    B.box(M.plasterOut, D.x1 + 0.16, T.x1 + 0.42, 1.0, L.TAVERN_TOP, zf - 0.04, zf);
+    B.box(M.plasterOut, D.x0 - 0.16, D.x1 + 0.16, D.top + 0.16, L.TAVERN_TOP, zf - 0.04, zf);
+    // The front door: two leaves in a surround, a step and a slate canopy on brackets.
+    plankDoor(Bout, 0, 0, zf - 0.04, 0, -1, D.x1 - D.x0, D.top, 2, { step: true, canopy: true });
     for (const x of [-10.2, -6.1, -2.9, 2.9, 6.1, 10.2]) B.box(M.timber, x - 0.14, x + 0.14, 1.0, L.TAVERN_TOP, zf - 0.12, zf);
     for (const y of [3.4, L.TAVERN_TOP - 0.15]) B.box(M.timber, T.x0 - 0.45, T.x1 + 0.45, y - 0.13, y + 0.13, zf - 0.14, zf);
     // The roof: a pitched slate roof over the whole house, gables filled.
@@ -562,18 +643,20 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     const sign = new THREE.Mesh(own(new THREE.BoxGeometry(4.4, 0.7, 0.08)), [M.timber, M.timber, M.timber, M.timber, M.timber, signMat]);
     sign.position.set(0, 4.15, zf - 0.2);
     sign.castShadow = true;
-    group.add(sign);
+    G.add(sign);
     const lanternGeo = own(new THREE.BoxGeometry(0.22, 0.32, 0.22));
     for (const x of [L.FRONT_DOOR.x0 - 0.65, L.FRONT_DOOR.x1 + 0.65]) {
       B.box(M.iron, x - 0.03, x + 0.03, 2.4, 2.46, zf - 0.4, zf);
       const l = new THREE.Mesh(lanternGeo, M.glassWarm);
       l.position.set(x, 2.22, zf - 0.38);
-      group.add(l);
+      G.add(l);
       lamp(x, 2.1, zf - 0.6, 0xffb46a, 2.2, 9);
     }
   }
 
   // ---- Inside: bar, tables, hearth, kitchen ------------------------------------------------------
+  B = Bin;
+  G = inside;
   const TOP = 0.877;
   L.TABLES.forEach((t, i) => {
     M3("rooms/dining_table", [t.x, 0, t.z]);
@@ -593,7 +676,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       B.box(M.timber, x0, x1, 0, 0.12, z0, z1);
     };
     counter(L.BAR.x0, L.BAR.x1, L.BAR.z0, L.BAR.z1);
-    counter(L.BAR.x1, 8.5, L.BAR.z0 - 0.3, L.BAR.z0 + 0.3);
+    counter(L.BAR.x1 + 0.08, 8.5, L.BAR.z0 - 0.3, L.BAR.z0 + 0.3);
     for (const s of L.BAR_STOOLS) M3("market/wooden_stool_01", [s.x, 0, s.z], { yaw: s.z });
     M3("market/brass_goblets", [4.0, 1.1, 2.4], { scale: 0.7 });
     M3("market/brass_goblets", [4.0, 1.1, 4.7], { scale: 0.7, yaw: 1 });
@@ -609,7 +692,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     B.box(M.iron, 5.57, 5.63, 2.95, L.TAVERN_TOP, 3.57, 3.63);
     const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.24, 0.34, 0.24)), M.glassWarm);
     l.position.set(5.6, 2.8, 3.6);
-    group.add(l);
+    G.add(l);
   }
   // Chandeliers over the front tables: an iron hoop of candles on chains.
   {
@@ -625,7 +708,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       const h = new THREE.Mesh(hoop, M.iron);
       h.position.set(c.x, y, c.z);
       h.rotation.x = Math.PI / 2;
-      group.add(h);
+      G.add(h);
       for (let k = 0; k < 4; k++) {
         const a = (k / 4) * Math.PI * 2 + 0.4;
         B.turned(M.iron, 0.02, L.TAVERN_TOP - y, 0.02, [c.x + Math.sin(a) * 0.35, (L.TAVERN_TOP + y) / 2, c.z + Math.cos(a) * 0.35], [0, 0, 0]);
@@ -636,7 +719,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
         const z = c.z + Math.cos(a) * 0.7;
         const m = new THREE.Mesh(wax, M.candle);
         m.position.set(x, y + 0.1, z);
-        group.add(m);
+        G.add(m);
         flame(x, y + 0.18, z, 0.7);
       }
       lamp(c.x, y - 0.1, c.z, 0xffc888, 6.5, 12);
@@ -711,8 +794,9 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   const chestLids: Array<Array<{ pivot: THREE.Object3D | null; open: number; target: number }>> = L.ROOMS.map(() => []);
   const leafGeo = own(new THREE.BoxGeometry(1.08, 2.22, 0.07));
   leafGeo.translate(0.54, 1.11, 0);
-  worldUV(leafGeo, 1.2);
-  const bandGeo = own(new THREE.BoxGeometry(1.0, 0.06, 0.09));
+  worldUV(leafGeo, 1.1);
+  const bandGeo = own(new THREE.BoxGeometry(0.8, 0.07, 0.09));
+  const ringGeo = own(new THREE.TorusGeometry(0.06, 0.011, 6, 16));
   const plaqueGeo = own(new THREE.BoxGeometry(0.9, 0.34, 0.04));
   L.ROOMS.forEach((r, ri) => {
     const Y = L.UPPER_Y;
@@ -723,7 +807,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     flame(cx - 0.3, Y + 1.38, T.z1 - 0.35, 0.6);
     lamp(cx - 0.3, Y + 1.6, T.z1 - 0.9, 0xffbc78, 2.6, 7.5);
     // A rug in the middle.
-    B.box(M.rug, (r.x0 + r.x1) / 2 - 1.1, (r.x0 + r.x1) / 2 + 1.3, Y, Y + 0.012, 10.6, 12.6);
+    B.box(M.rug, (r.x0 + r.x1) / 2 - 1.1, (r.x0 + r.x1) / 2 + 1.3, Y, Y + 0.02, 10.6, 12.6);
     r.chests.forEach((c) => {
       const slot = { pivot: null as THREE.Object3D | null, open: 0, target: 0 };
       chestLids[ri].push(slot);
@@ -734,23 +818,29 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     // The door: a plank leaf with iron bands, hung on the west post; a plaque over it.
     const pivot = new THREE.Group();
     pivot.position.set(r.door.x0 + 0.01, Y, L.ROOMS_Z + 0.1);
-    group.add(pivot);
-    const leaf = new THREE.Mesh(leafGeo, M.panel);
+    G.add(pivot);
+    const leaf = new THREE.Mesh(leafGeo, M.doorWood);
     leaf.castShadow = true;
     leaf.receiveShadow = true;
     pivot.add(leaf);
-    for (const y of [0.4, 1.8]) {
+    for (const y of [0.45, 1.78]) {
       const band = new THREE.Mesh(bandGeo, M.iron);
-      band.position.set(0.54, y, 0);
+      band.position.set(0.44, y, 0);
       pivot.add(band);
     }
-    B.box(M.timber, r.door.x0 - 0.1, r.door.x0, Y, Y + 2.35, L.ROOMS_Z - 0.04, L.ROOMS_Z + 0.24);
-    B.box(M.timber, r.door.x1, r.door.x1 + 0.1, Y, Y + 2.35, L.ROOMS_Z - 0.04, L.ROOMS_Z + 0.24);
-    B.box(M.timber, r.door.x0 - 0.1, r.door.x1 + 0.1, Y + 2.25, Y + 2.37, L.ROOMS_Z - 0.04, L.ROOMS_Z + 0.24);
+    for (const side of [-1, 1]) {
+      const ring = new THREE.Mesh(ringGeo, M.iron);
+      ring.position.set(0.92, 1.0, side * 0.05);
+      pivot.add(ring);
+    }
+    const mid = (r.door.x0 + r.door.x1) / 2;
+    const dw = r.door.x1 - r.door.x0;
+    plankDoor(B, mid, Y, L.ROOMS_Z, 0, -1, dw, 2.25, 0);
+    plankDoor(B, mid, Y, L.ROOMS_Z + 0.2, 0, 1, dw, 2.25, 0);
     const plaque = own(new THREE.MeshStandardMaterial({ roughness: 0.7 }));
     const pm = new THREE.Mesh(plaqueGeo, [M.timber, M.timber, M.timber, M.timber, M.timber, plaque]);
-    pm.position.set((r.door.x0 + r.door.x1) / 2, Y + 2.62, L.ROOMS_Z - 0.03);
-    group.add(pm);
+    pm.position.set((r.door.x0 + r.door.x1) / 2, Y + 2.8, L.ROOMS_Z - 0.04);
+    G.add(pm);
     doors.push({ pivot, open: 0, target: 0, plaque, tex: null });
     // Sconce on the gallery wall beside the door.
     const sx = r.door.x1 + 0.55;
@@ -758,7 +848,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       B.box(M.iron, sx - 0.04, sx + 0.04, Y + 1.7, Y + 1.78, L.ROOMS_Z - 0.25, L.ROOMS_Z);
       const w = new THREE.Mesh(own(new THREE.CylinderGeometry(0.03, 0.035, 0.14, 8)), M.candle);
       w.position.set(sx, Y + 1.85, L.ROOMS_Z - 0.22);
-      group.add(w);
+      G.add(w);
       flame(sx, Y + 1.92, L.ROOMS_Z - 0.22, 0.6);
       lamp(sx, Y + 2.0, L.ROOMS_Z - 0.6, 0xffc080, 1.6, 6.5);
     }
@@ -773,6 +863,8 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   };
 
   // ---- Outside: the square and the street ---------------------------------------------------------
+  B = Bout;
+  G = outside;
   B.box(M.cobbles, L.SQUARE.x0 - 1.2, L.SQUARE.x1 + 1.2, -0.12, 0, L.STREET.z0, L.SQUARE.z1 - 0.4);
   // The square's side walls, with coping.
   for (const side of [-1, 1]) {
@@ -783,7 +875,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     B.box(M.iron, lx - 0.25 * side, lx, 3.2, 3.26, -3.03, -2.97);
     const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.22, 0.32, 0.22)), M.glassWarm);
     l.position.set(lx - 0.3 * side, 3.0, -3);
-    group.add(l);
+    G.add(l);
     lamp(lx - 0.6 * side, 2.9, -3, 0xffb46a, 2.4, 10);
   }
   // A well in the square.
@@ -792,11 +884,11 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     const m = new THREE.Mesh(ring, M.stone);
     m.position.set(-6.4, 0.4, -3.2);
     m.castShadow = true;
-    group.add(m);
+    G.add(m);
     const water = new THREE.Mesh(own(new THREE.CircleGeometry(0.82, 20)), M.glassNight);
     water.rotation.x = -Math.PI / 2;
     water.position.set(-6.4, 0.25, -3.2);
-    group.add(water);
+    G.add(water);
     B.box(M.timber, -7.35, -7.2, 0, 2.2, -3.27, -3.13);
     B.box(M.timber, -5.6, -5.45, 0, 2.2, -3.27, -3.13);
     B.box(M.timber, -7.4, -5.4, 2.1, 2.22, -3.3, -3.1);
@@ -830,15 +922,12 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       const [rx0, rx1] = lo(out(0.5), xf);
       B.box(M.timber, rx0, rx1, 3.15, 3.35, za, zb);
       B.box(M.timber, qx0, qx1, H - 0.2, H, za, zb);
-      // Braces in the upper panels.
-      for (const [a, b] of [
-        [za + 0.15, (za + zb) / 2],
-        [(za + zb) / 2, zb - 0.15],
-      ]) {
-        const w = b - a;
-        const h = H - 0.2 - 3.35;
-        const ang = Math.atan2(h, w);
-        B.turned(M.timber, 0.1, 0.14, Math.hypot(w, h), [out(0.43), 3.35 + h / 2, (a + b) / 2], [side * ang, 0, 0]);
+      // Knee braces from the posts up to the top beam.
+      for (const z of [za + 0.15, (za + zb) / 2, zb - 0.15]) {
+        for (const dir of [-1, 1]) {
+          if ((z === za + 0.15 && dir < 0) || (z === zb - 0.15 && dir > 0)) continue;
+          B.turned(M.timber, 0.1, 0.12, 0.85, [out(0.43), H - 0.5, z + dir * 0.32], [-side * dir * 0.8, 0, 0]);
+        }
       }
       // Windows upstairs (lit or dark), a door below where no stall stands.
       for (const z of [za + (zb - za) * 0.27, za + (zb - za) * 0.73]) {
@@ -848,12 +937,8 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
         B.box(M.timber, wx0 - 0.02, wx1 + 0.02, 4.2, 4.3, z - 0.55, z + 0.55);
       }
       const stalls = stallZ(side);
-      const doorZ = [za + 1.0, (za + zb) / 2, zb - 1.0].find((z) => stalls.every((s) => Math.abs(s - z) > 1.9));
-      if (doorZ !== undefined) {
-        const [dx0, dx1] = lo(out(0.1), xf);
-        B.box(M.panel, dx0, dx1, 0, 2.2, doorZ - 0.55, doorZ + 0.55);
-        B.box(M.timber, dx0 - 0.02, dx1 + 0.02, 2.2, 2.35, doorZ - 0.7, doorZ + 0.7);
-      }
+      const doorZ = [za + 1.3, (za + zb) / 2 + 1.1, zb - 1.3].find((z) => stalls.every((s) => Math.abs(s - z) > 2.0));
+      if (doorZ !== undefined) plankDoor(B, xf, 0, doorZ, -side, 0, 1.05, 2.15, 1, { step: true, canopy: true });
       // The roof: a prism and two slate slopes, ridge along the street.
       const span = 5.5 + 0.6;
       const eave = H;
@@ -865,8 +950,8 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       const slope = Math.atan2(ridge - eave, span / 2);
       const len = Math.hypot(span / 2, ridge - eave) + 0.5;
       const mid = side < 0 ? back - 0.1 + span / 2 : out(0.5) + span / 2;
-      B.turned(M.slate, len, 0.2, zb - za + 0.3, [mid - span / 4 - 0.12, (eave + ridge) / 2 + 0.08, (za + zb) / 2], [0, 0, slope]);
-      B.turned(M.slate, len, 0.2, zb - za + 0.3, [mid + span / 4 + 0.12, (eave + ridge) / 2 + 0.08, (za + zb) / 2], [0, 0, -slope]);
+      B.turned(M.slate, len, 0.2, zb - za - 0.02, [mid - span / 4 - 0.12, (eave + ridge) / 2 + 0.08, (za + zb) / 2], [0, 0, slope]);
+      B.turned(M.slate, len, 0.2, zb - za - 0.02, [mid + span / 4 + 0.12, (eave + ridge) / 2 + 0.08, (za + zb) / 2], [0, 0, -slope]);
       if (hr() < 0.6) {
         const cz = za + (zb - za) * (0.3 + hr() * 0.4);
         const cxm = mid + side * 1.2;
@@ -888,7 +973,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     B.box(M.iron, Math.min(x, side * L.STREET.x1), Math.max(x, side * L.STREET.x1), 3.6, 3.66, z - 0.03, z + 0.03);
     const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.22, 0.32, 0.22)), M.glassWarm);
     l.position.set(x, 3.42, z);
-    group.add(l);
+    G.add(l);
     lamp(x - side * 0.4, 3.2, z, 0xffb46a, 2.6, 11);
   }
 
@@ -909,12 +994,12 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     const mat = own(new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }));
     const plaque = new THREE.Mesh(own(new THREE.PlaneGeometry(5.6, 0.88)), mat);
     plaque.position.set(0, 9.6, zf + 0.04);
-    group.add(plaque);
+    G.add(plaque);
     for (const x of [-3.6, 3.6]) {
       B.box(M.iron, x - 0.04, x + 0.04, 4.6, 4.66, zf, zf + 0.55);
       const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.26, 0.36, 0.26)), M.glassWarm);
       l.position.set(x, 4.4, zf + 0.55);
-      group.add(l);
+      G.add(l);
       lamp(x, 4.3, zf + 1.0, 0xffaa60, 3.0, 12);
     }
   }
@@ -932,23 +1017,23 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     B.box(M.iron, Math.min(fx, p.x - Math.sign(p.x) * L.PIER_HALF), Math.max(fx, p.x - Math.sign(p.x) * L.PIER_HALF), 3.0, 3.08, p.z - 0.04, p.z + 0.04);
     const cup = new THREE.Mesh(own(new THREE.CylinderGeometry(0.09, 0.05, 0.16, 8)), M.iron);
     cup.position.set(fx, 3.12, p.z);
-    group.add(cup);
+    G.add(cup);
     flame(fx, 3.2, p.z, 1.1);
     lamp(fx - Math.sign(p.x) * 0.3, 3.4, p.z, 0xffa055, 4.0, 11, 0.25);
   }
-  B.box(M.darkStone, -0.45, 0.45, 10.9, L.HALL_TOP, H0.z0, H0.z1);
+  B.box(M.darkStone, -0.45, 0.45, 11.05, L.HALL_TOP, H0.z0, H0.z1);
   for (const side of [-1, 1]) {
     for (const z of [-55.75, -62.25, -68.25]) {
-      const x = side * (H0.x1 - 0.03);
+      const x = side * (H0.x1 - 0.08);
       const ban = new THREE.Mesh(own(new THREE.PlaneGeometry(1.8, 5)), M.banner);
       ban.position.set(x, 6.2, z);
       ban.rotation.y = -side * (Math.PI / 2);
-      group.add(ban);
+      G.add(ban);
       B.box(M.iron, Math.min(x, x - side * 0.15), Math.max(x, x - side * 0.15), 8.7, 8.8, z - 1.05, z + 1.05);
       const emblem = new THREE.Mesh(own(new THREE.CircleGeometry(0.42, 24)), M.gold);
-      emblem.position.set(x - side * 0.02, 6.9, z);
+      emblem.position.set(x - side * 0.05, 6.9, z);
       emblem.rotation.y = -side * (Math.PI / 2);
-      group.add(emblem);
+      G.add(emblem);
     }
   }
   // The sealed gate in the south wall: a dark arch, the iron gate, heavy jambs.
@@ -966,7 +1051,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
         const k = Math.min(6.4 / Math.max(0.01, size.x), 7.1 / Math.max(0.01, size.y));
         o.scale.setScalar(k);
         o.position.set(-((box.min.x + box.max.x) / 2) * k, -box.min.y * k, zg + 0.35 - ((box.min.z + box.max.z) / 2) * k);
-        group.add(o);
+        G.add(o);
       })
       .catch(() => {});
     // Braziers either side.
@@ -975,13 +1060,13 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     for (const f of L.FURNITURE.filter((q) => q.kind === "brazier")) {
       const b = new THREE.Mesh(bowl, M.iron);
       b.position.set(f.x, 1.1, f.z);
-      group.add(b);
+      G.add(b);
       for (let k = 0; k < 3; k++) {
         const a = (k / 3) * Math.PI * 2;
         const m = new THREE.Mesh(leg, M.iron);
         m.position.set(f.x + Math.sin(a) * 0.22, 0.5, f.z + Math.cos(a) * 0.22);
         m.rotation.set(Math.cos(a) * 0.18, 0, -Math.sin(a) * 0.18);
-        group.add(m);
+        G.add(m);
       }
       fire(f.x, 1.12, f.z, 0.25);
       lamp(f.x, 1.9, f.z + 0.6, 0xff8a3a, 6.0, 14, 0.3);
@@ -989,7 +1074,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   }
   // The teleporter: a stone dais and its step, a ring of runes, a column of light, four obelisks.
   const runeTex = own(runeTexture());
-  const runeMat = own(new THREE.MeshBasicMaterial({ color: 0xa889ff, map: runeTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  const runeMat = own(new THREE.MeshBasicMaterial({ color: 0xa889ff, map: runeTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
   const glowTex = own(
     canvasTexture(
       64,
@@ -1016,23 +1101,23 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     const step = new THREE.Mesh(own(new THREE.CylinderGeometry(D.r + D.step, D.r + D.step + 0.05, D.h / 2, 48)), M.darkStone);
     step.position.set(D.x, D.h / 4, D.z);
     step.receiveShadow = true;
-    group.add(step);
+    G.add(step);
     const top = new THREE.Mesh(own(new THREE.CylinderGeometry(D.r, D.r + 0.04, D.h, 48)), M.stone);
     top.position.set(D.x, D.h / 2, D.z);
     top.receiveShadow = true;
-    group.add(top);
+    G.add(top);
     runeRing = new THREE.Mesh(own(new THREE.PlaneGeometry(D.r * 1.9, D.r * 1.9)), runeMat);
     runeRing.rotation.x = -Math.PI / 2;
-    runeRing.position.set(D.x, D.h + 0.012, D.z);
-    group.add(runeRing);
+    runeRing.position.set(D.x, D.h + 0.025, D.z);
+    G.add(runeRing);
     beam = new THREE.Mesh(own(new THREE.CylinderGeometry(1.1, 1.45, 9, 40, 1, true)), beamMat);
     beam.position.set(D.x, D.h + 4.5, D.z);
-    group.add(beam);
+    G.add(beam);
     const oct = own(new THREE.OctahedronGeometry(0.22, 0));
     for (let i = 0; i < 3; i++) {
       const c = new THREE.Mesh(oct, crystalMat);
       c.scale.set(1, 1.8, 1);
-      group.add(c);
+      G.add(c);
       crystals.push(c);
     }
     lamp(D.x, 1.8, D.z, 0x9a80ff, 9.0, 16, 0.08);
@@ -1044,12 +1129,12 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       o.rotation.y = Math.PI / 4;
       o.castShadow = true;
       o.receiveShadow = true;
-      group.add(o);
+      G.add(o);
       const toC = Math.atan2(D.x - f.x, D.z - f.z);
       const s = new THREE.Mesh(stripGeo, runeLineMat);
       s.position.set(f.x + Math.sin(toC) * 0.26, 1.6, f.z + Math.cos(toC) * 0.26);
       s.rotation.y = toC;
-      group.add(s);
+      G.add(s);
     }
   }
 
@@ -1058,7 +1143,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   const sky = new THREE.Mesh(own(new THREE.SphereGeometry(190, 32, 16)), own(new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false })));
   sky.position.set(0, -20, -20);
   sky.renderOrder = -10;
-  group.add(sky);
+  outside.add(sky);
   const hemi = new THREE.HemisphereLight(0x8a96c0, 0x2a2018, 0.4);
   group.add(hemi);
   const moon = new THREE.DirectionalLight(0x9aaad8, 0.35);
@@ -1087,7 +1172,8 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   }
   let lampCheck = 0;
 
-  B.build(group, owned);
+  Bin.build(inside, owned);
+  Bout.build(outside, owned);
   group.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.isMesh && m.material !== M.flame && m.material !== beamMat && m.material !== runeMat && o !== sky) {
@@ -1129,7 +1215,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
         p.group.rotation.order = "YXZ";
         p.group.position.set(n.x, 0, n.z);
         p.group.rotation.y = n.yaw;
-        group.add(p.group, p.fx);
+        (n.tavern ? inside : outside).add(p.group, p.fx);
         n.p = p;
       } catch (err) {
         console.error("townsfolk failed to load", err);
@@ -1198,6 +1284,13 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   const rentedNow: boolean[] = L.ROOMS.map(() => false);
   L.ROOMS.forEach((_, i) => setPlaque(i, false));
   let active = true;
+  let zoneNow: "in" | "out" = "in";
+  const applyZone = () => {
+    inside.visible = zoneNow === "in";
+    outside.visible = zoneNow === "out";
+    lampCheck = 0;
+  };
+  applyZone();
 
   const dynamicSolids = () => {
     const out: L.Solid[] = [];
@@ -1232,6 +1325,17 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       if (c) c.target = open ? 1 : 0;
     },
     npcSpots: () => npcs.filter((n) => n.p && n.p.group.visible).map((n) => ({ x: n.x, z: n.z })),
+    setZone(z) {
+      if (z === zoneNow) return;
+      zoneNow = z;
+      applyZone();
+      for (const sl of slots) {
+        sl.light.intensity = 0;
+        sl.lamp = null;
+        sl.leaving = false;
+      }
+    },
+    zone: () => zoneNow,
     setActive(on) {
       active = on;
       group.visible = on;
@@ -1246,14 +1350,12 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       if (!active) return;
       playerAt.copy(player);
       const zone = zoneOf(player.x, player.z);
-      // Townsfolk: the tavern's are only drawn when he could see in (inside, or near the door).
-      const seesIn = L.inTavern(player.x, player.z) || (player.z > -9 && Math.abs(player.x) < 7);
-      const seesOut = !L.inTavern(player.x, player.z) || player.z < 4;
+      // Townsfolk: only the zone he is in lives (and only those near enough to matter animate).
       for (const n of npcs) {
         if (!n.p) continue;
-        const show = n.tavern ? seesIn : seesOut;
-        n.p.group.visible = show;
-        if (show) updateNpc(n, dt);
+        const here = n.tavern === (zoneNow === "in");
+        n.p.group.visible = here;
+        if (here && Math.hypot(n.x - player.x, n.z - player.z) < 30) updateNpc(n, dt);
       }
       // Doors and chest lids.
       for (const d of doors) {
@@ -1298,7 +1400,8 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       if (lampCheck <= 0) {
         lampCheck = 0.15;
         const score = (l: Lamp) => l.at.distanceTo(player) + (l.zone === zone ? 0 : 14);
-        const ranked = lamps.slice().sort((a, b) => score(a) - score(b));
+        // Only the lamps of the zone being drawn.
+        const ranked = lamps.filter((l) => (l.zone === "in") === (zoneNow === "in")).sort((a, b) => score(a) - score(b));
         const want = ranked.slice(0, slots.length);
         // The nearest gets the shadow.
         const first = want[0];

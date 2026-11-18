@@ -362,6 +362,8 @@ export function createDungeonView(
   camera: THREE.PerspectiveCamera;
   carriedLight: THREE.PointLight;
   hemiLight: THREE.HemisphereLight;
+  /** The two lamp shadows on or off (off in town: a dark light's shadow still redraws the scene six times). */
+  setShadows: (on: boolean) => void;
   setMasonry: (data: { stone: ProceduralTextureData }) => void;
   setScans: (scans: { wall: ScanSet; floor: ScanSet; plaster: ScanSet }) => void;
   setLevel: (d: DungeonData, level: LevelData) => void;
@@ -1373,6 +1375,9 @@ export function createDungeonView(
     haloMaterial,
     carriedLight: carried,
     hemiLight: hemi,
+    setShadows(on: boolean) {
+      for (const s of shadowLights) s.light.castShadow = on;
+    },
     markSolid() {
       extraChildren = group.children.slice(baseCount);
       group.traverse((o) => {

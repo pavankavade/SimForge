@@ -56,6 +56,7 @@ export function rollChest(rand: () => number, tier: number): Grid {
   for (let i = 0; i < valuables; i++) g = put(g, weighted(rand, VALUABLES, tier * 1.5));
   if (rand() < 0.4) g = put(g, "potion");
   if (rand() < 0.3) g = put(g, "apple");
+  if (rand() < 0.3) g = put(g, "bandage");
   if (rand() < 0.16 + tier * 0.1) g = put(g, WEARABLE[Math.floor(rand() * WEARABLE.length)]);
   if (rand() < 0.1 + tier * 0.07) g = put(g, TROPHIES[Math.floor(rand() * TROPHIES.length)]);
   return g;
@@ -77,6 +78,7 @@ export function rollCorpse(rand: () => number, rarity: Rarity, worn: ArmorEquipm
     }
   }
   if (rand() < 0.25) g = put(g, "potion");
+  if (rand() < 0.3) g = put(g, "bandage");
   if (rand() < 0.2) g = put(g, weighted(rand, VALUABLES, rarity === "epic" ? 3 : 0));
   return g;
 }
