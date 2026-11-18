@@ -2,6 +2,7 @@
 // body). Valuables and trophies are rendered from their Patch models on a small off-screen
 // renderer; coins, the draught, the bandage and the gems are drawn.
 import * as THREE from "three";
+import { PROC_ICONS } from "./monsters/icons3d";
 import { loadModel } from "./props3d";
 
 const MODEL_ICONS: Record<string, { path: string; tilt?: number; turn?: number }> = {
@@ -110,6 +111,90 @@ function drawn(id: string): string | null {
     }
     g.fillStyle = "#b8282a";
     g.fillRect(48, 28, 8, 68);
+  } else if (id === "grave_dust") {
+    // A small leather pouch tied at the neck, grey ash spilling from it.
+    g.fillStyle = "#8d8a84";
+    g.beginPath();
+    g.ellipse(84, 100, 30, 9, 0, 0, Math.PI * 2);
+    g.fill();
+    const grad = g.createRadialGradient(52, 64, 6, 58, 76, 40);
+    grad.addColorStop(0, "#a07a52");
+    grad.addColorStop(1, "#4a3420");
+    g.fillStyle = grad;
+    g.beginPath();
+    g.ellipse(58, 78, 30, 28, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "#5a3e26";
+    g.fillRect(48, 36, 20, 18);
+    g.strokeStyle = "#2a1c10";
+    g.lineWidth = 4;
+    g.beginPath();
+    g.moveTo(44, 54);
+    g.lineTo(72, 52);
+    g.stroke();
+  } else if (id === "spell_page") {
+    // A scorched page with lines of script and a burnt corner.
+    g.save();
+    g.translate(64, 64);
+    g.rotate(-0.12);
+    g.fillStyle = "#d9c79c";
+    g.fillRect(-36, -46, 72, 92);
+    g.fillStyle = "rgba(60,30,10,0.85)";
+    for (let y = -36; y < 36; y += 9) g.fillRect(-28, y, 40 + ((y * 7) % 16), 2.5);
+    g.fillStyle = "#7a5ad8";
+    g.beginPath();
+    g.arc(18, 22, 9, 0, Math.PI * 2);
+    g.fill();
+    const burn = g.createRadialGradient(36, 46, 2, 36, 46, 34);
+    burn.addColorStop(0, "rgba(10,6,2,1)");
+    burn.addColorStop(0.5, "rgba(60,30,8,0.9)");
+    burn.addColorStop(1, "rgba(60,30,8,0)");
+    g.fillStyle = burn;
+    g.fillRect(-36, -46, 72, 92);
+    g.restore();
+  } else if (id === "candle") {
+    g.fillStyle = "#1c1814";
+    g.fillRect(50, 52, 28, 58);
+    g.fillStyle = "#2e2822";
+    g.fillRect(50, 52, 8, 58);
+    g.fillStyle = "#111";
+    g.fillRect(62, 40, 3, 12);
+    const fl = g.createRadialGradient(63, 30, 1, 63, 30, 14);
+    fl.addColorStop(0, "rgba(255,240,190,1)");
+    fl.addColorStop(1, "rgba(255,150,40,0)");
+    g.fillStyle = fl;
+    g.beginPath();
+    g.ellipse(63, 30, 7, 13, 0, 0, Math.PI * 2);
+    g.fill();
+  } else if (id === "rusty_sword") {
+    // Diagonal, point up-right: a pitted brown blade, a plain cross and grip.
+    g.save();
+    g.translate(64, 64);
+    g.rotate(-Math.PI / 4);
+    const blade = g.createLinearGradient(-6, 0, 6, 0);
+    blade.addColorStop(0, "#5a4430");
+    blade.addColorStop(0.5, "#9a7a58");
+    blade.addColorStop(1, "#4a3424");
+    g.fillStyle = blade;
+    g.beginPath();
+    g.moveTo(-6, 22);
+    g.lineTo(-6, -48);
+    g.lineTo(0, -58);
+    g.lineTo(6, -48);
+    g.lineTo(6, 22);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "rgba(120,50,20,0.6)";
+    for (let i = 0; i < 9; i++) g.fillRect(-5 + ((i * 5) % 9), -40 + i * 7, 3, 3);
+    g.fillStyle = "#3a3028";
+    g.fillRect(-20, 22, 40, 6);
+    g.fillStyle = "#4a3020";
+    g.fillRect(-4, 28, 8, 22);
+    g.fillStyle = "#3a3028";
+    g.beginPath();
+    g.arc(0, 54, 6, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
   } else return null;
   return c.toDataURL("image/png");
 }
@@ -121,7 +206,7 @@ export function itemIcons(): Promise<Record<string, string>> {
   if (made) return made;
   made = (async () => {
     const out: Record<string, string> = {};
-    for (const id of ["coins", "potion", "bandage", "ruby", "sapphire"]) {
+    for (const id of ["coins", "potion", "bandage", "ruby", "sapphire", "grave_dust", "spell_page", "candle", "rusty_sword"]) {
       const u = drawn(id);
       if (u) out[id] = u;
     }
@@ -146,6 +231,26 @@ export function itemIcons(): Promise<Record<string, string>> {
       try {
         const o = (await loadModel(spec.path)).clone(true);
         o.rotation.set(spec.tilt ?? 0, spec.turn ?? 0, 0);
+        scene.add(o);
+        o.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(o);
+        const c = box.getCenter(new THREE.Vector3());
+        const s = box.getSize(new THREE.Vector3());
+        const r = Math.max(s.x, s.y, s.z) * 0.62;
+        cam.position.set(c.x, c.y + r * 0.15, c.z + r / Math.tan((cam.fov * Math.PI) / 360));
+        cam.lookAt(c);
+        renderer.setClearColor(0x000000, 0);
+        renderer.render(scene, cam);
+        out[id] = canvas.toDataURL("image/png");
+        scene.remove(o);
+      } catch {
+        // Its name stands in.
+      }
+    }
+    // The monsters' drops, from their code-built models.
+    for (const id of Object.keys(PROC_ICONS)) {
+      try {
+        const o = PROC_ICONS[id]();
         scene.add(o);
         o.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(o);

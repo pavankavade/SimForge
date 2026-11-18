@@ -4,7 +4,7 @@
 // double-click / double-tap, puts a piece on or takes it off, and drinks or eats what can be used.
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ArmorSlot } from "../artifacts/characters/paladin";
-import { RARITY, def, fitsAt, placeItem, removeItem, type ItemInst } from "./items";
+import { RARITY, def, fitsAt, itemOf, placeItem, removeItem, type ItemInst } from "./items";
 import { DragGhost, GOLD, GridView, ItemIcon, ItemTooltip, PANEL_BG, PANEL_BORDER, btn, useItemDrag, type DragFrom, type DragState, type DropTarget, type Icons } from "./itemsUi";
 import { BAG_H, BAG_W, BELT_SLOTS, allItems, beltable, equipFromBag, fromBelt, sortBag, toBelt, unequipToBag, type PlayerInv } from "./playerInv";
 
@@ -161,14 +161,16 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
 
   const wornSlots = (Object.keys(inv.equipped) as ArmorSlot[]).filter((s) => inv.equipped[s]);
   const armor = wornSlots.reduce((a, s) => a + (def(s).armor ?? 0), 0);
+  const swordInst = inv.equipped.sword;
+  const shieldInst = inv.equipped.shield;
   const weight = wornSlots.reduce((a, s) => a + def(s).weight, 0);
   const carried = inv.bag.items.reduce((a, p) => a + def(p.item.id).weight, 0);
   const stats: Array<[string, string]> = [
     ["Armor rating", String(armor)],
     ["Worn weight", `${weight.toFixed(1)} kg`],
     ["Bag weight", `${carried.toFixed(1)} kg`],
-    ["Main hand", inv.equipped.sword ? `${def("sword").damage} dmg` : "Fists"],
-    ["Off hand", inv.equipped.shield ? `${def("shield").block}% block` : "Empty"],
+    ["Main hand", swordInst ? `${itemOf(swordInst).damage} dmg` : "Fists"],
+    ["Off hand", shieldInst ? `${itemOf(shieldInst).block}% block` : "Empty"],
     ["Gold", String(inv.gold)],
   ];
   void allItems;
@@ -177,7 +179,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
 
   const SlotBox = (s: ArmorSlot) => {
     const item = inv.equipped[s];
-    const it = item ? def(item.id) : null;
+    const it = item ? itemOf(item) : null;
     const target = drag !== null && drag.from.kind === "grid" && def(drag.item.id).slot === s;
     const weapon = WEAPONS.indexOf(s) !== -1;
     return (
@@ -343,7 +345,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
       <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676" }}>BELT</div>
       {Array.from({ length: BELT_SLOTS }, (_, i) => {
         const item = (inv.belt || [])[i] ?? null;
-        const it = item ? def(item.id) : null;
+        const it = item ? itemOf(item) : null;
         const target = drag !== null && drag.from.kind !== "slot" && beltable(drag.item.id);
         return (
           <div

@@ -3,7 +3,7 @@
 // lists what he carries that this merchant deals in (worn pieces must come off first). The
 // merchants with nothing yet say so. Click a row to pick it, double-click (or the button) to deal.
 import React, { useEffect, useMemo, useState } from "react";
-import { RARITY, addItem, def, newItem, removeItem, type ItemInst } from "./items";
+import { RARITY, addItem, def, itemOf, newItem, removeItem, type ItemDef, type ItemInst } from "./items";
 import { ItemIcon, type Icons } from "./itemsUi";
 import { buysItem, css, priceOf, sellPriceOf, type Merchant } from "./merchants";
 import type { PlayerInv } from "./playerInv";
@@ -24,8 +24,7 @@ export interface ShopScreenProps {
 
 type Tab = "buy" | "sell";
 
-const statLine = (id: string) => {
-  const it = def(id);
+const statLine = (it: ItemDef) => {
   if (it.damage) return `${it.damage} damage`;
   if (it.block) return `${it.block}% block`;
   if (it.armor) return `Armor ${it.armor}`;
@@ -38,6 +37,9 @@ interface Row {
   id: string;
   item?: ItemInst;
 }
+
+/** The row's item as it is (a bag item at its own rarity; stock at its base). */
+const rowDef = (r: Row): ItemDef => (r.item ? itemOf(r.item) : def(r.id));
 
 export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, icons, onClose, compact, touch }) => {
   // A merchant with nothing for sale opens on the sell tab (they all buy loot).
@@ -76,7 +78,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, ic
       onInv({ ...inv, gold: inv.gold - price, bag });
       setNote(`Bought the ${name} for ${price} gold.`);
     } else if (r.item) {
-      const gold = sellPriceOf(r.id, r.item.qty ?? 1);
+      const gold = sellPriceOf(r.item);
       onInv({ ...inv, gold: inv.gold + gold, bag: removeItem(inv.bag, r.item.uid) });
       setNote(`Sold the ${name} for ${gold} gold.`);
     }
@@ -85,7 +87,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, ic
   const empty = merchant.stock.length === 0;
   const width = compact ? "100%" : "min(460px, 46vw)";
   const picked = rows.find((r) => r.key === pick) ?? null;
-  const it = picked ? def(picked.id) : null;
+  const it = picked ? rowDef(picked) : null;
   const canAct = picked ? (tab === "buy" ? inv.gold >= priceOf(picked.id) : true) : false;
   const first = merchant.name.split(" ")[0];
 
@@ -162,9 +164,9 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, ic
               </div>
             ) : null}
             {rows.map((r) => {
-              const item = def(r.id);
+              const item = rowDef(r);
               const col = RARITY[item.rarity].color;
-              const price = tab === "buy" ? priceOf(r.id) : sellPriceOf(r.id, r.item?.qty ?? 1);
+              const price = tab === "buy" || !r.item ? priceOf(r.id) : sellPriceOf(r.item);
               const owned = tab === "buy" ? have(r.id) : 0;
               const sel = r.key === pick;
               const dim = tab === "buy" && inv.gold < price;
@@ -190,7 +192,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, ic
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, color: dim ? `${col}88` : col, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
                     <div style={{ fontSize: 11, color: "#8f8676" }}>
-                      {item.kind} · {statLine(r.id)} · {item.weight} kg
+                      {item.kind} · {statLine(item)} · {item.weight} kg
                     </div>
                   </div>
                   {owned ? (
@@ -229,7 +231,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, ic
                   border: canAct ? "1px solid #ffe7a0" : `1px solid ${LINE}`,
                 }}
               >
-                {tab === "buy" ? `BUY ${priceOf(picked.id)}g` : `SELL ${sellPriceOf(picked.id, picked.item?.qty ?? 1)}g`}
+                {tab === "buy" ? `BUY ${priceOf(picked.id)}g` : `SELL ${picked.item ? sellPriceOf(picked.item) : 0}g`}
               </button>
             </div>
           ) : null}

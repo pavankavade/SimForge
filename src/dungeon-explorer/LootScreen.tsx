@@ -3,7 +3,7 @@
 // right-click / double-click (double-tap) to move an item across; Take all fills the bag as far as
 // it goes. Coins go straight into his purse.
 import React, { useEffect, useState } from "react";
-import { addItem, def, fitsAt, placeItem, removeItem, type Grid, type ItemInst } from "./items";
+import { addItem, def, fitsAt, itemOf, placeItem, removeItem, type Grid, type ItemInst } from "./items";
 import { DragGhost, GOLD, GridView, ItemTooltip, PANEL_BG, PANEL_BORDER, btn, useItemDrag, type DragFrom, type DragState, type DropTarget, type Icons } from "./itemsUi";
 import { intoPurse, type PlayerInv } from "./playerInv";
 
@@ -114,7 +114,7 @@ export const LootScreen: React.FC<LootScreenProps> = ({ title, subtitle, contain
     ? Math.max(18, Math.min(40, Math.floor((vw - 36) / Math.max(container.w, inv.bag.w)), Math.floor((vh - 190) / (container.h + inv.bag.h))))
     : Math.max(20, Math.min(52, Math.floor((vw - 120) / cols), Math.floor((vh - 200) / Math.max(container.h, inv.bag.h))));
 
-  const value = container.items.reduce((a, p) => a + def(p.item.id).value * (p.item.qty ?? 1), 0);
+  const value = container.items.reduce((a, p) => a + itemOf(p.item).value * (p.item.qty ?? 1), 0);
   const hover = dnd.hover;
   const panel = (label: string, right: React.ReactNode, body: React.ReactNode) => (
     <div style={{ background: PANEL_BG, border: PANEL_BORDER, padding: "12px 14px", pointerEvents: "auto", alignSelf: "flex-start" }}>

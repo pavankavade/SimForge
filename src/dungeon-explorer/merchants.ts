@@ -3,7 +3,7 @@
 // belt; the arcanist and the woodsmith have nothing yet. For now every one of them buys whatever he
 // brings up from the dungeon.
 import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
-import { def } from "./items";
+import { def, itemOf, type ItemInst } from "./items";
 
 export type MerchantId = "armourer" | "weaponsmith" | "alchemist" | "mage" | "woodsmith";
 
@@ -91,8 +91,8 @@ export const css = (hex: number) => `#${("000000" + hex.toString(16)).slice(-6)}
 /** What a merchant asks for an item (gold). */
 export const priceOf = (id: string): number => def(id).value;
 
-/** What a merchant pays for one (two fifths of its value). */
-export const sellPriceOf = (id: string, qty = 1): number => Math.max(1, Math.round(def(id).value * 0.4)) * qty;
+/** What a merchant pays for it (two fifths of its value, at its own rarity). */
+export const sellPriceOf = (item: ItemInst): number => Math.max(1, Math.round(itemOf(item).value * 0.4)) * (item.qty ?? 1);
 
 /** Every merchant buys whatever he brings up (for now): only coins are not for sale. */
 export const buysItem = (_m: Merchant, id: string): boolean => def(id).category !== "coins";

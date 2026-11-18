@@ -3,7 +3,7 @@
 // double-tap does the quick move the screen defines (equip, use, take, stash).
 import React, { useEffect, useRef, useState } from "react";
 import type { ArmorSlot } from "../artifacts/characters/paladin";
-import { RARITY, def, fitsAt, type Grid, type ItemInst } from "./items";
+import { RARITY, def, fitsAt, itemOf, type Grid, type ItemInst } from "./items";
 
 export type Icons = Record<string, string | undefined>;
 
@@ -48,7 +48,7 @@ export const ItemIcon: React.FC<{ id: string; icons: Icons; w: number; h: number
 };
 
 export const ItemTooltip: React.FC<{ item: ItemInst; hint?: string; x: number; y: number }> = ({ item, hint, x, y }) => {
-  const it = def(item.id);
+  const it = itemOf(item);
   const r = RARITY[it.rarity];
   const W = 240;
   const left = x + 18 + W > window.innerWidth ? x - 18 - W : x + 18;
@@ -277,7 +277,7 @@ export const GridView: React.FC<{ id: string; grid: Grid; cell: number; icons: I
       }}
     >
       {grid.items.map((p) => {
-        const it = def(p.item.id);
+        const it = itemOf(p.item);
         const col = RARITY[it.rarity].color;
         const faded = dim ? dim(p.item) : false;
         return (

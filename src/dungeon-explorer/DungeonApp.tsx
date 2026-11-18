@@ -20,14 +20,15 @@ import { MERCHANTS, css } from "./merchants";
 import { MODULES, pieceProps, planFloor, type FloorPlan } from "./dungeon/rooms";
 import { buildDressing, type FloorDressing } from "./roomView";
 import { createDoors, doorwayProps, type Doors } from "./doorView";
-import { rollChest, rollCorpse, type Container } from "./loot";
+import { rollChest, rollMobLoot, type Container } from "./loot";
 import { LootScreen } from "./LootScreen";
 import { BELT_SLOTS, equipFromBag, loadInventory, normalizeInventory, saveInventory, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
-import { def, removeItem } from "./items";
+import { def, itemOf, removeItem } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
 import { ShopScreen } from "./ShopScreen";
-import { armorOf, armorReduction, createMobSimulation, type MobAgent } from "./npcSim";
+import { armorOf, armorReduction, createMobSimulation, type MobAgent, type MobEvent } from "./mobSim";
+import { createMonsterSfx, type MonsterSfx } from "./monsters/monsterSfx";
 import { POOL_SIZE, createMobBodies, type MobBodies } from "./mobBodies";
 import { HealthBar } from "./HealthBar";
 import { PORTAL_COUNT, PORTAL_REACH, PORTALS_FROM, RUN_SECONDS, createPortals, planPortals, type Portals } from "./portals";
@@ -40,7 +41,7 @@ import {
   type PanelLayout,
   type ShowcaseView,
 } from "./CharacterCustomizer";
-import { ITEMS, InventoryScreen, type FrameRect } from "./Inventory";
+import { InventoryScreen, type FrameRect } from "./Inventory";
 import { ItemIcon } from "./itemsUi";
 import { PauseMenu } from "./PauseMenu";
 import { ClassSelect } from "./ClassSelect";
@@ -113,9 +114,9 @@ interface Walker {
 }
 
 type Sim = ReturnType<typeof createMobSimulation>;
-type SimLike = Pick<Sim, "mobs" | "step" | "hit">;
-/** Town has no men to fight. */
-const NO_SIM: SimLike = { mobs: [], step: () => {}, hit: () => null };
+type SimLike = Pick<Sim, "mobs" | "projectiles" | "puddles" | "events" | "step" | "hit">;
+/** Town has no monsters to fight. */
+const NO_SIM: SimLike = { mobs: [], projectiles: [], puddles: [], events: [], step: () => {}, hit: () => null };
 
 /**
  * Where the camera may go (world metres): open air with `top` metres under the lid and `bottom`
@@ -236,6 +237,8 @@ interface DungeonSceneProps {
   /** Who the paladin is; a change rebuilds the body (debounced). */
   spec: HumanSpec;
   equipment: ArmorEquipment;
+  /** One cut of the sword in hand (its rarity counts), or the fists' without one. */
+  weaponDamage: number;
   /** The inventory or character screen is open: the paladin stands still and turns to a showcase camera. */
   customizing: boolean;
   /** The game has the controls (no menu or screen open). */
@@ -360,6 +363,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   firstPerson,
   spec,
   equipment,
+  weaponDamage,
   customizing,
   playing,
   showcaseRef,
@@ -429,6 +433,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const lastTouchDownRef = useRef(false);
   const paladinRef = useRef<Paladin | null>(null);
   const sfxRef = useRef<PaladinSfx | null>(null);
+  const monsterSfxRef = useRef<MonsterSfx | null>(null);
+  const weaponDamageRef = useRef(weaponDamage);
+  weaponDamageRef.current = weaponDamage;
   const mouseBlockRef = useRef(false);
   const freeLookRef = useRef(0);
   const prevYawRef = useRef(0);
@@ -537,29 +544,38 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     return () => window.clearTimeout(timer);
   }, [gl, scene, specKey, onCharacterBusy]);
 
-  // The men's bodies: a pool built once (see mobBodies.ts), lent to the nearest men on every floor.
-  const hurtPlayerRef = useRef<(m: MobAgent, body: { bounce: () => void }) => void>(() => {});
-  hurtPlayerRef.current = (m, body) => {
+  // The monsters' bodies: pools built once (see mobBodies.ts), lent to the nearest on every floor.
+  // A blow reaches the fighter: a skeleton's sword, a slime's lunge, an arrow, a bolt, or acid.
+  const hurtPlayerRef = useRef<(m: MobAgent, hit: { damage: number; fromX: number; fromZ: number; blockable: boolean; how: string; bounce?: () => void }) => void>(() => {});
+  hurtPlayerRef.current = (m, hit) => {
     const w = worldRef.current;
     const pal = paladinRef.current;
     if (!w || w.dead) return;
     const px = w.walker.x * CELL_M;
     const pz = w.walker.z * CELL_M;
     const facing = w.walker.yaw + Math.PI;
-    const tx = m.wx - px;
-    const tz = m.wz - pz;
+    const tx = hit.fromX - px;
+    const tz = hit.fromZ - pz;
     const front = (Math.sin(facing) * tx + Math.cos(facing) * tz) / (Math.hypot(tx, tz) || 1);
-    // A raised shield toward the man takes the cut, and his blade glances off.
-    if (blockingRef.current && equipmentRef.current.shield && front > 0.45) {
+    // A raised shield toward the blow takes it: the blade glances off, the arrow or bolt breaks on it.
+    if (hit.blockable && blockingRef.current && equipmentRef.current.shield && front > 0.45) {
+      if (hit.how === "bolt") monsterSfxRef.current?.burst();
+      else if (hit.how === "lunge") monsterSfxRef.current?.squelch(m.scale);
       sfxRef.current?.clang();
-      body.bounce();
+      hit.bounce?.();
       if (pal) pal.shake.value = Math.min(1, pal.shake.value + 0.25);
       return;
     }
-    const dmg = m.stats.damage * (0.9 + w.rand() * 0.2) * (1 - armorReduction(armorOf(equipmentRef.current)));
+    // Acid eats through boots and plate alike; everything else is softened by armour.
+    const armour = hit.how === "acid" ? 0 : armorReduction(armorOf(equipmentRef.current));
+    const dmg = hit.damage * (hit.how === "acid" ? 1 : 0.9 + w.rand() * 0.2) * (1 - armour);
     w.hp = Math.max(0, w.hp - dmg);
-    sfxRef.current?.hit();
-    if (pal) pal.shake.value = Math.min(1, pal.shake.value + 0.55);
+    if (hit.how === "acid") monsterSfxRef.current?.sizzle();
+    else if (hit.how === "bolt") monsterSfxRef.current?.burst();
+    else if (hit.how === "lunge") monsterSfxRef.current?.squelch(m.scale);
+    else if (hit.how === "arrow") monsterSfxRef.current?.thock();
+    if (hit.how !== "acid") sfxRef.current?.hit();
+    if (pal) pal.shake.value = Math.min(1, pal.shake.value + (hit.how === "acid" ? 0.08 : 0.55));
     if (w.hp <= 0) {
       w.dead = true;
       w.deadT = 0;
@@ -599,7 +615,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       scene,
       {
         solid: (x, y, z) => worldRef.current?.combat.solid?.(x, y, z) ?? false,
-        onPlayerHit: (m, body) => hurtPlayerRef.current(m, body),
+        onPlayerHit: (m, body) => hurtPlayerRef.current(m, { damage: m.stats.damage, fromX: m.wx, fromZ: m.wz, blockable: true, how: "blade", bounce: body.bounce }),
         onSwing: (m, swing) => {
           const w = worldRef.current;
           if (w && Math.hypot(m.wx - w.walker.x * CELL_M, m.wz - w.walker.z * CELL_M) < 7) sfxRef.current?.swing(swing);
@@ -607,7 +623,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         onClang: () => sfxRef.current?.clang(),
       },
       (built, total) => {
-        if (!worldRef.current) onHudUpdate({ loading: `Mustering the garrison... ${built} / ${total}` });
+        if (!worldRef.current) onHudUpdate({ loading: `Raising the dead... ${built} / ${total}` });
       }
     );
     bodiesPromiseRef.current = promise;
@@ -635,8 +651,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     unmountedRef.current = false;
     const sfx = createPaladinSfx();
     sfxRef.current = sfx;
+    const msfx = createMonsterSfx();
+    monsterSfxRef.current = msfx;
     // Browsers only start audio after a gesture.
-    const unlock = () => sfx.unlock();
+    const unlock = () => {
+      sfx.unlock();
+      msfx.unlock();
+    };
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
     return () => {
@@ -970,7 +991,19 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       const walker = createWalker(dungeon);
       walker.start();
       const playerFloor = floorAt(dungeon, walker.x + dungeon.W / 2, walker.z + dungeon.H / 2);
-      const sim = createMobSimulation(dungeon, walker.x * CELL_M, walker.z * CELL_M);
+      const solidAt = (x: number, y: number, z: number): boolean => {
+        const gx = x / CELL_M + dungeon.W / 2;
+        const gz = z / CELL_M + dungeon.H / 2;
+        const ix = Math.floor(gx);
+        const iz = Math.floor(gz);
+        if (ix < 0 || iz < 0 || ix >= dungeon.W || iz >= dungeon.H) return true;
+        const c = iz * dungeon.W + ix;
+        if (dungeon.grid[c] !== FLOOR) return true;
+        if (level.openAt && level.openAt(gx, gz) < 0.5) return true;
+        if (y > (level.heights[c] || 2.8) * CELL_M) return true;
+        return y < floorAt(dungeon, gx, gz) * CELL_M - 0.03;
+      };
+      const sim = createMobSimulation(dungeon, walker.x * CELL_M, walker.z * CELL_M, solidAt);
       // The way out: five portals at random places, opening from minute five (portals.ts).
       let ps = (Math.imul(seed ^ 0x51ed27, 2246822519) + Math.imul(life, 362437) + 99) >>> 0;
       const portalRand = () => (ps = (Math.imul(ps, 1664525) + 1013904223) >>> 0) / 4294967296;
@@ -979,7 +1012,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
 
       // The men need their bodies before the floor opens.
       if (!bodiesRef.current && bodiesPromiseRef.current) {
-        onHudUpdate({ loading: "Mustering the garrison..." });
+        onHudUpdate({ loading: "Raising the dead..." });
         await bodiesPromiseRef.current.catch(() => null);
         if (cancelled) return;
       }
@@ -989,26 +1022,23 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       const targets: CombatTarget[] = [];
       const combat: CombatWorld = {
         targets,
-        solid: (x, y, z) => {
-          const gx = x / CELL_M + dungeon.W / 2;
-          const gz = z / CELL_M + dungeon.H / 2;
-          const ix = Math.floor(gx);
-          const iz = Math.floor(gz);
-          if (ix < 0 || iz < 0 || ix >= dungeon.W || iz >= dungeon.H) return true;
-          const c = iz * dungeon.W + ix;
-          if (dungeon.grid[c] !== FLOOR) return true;
-          if (level.openAt && level.openAt(gx, gz) < 0.5) return true;
-          if (y > (level.heights[c] || 2.8) * CELL_M) return true;
-          return y < floorAt(dungeon, gx, gz) * CELL_M - 0.03;
-        },
+        solid: solidAt,
         onHit: (id, dirX, dirZ) => {
-          // The arming sword's cut (fists without it), less the man's armour (npcSim.hit).
-          const dmg = (equipmentRef.current.sword ? ITEMS.sword.damage ?? 30 : 6) * (0.9 + rand() * 0.2);
+          // The sword's cut at its rarity (fists without it), less the monster's armour (mobSim.hit).
+          const dmg = (equipmentRef.current.sword ? weaponDamageRef.current : 6) * (0.9 + rand() * 0.2);
+          const m = sim.mobs.find((o) => o.id === id);
           const r = sim.hit(id, dirX, dirZ, dmg);
+          const ms = monsterSfxRef.current;
           if (r === "blocked") {
             sfxRef.current?.clang();
             paladinRef.current?.animator.bounce();
-          } else if (r) sfxRef.current?.hit();
+          } else if (r && m) {
+            // Bone cracks and rattles; jelly squelches.
+            if (m.family === "slime") ms?.squelch(m.scale);
+            else ms?.boneHit();
+            if (r === "killed" && m.family === "skeleton") ms?.collapse();
+            if (r === "killed" && m.family === "slime") ms?.squelch(m.scale * 1.6);
+          }
         },
         onClang: () => sfxRef.current?.clang(),
         onSwing: (swing) => sfxRef.current?.swing(swing),
@@ -1070,6 +1100,28 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       cancelled = true;
     };
   }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef]);
+
+  /** What the monsters did to (or near) the fighter this step: blows land, bows twang, slimes plop. */
+  const handleMobEvents = (events: MobEvent[], px: number, pz: number) => {
+    const ms = monsterSfxRef.current;
+    const near = (x: number, z: number, r: number) => Math.hypot(x - px, z - pz) < r;
+    for (const e of events) {
+      if (e.type === "hit") hurtPlayerRef.current(e.mob, e);
+      else if (e.type === "loose") {
+        if (near(e.mob.wx, e.mob.wz, 16)) {
+          if (e.projectile === "arrow") ms?.twang();
+          else ms?.cast();
+        }
+      } else if (e.type === "impact") {
+        if (near(e.projectile.x, e.projectile.z, 14)) {
+          if (e.projectile.kind === "arrow") ms?.thock();
+          else ms?.burst();
+        }
+      } else if (e.type === "hop") {
+        if (near(e.mob.wx, e.mob.wz, 9)) ms?.plop(e.mob.scale);
+      } else if (e.type === "split") ms?.squelch(2.2);
+    }
+  };
 
   useFrame((_, rawDelta) => {
     const view = viewRef.current;
@@ -1181,15 +1233,16 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const z0 = walker.z;
     // In the air he keeps the way he was going (only a little steering).
     walker.step(dt, forward, strafe, speed, !grounded || world.playerJumpVy > 0);
-    // Men are solid: the paladin is eased out of anyone standing in his way.
+    // Monsters are solid: the fighter is eased out of anything standing in his way.
     for (const m of sim.mobs) {
       if (m.dead) continue;
       const dx = walker.x * CELL_M - m.wx;
       const dz = walker.z * CELL_M - m.wz;
       const dd = Math.hypot(dx, dz);
-      if (dd < 0.62 && dd > 1e-4) {
-        walker.x += ((dx / dd) * (0.62 - dd)) / CELL_M;
-        walker.z += ((dz / dd) * (0.62 - dd)) / CELL_M;
+      const gap = Math.max(0.62, m.radius + 0.32);
+      if (dd < gap && dd > 1e-4) {
+        walker.x += ((dx / dd) * (gap - dd)) / CELL_M;
+        walker.z += ((dz / dd) * (gap - dd)) / CELL_M;
       }
     }
     // So are the townsfolk.
@@ -1242,19 +1295,23 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     world.lastSerial = serial;
     sim.step(dt, {
       wx: px,
+      wy: py,
       wz: pz,
       swinging: paladin !== null && (paladin.animator.state === "windup" || paladin.animator.state === "strike"),
       swingStarted,
       dead: world.dead,
     });
-    // A man who falls leaves what he carried, to search with E like a chest.
+    handleMobEvents(sim.events, px, pz);
+    // A fallen monster leaves its crystal and what it carried, to search with E like a chest.
     for (const m of sim.mobs) {
       const id = `corpse-${m.id}`;
       if (!m.dead || containersRef.current.has(id)) continue;
-      containersRef.current.set(id, { id, kind: "corpse", name: m.name, x: m.wx, z: m.wz, grid: rollCorpse(world.rand, m.rarity, m.equipment), seen: false });
+      const grid = rollMobLoot(world.rand, m);
+      const name = m.family === "slime" ? `${m.name} remains` : `${m.name} bones`;
+      containersRef.current.set(id, { id, kind: "corpse", name, x: m.wx, z: m.wz, grid, seen: grid.items.length === 0 });
     }
     world.targets.length = 0;
-    for (const m of sim.mobs) if (!m.dead) world.targets.push({ id: m.id, x: m.wx, y: m.wy, z: m.wz, radius: 0.34, height: 1.8 });
+    for (const m of sim.mobs) if (!m.dead) world.targets.push({ id: m.id, x: m.wx, y: m.wy, z: m.wz, radius: m.radius + 0.04, height: m.height });
 
     // The paladin always squares up to where the camera aims; the gait is driven by the
     // distance actually covered (after wall collision), in his own frame.
@@ -1548,7 +1605,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     persp.updateMatrixWorld();
 
     // The men: bodies lent to the nearest, animated from the simulation; nameplates over the hostile.
-    bodiesRef.current?.update(dt, sim.mobs, { x: px, y: py, z: pz }, persp, size, platesRef.current);
+    bodiesRef.current?.update(dt, world.time, sim, { x: px, y: py, z: pz }, persp, size, platesRef.current);
 
     // Update nearest shadow lamps + render multi-pass crypt frame.
     if (fl) view.updateLights(dt, walker.x, walker.z, fl.lamps, fl.dungeon);
@@ -2217,6 +2274,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           firstPerson={firstPerson}
           spec={spec}
           equipment={shownEquipment}
+          weaponDamage={inv.equipped.sword ? itemOf(inv.equipped.sword).damage ?? 30 : 6}
           customizing={showcasing}
           playing={screen === "play"}
           showcaseRef={showcaseRef}
@@ -2400,7 +2458,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           <b>{spec.name || className}</b> · {className} · {hud.roomLabel} · <b style={{ color: "#ffd84d" }}>{inv.gold}</b> gold
         </div>
         <div style={{ fontSize: mobileMode ? 10 : 12, color: "#9fb0bf", marginTop: 1, display: place === "dungeon" ? undefined : "none" }}>
-          Men: <b>{hud.mobs}</b> · Portals: <b style={{ color: hud.portalsOpen ? "#c9a8ff" : undefined }}>{hud.portalsOpen}</b> / {PORTAL_COUNT}
+          Monsters: <b>{hud.mobs}</b> · Portals: <b style={{ color: hud.portalsOpen ? "#c9a8ff" : undefined }}>{hud.portalsOpen}</b> / {PORTAL_COUNT}
           {mobileMode ? (
             <>
               {" · "}
@@ -3037,7 +3095,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
               </>
             ) : (
               <>
-                <span style={{ color: "#ffd84d" }}>●</span> You &nbsp; <span style={{ color: "#6ce88a" }}>●</span> Men &nbsp; <span style={{ color: "#ff5a4a" }}>●</span> Hostile
+                <span style={{ color: "#ffd84d" }}>●</span> You &nbsp; <span style={{ color: "#6ce88a" }}>●</span> Monsters &nbsp; <span style={{ color: "#ff5a4a" }}>●</span> Hostile
               </>
             )}
             {hud.portalsOpen ? (

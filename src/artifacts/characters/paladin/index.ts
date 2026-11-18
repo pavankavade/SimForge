@@ -20,6 +20,7 @@ export type { ArmsPose, FpArms, PaladinInput, Stance } from "./animator";
 export { FP_ARMS } from "./animator";
 export { DEFAULT_OUTFIT, type Outfit } from "./materials";
 export type { CombatTarget, CombatWorld } from "./combat";
+export { EYE_LOCAL, REST, type BoneName } from "./rig";
 export { FX_LAYER } from "./combat";
 export { createPaladinSfx, type PaladinSfx } from "./sfx";
 export { AVERAGE_FACE, CHARACTERS, DEFAULT_CHARACTER, characterByName, type FaceSpec, type HairStyle, type HumanSpec, type RGB } from "./spec";
@@ -153,6 +154,11 @@ export interface PaladinOptions {
   outfit?: Outfit;
   /** Brightness of the cap lamp's spot light (candela-ish; 0 = lens glow and beam only). */
   lampIntensity?: number;
+  /**
+   * No flesh: the body, head, hands and feet (and the mail and doublet shaped on them) are never
+   * shown, only armour and weapons. The game hangs bones on `rig` for its skeletons.
+   */
+  fleshless?: boolean;
 }
 
 export async function createPaladin(renderer: THREE.WebGLRenderer, options: PaladinOptions = {}): Promise<Paladin> {
@@ -301,7 +307,8 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
     };
     // The closed helm replaces the head; mail or the doublet replace the bare body they cover;
     // gauntlets and sabatons replace the hands and the shoes (or bare feet).
-    const covered = equipment.mail || equipment.doublet || workwear.coverall;
+    const flesh = !options.fleshless;
+    const covered = flesh && (equipment.mail || equipment.doublet || workwear.coverall);
     const booted = workwear.boots && !equipment.sabatons;
     const hatted = workwear.hardhat && !equipment.helm && !firstPersonMode;
     show("coverall", workwear.coverall && !equipment.mail);
@@ -313,7 +320,7 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
     beam.visible = lit;
     materials.skinned.lamp.emissiveIntensity = lit ? 3 : 0;
     show("helm", !firstPersonMode && equipment.helm);
-    show("head", !firstPersonMode && !equipment.helm);
+    show("head", flesh && !firstPersonMode && !equipment.helm);
     show("gorget", !firstPersonMode && equipment.gorget);
     show("cuirass", equipment.cuirass);
     show("pauldrons", equipment.pauldrons);
@@ -323,13 +330,13 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
     show("cuisses", equipment.cuisses);
     show("greaves", equipment.greaves);
     show("sabatons", equipment.sabatons);
-    show("mail", equipment.mail);
-    show("doublet", equipment.doublet && !equipment.mail && !workwear.coverall);
-    show("body", !covered);
-    show("braies", !covered);
-    show("hands", !equipment.gauntlets);
-    show("shoes", !equipment.sabatons && covered && !booted);
-    show("feet", !equipment.sabatons && !covered && !booted);
+    show("mail", flesh && equipment.mail);
+    show("doublet", flesh && equipment.doublet && !equipment.mail && !workwear.coverall);
+    show("body", flesh && !covered);
+    show("braies", flesh && !covered);
+    show("hands", flesh && !equipment.gauntlets);
+    show("shoes", flesh && !equipment.sabatons && covered && !booted);
+    show("feet", flesh && !equipment.sabatons && !covered && !booted);
   };
   syncEquipment();
 

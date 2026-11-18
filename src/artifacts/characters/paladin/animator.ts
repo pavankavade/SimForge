@@ -38,9 +38,10 @@ export type Stance = "stand" | "sit" | "crouch";
  * Arm poses for acting. eat: right hand to the mouth, left holding food at the chest; hold: both
  * hands in front (a note, a can); cheer: both arms up; reach: right hand out in front at chest
  * height; wave: right hand up, waving; shade: right hand at the brow; cross: arms folded;
- * knees: hands resting on the knees (sitting).
+ * knees: hands resting on the knees (sitting); bow: left arm out holding a bow, right hand drawn
+ * back to the cheek; cast: right hand (a staff) thrust forward and up, left palm out.
  */
-export type ArmsPose = "eat" | "hold" | "cheer" | "reach" | "wave" | "shade" | "cross" | "knees";
+export type ArmsPose = "eat" | "hold" | "cheer" | "reach" | "wave" | "shade" | "cross" | "knees" | "bow" | "cast";
 
 type V3 = THREE.Vector3;
 const v = (x: number, y: number, z: number): V3 => new THREE.Vector3(x, y, z);
@@ -319,6 +320,30 @@ const ARMS: Record<ArmsPose, Pose> = {
     hipYaw: 0,
     lean: -0.02,
     drop: 0,
+  }),
+  bow: pose({
+    hr: v(-0.07, -0.13, 0.12),
+    bd: v(0, 1, 0.15),
+    er: v(-1, 0.25, -0.7),
+    hl: v(0.09, -0.15, 0.6),
+    el: v(0.9, -0.4, 0),
+    sn: v(1, 0, 0),
+    chestYaw: 0.35,
+    hipYaw: 0.2,
+    lean: 0.04,
+    drop: 0.01,
+  }),
+  cast: pose({
+    hr: v(-0.16, -0.2, 0.5),
+    bd: v(0, 0.75, 0.66),
+    er: v(-0.8, -0.6, -0.1),
+    hl: v(0.12, -0.24, 0.46),
+    el: v(0.8, -0.6, -0.1),
+    sn: v(0, 0, 1),
+    chestYaw: -0.08,
+    hipYaw: 0,
+    lean: 0.12,
+    drop: 0.03,
   }),
   // The hands are moved onto the knees each frame (see toKnee); this is the arm shape.
   knees: pose({

@@ -710,3 +710,68 @@ game assets. Cloud Blender is not used.
   and this repo holds licensed music and unreleased work. Use `--visibility private` and run
   `pch scan` before anything goes Open (Open cannot be undone).
 - Never run `pch agent guide` here: it writes an `AGENTS.md` over this one.
+
+## 15. Rarity and monsters in the game (`src/dungeon-explorer`)
+
+### One rarity ladder
+
+The game has exactly one ladder, lowest first:
+
+| Rarity | Colour |
+| --- | --- |
+| Common | `#d9dde2` |
+| Uncommon | `#62d36d` |
+| Rare | `#5aa2ff` |
+| Epic | `#bd76ff` |
+| Legendary | `#ff9f2e` |
+| Unique | `#f2d478` |
+| Artifact | `#ff4f4f` |
+
+- It lives in `items.ts` (`RARITIES`, `RARITY`, `rarityRank`, `bumpRarity`). Never add a tier,
+  rename one or invent a parallel scale (sizes, grades, purity, stars).
+- Never hard-code a rarity colour: read `RARITY[r].color` (`rarityColor` for nameplates).
+- **Every item def has a base `rarity`.** New items pick one from the ladder.
+- **Weapons roll their own.** Anything in the `weapon` or `trophy` category (`rollsRarity`) gets a
+  per-instance `ItemInst.rarity` when it drops.
+  - `itemOf(inst)` scales damage and block by `RARITY_POWER` and price by `RARITY_PRICE`.
+  - Use `itemOf` wherever an instance is at hand: tooltips, grids, prices, the fighter's damage.
+  - `def(id)` is only the base.
+  - A new weapon needs no extra code beyond its def; give it a modest base rarity (the kit's
+    sword and shield are common).
+- **Monsters carry a rarity:**
+  - the kind's base (`monsters/kinds.ts`);
+  - elites are one rung higher;
+  - mini-bosses are epic on floor one.
+
+  It colours the nameplate and sets the mana crystal it drops.
+- **Mana crystals** (`crystal_<rarity>`, one def per rung) are the dungeon's mana set hard. Every
+  monster drops one of its own rarity (rarely one rung higher), plus two or three random things from
+  its kind's table (`rollDrops`).
+- **What each floor reaches:**
+  - Floor one stays at Common–Epic, with an occasional Legendary from bosses and deep chests.
+  - Unique and Artifact are for later floors and bosses; each is hand-placed and named.
+
+### Adding a monster
+
+1. Add a `MobKind` in `monsters/kinds.ts`:
+   - numbers;
+   - rarity;
+   - family;
+   - weapon;
+   - gear chances for skeletons;
+   - glow colour.
+2. Add its drop table (`TABLES`): crystal plus 2–3 things. Add new drop items to `items.ts` with an
+   icon (`monsters/icons3d.ts` for 3D, `icons.ts` `drawn` for 2D).
+3. Add it to `FAMILY_MIX` / `FAMILY_BOSS` for the floor it lives on.
+4. Its behaviour is `mobSim.ts`: melee, `ranged`, slime hops and lunges. Its body is
+   `mobBodies.ts`.
+5. Choose how to build its body. Check Patch first
+   (`pch assets search <name> --type model --license CC0-1.0 --where "ai=false"`), and say in your
+   reply what you found and which you chose:
+   - **Code (the default).** Humanoids (skeletons, and later goblins and orcs) go on the fighter's
+     rig: `createPaladin({ fleshless: true })` plus code-built parts, as `monsters/skeletonBody.ts`
+     does. That way they inherit his walk, combo, block and fall. Blobs and other simple forms are
+     built from scratch, like `monsters/slimeBody.ts`.
+   - **A Patch asset**, only when it matches the realistic fighter. KayKit/Kenney characters are
+     chibi toys and do not.
+6. Check it in the game: `npm run explorer`. Look at it close up, in a fight, and dying.

@@ -1,9 +1,11 @@
-// What chests and fallen men hold. A chest rolls coins, a few valuables, now and then a draught, a
-// piece of the paladin's kit or a trophy weapon; deeper rooms and treasuries roll richer. A fallen
-// man leaves some of what he wore (pieces the paladin can wear too), his purse, and sometimes a
-// draught or a trinket.
-import { ARMOR_SLOTS, type ArmorEquipment, type ArmorSlot } from "../artifacts/characters/paladin";
-import { addItem, emptyGrid, newItem, type Grid, type Rarity } from "./items";
+// What chests and fallen monsters hold. A chest rolls coins, a few valuables, now and then a
+// draught, a piece of the fighter's kit or a trophy weapon; deeper rooms and treasuries roll richer,
+// and every weapon in one rolls its own rarity. A fallen monster leaves its mana crystal and two or
+// three things from its kind's table (monsters/kinds.ts).
+import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
+import { addItem, emptyGrid, newItem, rollsRarity, type Grid, type Rarity } from "./items";
+import type { MobAgent } from "./mobSim";
+import { rollDrops, rollWeaponRarity } from "./monsters/kinds";
 
 export const CHEST_W = 8;
 export const CHEST_H = 5;
@@ -46,7 +48,12 @@ function weighted<T>(rand: () => number, list: Array<[T, number]>, bias = 0): T 
   return list[list.length - 1][0];
 }
 
-const put = (g: Grid, id: string, qty?: number): Grid => addItem(g, newItem(id, qty)) ?? g;
+const put = (g: Grid, id: string, qty?: number, rarity?: Rarity): Grid => addItem(g, newItem(id, qty, rarity)) ?? g;
+
+/** A chest's weapon: its rarity from the chest's tier (deep treasuries can hold an epic or better). */
+const CHEST_RARITY: Rarity[] = ["common", "uncommon", "rare", "epic"];
+const putWeapon = (g: Grid, rand: () => number, id: string, tier: number): Grid =>
+  put(g, id, undefined, rollsRarity(id) ? rollWeaponRarity(rand, CHEST_RARITY[Math.max(0, Math.min(3, tier))]) : undefined);
 
 /** A chest's contents; `tier` 0 (near the entrance) .. 3 (deep or a treasury). */
 export function rollChest(rand: () => number, tier: number): Grid {
@@ -58,27 +65,14 @@ export function rollChest(rand: () => number, tier: number): Grid {
   if (rand() < 0.3) g = put(g, "apple");
   if (rand() < 0.3) g = put(g, "bandage");
   if (rand() < 0.16 + tier * 0.1) g = put(g, WEARABLE[Math.floor(rand() * WEARABLE.length)]);
-  if (rand() < 0.1 + tier * 0.07) g = put(g, TROPHIES[Math.floor(rand() * TROPHIES.length)]);
+  if (rand() < 0.1 + tier * 0.07) g = putWeapon(g, rand, TROPHIES[Math.floor(rand() * TROPHIES.length)], tier);
+  if (rand() < 0.04 + tier * 0.04) g = putWeapon(g, rand, rand() < 0.6 ? "sword" : "shield", tier);
   return g;
 }
 
-const PURSE: Record<Rarity, number> = { common: 10, uncommon: 22, rare: 45, epic: 110 };
-
-/** What a fallen man leaves: some of what he wore, his purse, maybe a draught or a trinket. */
-export function rollCorpse(rand: () => number, rarity: Rarity, worn: ArmorEquipment): Grid {
+/** What a fallen monster leaves: its crystal, then its drops (weapons at their own rarity). */
+export function rollMobLoot(rand: () => number, m: MobAgent): Grid {
   let g = emptyGrid(CORPSE_W, CORPSE_H);
-  g = put(g, "coins", Math.max(1, Math.round(PURSE[rarity] * (0.6 + rand() * 0.8))));
-  const keep = rarity === "epic" ? 0.55 : rarity === "rare" ? 0.42 : 0.3;
-  let pieces = 0;
-  for (const s of ARMOR_SLOTS) {
-    if (!worn[s] || pieces >= 3) continue;
-    if (rand() < keep) {
-      g = put(g, s);
-      pieces++;
-    }
-  }
-  if (rand() < 0.25) g = put(g, "potion");
-  if (rand() < 0.3) g = put(g, "bandage");
-  if (rand() < 0.2) g = put(g, weighted(rand, VALUABLES, rarity === "epic" ? 3 : 0));
+  for (const d of rollDrops(rand, m.kind, m.rarity)) g = put(g, d.id, d.qty, d.rarity);
   return g;
 }
