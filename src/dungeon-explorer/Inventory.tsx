@@ -63,10 +63,13 @@ export interface InventoryScreenProps {
   touch: boolean;
   /** Where the paladin stands on screen (the 3D view frames him there). */
   onModelRect: (r: FrameRect) => void;
+  /** Drag across his picture to turn him, scroll on it to zoom (desktop). */
+  onTurn: (dx: number) => void;
+  onZoom: (dy: number) => void;
   onClose: () => void;
 }
 
-export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClass, stats: sheet, base, inv, onInv, onUse, icons, viewport, compact, touch, onModelRect, onClose }) => {
+export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClass, stats: sheet, base, inv, onInv, onUse, icons, viewport, compact, touch, onModelRect, onTurn, onZoom, onClose }) => {
   const [toast, setToast] = useState<string | null>(null);
   const modelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -139,16 +142,20 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
   const dnd = useItemDrag(drop, quick);
   const drag = dnd.drag;
 
-  // Sizes: eight slots tall in each column; the bag takes about two fifths of the width.
+  // Sizes. On a desktop the inventory is a panel docked on the right over the live game (which
+  // keeps playing to its left): the slot columns round his picture, then the bag; the full stat
+  // sheet joins on the left when the window is wide enough. Phones keep the sheet along the bottom.
   const { w: vw, h: vh } = viewport;
-  const wide = !compact && vw >= 1100;
-  const topBar = compact ? 44 : 54;
+  const wide = !compact && vw >= 1700;
+  const topBar = compact ? 44 : 46;
   const slot = compact
     ? Math.max(30, Math.min(58, Math.floor((vw - 24 - 8 * 5) / 9)))
-    : Math.max(28, Math.min(70, Math.floor((vh - topBar - 36) / ROWS) - 7));
+    : Math.max(28, Math.min(60, Math.floor((vh - topBar - 40) / ROWS) - 7));
+  const portraitW = Math.max(150, Math.min(250, Math.round(slot * 3.4)));
+  const bagBudget = vw * 0.72 - (2 * slot + portraitW + (wide ? 250 : 0) + 90);
   const cell = compact
     ? Math.max(20, Math.min(42, Math.floor((vw - 28) / BAG_W)))
-    : Math.max(18, Math.min(50, Math.floor(Math.min((vw * (wide ? 0.36 : 0.44) - 30) / BAG_W, (vh - topBar - (wide ? 90 : 170)) / BAG_H))));
+    : Math.max(18, Math.min(44, Math.floor(Math.min(bagBudget / BAG_W, (vh - topBar - (wide ? 110 : 190)) / BAG_H))));
 
   // Tell the 3D view where he stands.
   useLayoutEffect(() => {
@@ -310,11 +317,14 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
     </div>
   );
 
+  // On a desktop the header sits over the docked panel only (the game shows to its left).
+  const panelW = (wide ? 258 : 0) + 2 * (slot + 16) + portraitW + BAG_W * cell + 28 + 50;
   const header = (
     <div
       style={{
         height: topBar,
         flex: `0 0 ${topBar}px`,
+        ...(compact ? {} : { width: Math.min(vw, panelW), alignSelf: "flex-end", boxSizing: "border-box" as const }),
         display: "flex",
         alignItems: "center",
         gap: 12,
@@ -338,22 +348,42 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
   // The paladin's space: the 3D view frames him here. It lets the pointer through to the canvas
   // (drag to spin him) except while a bag piece is dragged, when it takes the drop.
   const takingDrop = drag !== null && drag.from.kind === "grid";
+  // Desktop: his own picture (the game draws it into this box). Phones: an open space over the live
+  // game, where he stands in the world.
+  const turnRef = useRef<{ id: number; x: number } | null>(null);
   const modelSpace = (
     <div
       ref={modelRef}
       data-drop="body"
+      onPointerDown={(e) => {
+        if (compact || e.button !== 0) return;
+        turnRef.current = { id: e.pointerId, x: e.clientX };
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        const t = turnRef.current;
+        if (!t || t.id !== e.pointerId || drag) return;
+        onTurn(e.clientX - t.x);
+        t.x = e.clientX;
+      }}
+      onPointerUp={() => {
+        turnRef.current = null;
+      }}
+      onWheel={(e) => {
+        if (!compact) onZoom(e.deltaY);
+      }}
       style={{
         position: "relative",
-        flex: 1,
-        minWidth: 0,
-        minHeight: 0,
-        pointerEvents: takingDrop ? "auto" : "none",
+        ...(compact
+          ? { flex: 1, minWidth: 0, minHeight: 0, pointerEvents: takingDrop ? "auto" : "none" }
+          : { width: portraitW, flex: `0 0 ${portraitW}px`, alignSelf: "stretch", pointerEvents: "auto", cursor: "grab", border: PANEL_BORDER, boxShadow: "inset 0 0 30px rgba(0,0,0,0.85)" }),
         outline: takingDrop ? "2px dashed rgba(255,216,77,0.45)" : "none",
         outlineOffset: -8,
+        touchAction: "none",
       }}
     >
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 10, textAlign: "center", fontSize: 11, color: takingDrop ? GOLD : "rgba(220,210,190,0.45)" }}>
-        {takingDrop && drag ? `Drop on him to put on the ${def(drag.item.id).name.toLowerCase()}` : touch ? "Drag to turn him" : "Drag to turn him · Scroll to zoom"}
+        {takingDrop && drag ? `Drop on him to put on the ${def(drag.item.id).name.toLowerCase()}` : compact ? "" : "Drag to turn him · Scroll to zoom"}
       </div>
     </div>
   );
@@ -407,7 +437,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
           </div>
         );
       })}
-      <div style={{ fontSize: 11, color: "#6e675b" }}>{touch ? "Tap the slots on the bar to use" : "Keys 3 and 4 use them"}</div>
+      <div style={{ fontSize: 11, color: "#6e675b" }}>{touch ? "Tap the slots on the bar to use" : "Keys 3 and 4 use them · WASD still walks"}</div>
     </div>
   );
 
@@ -455,7 +485,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
           </div>
         </>
       ) : (
-        <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 14, padding: "14px 18px 16px" }}>
+        <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 8, padding: "10px 14px 14px", justifyContent: "flex-end", alignItems: "flex-start" }}>
           {wide ? (
             <div style={{ width: 230, flex: "0 0 230px", alignSelf: "flex-start", background: PANEL_BG, border: PANEL_BORDER, padding: "14px 16px", pointerEvents: "auto" }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: GOLD }}>{name || heroClass}</div>
@@ -468,9 +498,11 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
               {StatsRows.slice(3)}
             </div>
           ) : null}
-          {column(LEFT)}
-          {modelSpace}
-          {column(RIGHT)}
+          <div style={{ display: "flex", gap: 0, alignSelf: "flex-start", height: ROWS * (slot + 7) + 30 }}>
+            <div style={{ background: PANEL_BG, border: PANEL_BORDER, borderRight: "none", padding: "8px 8px", display: "flex" }}>{column(LEFT)}</div>
+            {modelSpace}
+            <div style={{ background: PANEL_BG, border: PANEL_BORDER, borderLeft: "none", padding: "8px 8px", display: "flex" }}>{column(RIGHT)}</div>
+          </div>
           <div style={{ flex: "0 0 auto", alignSelf: "flex-start", background: PANEL_BG, border: PANEL_BORDER, padding: "12px 14px", pointerEvents: "auto" }}>
             {!wide ? Attrs : null}
             {!wide ? StatsStrip : null}

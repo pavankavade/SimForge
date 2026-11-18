@@ -29,6 +29,7 @@ import { loadModel } from "./props3d";
 import { ShopScreen } from "./ShopScreen";
 import { createMobSimulation, type MobAgent, type MobEvent } from "./mobSim";
 import { computeStats, type Stats } from "./stats";
+import { createPortrait, type Portrait, type ScreenRect } from "./portrait";
 import { createMonsterSfx, type MonsterSfx } from "./monsters/monsterSfx";
 import { BOW_TIP, arrowGeometry, bowGeometry } from "./monsters/props";
 import { POOL_SIZE, createMobBodies, type MobBodies } from "./mobBodies";
@@ -275,6 +276,13 @@ interface DungeonSceneProps {
   customizing: boolean;
   /** The game has the controls (no menu or screen open). */
   playing: boolean;
+  /** The inventory is open over the game: he can still walk, run, jump and look, but not fight. */
+  freeMove: boolean;
+  /** Where the inventory's picture of him goes (null when it is not shown), what he wears in it,
+   * and how it is turned and zoomed (dragged in the inventory). */
+  portraitRect: ScreenRect | null;
+  kit: ArmorEquipment;
+  portraitViewRef: React.RefObject<{ spin: number; zoom: number }>;
   showcaseRef: React.RefObject<Showcase>;
   /** Where on screen the showcase frames him. */
   frame: FrameRect;
@@ -406,6 +414,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   crosshairRef,
   customizing,
   playing,
+  freeMove,
+  portraitRect,
+  kit,
+  portraitViewRef,
   showcaseRef,
   frame,
   onCharacterBusy,
@@ -523,6 +535,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   customizingRef.current = customizing;
   const playingRef = useRef(playing);
   playingRef.current = playing;
+  const freeMoveRef = useRef(freeMove);
+  freeMoveRef.current = freeMove;
+  const portraitRectRef = useRef(portraitRect);
+  portraitRectRef.current = portraitRect;
+  const kitRef = useRef(kit);
+  kitRef.current = kit;
   const iconsDoneRef = useRef(false);
   const equipmentRef = useRef(equipment);
   equipmentRef.current = equipment;
@@ -618,6 +636,27 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     }, first ? 0 : 220);
     return () => window.clearTimeout(timer);
   }, [gl, scene, specKey, onCharacterBusy]);
+
+  // The inventory's picture of him: a second copy on a little stage of its own (portrait.ts), built
+  // the first time the inventory is opened and rebuilt when his look changes.
+  const portraitRef = useRef<Portrait | null>(null);
+  const portraitWanted = portraitRect !== null;
+  const portraitSpecRef = useRef("");
+  useEffect(() => {
+    if (!portraitWanted && !portraitRef.current) return;
+    if (!portraitRef.current) portraitRef.current = createPortrait(gl);
+    if (portraitSpecRef.current !== specKey) {
+      portraitSpecRef.current = specKey;
+      portraitRef.current.setSpec(specRef.current);
+    }
+  }, [gl, portraitWanted, specKey]);
+  useEffect(
+    () => () => {
+      portraitRef.current?.dispose();
+      portraitRef.current = null;
+    },
+    [gl]
+  );
 
   // The monsters' bodies: pools built once (see mobBodies.ts), lent to the nearest on every floor.
   // A blow reaches the fighter: a skeleton's sword, a slime's lunge, an arrow, a bolt, or acid.
@@ -757,8 +796,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const dom = gl.domElement;
     const onKeyDown = (e: KeyboardEvent) => {
       if (!e.repeat) keysRef.current.add(e.code);
-      if (!playingRef.current) return;
+      if (!playingRef.current && !freeMoveRef.current) return;
       if (e.code === "Space" && !e.repeat) jumpQueueRef.current = true;
+      if (!playingRef.current) return;
       if (e.code === "KeyF" && !e.repeat) {
         attackQueueRef.current = true;
         attackHeldRef.current = true;
@@ -846,7 +886,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         sc.lift = Math.max(-0.9, Math.min(0.9, sc.lift + dy * 0.0028 * (sc.zoom / 1.4)));
         return;
       }
-      if (!playingRef.current) return;
+      if (!playingRef.current && !freeMoveRef.current) return;
       // Hold C in third person to orbit the camera around the paladin without turning him.
       if (!firstPerson && keysRef.current.has("KeyC")) freeLookRef.current -= dx * sens;
       else world.walker.yaw -= dx * sens;
@@ -1295,7 +1335,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         onHudUpdate({ hp: 0, dead: true, deathCause: "The dungeon closed on you", runLeft: 0 });
       }
     }
-    const active = playingRef.current && !world.dead && !world.escaped;
+    // With the inventory open he still walks and looks about (it is drawn over the live game).
+    const active = (playingRef.current || freeMoveRef.current) && !world.dead && !world.escaped;
+    const fighting = active && playingRef.current;
     if (!active) keys.clear();
     const kbForward =
       (keys.has("KeyW") || keys.has("ArrowUp") ? 1 : 0) - (keys.has("KeyS") || keys.has("ArrowDown") ? 1 : 0);
@@ -1447,7 +1489,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           turnRate: !show.active && dt > 0 ? (walker.yaw - prevYawRef.current) / dt : 0,
           air: world.playerJumpY,
           block: blocking,
-          attack: active && attackQueueRef.current && !bowRef.current.inHand,
+          attack: fighting && attackQueueRef.current && !bowRef.current.inHand,
           firstPerson: fp,
           // Nothing drawn: off-duty arms in third person (first person keeps the bare fists up in view).
           // The bow hangs in the left hand until it is drawn.
@@ -1466,7 +1508,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     // flies faster and hits harder; the arrow goes where the middle of the screen points.
     {
       const bow = bowRef.current;
-      const ready = bow.inHand && world.place === "dungeon" && active && !world.dead && !show.active && paladin !== null;
+      const ready = bow.inHand && world.place === "dungeon" && fighting && !world.dead && !show.active && paladin !== null;
       if (ready && attackHeldRef.current && bow.arrows > 0) drawRef.current = Math.min(1.5, drawRef.current + dt * (1 + statsRef.current.actionSpeed));
       else if (drawRef.current > 0) {
         if (ready && !attackHeldRef.current && drawRef.current >= 0.16 && bow.arrows > 0 && paladin) {
@@ -1799,6 +1841,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     if (fl) view.updateLights(dt, walker.x, walker.z, fl.lamps, fl.dungeon);
     // The carried lantern rides half a metre above the helm so it lights the steel without burning it out.
     view.renderFrame(world.time, dt, lightX, lightY, lightZ, size.width, size.height);
+    // The inventory's picture of him, drawn into its box over the frame.
+    const pr = portraitRectRef.current;
+    if (pr && portraitRef.current) {
+      const pv = portraitViewRef.current;
+      portraitRef.current.render(pr, kitRef.current, dt, pv.spin, pv.zoom);
+    }
     // Inventory icons: rendered off screen after the frame, once (they need the paladin built).
     if (iconsWanted && !iconsDoneRef.current && paladin) {
       iconsDoneRef.current = true;
@@ -2149,7 +2197,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   screenRef.current = screen;
   stashOpenRef.current = screen === "loot" && stashAt ? stashAt : null;
   const customizing = screen === "character";
-  const showcasing = screen === "inventory" || screen === "class" || customizing;
+  // The inventory no longer takes the view: it is an overlay with its own picture of him.
+  const showcasing = screen === "class" || customizing;
+  const portraitViewRef = useRef({ spin: 0, zoom: 1 });
   // A greeting by name once the tavern is up.
   const welcomedRef = useRef(false);
   useEffect(() => {
@@ -2319,7 +2369,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       // Tab opens and closes the inventory (and never moves keyboard focus).
       if (e.code === "Tab") {
         e.preventDefault();
-        if (!e.repeat) openScreen(screenRef.current === "inventory" ? "play" : "inventory");
+        if (!e.repeat) {
+          if (screenRef.current === "inventory") resume();
+          else openScreen("inventory");
+        }
         return;
       }
       if (e.repeat) return;
@@ -2490,6 +2543,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           crosshairRef={crosshairRef}
           customizing={showcasing}
           playing={screen === "play"}
+          freeMove={screen === "inventory"}
+          portraitRect={screen === "inventory" && !(isPortrait || viewport.w < 760) ? inventoryFrame : null}
+          kit={equipment}
+          portraitViewRef={portraitViewRef}
           showcaseRef={showcaseRef}
           frame={customizing || screen === "class" ? panelFrame : inventoryFrame}
           onCharacterBusy={handleCharacterBusy}
@@ -2573,7 +2630,14 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           compact={isPortrait || viewport.w < 760}
           touch={isTouchUI}
           onModelRect={setInventoryFrame}
-          onClose={() => openScreen("play")}
+          onTurn={(dx) => {
+            portraitViewRef.current.spin += dx * 0.012;
+          }}
+          onZoom={(dy) => {
+            const v = portraitViewRef.current;
+            v.zoom = Math.max(0.35, Math.min(1.1, v.zoom * Math.exp(dy * 0.0012)));
+          }}
+          onClose={resume}
         />
       ) : null}
 
