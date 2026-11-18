@@ -32,6 +32,8 @@
     "typescript": "5.9.3"
   },
   "scripts": {
+    "vardhan": "node scripts/vardhan-game.mjs",
+    "game:vardhan": "node scripts/vardhan-game.mjs",
     "dev": "remotion studio",
     "explorer": "node scripts/dungeon-explorer.mjs",
     "web:dev": "npm --prefix web run dev",
@@ -60,6 +62,13 @@
     "render:slow-flight-short": "node scripts/render.mjs SlowFlightShort slow-flight-short --concurrency 6",
     "render:teleport": "node scripts/render.mjs Teleport teleport --concurrency 6",
     "render:reflexes": "node scripts/render.mjs Reflexes reflexes --concurrency 6",
+    "render:heal": "node scripts/render.mjs Heal heal --concurrency 6",
+    "render:mine-rescue": "node scripts/render.mjs MineRescue mine-rescue --concurrency 3 -- --timeout=300000",
+    "still:mine-rescue": "node scripts/solo.mjs still MineRescue out/whatif/mine-rescue/wip/still.png",
+    "render:mimic": "node scripts/render.mjs MimicBio mimic --concurrency 4",
+    "render:slime": "node scripts/render.mjs SlimeBio slime --concurrency 4",
+    "render:dragon": "node scripts/render.mjs DragonBio dragon --concurrency 4",
+    "still:dragon": "node scripts/solo.mjs still DragonBio out/bio/dragon/wip/dragon-still.png --frame=400",
     "render:slow-flight": "node scripts/render.mjs SlowFlight slow-flight --concurrency 6",
     "render:nuclear-bunker": "node scripts/render.mjs NuclearBunker nuclear-bunker --concurrency 6",
     "thumb:dart-trap": "node scripts/render-dart-thumbnails.mjs",

@@ -23,6 +23,7 @@
  *   --out <dir>          output dir (default out/review/<CompositionId>)
  *   --reuse              reuse the previous bundle (skip re-bundling)
  *   --concurrency 4      parallel stills (default 4)
+ *   --timeout 30000      ms a still may take to load (heavy scenes, e.g. many rigged humans)
  *   --full               bundle the whole studio (src/index.ts) instead of the
  *                        episode on its own (scripts/solo.mjs; the default for
  *                        episodes, so a half-built episode elsewhere cannot break it)
@@ -43,7 +44,7 @@ import { labelStill, pairStills, printAudit, tileSheets } from "./sheet.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const args = process.argv.slice(2);
-const valueArgs = new Set(["--scale", "--cols", "--out", "--every", "--concurrency", "--entry", "--compare"]);
+const valueArgs = new Set(["--scale", "--cols", "--out", "--every", "--concurrency", "--entry", "--compare", "--timeout"]);
 const id = args.find((a, i) => !a.startsWith("-") && !valueArgs.has(args[i - 1]) && !/^[\d:]+$/.test(a));
 if (!id) {
   console.error("usage: node scripts/review.mjs <CompositionId> [frames...] [--beats|--every N|--pages] [--audit] [--compare dir] [--scale s] [--cols n] [--reuse]");
@@ -58,6 +59,7 @@ const compareDir = opt("--compare") ? path.resolve(root, opt("--compare")) : nul
 const scale = Number(opt("--scale", "0.4"));
 const cols = Number(opt("--cols", compareDir ? "3" : "5"));
 const concurrency = Number(opt("--concurrency", "4"));
+const timeoutInMilliseconds = Number(opt("--timeout", "30000"));
 const outDir = path.resolve(root, opt("--out", path.join("out", "review", id)));
 // One bundle dir per composition, so reviews of different episodes can run at the same time.
 const bundleDir = path.join(root, "out", "review", `.bundle-${id}`);
@@ -150,7 +152,7 @@ const worker = async () => {
     const i = next++;
     const { frame } = shots[i];
     const output = still(outDir, frame);
-    await renderStill({ serveUrl, composition, frame, output, scale, puppeteerInstance: browser, chromiumOptions, overwrite: true });
+    await renderStill({ serveUrl, composition, frame, output, scale, puppeteerInstance: browser, chromiumOptions, overwrite: true, timeoutInMilliseconds });
     files[i] = output;
     process.stdout.write(".");
   }

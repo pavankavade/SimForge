@@ -1,8 +1,8 @@
 import type React from "react";
 import type { Vec3 } from "../../../engine/types";
-import { Face, type Expression } from "./Face";
+import { Face, type Expression, type FaceKit } from "./Face";
 import { Cane, Dagger, Greataxe, HeaterShield, SpikedClub, Staff, Sword, Warhammer } from "./gear";
-import { G, INK, vinyl } from "./ink";
+import { G, INK, INK_THIN, vinyl } from "./ink";
 import { KITS, Lute, type AdventurerClass, type KitCtx, type Weapon } from "./kits";
 import { InkColor, Part } from "./Part";
 import { solvePose, type AdventurerPose, type RigPose } from "./poses";
@@ -57,6 +57,10 @@ const POSE_EXPRESSION: Record<AdventurerPose, Expression> = {
   ride: "happy",
   surf: "happy",
   play: "neutral",
+  sit: "neutral",
+  crawl: "focus",
+  prone: "focus",
+  hoist: "focus",
 };
 
 /** Cape / hood-tail sway (radians) for a pose at an animation frame. */
@@ -90,6 +94,8 @@ export interface AdventurerUnitProps {
   headColor?: string;
   /** Outline colour override. */
   inkColor?: string;
+  /** Face layout overrides (bigger eyes and mouth for thumbnail close-ups). */
+  faceKit?: Partial<FaceKit>;
   /** Pre-solved joints (ActorView's pose blending); defaults to `pose` solved at `animFrame`. */
   rig?: RigPose;
   /** Cape / hood sway override (radians), blended alongside `rig`. */
@@ -139,12 +145,13 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
   expression,
   headColor,
   inkColor,
+  faceKit,
   rig: rigOverride,
   sway: swayOverride,
 }) => {
   const base = KITS[classType];
   const lightHead = headColor !== undefined && base.face.decal === true && luma(headColor) > 0.45;
-  const kit = headColor
+  const tinted = headColor
     ? {
         ...base,
         face: {
@@ -158,6 +165,7 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
         },
       }
     : base;
+  const kit = faceKit ? { ...tinted, face: { ...tinted.face, ...faceKit } } : tinted;
   const rig = rigOverride ?? solvePose(pose, animFrame);
   const gear: Weapon = weapon ?? kit.defaultWeapon;
   const sway = swayOverride ?? poseSway(pose, animFrame);
@@ -237,6 +245,10 @@ export const AdventurerUnit: React.FC<AdventurerUnitProps> = ({
                   ) : null}
                   {shieldOnArm && side === -1 && !shieldUp ? (
                     <HeaterShield position={[-0.11, -0.1, 0.05]} rotation={[0, 0.75, 0.08]} scale={0.9} />
+                  ) : null}
+                  {/* "cast": a plaster cast on the left forearm (the what-if Heal episode's broken arm). */}
+                  {gear === "cast" && side === -1 ? (
+                    <Part geo={G.capsule(0.1 * w, 0.3)} mat={vinyl("#f4f1ea", "cloth")} position={[0, -0.13, 0]} ink={INK_THIN} />
                   ) : null}
                   <group position={[0, -RIG.forearm, 0]}>
                     <Part geo={G.sphere(0.078)} mat={L.hand} scale={[0.95, 1, 0.9]} />

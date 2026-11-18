@@ -1,0 +1,102 @@
+{
+  "bubble": {
+    "batch_seed": 1667704332,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "burst": {
+    "batch_seed": 1968916262,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "cave": {
+    "batch_seed": 3970123297,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "cheer": {
+    "batch_seed": 4153064180,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "clank": {
+    "batch_seed": 3314758738,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "collapse": {
+    "batch_seed": 3458172611,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "crack": {
+    "batch_seed": 2553579661,
+    "model": "small-sfx",
+    "take": 4
+  },
+  "ding": {
+    "batch_seed": 2176800071,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "drill": {
+    "batch_seed": 332522305,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "grind": {
+    "batch_seed": 2286246042,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "hatch": {
+    "batch_seed": 3217681443,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "pop": {
+    "batch_seed": 14002520,
+    "model": "small-sfx",
+    "take": 4
+  },
+  "rustle": {
+    "batch_seed": 1157520287,
+    "model": "small-sfx",
+    "take": 4
+  },
+  "snap": {
+    "batch_seed": 2348022630,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "sparkle": {
+    "batch_seed": 59979533,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "stamp": {
+    "batch_seed": 3756046772,
+    "model": "small-sfx",
+    "take": 4
+  },
+  "thud": {
+    "batch_seed": 2748741877,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "tube": {
+    "batch_seed": 2087214610,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "whoosh": {
+    "batch_seed": 897830104,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "winch": {
+    "batch_seed": 2505302986,
+    "model": "small-sfx",
+    "take": 1
+  }
+}

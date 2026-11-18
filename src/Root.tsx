@@ -30,6 +30,12 @@ import { PaladinShowcase, SHOWCASE_DURATION } from "./lab/PaladinShowcase";
 import { slowFlightEpisode } from "./whatif/slow-flight";
 import { teleportEpisode } from "./whatif/teleport";
 import { reflexesEpisode } from "./whatif/reflexes";
+import { healEpisode } from "./whatif/heal";
+import { mineRescueEpisode, mineRescueLab, mineWorldLab } from "./whatif/mine-rescue";
+import { mimicBioEpisode } from "./bio/mimic";
+import { slimeBioEpisode } from "./bio/slime";
+import { dragonBioEpisode } from "./bio/dragon";
+import { MimicBioShortThumbnail, MimicBioThumbnail } from "./bio/mimic/Thumbnail";
 import { SlowFlightThumbnail } from "./whatif/slow-flight/Thumbnail";
 import { TeleportThumbnail } from "./whatif/teleport/Thumbnail";
 import { ReflexesThumbnail } from "./whatif/reflexes/Thumbnail";
@@ -183,9 +189,74 @@ export const RemotionRoot: React.FC = () => {
         height={reflexesEpisode.config.height}
         defaultProps={{ beats: reflexesEpisode.beats, audit: reflexesEpisode.audit }}
       />
+      <Composition
+        id={healEpisode.config.id}
+        component={healEpisode.Video}
+        durationInFrames={healEpisode.config.durationInFrames}
+        fps={healEpisode.config.fps}
+        width={healEpisode.config.width}
+        height={healEpisode.config.height}
+        defaultProps={{ beats: healEpisode.beats, audit: healEpisode.audit }}
+      />
+      <Composition
+        id={mineRescueEpisode.config.id}
+        component={mineRescueEpisode.Video}
+        durationInFrames={mineRescueEpisode.config.durationInFrames}
+        fps={mineRescueEpisode.config.fps}
+        width={mineRescueEpisode.config.width}
+        height={mineRescueEpisode.config.height}
+        defaultProps={{ beats: mineRescueEpisode.beats, audit: mineRescueEpisode.audit }}
+      />
+      <Composition
+        id={mineRescueLab.config.id}
+        component={mineRescueLab.Video}
+        durationInFrames={mineRescueLab.config.durationInFrames}
+        fps={mineRescueLab.config.fps}
+        width={mineRescueLab.config.width}
+        height={mineRescueLab.config.height}
+        defaultProps={{ beats: mineRescueLab.beats, audit: mineRescueLab.audit }}
+      />
+      <Composition
+        id={mineWorldLab.config.id}
+        component={mineWorldLab.Video}
+        durationInFrames={mineWorldLab.config.durationInFrames}
+        fps={mineWorldLab.config.fps}
+        width={mineWorldLab.config.width}
+        height={mineWorldLab.config.height}
+        defaultProps={{ beats: mineWorldLab.beats, audit: mineWorldLab.audit }}
+      />
+      <Composition
+        id={mimicBioEpisode.config.id}
+        component={mimicBioEpisode.Video}
+        durationInFrames={mimicBioEpisode.config.durationInFrames}
+        fps={mimicBioEpisode.config.fps}
+        width={mimicBioEpisode.config.width}
+        height={mimicBioEpisode.config.height}
+        defaultProps={{ beats: mimicBioEpisode.beats, audit: mimicBioEpisode.audit }}
+      />
+      <Composition
+        id={slimeBioEpisode.config.id}
+        component={slimeBioEpisode.Video}
+        durationInFrames={slimeBioEpisode.config.durationInFrames}
+        fps={slimeBioEpisode.config.fps}
+        width={slimeBioEpisode.config.width}
+        height={slimeBioEpisode.config.height}
+        defaultProps={{ beats: slimeBioEpisode.beats, audit: slimeBioEpisode.audit }}
+      />
+      <Composition
+        id={dragonBioEpisode.config.id}
+        component={dragonBioEpisode.Video}
+        durationInFrames={dragonBioEpisode.config.durationInFrames}
+        fps={dragonBioEpisode.config.fps}
+        width={dragonBioEpisode.config.width}
+        height={dragonBioEpisode.config.height}
+        defaultProps={{ beats: dragonBioEpisode.beats, audit: dragonBioEpisode.audit }}
+      />
       <Composition id="SlowFlightThumbnail" component={SlowFlightThumbnail} durationInFrames={2} fps={30} width={1280} height={720} defaultProps={{ variant: 0 }} />
       <Composition id="TeleportThumbnail" component={TeleportThumbnail} durationInFrames={2} fps={30} width={1280} height={720} defaultProps={{ variant: 0 }} />
       <Composition id="ReflexesThumbnail" component={ReflexesThumbnail} durationInFrames={2} fps={30} width={1280} height={720} defaultProps={{ variant: 0 }} />
+      <Composition id="MimicBioThumbnail" component={MimicBioThumbnail} durationInFrames={2} fps={30} width={1280} height={720} defaultProps={{ variant: 0 }} />
+      <Composition id="MimicBioShortThumbnail" component={MimicBioShortThumbnail} durationInFrames={2} fps={30} width={1080} height={1920} />
       <Composition id="SlowFlightShort" component={SlowFlightShort} durationInFrames={SHORT_DURATION} fps={30} width={1080} height={1920} />
       <Composition id="ChannelAvatar" component={ChannelAvatar} durationInFrames={2} fps={30} width={1024} height={1024} />
       <Composition id="ChannelBanner" component={ChannelBanner} durationInFrames={2} fps={30} width={2560} height={1440} defaultProps={{ guides: false }} />

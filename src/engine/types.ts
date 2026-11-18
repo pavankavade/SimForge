@@ -184,6 +184,8 @@ export interface PostFXConfig {
   grain?: number;
   /** "aces" (default series look), "neutral" (truer toy colours in daylight), "agx". */
   toneMapping?: "aces" | "neutral" | "agx";
+  /** Depth of field focused on the camera's look target; `range` is the sharp band as a fraction of the focus distance. Off unless set. */
+  dof?: { bokehScale?: number; range?: number };
 }
 
 export interface OverlayConfig {

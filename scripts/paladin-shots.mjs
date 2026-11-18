@@ -1,6 +1,6 @@
 // Contact sheets of the playable paladin from the Paladin Lab, for before/after checks.
 //
-//   node scripts/paladin-shots.mjs <tag> [--url http://127.0.0.1:5395] [--char aldric] [--only a,b] [--query head=classic]
+//   node scripts/paladin-shots.mjs <tag> [--url http://127.0.0.1:5395] [--char aldric] [--only a,b] [--query head=classic] [--size 1280x720]
 //
 // Needs the explorer server running (`npm run explorer`). Writes
 // out/misc/paladin/wip/<tag>/sheet-<n>.png: labelled tiles of every view in SHOTS.
@@ -18,6 +18,8 @@ const BASE = opt("url", "http://127.0.0.1:5395");
 const CHAR = opt("char", "");
 const ONLY = opt("only", "");
 const QUERY = opt("query", "");
+// Page size; tiles are half of it. 1280x720 frames first person the way the game does (16:9).
+const [W, H] = opt("size", "600x750").split("x").map(Number);
 const OUT = path.join(process.cwd(), "out", "misc", "paladin", "wip", tag);
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -44,9 +46,13 @@ const SHOTS = [
   ["jump", `L.setAllArmor(true); L.equip("helm", false); jump(); L.view("three");`],
   ["fp guard", `L.setAllArmor(true); L.state.firstPerson = true; L.step(30);`],
   ["fp swing", `L.setAllArmor(true); L.state.firstPerson = true; L.step(20); swing(0);`],
+  ["fp block", `L.setAllArmor(true); L.state.firstPerson = true; L.state.block = true; L.step(40);`],
   ["sword hand", `bare(); L.equip("sword", true); L.step(20); handCam("handR", [-0.32, 0.12, 0.22]);`],
   ["shield hand", `bare(); L.equip("shield", true); L.equip("sword", true); L.step(20); handCam("handL", [0.05, 0.1, -0.35]);`],
   ["bare hands", `bare(); L.step(20); handCam("handR", [-0.2, 0.05, 0.3]);`],
+  ["sword flat", `bare(); L.equip("sword", true); L.step(20); swordCam(0.42, 1.25, [1, 0, 0]);`],
+  ["hilt flat", `bare(); L.equip("sword", true); L.step(20); swordCam(0.0, 0.42, [1, 0, 0]);`],
+  ["hilt edge", `bare(); L.equip("sword", true); L.step(20); swordCam(0.0, 0.42, [0, 1, 0]);`],
 ];
 
 const HELPERS = `
@@ -78,14 +84,22 @@ const HELPERS = `
     p.y -= 0.06;
     closeAt([p.x + off[0], p.y + off[1], p.z + off[2]], [p.x, p.y, p.z]);
   };
+  // Look at the sword itself: \`along\` metres up the blade from the grip, from \`dist\` away along a
+  // sword-space axis (x = a flat, y = an edge).
+  const swordCam = (along, dist, axis) => {
+    const V = L.paladin.group.position.constructor;
+    const sw = L.paladin.sword;
+    sw.updateMatrixWorld(true);
+    const c = new V(0, 0, along).applyMatrix4(sw.matrixWorld);
+    const d = new V(axis[0], axis[1], axis[2]).transformDirection(sw.matrixWorld);
+    closeAt([c.x + d.x * dist, c.y + d.y * dist, c.z + d.z * dist], [c.x, c.y, c.z]);
+  };
 `;
 
 const browser = await openBrowser("chrome");
 try {
   const page = await browser.newPage({ context: null, indent: false, logLevel: "info" });
   page.sourceMapGetter = () => null;
-  const W = 600;
-  const H = 750;
   await page.setViewport({ width: W, height: H, deviceScaleFactor: 1 });
   const q = new URLSearchParams({ lab: "paladin", paused: "1" });
   if (CHAR) q.set("char", CHAR);
@@ -114,7 +128,7 @@ try {
       const batch = ${JSON.stringify(batch)};
       for (let i = 0; i < batch.length; i++) {
         reset();
-        new Function("L", "bare", "swing", "jump", "closeAt", "handCam", batch[i][1])(L, bare, swing, jump, closeAt, handCam);
+        new Function("L", "bare", "swing", "jump", "closeAt", "handCam", "swordCam", batch[i][1])(L, bare, swing, jump, closeAt, handCam, swordCam);
         L.step(1);
         await new Promise((r) => setTimeout(r, 60));
         L.step(0);

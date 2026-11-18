@@ -13,7 +13,7 @@ Two steps:
 
   2. PICK the takes you like (any python with numpy + soundfile):
        python scripts/gen-sfx.py dart-trap --pick dart_hit=2 boom=1
-     Copies each take to public/episodes/<slug>/sfx_ai/<name>.wav and records
+     Copies each take to public/<episodes|whatif|...>/<slug>/sfx_ai/<name>.wav and records
      it in scripts/sfx-prompts/<slug>.picks.json. The episode audio script lays
      sfx_ai/ over its procedural sfx/, so re-running it keeps your picks.
      `--unpick name` goes back to the procedural sound.
@@ -132,7 +132,7 @@ def write_index(slug, prompts, out, takes):
         )
         if not cells:
             continue
-        proc = f"../../../public/episodes/{slug}/sfx/{name}.wav"
+        proc = "../../../" + (ep_dir(slug) / "sfx" / f"{name}.wav").relative_to(ROOT).as_posix()
         rows.append(
             f"<tr><th>{html.escape(name)}</th><td class=p>{html.escape(spec['prompt'])}</td>"
             f'<td>current<br><audio controls preload="none" src="{proc}"></audio></td>{cells}</tr>'
@@ -147,6 +147,15 @@ def write_index(slug, prompts, out, takes):
     )
 
 
+def ep_dir(slug):
+    """The episode's public folder: public/episodes/<slug>, or a what-if/shelter/bio one."""
+    for sub in ("episodes", "whatif", "shelter", "bio"):
+        d = ROOT / "public" / sub / slug
+        if d.exists():
+            return d
+    return ROOT / "public" / "episodes" / slug
+
+
 def picks_path(slug):
     return ROOT / "scripts" / "sfx-prompts" / f"{slug}.picks.json"
 
@@ -154,8 +163,8 @@ def picks_path(slug):
 def pick(slug, items, unpick):
     path = picks_path(slug)
     picks = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-    ai_dir = ROOT / "public" / "episodes" / slug / "sfx_ai"
-    sfx_dir = ROOT / "public" / "episodes" / slug / "sfx"
+    ai_dir = ep_dir(slug) / "sfx_ai"
+    sfx_dir = ep_dir(slug) / "sfx"
     ai_dir.mkdir(parents=True, exist_ok=True)
     for item in items:
         name, take = item.split("=")

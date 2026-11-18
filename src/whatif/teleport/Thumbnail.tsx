@@ -1,6 +1,6 @@
 import type React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
-import { AdventurerUnit, hipHeight } from "../../artifacts/characters/hero";
+import { AdventurerUnit, hipHeight, type FaceKit } from "../../artifacts/characters/hero";
 import { SkyRig, Tilted, riderOffset } from "../../artifacts/sky";
 import { Globe, HayBurst, Hayfield, Hedge, HouseBack, Lawn, PatagoniaSet, Snowball, Snowfall, SpeedLines, SwingSet, Tree, facing, swingSeat } from "../../artifacts/teleport";
 import { jellySplash } from "../../kit";
@@ -202,6 +202,62 @@ const HedgeHalf: React.FC<{ frame: number }> = ({ frame }) => (
   </>
 );
 
+/**
+ * v2 set (7-9), after the first upload stalled at 2.7% CTR: Kit's decal face is
+ * three dots at 168 px, so it is pushed to thumbnail size and the camera goes in
+ * until the head fills about half the frame.
+ */
+const BIG_FACE: Partial<FaceKit> = { eyeR: 0.074, eyeYaw: 0.33, mouthScale: 1.6, mouthPitch: 0.45, browSize: 1.5 };
+
+/** Variant 7: Kit flying head-first at Grandpa's hedge, a second before he goes in. */
+const HedgeFlight: React.FC<{ frame: number }> = ({ frame }) => (
+  <>
+    <SkyRig tod={0.1} azimuth={-0.5} fogNear={40} fogFar={400} />
+    <Lawn />
+    <HouseBack position={[-8, 0, Z - 5]} width={14} />
+    <group position={[-1.25, 0, Z + 0.2]} rotation={[0, EAST, 0]}>
+      <Hedge position={[0, 0, 0]} length={6} hit={0} hitX={0} frame={frame} />
+    </group>
+    <Trail />
+    <group position={[0.15, 0.25, Z]} rotation={[0, 0, 0.3]}>
+      <Tilted position={[0, 0, 0]} yaw={-0.35} pitch={-0.1} pivot={hipHeight(KIT)}>
+        <AdventurerUnit classType={KIT} pose="launch" expression="scared" faceKit={BIG_FACE} animFrame={6} />
+      </Tilted>
+    </group>
+    <SpeedLines frame={frame} center={[1.4, 1.6, Z - 0.8]} speed={1} count={26} />
+  </>
+);
+
+/** Variant 8: the spinning Earth on a night field, Kit realising the ground never stood still. */
+const SpinScene: React.FC<{ frame: number }> = ({ frame }) => (
+  <>
+    <SkyRig tod={2} azimuth={-0.5} fogNear={400} fogFar={3000} />
+    <directionalLight position={[-12, 6, 14]} intensity={2.8} color="#fff4e2" />
+    <ambientLight intensity={0.6} color="#9fb4ff" />
+    <Globe position={[-1.6, 1.0, -5]} radius={2.6} spin={facing(-72.4) + 0.35} pins={[{ lat: PLACES.vermont[0], lon: PLACES.vermont[1], color: TANGERINE, size: 0.09 }]} />
+    <AdventurerUnit classType={KIT} pose="cheer" expression="shock" faceKit={BIG_FACE} position={[0.55, 0, Z]} rotation={[0, -0.35, 0]} animFrame={frame} />
+  </>
+);
+
+/** Variant 9: Patagonia in July, Kit's frozen face filling the frame. */
+const SnowFace: React.FC<{ frame: number }> = ({ frame }) => (
+  <>
+    <SkyRig tod={0.25} azimuth={2.5} fogNear={60} fogFar={600} />
+    <PatagoniaSet frame={frame} />
+    <Snowfall frame={frame + 200} amount={1.6} center={[0.3, 0, Z + 1.0]} />
+    <AdventurerUnit classType={KIT} pose="cower" expression="scared" faceKit={BIG_FACE} position={[0.5, 0, Z]} rotation={[0, -0.3, 0]} animFrame={frame} />
+  </>
+);
+
+/** Variant 8: a curved red arrow round the globe (its spin). */
+const SpinArrow: React.FC = () => (
+  <svg width={1280} height={720} style={{ position: "absolute", inset: 0 }}>
+    <path d="M 210 560 Q 430 690 650 520" fill="none" stroke={NAVY} strokeWidth={34} strokeLinecap="round" />
+    <path d="M 210 560 Q 430 690 650 520" fill="none" stroke="#ff3b3b" strokeWidth={22} strokeLinecap="round" />
+    <polygon points="700,470 628,500 676,560" fill="#ff3b3b" stroke={NAVY} strokeWidth={7} strokeLinejoin="round" />
+  </svg>
+);
+
 /** The one text element: 1-3 words, key word coloured. */
 const WORDS: { lines: { text: string; color: string; size: number }[]; left: number; top: number }[] = [
   { lines: [{ text: "TOO", color: "#fff", size: 150 }, { text: "FAST!", color: GOLD, size: 190 }], left: 44, top: 40 },
@@ -211,6 +267,9 @@ const WORDS: { lines: { text: string; color: string; size: number }[]; left: num
   { lines: [{ text: "SNOW IN", color: "#fff", size: 120 }, { text: "JULY?!", color: GOLD, size: 190 }], left: 40, top: 40 },
   { lines: [], left: 0, top: 0 },
   { lines: [{ text: "12", color: GOLD, size: 210 }, { text: "MPH!", color: "#fff", size: 130 }], left: 345, top: 24 },
+  { lines: [{ text: "12", color: GOLD, size: 240 }, { text: "MPH!", color: "#fff", size: 150 }], left: 50, top: 30 },
+  { lines: [{ text: "1,037", color: GOLD, size: 190 }, { text: "MPH", color: "#fff", size: 150 }], left: 40, top: 30 },
+  { lines: [{ text: "IN", color: "#fff", size: 130 }, { text: "JULY?!", color: GOLD, size: 200 }], left: 44, top: 40 },
 ];
 
 /** Variant 2: a fat red arrow straight through the planet, Vermont to Chile. */
@@ -235,6 +294,7 @@ const Card: React.FC<{ variant: number }> = ({ variant }) => {
     <AbsoluteFill style={{ fontFamily: FONT }}>
       {variant === 2 ? <ThroughArrow /> : null}
       {variant === 3 ? <PanicMarks /> : null}
+      {variant === 8 ? <SpinArrow /> : null}
       <div style={{ position: "absolute", left: w.left, top: w.top, lineHeight: 0.88, transform: "rotate(-3deg)" }}>
         {w.lines.map((l) => (
           <div key={l.text} style={{ fontSize: l.size, color: l.color, textShadow: stroke(l.size > 180 ? 9 : 7) }}>
@@ -256,6 +316,10 @@ const CAMS: { position: Vec3; lookAt: Vec3; fov: number; roll?: number }[] = [
   // Split halves: the subject sits in the middle 640 px, which is all thumb-split keeps.
   { position: [2.75, 1.7, Z + 2.5], lookAt: [1.3, 1.55, Z], fov: 30 },
   { position: [-0.9, 0.95, Z + 3.4], lookAt: [-0.95, 0.95, Z], fov: 30 },
+  // v2: the head fills about half the frame height.
+  { position: [-0.6, 1.5, Z + 2.6], lookAt: [-0.3, 1.55, Z], fov: 28, roll: -0.08 },
+  { position: [-0.55, 1.05, Z + 2.2], lookAt: [-0.05, 1.3, Z], fov: 26 },
+  { position: [-0.55, 1.0, Z + 2.1], lookAt: [-0.05, 1.3, Z], fov: 26 },
 ];
 
 const ThumbScene: React.FC<{ variant: number }> = ({ variant }) => {
@@ -264,6 +328,9 @@ const ThumbScene: React.FC<{ variant: number }> = ({ variant }) => {
   if (variant === 4) return <SnowScene frame={frame} />;
   if (variant === 5) return <SwingHalf frame={frame} />;
   if (variant === 6) return <HedgeHalf frame={frame} />;
+  if (variant === 7) return <HedgeFlight frame={frame} />;
+  if (variant === 8) return <SpinScene frame={frame} />;
+  if (variant === 9) return <SnowFace frame={frame} />;
   if (variant === 1) return <HedgeScene frame={frame} />;
   if (variant === 2) return <GlobeScene frame={frame} />;
   return <HayScene frame={frame} />;
@@ -284,7 +351,7 @@ const config = (variant: number): EpisodeConfig => {
       vignette: "radial-gradient(ellipse at 62% 50%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.32) 100%)",
       fadeInFrames: 0,
       fadeOutFrames: 0,
-      backgroundColor: variant === 2 ? "#0b1230" : "#a5d2f0",
+      backgroundColor: variant === 2 || variant === 8 ? "#0b1230" : "#a5d2f0",
       postfx: { aoIntensity: 1.3, bloomIntensity: 0.4, bloomThreshold: 0.85, grain: 0 },
     },
     OverlayComponent: () => <Card variant={variant} />,

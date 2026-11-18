@@ -1,0 +1,1322 @@
+[
+  {
+    "startFrame": 15,
+    "endFrame": 210,
+    "text": "On the front line, you need eyes on the enemy trench. So you crawl into no man's land and lie flat in the mud.",
+    "words": [
+      {
+        "word": "On",
+        "startFrame": 15,
+        "endFrame": 18
+      },
+      {
+        "word": "the",
+        "startFrame": 18,
+        "endFrame": 21
+      },
+      {
+        "word": "front",
+        "startFrame": 21,
+        "endFrame": 27
+      },
+      {
+        "word": "line,",
+        "startFrame": 27,
+        "endFrame": 39
+      },
+      {
+        "word": "you",
+        "startFrame": 39,
+        "endFrame": 42
+      },
+      {
+        "word": "need",
+        "startFrame": 42,
+        "endFrame": 51
+      },
+      {
+        "word": "eyes",
+        "startFrame": 51,
+        "endFrame": 63
+      },
+      {
+        "word": "on",
+        "startFrame": 63,
+        "endFrame": 66
+      },
+      {
+        "word": "the",
+        "startFrame": 66,
+        "endFrame": 69
+      },
+      {
+        "word": "enemy",
+        "startFrame": 69,
+        "endFrame": 78
+      },
+      {
+        "word": "trench.",
+        "startFrame": 78,
+        "endFrame": 93
+      },
+      {
+        "word": "So",
+        "startFrame": 99,
+        "endFrame": 108
+      },
+      {
+        "word": "you",
+        "startFrame": 108,
+        "endFrame": 114
+      },
+      {
+        "word": "crawl",
+        "startFrame": 114,
+        "endFrame": 126
+      },
+      {
+        "word": "into",
+        "startFrame": 126,
+        "endFrame": 132
+      },
+      {
+        "word": "no",
+        "startFrame": 132,
+        "endFrame": 138
+      },
+      {
+        "word": "man's",
+        "startFrame": 138,
+        "endFrame": 144
+      },
+      {
+        "word": "land",
+        "startFrame": 144,
+        "endFrame": 162
+      },
+      {
+        "word": "and",
+        "startFrame": 165,
+        "endFrame": 168
+      },
+      {
+        "word": "lie",
+        "startFrame": 168,
+        "endFrame": 174
+      },
+      {
+        "word": "flat",
+        "startFrame": 174,
+        "endFrame": 192
+      },
+      {
+        "word": "in",
+        "startFrame": 195,
+        "endFrame": 198
+      },
+      {
+        "word": "the",
+        "startFrame": 198,
+        "endFrame": 201
+      },
+      {
+        "word": "mud.",
+        "startFrame": 201,
+        "endFrame": 210
+      }
+    ]
+  },
+  {
+    "startFrame": 224,
+    "endFrame": 380,
+    "text": "But out there, anything that moves gets shot. One twitch, and the sniper has you.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 224,
+        "endFrame": 227
+      },
+      {
+        "word": "out",
+        "startFrame": 227,
+        "endFrame": 230
+      },
+      {
+        "word": "there,",
+        "startFrame": 230,
+        "endFrame": 242
+      },
+      {
+        "word": "anything",
+        "startFrame": 257,
+        "endFrame": 266
+      },
+      {
+        "word": "that",
+        "startFrame": 266,
+        "endFrame": 272
+      },
+      {
+        "word": "moves",
+        "startFrame": 272,
+        "endFrame": 287
+      },
+      {
+        "word": "gets",
+        "startFrame": 287,
+        "endFrame": 293
+      },
+      {
+        "word": "shot.",
+        "startFrame": 293,
+        "endFrame": 305
+      },
+      {
+        "word": "One",
+        "startFrame": 317,
+        "endFrame": 323
+      },
+      {
+        "word": "twitch,",
+        "startFrame": 323,
+        "endFrame": 338
+      },
+      {
+        "word": "and",
+        "startFrame": 347,
+        "endFrame": 350
+      },
+      {
+        "word": "the",
+        "startFrame": 350,
+        "endFrame": 353
+      },
+      {
+        "word": "sniper",
+        "startFrame": 353,
+        "endFrame": 368
+      },
+      {
+        "word": "has",
+        "startFrame": 368,
+        "endFrame": 374
+      },
+      {
+        "word": "you.",
+        "startFrame": 374,
+        "endFrame": 380
+      }
+    ]
+  },
+  {
+    "startFrame": 417,
+    "endFrame": 528,
+    "text": "So you dig a shell hole deeper, and pile sandbags around the edge.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 417,
+        "endFrame": 420
+      },
+      {
+        "word": "you",
+        "startFrame": 420,
+        "endFrame": 423
+      },
+      {
+        "word": "dig",
+        "startFrame": 423,
+        "endFrame": 429
+      },
+      {
+        "word": "a",
+        "startFrame": 429,
+        "endFrame": 430
+      },
+      {
+        "word": "shell",
+        "startFrame": 429,
+        "endFrame": 438
+      },
+      {
+        "word": "hole",
+        "startFrame": 438,
+        "endFrame": 450
+      },
+      {
+        "word": "deeper,",
+        "startFrame": 450,
+        "endFrame": 462
+      },
+      {
+        "word": "and",
+        "startFrame": 462,
+        "endFrame": 468
+      },
+      {
+        "word": "pile",
+        "startFrame": 468,
+        "endFrame": 477
+      },
+      {
+        "word": "sandbags",
+        "startFrame": 477,
+        "endFrame": 498
+      },
+      {
+        "word": "around",
+        "startFrame": 498,
+        "endFrame": 507
+      },
+      {
+        "word": "the",
+        "startFrame": 507,
+        "endFrame": 510
+      },
+      {
+        "word": "edge.",
+        "startFrame": 510,
+        "endFrame": 528
+      }
+    ]
+  },
+  {
+    "startFrame": 546,
+    "endFrame": 735,
+    "text": "But the enemy maps every crater. A fresh sandbag wall by morning means a shell by lunch.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 546,
+        "endFrame": 549
+      },
+      {
+        "word": "the",
+        "startFrame": 549,
+        "endFrame": 555
+      },
+      {
+        "word": "enemy",
+        "startFrame": 555,
+        "endFrame": 567
+      },
+      {
+        "word": "maps",
+        "startFrame": 567,
+        "endFrame": 585
+      },
+      {
+        "word": "every",
+        "startFrame": 585,
+        "endFrame": 597
+      },
+      {
+        "word": "crater.",
+        "startFrame": 597,
+        "endFrame": 615
+      },
+      {
+        "word": "A",
+        "startFrame": 624,
+        "endFrame": 627
+      },
+      {
+        "word": "fresh",
+        "startFrame": 627,
+        "endFrame": 639
+      },
+      {
+        "word": "sandbag",
+        "startFrame": 639,
+        "endFrame": 657
+      },
+      {
+        "word": "wall",
+        "startFrame": 657,
+        "endFrame": 663
+      },
+      {
+        "word": "by",
+        "startFrame": 663,
+        "endFrame": 669
+      },
+      {
+        "word": "morning",
+        "startFrame": 669,
+        "endFrame": 687
+      },
+      {
+        "word": "means",
+        "startFrame": 690,
+        "endFrame": 693
+      },
+      {
+        "word": "a",
+        "startFrame": 693,
+        "endFrame": 696
+      },
+      {
+        "word": "shell",
+        "startFrame": 696,
+        "endFrame": 714
+      },
+      {
+        "word": "by",
+        "startFrame": 714,
+        "endFrame": 720
+      },
+      {
+        "word": "lunch.",
+        "startFrame": 720,
+        "endFrame": 735
+      }
+    ]
+  },
+  {
+    "startFrame": 765,
+    "endFrame": 927,
+    "text": "The only thing nobody looks at twice is a dead horse. There are hundreds of them out there.",
+    "words": [
+      {
+        "word": "The",
+        "startFrame": 765,
+        "endFrame": 771
+      },
+      {
+        "word": "only",
+        "startFrame": 771,
+        "endFrame": 777
+      },
+      {
+        "word": "thing",
+        "startFrame": 777,
+        "endFrame": 789
+      },
+      {
+        "word": "nobody",
+        "startFrame": 789,
+        "endFrame": 804
+      },
+      {
+        "word": "looks",
+        "startFrame": 804,
+        "endFrame": 810
+      },
+      {
+        "word": "at",
+        "startFrame": 810,
+        "endFrame": 816
+      },
+      {
+        "word": "twice",
+        "startFrame": 816,
+        "endFrame": 837
+      },
+      {
+        "word": "is",
+        "startFrame": 840,
+        "endFrame": 843
+      },
+      {
+        "word": "a",
+        "startFrame": 843,
+        "endFrame": 846
+      },
+      {
+        "word": "dead",
+        "startFrame": 846,
+        "endFrame": 855
+      },
+      {
+        "word": "horse.",
+        "startFrame": 855,
+        "endFrame": 873
+      },
+      {
+        "word": "There",
+        "startFrame": 885,
+        "endFrame": 891
+      },
+      {
+        "word": "are",
+        "startFrame": 891,
+        "endFrame": 892
+      },
+      {
+        "word": "hundreds",
+        "startFrame": 891,
+        "endFrame": 906
+      },
+      {
+        "word": "of",
+        "startFrame": 906,
+        "endFrame": 909
+      },
+      {
+        "word": "them",
+        "startFrame": 909,
+        "endFrame": 915
+      },
+      {
+        "word": "out",
+        "startFrame": 915,
+        "endFrame": 918
+      },
+      {
+        "word": "there.",
+        "startFrame": 918,
+        "endFrame": 927
+      }
+    ]
+  },
+  {
+    "startFrame": 940,
+    "endFrame": 1135,
+    "text": "So an artist crawls out at night, holds his nose, and sketches one, every fold and every shadow.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 940,
+        "endFrame": 943
+      },
+      {
+        "word": "an",
+        "startFrame": 943,
+        "endFrame": 946
+      },
+      {
+        "word": "artist",
+        "startFrame": 946,
+        "endFrame": 961
+      },
+      {
+        "word": "crawls",
+        "startFrame": 961,
+        "endFrame": 976
+      },
+      {
+        "word": "out",
+        "startFrame": 976,
+        "endFrame": 982
+      },
+      {
+        "word": "at",
+        "startFrame": 982,
+        "endFrame": 985
+      },
+      {
+        "word": "night,",
+        "startFrame": 985,
+        "endFrame": 1000
+      },
+      {
+        "word": "holds",
+        "startFrame": 1006,
+        "endFrame": 1015
+      },
+      {
+        "word": "his",
+        "startFrame": 1015,
+        "endFrame": 1021
+      },
+      {
+        "word": "nose,",
+        "startFrame": 1021,
+        "endFrame": 1036
+      },
+      {
+        "word": "and",
+        "startFrame": 1036,
+        "endFrame": 1042
+      },
+      {
+        "word": "sketches",
+        "startFrame": 1042,
+        "endFrame": 1057
+      },
+      {
+        "word": "one,",
+        "startFrame": 1057,
+        "endFrame": 1069
+      },
+      {
+        "word": "every",
+        "startFrame": 1078,
+        "endFrame": 1084
+      },
+      {
+        "word": "fold",
+        "startFrame": 1084,
+        "endFrame": 1108
+      },
+      {
+        "word": "and",
+        "startFrame": 1108,
+        "endFrame": 1111
+      },
+      {
+        "word": "every",
+        "startFrame": 1111,
+        "endFrame": 1117
+      },
+      {
+        "word": "shadow.",
+        "startFrame": 1117,
+        "endFrame": 1135
+      }
+    ]
+  },
+  {
+    "startFrame": 1148,
+    "endFrame": 1307,
+    "text": "Behind the lines, they build a hollow copy out of papier-mache, and paint it to match.",
+    "words": [
+      {
+        "word": "Behind",
+        "startFrame": 1148,
+        "endFrame": 1157
+      },
+      {
+        "word": "the",
+        "startFrame": 1157,
+        "endFrame": 1160
+      },
+      {
+        "word": "lines,",
+        "startFrame": 1160,
+        "endFrame": 1181
+      },
+      {
+        "word": "they",
+        "startFrame": 1184,
+        "endFrame": 1187
+      },
+      {
+        "word": "build",
+        "startFrame": 1187,
+        "endFrame": 1193
+      },
+      {
+        "word": "a",
+        "startFrame": 1193,
+        "endFrame": 1196
+      },
+      {
+        "word": "hollow",
+        "startFrame": 1196,
+        "endFrame": 1214
+      },
+      {
+        "word": "copy",
+        "startFrame": 1214,
+        "endFrame": 1229
+      },
+      {
+        "word": "out",
+        "startFrame": 1229,
+        "endFrame": 1241
+      },
+      {
+        "word": "of",
+        "startFrame": 1241,
+        "endFrame": 1253
+      },
+      {
+        "word": "papier-mache,",
+        "startFrame": 1253,
+        "endFrame": 1265
+      },
+      {
+        "word": "and",
+        "startFrame": 1265,
+        "endFrame": 1277
+      },
+      {
+        "word": "paint",
+        "startFrame": 1277,
+        "endFrame": 1289
+      },
+      {
+        "word": "to",
+        "startFrame": 1289,
+        "endFrame": 1292
+      },
+      {
+        "word": "match.",
+        "startFrame": 1292,
+        "endFrame": 1307
+      }
+    ]
+  },
+  {
+    "startFrame": 1337,
+    "endFrame": 1580,
+    "text": "You might think you'd just put it down next to the real one. Don't. Two horses where there was one, and they shell both.",
+    "words": [
+      {
+        "word": "You",
+        "startFrame": 1337,
+        "endFrame": 1338
+      },
+      {
+        "word": "might",
+        "startFrame": 1337,
+        "endFrame": 1343
+      },
+      {
+        "word": "think",
+        "startFrame": 1343,
+        "endFrame": 1358
+      },
+      {
+        "word": "you'd",
+        "startFrame": 1358,
+        "endFrame": 1367
+      },
+      {
+        "word": "just",
+        "startFrame": 1367,
+        "endFrame": 1376
+      },
+      {
+        "word": "put",
+        "startFrame": 1379,
+        "endFrame": 1382
+      },
+      {
+        "word": "it",
+        "startFrame": 1382,
+        "endFrame": 1385
+      },
+      {
+        "word": "down",
+        "startFrame": 1385,
+        "endFrame": 1397
+      },
+      {
+        "word": "next",
+        "startFrame": 1397,
+        "endFrame": 1406
+      },
+      {
+        "word": "to",
+        "startFrame": 1406,
+        "endFrame": 1409
+      },
+      {
+        "word": "the",
+        "startFrame": 1409,
+        "endFrame": 1412
+      },
+      {
+        "word": "real",
+        "startFrame": 1412,
+        "endFrame": 1421
+      },
+      {
+        "word": "one.",
+        "startFrame": 1421,
+        "endFrame": 1430
+      },
+      {
+        "word": "Don't.",
+        "startFrame": 1454,
+        "endFrame": 1466
+      },
+      {
+        "word": "Two",
+        "startFrame": 1484,
+        "endFrame": 1493
+      },
+      {
+        "word": "horses",
+        "startFrame": 1493,
+        "endFrame": 1508
+      },
+      {
+        "word": "where",
+        "startFrame": 1508,
+        "endFrame": 1511
+      },
+      {
+        "word": "there",
+        "startFrame": 1511,
+        "endFrame": 1514
+      },
+      {
+        "word": "was",
+        "startFrame": 1514,
+        "endFrame": 1520
+      },
+      {
+        "word": "one,",
+        "startFrame": 1520,
+        "endFrame": 1532
+      },
+      {
+        "word": "and",
+        "startFrame": 1541,
+        "endFrame": 1544
+      },
+      {
+        "word": "they",
+        "startFrame": 1544,
+        "endFrame": 1547
+      },
+      {
+        "word": "shell",
+        "startFrame": 1547,
+        "endFrame": 1565
+      },
+      {
+        "word": "both.",
+        "startFrame": 1565,
+        "endFrame": 1580
+      }
+    ]
+  },
+  {
+    "startFrame": 1612,
+    "endFrame": 1804,
+    "text": "So you swap them. Under the noise of the guns, the crew drags the real horse away into a trench.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1612,
+        "endFrame": 1615
+      },
+      {
+        "word": "you",
+        "startFrame": 1615,
+        "endFrame": 1622
+      },
+      {
+        "word": "swap",
+        "startFrame": 1622,
+        "endFrame": 1633
+      },
+      {
+        "word": "them.",
+        "startFrame": 1633,
+        "endFrame": 1639
+      },
+      {
+        "word": "Under",
+        "startFrame": 1663,
+        "endFrame": 1672
+      },
+      {
+        "word": "the",
+        "startFrame": 1672,
+        "endFrame": 1673
+      },
+      {
+        "word": "noise",
+        "startFrame": 1672,
+        "endFrame": 1690
+      },
+      {
+        "word": "of",
+        "startFrame": 1690,
+        "endFrame": 1693
+      },
+      {
+        "word": "the",
+        "startFrame": 1693,
+        "endFrame": 1696
+      },
+      {
+        "word": "guns,",
+        "startFrame": 1696,
+        "endFrame": 1708
+      },
+      {
+        "word": "the",
+        "startFrame": 1714,
+        "endFrame": 1715
+      },
+      {
+        "word": "crew",
+        "startFrame": 1714,
+        "endFrame": 1723
+      },
+      {
+        "word": "drags",
+        "startFrame": 1723,
+        "endFrame": 1742
+      },
+      {
+        "word": "the",
+        "startFrame": 1742,
+        "endFrame": 1744
+      },
+      {
+        "word": "real",
+        "startFrame": 1744,
+        "endFrame": 1759
+      },
+      {
+        "word": "horse",
+        "startFrame": 1759,
+        "endFrame": 1768
+      },
+      {
+        "word": "away",
+        "startFrame": 1768,
+        "endFrame": 1780
+      },
+      {
+        "word": "into",
+        "startFrame": 1780,
+        "endFrame": 1786
+      },
+      {
+        "word": "a",
+        "startFrame": 1786,
+        "endFrame": 1789
+      },
+      {
+        "word": "trench.",
+        "startFrame": 1789,
+        "endFrame": 1804
+      }
+    ]
+  },
+  {
+    "startFrame": 1821,
+    "endFrame": 1968,
+    "text": "And they lay the copy in the exact same spot, legs in the air, before dawn.",
+    "words": [
+      {
+        "word": "And",
+        "startFrame": 1821,
+        "endFrame": 1824
+      },
+      {
+        "word": "they",
+        "startFrame": 1824,
+        "endFrame": 1827
+      },
+      {
+        "word": "lay",
+        "startFrame": 1827,
+        "endFrame": 1839
+      },
+      {
+        "word": "the",
+        "startFrame": 1839,
+        "endFrame": 1842
+      },
+      {
+        "word": "copy",
+        "startFrame": 1842,
+        "endFrame": 1854
+      },
+      {
+        "word": "in",
+        "startFrame": 1854,
+        "endFrame": 1857
+      },
+      {
+        "word": "the",
+        "startFrame": 1857,
+        "endFrame": 1860
+      },
+      {
+        "word": "exact",
+        "startFrame": 1860,
+        "endFrame": 1878
+      },
+      {
+        "word": "same",
+        "startFrame": 1878,
+        "endFrame": 1887
+      },
+      {
+        "word": "spot,",
+        "startFrame": 1887,
+        "endFrame": 1905
+      },
+      {
+        "word": "legs",
+        "startFrame": 1908,
+        "endFrame": 1923
+      },
+      {
+        "word": "in",
+        "startFrame": 1923,
+        "endFrame": 1926
+      },
+      {
+        "word": "the",
+        "startFrame": 1926,
+        "endFrame": 1929
+      },
+      {
+        "word": "air,",
+        "startFrame": 1929,
+        "endFrame": 1941
+      },
+      {
+        "word": "before",
+        "startFrame": 1944,
+        "endFrame": 1956
+      },
+      {
+        "word": "dawn.",
+        "startFrame": 1956,
+        "endFrame": 1968
+      }
+    ]
+  },
+  {
+    "startFrame": 1998,
+    "endFrame": 2154,
+    "text": "Inside there's just room for one man, lying on his belly, with a rifle.",
+    "words": [
+      {
+        "word": "Inside",
+        "startFrame": 1998,
+        "endFrame": 2019
+      },
+      {
+        "word": "there's",
+        "startFrame": 2019,
+        "endFrame": 2025
+      },
+      {
+        "word": "just",
+        "startFrame": 2025,
+        "endFrame": 2034
+      },
+      {
+        "word": "room",
+        "startFrame": 2034,
+        "endFrame": 2046
+      },
+      {
+        "word": "for",
+        "startFrame": 2046,
+        "endFrame": 2052
+      },
+      {
+        "word": "one",
+        "startFrame": 2052,
+        "endFrame": 2061
+      },
+      {
+        "word": "man,",
+        "startFrame": 2061,
+        "endFrame": 2076
+      },
+      {
+        "word": "lying",
+        "startFrame": 2085,
+        "endFrame": 2100
+      },
+      {
+        "word": "on",
+        "startFrame": 2100,
+        "endFrame": 2103
+      },
+      {
+        "word": "his",
+        "startFrame": 2103,
+        "endFrame": 2109
+      },
+      {
+        "word": "belly,",
+        "startFrame": 2109,
+        "endFrame": 2124
+      },
+      {
+        "word": "with",
+        "startFrame": 2133,
+        "endFrame": 2136
+      },
+      {
+        "word": "a",
+        "startFrame": 2136,
+        "endFrame": 2139
+      },
+      {
+        "word": "rifle.",
+        "startFrame": 2139,
+        "endFrame": 2154
+      }
+    ]
+  },
+  {
+    "startFrame": 2166,
+    "endFrame": 2313,
+    "text": "He watches through a slit in the neck, and a telephone wire runs back to your trench.",
+    "words": [
+      {
+        "word": "He",
+        "startFrame": 2166,
+        "endFrame": 2172
+      },
+      {
+        "word": "watches",
+        "startFrame": 2172,
+        "endFrame": 2187
+      },
+      {
+        "word": "through",
+        "startFrame": 2187,
+        "endFrame": 2193
+      },
+      {
+        "word": "a",
+        "startFrame": 2193,
+        "endFrame": 2196
+      },
+      {
+        "word": "slit",
+        "startFrame": 2196,
+        "endFrame": 2211
+      },
+      {
+        "word": "in",
+        "startFrame": 2211,
+        "endFrame": 2214
+      },
+      {
+        "word": "the",
+        "startFrame": 2214,
+        "endFrame": 2217
+      },
+      {
+        "word": "neck,",
+        "startFrame": 2217,
+        "endFrame": 2235
+      },
+      {
+        "word": "and",
+        "startFrame": 2238,
+        "endFrame": 2241
+      },
+      {
+        "word": "a",
+        "startFrame": 2241,
+        "endFrame": 2242
+      },
+      {
+        "word": "telephone",
+        "startFrame": 2241,
+        "endFrame": 2259
+      },
+      {
+        "word": "wire",
+        "startFrame": 2259,
+        "endFrame": 2271
+      },
+      {
+        "word": "runs",
+        "startFrame": 2271,
+        "endFrame": 2280
+      },
+      {
+        "word": "back",
+        "startFrame": 2280,
+        "endFrame": 2286
+      },
+      {
+        "word": "to",
+        "startFrame": 2286,
+        "endFrame": 2289
+      },
+      {
+        "word": "your",
+        "startFrame": 2289,
+        "endFrame": 2295
+      },
+      {
+        "word": "trench.",
+        "startFrame": 2295,
+        "endFrame": 2313
+      }
+    ]
+  },
+  {
+    "startFrame": 2348,
+    "endFrame": 2498,
+    "text": "At sunrise, the enemy sees the same dead horse they've ignored for a week.",
+    "words": [
+      {
+        "word": "At",
+        "startFrame": 2348,
+        "endFrame": 2351
+      },
+      {
+        "word": "sunrise,",
+        "startFrame": 2351,
+        "endFrame": 2378
+      },
+      {
+        "word": "the",
+        "startFrame": 2384,
+        "endFrame": 2387
+      },
+      {
+        "word": "enemy",
+        "startFrame": 2387,
+        "endFrame": 2396
+      },
+      {
+        "word": "sees",
+        "startFrame": 2396,
+        "endFrame": 2408
+      },
+      {
+        "word": "the",
+        "startFrame": 2408,
+        "endFrame": 2411
+      },
+      {
+        "word": "same",
+        "startFrame": 2411,
+        "endFrame": 2429
+      },
+      {
+        "word": "dead",
+        "startFrame": 2429,
+        "endFrame": 2438
+      },
+      {
+        "word": "horse",
+        "startFrame": 2438,
+        "endFrame": 2459
+      },
+      {
+        "word": "they've",
+        "startFrame": 2459,
+        "endFrame": 2462
+      },
+      {
+        "word": "ignored",
+        "startFrame": 2462,
+        "endFrame": 2477
+      },
+      {
+        "word": "for",
+        "startFrame": 2477,
+        "endFrame": 2480
+      },
+      {
+        "word": "a",
+        "startFrame": 2480,
+        "endFrame": 2483
+      },
+      {
+        "word": "week.",
+        "startFrame": 2483,
+        "endFrame": 2498
+      }
+    ]
+  },
+  {
+    "startFrame": 2510,
+    "endFrame": 2621,
+    "text": "And from inside it, you call in every move they make.",
+    "words": [
+      {
+        "word": "And",
+        "startFrame": 2510,
+        "endFrame": 2513
+      },
+      {
+        "word": "from",
+        "startFrame": 2513,
+        "endFrame": 2519
+      },
+      {
+        "word": "inside",
+        "startFrame": 2519,
+        "endFrame": 2537
+      },
+      {
+        "word": "it,",
+        "startFrame": 2537,
+        "endFrame": 2543
+      },
+      {
+        "word": "you",
+        "startFrame": 2549,
+        "endFrame": 2555
+      },
+      {
+        "word": "call",
+        "startFrame": 2555,
+        "endFrame": 2567
+      },
+      {
+        "word": "in",
+        "startFrame": 2567,
+        "endFrame": 2576
+      },
+      {
+        "word": "every",
+        "startFrame": 2579,
+        "endFrame": 2591
+      },
+      {
+        "word": "move",
+        "startFrame": 2591,
+        "endFrame": 2606
+      },
+      {
+        "word": "they",
+        "startFrame": 2606,
+        "endFrame": 2609
+      },
+      {
+        "word": "make.",
+        "startFrame": 2609,
+        "endFrame": 2621
+      }
+    ]
+  },
+  {
+    "startFrame": 2654,
+    "endFrame": 2765,
+    "text": "Congratulations. You have built a spy horse.",
+    "words": [
+      {
+        "word": "Congratulations.",
+        "startFrame": 2654,
+        "endFrame": 2687
+      },
+      {
+        "word": "You",
+        "startFrame": 2699,
+        "endFrame": 2711
+      },
+      {
+        "word": "have",
+        "startFrame": 2711,
+        "endFrame": 2717
+      },
+      {
+        "word": "built",
+        "startFrame": 2717,
+        "endFrame": 2729
+      },
+      {
+        "word": "a",
+        "startFrame": 2729,
+        "endFrame": 2732
+      },
+      {
+        "word": "spy",
+        "startFrame": 2732,
+        "endFrame": 2750
+      },
+      {
+        "word": "horse.",
+        "startFrame": 2750,
+        "endFrame": 2765
+      }
+    ]
+  }
+]

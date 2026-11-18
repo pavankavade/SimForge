@@ -18,7 +18,9 @@ import type { AdventurerPose, RigPose } from "./poses";
  *  - Cuff         : wrist at the origin, hand below it along -y.
  */
 
-export type AdventurerClass = "goblin" | "rogue" | "mage" | "paladin" | "barbarian" | "bard" | CivilianClass | SilhouetteClass;
+export type AdventurerClass = "goblin" | "rogue" | "mage" | "paladin" | "barbarian" | "bard" | CivilianClass | SoldierClass | SilhouetteClass;
+/** WW1 soldiers for the shelter series (spy horse). */
+export type SoldierClass = "tommy" | "tommyB" | "tommyC" | "artist" | "enemyOfficer";
 /** "What if" series cast (round skin-tone heads, decal faces). */
 export type SilhouetteClass = "flyKit" | "grandpaTeo" | "sisterTess";
 /** Modern civilians for the shelter series (no weapons, everyday clothes). */
@@ -32,8 +34,11 @@ export type CivilianClass =
   | "neighborC"
   | "neighborD"
   | "neighborE"
-  | "neighborF";
-export type Weapon = "sword" | "warhammer" | "club" | "dagger" | "daggers" | "staff" | "cane" | "greataxe" | "lute" | "none";
+  | "neighborF"
+  | "dadParka"
+  | "momParka"
+  | "kidParka";
+export type Weapon = "sword" | "warhammer" | "club" | "dagger" | "daggers" | "staff" | "cane" | "greataxe" | "lute" | "cast" | "none";
 
 export interface KitCtx {
   frame: number;
@@ -874,11 +879,27 @@ interface CivilianLook {
   style: HairStyle;
   iris?: string;
   blinkSeed: number;
+  /** Cold-weather dress: a puffy parka (`shirt` is its colour) with a fur-ruffed hood, mittens and boots. */
+  winter?: { trim: string; mitts: string };
 }
 
-const civilian = ({ scale, skin, shirt, shortSleeves, pants, skirt, shoes, hair, style, iris = "#5a3a22", blinkSeed }: CivilianLook): ClassKit => {
+/** A parka over the torso: longer, rounder and quilted. */
+const PARKA_PROFILE = [
+  [0.0, 0.3],
+  [0.25, 0.31],
+  [0.255, 0.42],
+  [0.235, 0.62],
+  [0.24, 0.8],
+  [0.265, 0.96],
+  [0.25, 1.07],
+  [0.16, 1.16],
+  [0.0, 1.18],
+] as const;
+
+const civilian = ({ scale, skin, shirt, shortSleeves, pants, skirt, shoes, hair, style, iris = "#5a3a22", blinkSeed, winter }: CivilianLook): ClassKit => {
   const r = 0.25;
   const hairMat = vinyl(hair, "hair");
+  if (winter) return parkaKit({ scale, skin, parka: shirt, pants, boots: shoes, hair, iris, blinkSeed, ...winter });
   return {
     scale,
     headR: r,
@@ -957,6 +978,51 @@ const civilian = ({ scale, skin, shirt, shortSleeves, pants, skirt, shoes, hair,
   };
 };
 
+/** The civilian rebuilt for the cold: parka, fur-ruffed hood up, mittens, snow boots. */
+const parkaKit = ({ scale, skin, parka, pants, boots, hair, iris, blinkSeed, trim, mitts }: {
+  scale: number; skin: string; parka: string; pants: string; boots: string; hair: string; iris: string; blinkSeed: number; trim: string; mitts: string;
+}): ClassKit => {
+  const r = 0.25;
+  const shell = vinyl(parka, "cloth");
+  const fur = vinyl(trim, "hair");
+  return {
+    scale,
+    headR: r,
+    blinkSeed,
+    defaultWeapon: "none",
+    face: { r, skin, eyeYaw: 0.32, eyePitch: 0.05, eyeR: 0.056, sclera: "#fbf7ee", iris, brow: hair, mouth: true, mouthPitch: 0.43 },
+    limbs: {
+      upperArm: shell,
+      forearm: shell,
+      hand: vinyl(mitts, "cloth"),
+      thigh: vinyl(pants, "cloth"),
+      shin: vinyl(pants, "cloth"),
+      foot: vinyl(boots, "leather"),
+    },
+    Torso: ({ rig }) => (
+      <>
+        <Torso mat={shell} breathe={rig.breathe} profile={PARKA_PROFILE} id="parka" />
+        {/* Quilting seams, a fur hem and a zip */}
+        {[0.52, 0.74, 0.94].map((y) => (
+          <Part key={y} geo={G.torus(y > 0.9 ? 0.262 : 0.24, 0.014)} mat={vinyl(parka, "cloth")} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.8, 1]} ink={false} />
+        ))}
+        <Part geo={G.torus(0.25, 0.04)} mat={fur} position={[0, 0.32, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.8, 1]} ink={INK_THIN} />
+        <Part geo={G.box(0.022, 0.78, 0.02, 0.008)} mat={vinyl("#2b2b30", "gloss")} position={[0, 0.72, 0.205]} ink={false} />
+      </>
+    ),
+    Head: () => (
+      <>
+        <Nose r={r} skin={skin} size={0.042} pitch={0.24} />
+        {/* Hood up: a deep shell round the face, edged with a thick fur ruff */}
+        <OpenShell r={r + 0.07} browTheta={Math.PI * 0.27} thetaMax={Math.PI * 0.8} gap={2.0} mat={shell} rimMat={fur} rimTube={0.045} position={[0, 0.02, -0.03]} />
+        <Part geo={G.torus(r * 0.98, 0.06)} mat={fur} position={[0, -0.01, 0.13]} scale={[1, 1.08, 0.7]} ink={INK_THIN} />
+      </>
+    ),
+    Cuff: () => <Part geo={G.cyl(0.075, 0.075, 0.06, 14)} mat={fur} ink={INK_THIN} />,
+    expression: { idle: "neutral", walk: "neutral" },
+  };
+};
+
 const CIVILIANS: Record<CivilianClass, ClassKit> = {
   dad: civilian({ scale: 1, skin: "#e8b48c", shirt: "#3f78c4", pants: "#3b4a63", shoes: "#4a3324", hair: "#5a3a22", style: "short", blinkSeed: 5 }),
   mom: civilian({ scale: 0.96, skin: "#f0c39e", shirt: "#d9534f", pants: "#46506b", skirt: "#46506b", shoes: "#2e2a2a", hair: "#8a4a26", style: "bob", blinkSeed: 17 }),
@@ -968,6 +1034,93 @@ const CIVILIANS: Record<CivilianClass, ClassKit> = {
   neighborD: civilian({ scale: 0.96, skin: "#c98b62", shirt: "#c44a7a", pants: "#2e3442", skirt: "#2e3442", shoes: "#2b2b2b", hair: "#2a1a10", style: "bun", blinkSeed: 79 }),
   neighborE: civilian({ scale: 1.04, skin: "#e3ad84", shirt: "#5b6470", pants: "#33302c", shoes: "#2b2b2b", hair: "#6b6b70", style: "cap", blinkSeed: 83 }),
   neighborF: civilian({ scale: 0.82, skin: "#8f5a3a", shirt: "#2fa8c4", shortSleeves: true, pants: "#3b4a63", shoes: "#e8e8e8", hair: "#1a120c", style: "short", blinkSeed: 97 }),
+  // the family dressed for the igloo short: same faces, cold-weather clothes
+  dadParka: civilian({ scale: 1, skin: "#e8b48c", shirt: "#2f63b0", pants: "#2e3442", shoes: "#4a3324", hair: "#5a3a22", style: "short", blinkSeed: 5, winter: { trim: "#efe4cf", mitts: "#7a2a22" } }),
+  momParka: civilian({ scale: 0.96, skin: "#f0c39e", shirt: "#c8403c", pants: "#2e3442", shoes: "#2e2a2a", hair: "#8a4a26", style: "bob", blinkSeed: 17, winter: { trim: "#efe4cf", mitts: "#2f63b0" } }),
+  kidParka: civilian({ scale: 0.74, skin: "#eab88e", shirt: "#f2b632", pants: "#3e6fb8", shoes: "#4a3324", hair: "#3a2516", style: "pony", blinkSeed: 29, winter: { trim: "#efe4cf", mitts: "#c8403c" } }),
+};
+
+// ---------------------------------------------------------------------------
+// WW1 soldiers (shelter series "spy horse"): the civilian body in a wool tunic
+// with breast pockets, leather webbing and ammo pouches, wrapped puttees on the
+// shins, and either a shallow "soup bowl" steel helmet or a peaked cap.
+// ---------------------------------------------------------------------------
+
+interface SoldierLook {
+  scale: number;
+  skin: string;
+  tunic: string;
+  trousers: string;
+  puttees: string;
+  boots: string;
+  hair: string;
+  /** Helmet paint; without one the soldier wears a peaked cap in `cap` (band in `band`). */
+  helmet?: string;
+  cap?: { crown: string; band: string };
+  moustache?: string;
+  iris?: string;
+  blinkSeed: number;
+}
+
+const soldier = (s: SoldierLook): ClassKit => {
+  const r = 0.25;
+  const base = civilian({ scale: s.scale, skin: s.skin, shirt: s.tunic, pants: s.trousers, shoes: s.boots, hair: s.hair, style: "short", iris: s.iris, blinkSeed: s.blinkSeed });
+  const tunic = vinyl(s.tunic, "cloth");
+  const strap = vinyl("#5b4630", "leather");
+  const BaseTorso = base.Torso;
+  const BaseHead = base.Head;
+  return {
+    ...base,
+    limbs: { ...base.limbs, shin: vinyl(s.puttees, "cloth") },
+    Torso: (ctx) => (
+      <>
+        <BaseTorso {...ctx} />
+        {/* breast pockets with buttoned flaps */}
+        {([-1, 1] as const).map((side) => (
+          <group key={side} position={[side * 0.095, 0.9, 0.172]} rotation={[-0.2, side * 0.4, 0]}>
+            <Part geo={G.box(0.1, 0.1, 0.025, 0.01)} mat={tunic} ink={INK_THIN} />
+            <Part geo={G.box(0.106, 0.035, 0.03, 0.01)} mat={tunic} position={[0, 0.04, 0.006]} ink={INK_THIN} />
+            <Part geo={G.sphere(0.012)} mat={vinyl("#c9a24a", "gloss")} position={[0, 0.035, 0.024]} ink={false} />
+          </group>
+        ))}
+        {/* a cross strap over the chest and two ammo pouches on the belt */}
+        <Part geo={G.box(0.04, 0.56, 0.02, 0.008)} mat={strap} position={[0, 0.86, 0.183]} rotation={[-0.08, 0, 0.62]} ink={false} />
+        {([-1, 1] as const).map((side) => (
+          <Part key={`p${side}`} geo={G.box(0.1, 0.085, 0.05, 0.015)} mat={strap} position={[side * 0.11, 0.665, 0.172]} rotation={[0, side * 0.45, 0]} ink={INK_THIN} />
+        ))}
+      </>
+    ),
+    Head: (ctx) => (
+      <>
+        <BaseHead {...ctx} />
+        {s.helmet ? (
+          // the shallow steel bowl and its wide brim, tipped a little forward
+          <group position={[0, 0.125, -0.01]} rotation={[0.12, 0, 0]}>
+            <Part geo={G.sphere(r + 0.03, 0, Math.PI * 0.42)} inkGeo={G.sphere(r + 0.03, 0, Math.PI * 0.42)} mat={vinyl(s.helmet, "cloth")} scale={[1, 0.66, 1]} />
+            <Part geo={G.cyl(r + 0.085, r + 0.085, 0.02, 32)} mat={vinyl(s.helmet, "cloth")} position={[0, 0.04, 0]} ink={INK_THIN} />
+          </group>
+        ) : null}
+        {s.cap ? (
+          <group position={[0, 0.06, 0]}>
+            <Part geo={G.cyl(r + 0.06, r + 0.01, 0.12, 28)} mat={vinyl(s.cap.crown, "cloth")} position={[0, 0.12, -0.01]} ink={INK_THIN} />
+            <Part geo={G.cyl(r + 0.015, r + 0.015, 0.05, 28)} mat={vinyl(s.cap.band, "cloth")} position={[0, 0.06, -0.01]} ink={INK_THIN} />
+            <Part geo={G.box(0.26, 0.02, 0.13, 0.008)} mat={vinyl("#1e1a16", "gloss")} position={[0, 0.045, r - 0.01]} rotation={[0.3, 0, 0]} ink={INK_THIN} />
+          </group>
+        ) : null}
+        {s.moustache ? <Part geo={G.capsule(0.022, 0.1)} mat={vinyl(s.moustache, "hair")} position={[0, -0.09, r - 0.01]} rotation={[0, 0, Math.PI / 2]} scale={[1, 1, 0.7]} ink={INK_THIN} /> : null}
+      </>
+    ),
+    expression: { idle: "neutral", walk: "focus" },
+  };
+};
+
+const KHAKI = "#8c7b52";
+const SOLDIERS: Record<SoldierClass, ClassKit> = {
+  tommy: soldier({ scale: 1, skin: "#e8b48c", tunic: KHAKI, trousers: "#7d6e49", puttees: "#6b5d3e", boots: "#3e2a1c", hair: "#5a3a22", helmet: "#6f7350", blinkSeed: 71 }),
+  tommyB: soldier({ scale: 1.03, skin: "#c98f66", tunic: "#857550", trousers: "#776845", puttees: "#655839", boots: "#3a281b", hair: "#1e1612", helmet: "#6a6e4c", moustache: "#2a1d14", blinkSeed: 83 }),
+  tommyC: soldier({ scale: 0.97, skin: "#f0c39e", tunic: "#917f55", trousers: "#80714b", puttees: "#6e6040", boots: "#3e2a1c", hair: "#b0652e", helmet: "#727652", blinkSeed: 97 }),
+  artist: soldier({ scale: 0.98, skin: "#eab88e", tunic: KHAKI, trousers: "#7d6e49", puttees: "#6b5d3e", boots: "#3e2a1c", hair: "#3a2516", cap: { crown: "#7d6e49", band: "#6b5d3e" }, iris: "#4a7ab8", blinkSeed: 109 }),
+  enemyOfficer: soldier({ scale: 1.02, skin: "#efc7a4", tunic: "#6d7262", trousers: "#5e6254", puttees: "#4f5246", boots: "#1f1a16", hair: "#c9a46a", cap: { crown: "#6d7262", band: "#9b2b24" }, moustache: "#b08a52", blinkSeed: 121 }),
 };
 
 // ---------------------------------------------------------------------------
@@ -1193,7 +1346,7 @@ const sisterTess: ClassKit = {
 
 const SILHOUETTES: Record<SilhouetteClass, ClassKit> = { flyKit, grandpaTeo, sisterTess };
 
-export const KITS: Record<AdventurerClass, ClassKit> = { goblin, rogue, mage, paladin, barbarian, bard, ...CIVILIANS, ...SILHOUETTES };
+export const KITS: Record<AdventurerClass, ClassKit> = { goblin, rogue, mage, paladin, barbarian, bard, ...CIVILIANS, ...SOLDIERS, ...SILHOUETTES };
 
 /** Overall size multiplier per class (feet stay at y=0). */
 export const CLASS_SCALE = Object.keys(KITS).reduce(

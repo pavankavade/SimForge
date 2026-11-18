@@ -1,0 +1,882 @@
+[
+  {
+    "startFrame": 7,
+    "endFrame": 112,
+    "text": "Dig a hole under your prison bed, and you have an escape tunnel.",
+    "words": [
+      {
+        "word": "Dig",
+        "startFrame": 7,
+        "endFrame": 10
+      },
+      {
+        "word": "a",
+        "startFrame": 10,
+        "endFrame": 11
+      },
+      {
+        "word": "hole",
+        "startFrame": 10,
+        "endFrame": 26
+      },
+      {
+        "word": "under",
+        "startFrame": 26,
+        "endFrame": 28
+      },
+      {
+        "word": "your",
+        "startFrame": 28,
+        "endFrame": 34
+      },
+      {
+        "word": "prison",
+        "startFrame": 34,
+        "endFrame": 50
+      },
+      {
+        "word": "bed,",
+        "startFrame": 50,
+        "endFrame": 65
+      },
+      {
+        "word": "and",
+        "startFrame": 74,
+        "endFrame": 77
+      },
+      {
+        "word": "you",
+        "startFrame": 77,
+        "endFrame": 80
+      },
+      {
+        "word": "have",
+        "startFrame": 80,
+        "endFrame": 82
+      },
+      {
+        "word": "an",
+        "startFrame": 82,
+        "endFrame": 86
+      },
+      {
+        "word": "escape",
+        "startFrame": 86,
+        "endFrame": 100
+      },
+      {
+        "word": "tunnel.",
+        "startFrame": 100,
+        "endFrame": 112
+      }
+    ]
+  },
+  {
+    "startFrame": 123,
+    "endFrame": 330,
+    "text": "But the guards search every floor. So the hole starts under the hot stove, where nobody puts a hand.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 123,
+        "endFrame": 126
+      },
+      {
+        "word": "the",
+        "startFrame": 126,
+        "endFrame": 129
+      },
+      {
+        "word": "guards",
+        "startFrame": 129,
+        "endFrame": 144
+      },
+      {
+        "word": "search",
+        "startFrame": 144,
+        "endFrame": 156
+      },
+      {
+        "word": "every",
+        "startFrame": 156,
+        "endFrame": 168
+      },
+      {
+        "word": "floor.",
+        "startFrame": 168,
+        "endFrame": 180
+      },
+      {
+        "word": "So",
+        "startFrame": 207,
+        "endFrame": 210
+      },
+      {
+        "word": "the",
+        "startFrame": 210,
+        "endFrame": 213
+      },
+      {
+        "word": "hole",
+        "startFrame": 213,
+        "endFrame": 222
+      },
+      {
+        "word": "starts",
+        "startFrame": 222,
+        "endFrame": 237
+      },
+      {
+        "word": "under",
+        "startFrame": 237,
+        "endFrame": 246
+      },
+      {
+        "word": "the",
+        "startFrame": 246,
+        "endFrame": 249
+      },
+      {
+        "word": "hot",
+        "startFrame": 249,
+        "endFrame": 258
+      },
+      {
+        "word": "stove,",
+        "startFrame": 258,
+        "endFrame": 285
+      },
+      {
+        "word": "where",
+        "startFrame": 288,
+        "endFrame": 294
+      },
+      {
+        "word": "nobody",
+        "startFrame": 294,
+        "endFrame": 306
+      },
+      {
+        "word": "puts",
+        "startFrame": 306,
+        "endFrame": 312
+      },
+      {
+        "word": "a",
+        "startFrame": 312,
+        "endFrame": 313
+      },
+      {
+        "word": "hand.",
+        "startFrame": 312,
+        "endFrame": 330
+      }
+    ]
+  },
+  {
+    "startFrame": 344,
+    "endFrame": 461,
+    "text": "But the sand you dig is bright yellow, and the yard is dark grey.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 344,
+        "endFrame": 347
+      },
+      {
+        "word": "the",
+        "startFrame": 347,
+        "endFrame": 350
+      },
+      {
+        "word": "sand",
+        "startFrame": 350,
+        "endFrame": 362
+      },
+      {
+        "word": "you",
+        "startFrame": 362,
+        "endFrame": 365
+      },
+      {
+        "word": "dig",
+        "startFrame": 365,
+        "endFrame": 374
+      },
+      {
+        "word": "is",
+        "startFrame": 374,
+        "endFrame": 380
+      },
+      {
+        "word": "bright",
+        "startFrame": 380,
+        "endFrame": 392
+      },
+      {
+        "word": "yellow,",
+        "startFrame": 392,
+        "endFrame": 407
+      },
+      {
+        "word": "and",
+        "startFrame": 413,
+        "endFrame": 416
+      },
+      {
+        "word": "the",
+        "startFrame": 416,
+        "endFrame": 419
+      },
+      {
+        "word": "yard",
+        "startFrame": 419,
+        "endFrame": 428
+      },
+      {
+        "word": "is",
+        "startFrame": 428,
+        "endFrame": 434
+      },
+      {
+        "word": "dark",
+        "startFrame": 434,
+        "endFrame": 449
+      },
+      {
+        "word": "grey.",
+        "startFrame": 449,
+        "endFrame": 461
+      }
+    ]
+  },
+  {
+    "startFrame": 472,
+    "endFrame": 622,
+    "text": "So you carry it out in bags inside your trousers, and shake it loose as you walk.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 472,
+        "endFrame": 475
+      },
+      {
+        "word": "you",
+        "startFrame": 475,
+        "endFrame": 481
+      },
+      {
+        "word": "carry",
+        "startFrame": 481,
+        "endFrame": 490
+      },
+      {
+        "word": "it",
+        "startFrame": 490,
+        "endFrame": 496
+      },
+      {
+        "word": "out",
+        "startFrame": 496,
+        "endFrame": 499
+      },
+      {
+        "word": "in",
+        "startFrame": 499,
+        "endFrame": 505
+      },
+      {
+        "word": "bags",
+        "startFrame": 505,
+        "endFrame": 526
+      },
+      {
+        "word": "inside",
+        "startFrame": 526,
+        "endFrame": 544
+      },
+      {
+        "word": "your",
+        "startFrame": 544,
+        "endFrame": 547
+      },
+      {
+        "word": "trousers,",
+        "startFrame": 547,
+        "endFrame": 568
+      },
+      {
+        "word": "and",
+        "startFrame": 571,
+        "endFrame": 577
+      },
+      {
+        "word": "shake",
+        "startFrame": 577,
+        "endFrame": 586
+      },
+      {
+        "word": "it",
+        "startFrame": 586,
+        "endFrame": 589
+      },
+      {
+        "word": "loose",
+        "startFrame": 589,
+        "endFrame": 601
+      },
+      {
+        "word": "as",
+        "startFrame": 601,
+        "endFrame": 604
+      },
+      {
+        "word": "you",
+        "startFrame": 604,
+        "endFrame": 607
+      },
+      {
+        "word": "walk.",
+        "startFrame": 607,
+        "endFrame": 622
+      }
+    ]
+  },
+  {
+    "startFrame": 635,
+    "endFrame": 794,
+    "text": "But sand caves in. So every bed in the hut gives up its boards to line the walls.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 635,
+        "endFrame": 641
+      },
+      {
+        "word": "sand",
+        "startFrame": 641,
+        "endFrame": 653
+      },
+      {
+        "word": "caves",
+        "startFrame": 653,
+        "endFrame": 662
+      },
+      {
+        "word": "in.",
+        "startFrame": 662,
+        "endFrame": 671
+      },
+      {
+        "word": "So",
+        "startFrame": 689,
+        "endFrame": 695
+      },
+      {
+        "word": "every",
+        "startFrame": 695,
+        "endFrame": 707
+      },
+      {
+        "word": "bed",
+        "startFrame": 707,
+        "endFrame": 713
+      },
+      {
+        "word": "in",
+        "startFrame": 713,
+        "endFrame": 716
+      },
+      {
+        "word": "the",
+        "startFrame": 716,
+        "endFrame": 719
+      },
+      {
+        "word": "hut",
+        "startFrame": 719,
+        "endFrame": 725
+      },
+      {
+        "word": "gives",
+        "startFrame": 725,
+        "endFrame": 734
+      },
+      {
+        "word": "up",
+        "startFrame": 734,
+        "endFrame": 737
+      },
+      {
+        "word": "its",
+        "startFrame": 737,
+        "endFrame": 743
+      },
+      {
+        "word": "boards",
+        "startFrame": 743,
+        "endFrame": 761
+      },
+      {
+        "word": "to",
+        "startFrame": 761,
+        "endFrame": 764
+      },
+      {
+        "word": "line",
+        "startFrame": 764,
+        "endFrame": 770
+      },
+      {
+        "word": "the",
+        "startFrame": 770,
+        "endFrame": 773
+      },
+      {
+        "word": "walls.",
+        "startFrame": 773,
+        "endFrame": 794
+      }
+    ]
+  },
+  {
+    "startFrame": 807,
+    "endFrame": 1038,
+    "text": "But thirty feet down, the air runs out. So a pump made from a kit bag pushes air through a pipe of milk tins.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 807,
+        "endFrame": 813
+      },
+      {
+        "word": "thirty",
+        "startFrame": 813,
+        "endFrame": 822
+      },
+      {
+        "word": "feet",
+        "startFrame": 822,
+        "endFrame": 831
+      },
+      {
+        "word": "down,",
+        "startFrame": 831,
+        "endFrame": 846
+      },
+      {
+        "word": "the",
+        "startFrame": 858,
+        "endFrame": 864
+      },
+      {
+        "word": "air",
+        "startFrame": 864,
+        "endFrame": 879
+      },
+      {
+        "word": "runs",
+        "startFrame": 882,
+        "endFrame": 891
+      },
+      {
+        "word": "out.",
+        "startFrame": 891,
+        "endFrame": 903
+      },
+      {
+        "word": "So",
+        "startFrame": 909,
+        "endFrame": 912
+      },
+      {
+        "word": "a",
+        "startFrame": 912,
+        "endFrame": 915
+      },
+      {
+        "word": "pump",
+        "startFrame": 915,
+        "endFrame": 930
+      },
+      {
+        "word": "made",
+        "startFrame": 933,
+        "endFrame": 939
+      },
+      {
+        "word": "from",
+        "startFrame": 939,
+        "endFrame": 942
+      },
+      {
+        "word": "a",
+        "startFrame": 942,
+        "endFrame": 945
+      },
+      {
+        "word": "kit",
+        "startFrame": 945,
+        "endFrame": 954
+      },
+      {
+        "word": "bag",
+        "startFrame": 954,
+        "endFrame": 966
+      },
+      {
+        "word": "pushes",
+        "startFrame": 966,
+        "endFrame": 978
+      },
+      {
+        "word": "air",
+        "startFrame": 978,
+        "endFrame": 984
+      },
+      {
+        "word": "through",
+        "startFrame": 984,
+        "endFrame": 993
+      },
+      {
+        "word": "a",
+        "startFrame": 993,
+        "endFrame": 996
+      },
+      {
+        "word": "pipe",
+        "startFrame": 996,
+        "endFrame": 1008
+      },
+      {
+        "word": "of",
+        "startFrame": 1008,
+        "endFrame": 1014
+      },
+      {
+        "word": "milk",
+        "startFrame": 1014,
+        "endFrame": 1023
+      },
+      {
+        "word": "tins.",
+        "startFrame": 1023,
+        "endFrame": 1038
+      }
+    ]
+  },
+  {
+    "startFrame": 1051,
+    "endFrame": 1258,
+    "text": "But crawling the length of a football field takes all night. So you lay wooden rails, and ride a trolley on a rope.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 1051,
+        "endFrame": 1057
+      },
+      {
+        "word": "crawling",
+        "startFrame": 1057,
+        "endFrame": 1072
+      },
+      {
+        "word": "the",
+        "startFrame": 1072,
+        "endFrame": 1075
+      },
+      {
+        "word": "length",
+        "startFrame": 1075,
+        "endFrame": 1087
+      },
+      {
+        "word": "of",
+        "startFrame": 1087,
+        "endFrame": 1090
+      },
+      {
+        "word": "a",
+        "startFrame": 1090,
+        "endFrame": 1093
+      },
+      {
+        "word": "football",
+        "startFrame": 1093,
+        "endFrame": 1108
+      },
+      {
+        "word": "field",
+        "startFrame": 1108,
+        "endFrame": 1120
+      },
+      {
+        "word": "takes",
+        "startFrame": 1120,
+        "endFrame": 1132
+      },
+      {
+        "word": "all",
+        "startFrame": 1135,
+        "endFrame": 1144
+      },
+      {
+        "word": "night.",
+        "startFrame": 1144,
+        "endFrame": 1165
+      },
+      {
+        "word": "So",
+        "startFrame": 1168,
+        "endFrame": 1174
+      },
+      {
+        "word": "you",
+        "startFrame": 1174,
+        "endFrame": 1177
+      },
+      {
+        "word": "lay",
+        "startFrame": 1177,
+        "endFrame": 1186
+      },
+      {
+        "word": "wooden",
+        "startFrame": 1186,
+        "endFrame": 1201
+      },
+      {
+        "word": "rails,",
+        "startFrame": 1201,
+        "endFrame": 1219
+      },
+      {
+        "word": "and",
+        "startFrame": 1219,
+        "endFrame": 1222
+      },
+      {
+        "word": "ride",
+        "startFrame": 1222,
+        "endFrame": 1228
+      },
+      {
+        "word": "a",
+        "startFrame": 1228,
+        "endFrame": 1231
+      },
+      {
+        "word": "trolley",
+        "startFrame": 1231,
+        "endFrame": 1243
+      },
+      {
+        "word": "on",
+        "startFrame": 1243,
+        "endFrame": 1246
+      },
+      {
+        "word": "a",
+        "startFrame": 1246,
+        "endFrame": 1249
+      },
+      {
+        "word": "rope.",
+        "startFrame": 1249,
+        "endFrame": 1258
+      }
+    ]
+  },
+  {
+    "startFrame": 1273,
+    "endFrame": 1390,
+    "text": "Then one night you climb the last ladder, push up through the grass,",
+    "words": [
+      {
+        "word": "Then",
+        "startFrame": 1273,
+        "endFrame": 1285
+      },
+      {
+        "word": "one",
+        "startFrame": 1288,
+        "endFrame": 1294
+      },
+      {
+        "word": "night",
+        "startFrame": 1294,
+        "endFrame": 1306
+      },
+      {
+        "word": "you",
+        "startFrame": 1306,
+        "endFrame": 1312
+      },
+      {
+        "word": "climb",
+        "startFrame": 1312,
+        "endFrame": 1330
+      },
+      {
+        "word": "the",
+        "startFrame": 1330,
+        "endFrame": 1333
+      },
+      {
+        "word": "last",
+        "startFrame": 1333,
+        "endFrame": 1339
+      },
+      {
+        "word": "ladder,",
+        "startFrame": 1339,
+        "endFrame": 1351
+      },
+      {
+        "word": "push",
+        "startFrame": 1360,
+        "endFrame": 1369
+      },
+      {
+        "word": "up",
+        "startFrame": 1369,
+        "endFrame": 1372
+      },
+      {
+        "word": "through",
+        "startFrame": 1372,
+        "endFrame": 1378
+      },
+      {
+        "word": "the",
+        "startFrame": 1378,
+        "endFrame": 1381
+      },
+      {
+        "word": "grass,",
+        "startFrame": 1381,
+        "endFrame": 1390
+      }
+    ]
+  },
+  {
+    "startFrame": 1400,
+    "endFrame": 1517,
+    "text": "and you are just short of the trees, right beside the guard tower.",
+    "words": [
+      {
+        "word": "and",
+        "startFrame": 1400,
+        "endFrame": 1406
+      },
+      {
+        "word": "you",
+        "startFrame": 1406,
+        "endFrame": 1409
+      },
+      {
+        "word": "are",
+        "startFrame": 1409,
+        "endFrame": 1412
+      },
+      {
+        "word": "just",
+        "startFrame": 1412,
+        "endFrame": 1430
+      },
+      {
+        "word": "short",
+        "startFrame": 1430,
+        "endFrame": 1442
+      },
+      {
+        "word": "of",
+        "startFrame": 1442,
+        "endFrame": 1445
+      },
+      {
+        "word": "the",
+        "startFrame": 1445,
+        "endFrame": 1448
+      },
+      {
+        "word": "trees,",
+        "startFrame": 1448,
+        "endFrame": 1463
+      },
+      {
+        "word": "right",
+        "startFrame": 1466,
+        "endFrame": 1478
+      },
+      {
+        "word": "beside",
+        "startFrame": 1478,
+        "endFrame": 1493
+      },
+      {
+        "word": "the",
+        "startFrame": 1493,
+        "endFrame": 1496
+      },
+      {
+        "word": "guard",
+        "startFrame": 1496,
+        "endFrame": 1505
+      },
+      {
+        "word": "tower.",
+        "startFrame": 1505,
+        "endFrame": 1517
+      }
+    ]
+  },
+  {
+    "startFrame": 1543,
+    "endFrame": 1636,
+    "text": "So. Do you run, or go back down?",
+    "words": [
+      {
+        "word": "So.",
+        "startFrame": 1543,
+        "endFrame": 1546
+      },
+      {
+        "word": "Do",
+        "startFrame": 1570,
+        "endFrame": 1573
+      },
+      {
+        "word": "you",
+        "startFrame": 1573,
+        "endFrame": 1579
+      },
+      {
+        "word": "run,",
+        "startFrame": 1579,
+        "endFrame": 1588
+      },
+      {
+        "word": "or",
+        "startFrame": 1588,
+        "endFrame": 1603
+      },
+      {
+        "word": "go",
+        "startFrame": 1615,
+        "endFrame": 1618
+      },
+      {
+        "word": "back",
+        "startFrame": 1618,
+        "endFrame": 1627
+      },
+      {
+        "word": "down?",
+        "startFrame": 1627,
+        "endFrame": 1636
+      }
+    ]
+  }
+]

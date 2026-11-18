@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { AdventurerUnit, type AdventurerClass, type AdventurerPose } from "../artifacts/characters/hero";
-import type { Expression } from "../artifacts/characters/hero/Face";
 import { OUTPUT_HEIGHT } from "../engine/viewport";
 import { buildCrypt, type CryptLamp } from "./dungeon/crypt";
 import { floorAt } from "./dungeon/floors";
@@ -12,7 +10,23 @@ import { ashlar } from "./dungeon/masonry";
 import { THEMES, type ThemeName } from "./dungeon/themes";
 import { CELL_M, createDungeonView, type ScanSet } from "./dungeon/view";
 import { createWalker } from "./dungeon/walker";
-import { createMobSimulation, type MobAgent } from "./npcSim";
+import { planMarket, stallPoint, stallProps } from "./dungeon/market";
+import { createMarket, type Market } from "./marketView";
+import { MERCHANTS, css } from "./merchants";
+import { MODULES, pieceProps, planFloor, type FloorPlan } from "./dungeon/rooms";
+import { buildDressing, type FloorDressing } from "./roomView";
+import { createDoors, doorwayProps, type Doors } from "./doorView";
+import { rollChest, rollCorpse, type Container } from "./loot";
+import { LootScreen } from "./LootScreen";
+import { equipFromBag, loadInventory, saveInventory, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
+import { def, removeItem } from "./items";
+import { itemIcons } from "./icons";
+import { loadModel } from "./props3d";
+import { ShopScreen } from "./ShopScreen";
+import { armorOf, armorReduction, createMobSimulation, type MobAgent } from "./npcSim";
+import { POOL_SIZE, createMobBodies, type MobBodies } from "./mobBodies";
+import { HealthBar } from "./HealthBar";
+import { PORTAL_COUNT, PORTAL_REACH, PORTALS_FROM, RUN_SECONDS, createPortals, planPortals, type Portals } from "./portals";
 import {
   CharacterCustomizer,
   initialEquipment,
@@ -22,6 +36,8 @@ import {
   type PanelLayout,
   type ShowcaseView,
 } from "./CharacterCustomizer";
+import { ITEMS, InventoryScreen, type FrameRect } from "./Inventory";
+import { PauseMenu } from "./PauseMenu";
 import {
   createPaladin,
   createPaladinSfx,
@@ -70,29 +86,6 @@ async function enterLandscapeMode(): Promise<void> {
   }
 }
 
-interface CharacterViewProps {
-  classType: AdventurerClass;
-  scale: number;
-  pose: AdventurerPose;
-  animFrame: number;
-  expression: Expression;
-  visible?: boolean;
-}
-
-const CharacterModel = React.memo<CharacterViewProps>(
-  ({ classType, scale, pose, animFrame, expression, visible = true }) => (
-    <group visible={visible}>
-      <AdventurerUnit
-        classType={classType}
-        scale={scale}
-        pose={pose}
-        animFrame={Math.floor(animFrame)}
-        expression={expression}
-      />
-    </group>
-  )
-);
-
 interface WorldState {
   dungeon: DungeonData;
   level: LevelData;
@@ -103,9 +96,20 @@ interface WorldState {
   playerJumpY: number;
   playerJumpVy: number;
   time: number;
-  /** What the paladin's blade can strike: stone and the mobs. */
+  /** What the paladin's blade can strike: stone and the men still standing. */
   combat: CombatWorld;
   targets: CombatTarget[];
+  /** The paladin's health; he falls at 0. */
+  hp: number;
+  maxHp: number;
+  dead: boolean;
+  deadT: number;
+  /** Swing counter last frame (a new cut warns the shield-bearers). */
+  lastSerial: number;
+  /** Seconds into this floor's run (the clock stops in the Esc menu), and he got out through a portal. */
+  runT: number;
+  escaped: boolean;
+  rand: () => number;
 }
 
 interface HudInfo {
@@ -118,6 +122,26 @@ interface HudInfo {
   firstPerson: boolean;
   pointerLocked: boolean;
   loading: string | null;
+  hp: number;
+  maxHp: number;
+  dead: boolean;
+  /** Why he fell ("The dungeon closed on you" when the time ran out), or null. */
+  deathCause: string | null;
+  /** Seconds left on the run, and how many escape portals are open. */
+  runLeft: number;
+  portalsOpen: number;
+  escaped: boolean;
+  /** What E would do right now, or null. */
+  interact: Interact | null;
+}
+
+/** Something within reach: a stall, a door, a chest or a fallen man. */
+interface Interact {
+  kind: "trade" | "door" | "chest" | "corpse" | "portal";
+  /** Merchant index, door index or container id. */
+  key: string;
+  verb: string;
+  label: string;
 }
 
 /** Character-screen framing the panel controls: turntable spin, framed height (m), target lift (m). */
@@ -139,15 +163,29 @@ interface DungeonSceneProps {
   /** Who the paladin is; a change rebuilds the body (debounced). */
   spec: HumanSpec;
   equipment: ArmorEquipment;
-  /** The character screen is open: the paladin stands still and turns to a showcase camera. */
+  /** The inventory or character screen is open: the paladin stands still and turns to a showcase camera. */
   customizing: boolean;
+  /** The game has the controls (no menu or screen open). */
+  playing: boolean;
   showcaseRef: React.RefObject<Showcase>;
-  panel: PanelLayout;
+  /** Where on screen the showcase frames him. */
+  frame: FrameRect;
   onCharacterBusy: (busy: boolean) => void;
   /** Render the inventory icons (once) and hand them back. */
   iconsWanted: boolean;
   onIcons: (icons: Partial<Record<ArmorSlot, string>>) => void;
   onHudUpdate: (patch: Partial<HudInfo>) => void;
+  /** Bumped by Respawn: the floor is rebuilt and the paladin stands up again. */
+  life: number;
+  /** One nameplate element per pooled body (filled each frame). */
+  platesRef: React.RefObject<Array<HTMLDivElement | null>>;
+  /** The paladin took a wound (screen flash). */
+  onPlayerHurt: () => void;
+  /** The chests and fallen men on this floor (shared with the loot screen). */
+  containersRef: React.RefObject<Map<string, Container>>;
+  /** A door to open or close (set by E), and hit points to give back (a draught, an apple). */
+  doorQueueRef: React.RefObject<number>;
+  healQueueRef: React.RefObject<number>;
   minimapCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   touchMoveRef: React.RefObject<{ forward: number; strafe: number }>;
   touchSprintRef: React.RefObject<boolean>;
@@ -155,8 +193,39 @@ interface DungeonSceneProps {
   attackQueueRef: React.RefObject<boolean>;
   touchBlockRef: React.RefObject<boolean>;
   onTouchDetected: () => void;
+  /** The merchant being traded with (-1: none), and where the trade panel leaves the view free. */
+  trading: number;
+  tradeFrame: FrameRect | null;
+  /** The run clock ticks (stopped in the Esc menu and the character screen). */
+  clockRunning: boolean;
+  /** Set by E at an open portal: he steps through and the run ends. */
+  escapeQueueRef: React.RefObject<boolean>;
+  /** A floor is built and he stands at the entrance (the run starts). */
+  onFloorReady: () => void;
 }
 
+/** Over-the-shoulder camera: the pivot sits this far right of his head, at about ear height. */
+const SHOULDER_OFFSET = 0.52;
+const SHOULDER_HEIGHT = 1.58;
+
+/** Is this point (metres) open air inside the dungeon, `margin` metres clear of floor and vault? */
+function openAir(d: DungeonData, level: LevelData, x: number, y: number, z: number, margin: number): boolean {
+  const gx = x / CELL_M + d.W / 2;
+  const gz = z / CELL_M + d.H / 2;
+  const ix = Math.max(0, Math.min(d.W - 1, Math.floor(gx)));
+  const iz = Math.max(0, Math.min(d.H - 1, Math.floor(gz)));
+  if (d.grid[iz * d.W + ix] !== FLOOR) return false;
+  if (level.openAt && level.openAt(gx, gz) < 0.58) return false;
+  const ceilY = (level.heights[iz * d.W + ix] || 2.8) * CELL_M - margin;
+  const flY = floorAt(d, gx, gz) * CELL_M + margin;
+  return y <= ceilY && y >= flY;
+}
+
+/**
+ * Third-person camera. The pivot is `shoulder` metres to the right of his head (over the right
+ * shoulder), pulled in when a wall is closer (`sideMax` reports how far it could go, up to
+ * `shoulderWant`); the camera then backs off from the pivot until it meets stone.
+ */
 function resolveThirdPersonCam(
   d: DungeonData,
   level: LevelData,
@@ -165,11 +234,27 @@ function resolveThirdPersonCam(
   pz: number,
   yaw: number,
   pitch: number,
-  desiredDist: number
-): { cx: number; cy: number; cz: number; tx: number; ty: number; tz: number } {
-  const tx = px;
-  const ty = py + 1.5;
-  const tz = pz;
+  desiredDist: number,
+  shoulder = 0,
+  shoulderWant = 0,
+  solid?: (x: number, y: number, z: number) => boolean
+): { cx: number; cy: number; cz: number; tx: number; ty: number; tz: number; sideMax: number } {
+  // The view's right-hand direction (the camera looks along -(sin yaw, 0, cos yaw)).
+  const rx = Math.cos(yaw);
+  const rz = -Math.sin(yaw);
+  const headY = py + SHOULDER_HEIGHT;
+  let sideMax = shoulderWant;
+  for (let i = 1; i <= 8; i++) {
+    const s = (shoulderWant * i) / 8 + 0.18;
+    if (!openAir(d, level, px + rx * s, headY, pz + rz * s, 0.2) || solid?.(px + rx * s, headY, pz + rz * s)) {
+      sideMax = Math.max(0, (shoulderWant * (i - 1)) / 8 - 0.05);
+      break;
+    }
+  }
+  const side = Math.min(shoulder, sideMax);
+  const tx = px + rx * side;
+  const ty = headY;
+  const tz = pz + rz * side;
   const dirX = Math.cos(pitch) * Math.sin(yaw);
   const dirY = Math.sin(pitch);
   const dirZ = Math.cos(pitch) * Math.cos(yaw);
@@ -188,7 +273,7 @@ function resolveThirdPersonCam(
     const open = level.openAt ? level.openAt(gx, gz) : d.grid[iz * d.W + ix] === FLOOR ? 1 : 0;
     const ceilY = (level.heights[iz * d.W + ix] || 2.8) * CELL_M - 0.25;
     const flY = floorAt(d, gx, gz) * CELL_M + 0.35;
-    if (open < 0.58 || d.grid[iz * d.W + ix] !== FLOOR || y > ceilY || y < flY) {
+    if (open < 0.58 || d.grid[iz * d.W + ix] !== FLOOR || y > ceilY || y < flY || solid?.(x, y, z)) {
       safeDist = Math.max(0.55, (desiredDist * (i - 1)) / STEPS - 0.15);
       break;
     }
@@ -203,7 +288,7 @@ function resolveThirdPersonCam(
   const ceilY = (level.heights[iz * d.W + ix] || 2.8) * CELL_M - 0.28;
   const flY = floorAt(d, gx, gz) * CELL_M + 0.35;
   cy = Math.max(flY, Math.min(ceilY, cy));
-  return { cx, cy, cz, tx, ty, tz };
+  return { cx, cy, cz, tx, ty, tz, sideMax };
 }
 
 const DungeonScene: React.FC<DungeonSceneProps> = ({
@@ -214,12 +299,19 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   spec,
   equipment,
   customizing,
+  playing,
   showcaseRef,
-  panel,
+  frame,
   onCharacterBusy,
   iconsWanted,
   onIcons,
   onHudUpdate,
+  life,
+  platesRef,
+  onPlayerHurt,
+  containersRef,
+  doorQueueRef,
+  healQueueRef,
   minimapCanvasRef,
   touchMoveRef,
   touchSprintRef,
@@ -227,13 +319,37 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   attackQueueRef,
   touchBlockRef,
   onTouchDetected,
+  trading,
+  tradeFrame,
+  clockRunning,
+  escapeQueueRef,
+  onFloorReady,
 }) => {
   const { gl, scene, camera, size } = useThree();
+  const marketRef = useRef<Market | null>(null);
+  // The floor's furnishings and doors, the room plan, and what E would do (as last told to the HUD).
+  const dressingRef = useRef<FloorDressing | null>(null);
+  const doorsRef = useRef<Doors | null>(null);
+  const portalsRef = useRef<Portals | null>(null);
+  const clockRunningRef = useRef(clockRunning);
+  clockRunningRef.current = clockRunning;
+  const floorReadyRef = useRef(onFloorReady);
+  floorReadyRef.current = onFloorReady;
+  const planRef = useRef<FloorPlan | null>(null);
+  const chestIdsRef = useRef<string[]>([]);
+  const interactKeyRef = useRef("");
+  const tradingRef = useRef(trading);
+  tradingRef.current = trading;
+  const tradeFrameRef = useRef(tradeFrame);
+  tradeFrameRef.current = tradeFrame;
+  const offsetOnRef = useRef(false);
   const viewRef = useRef<ReturnType<typeof createDungeonView> | null>(null);
   const scansRef = useRef<{ wall: ScanSet; floor: ScanSet; plaster: ScanSet } | null>(null);
   const worldRef = useRef<WorldState | null>(null);
   const keysRef = useRef<Set<string>>(new Set());
-  const camDistRef = useRef<number>(3.1);
+  const camDistRef = useRef<number>(2.4);
+  // How far over the right shoulder the camera sits now (eased; pulled in at once by a wall).
+  const shoulderRef = useRef(SHOULDER_OFFSET);
   const lookPointerRef = useRef<{ id: number; x: number; y: number; touch: boolean } | null>(null);
   const lastTouchDownRef = useRef(false);
   const paladinRef = useRef<Paladin | null>(null);
@@ -242,13 +358,14 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const freeLookRef = useRef(0);
   const prevYawRef = useRef(0);
   const eyeRef = useRef(new THREE.Vector3());
-  const mobGroupRefs = useRef<Array<THREE.Group | null>>([]);
-  const [mobs, setMobs] = useState<MobAgent[]>([]);
-  const [animTick, setAnimTick] = useState(0);
-  const animTimerRef = useRef(0);
+  const bodiesRef = useRef<MobBodies | null>(null);
+  const bodiesPromiseRef = useRef<Promise<MobBodies> | null>(null);
+  const blockingRef = useRef(false);
   const hudTimerRef = useRef(0);
   const customizingRef = useRef(customizing);
   customizingRef.current = customizing;
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
   const iconsDoneRef = useRef(false);
   const equipmentRef = useRef(equipment);
   equipmentRef.current = equipment;
@@ -275,8 +392,19 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
 
     const view = createDungeonView(gl, scene, persp);
     viewRef.current = view;
+    // The entrance market (stalls per floor; the merchants are built once, in the background).
+    const market = createMarket(gl, scene);
+    marketRef.current = market;
 
     return () => {
+      market.dispose();
+      marketRef.current = null;
+      dressingRef.current?.dispose();
+      dressingRef.current = null;
+      doorsRef.current?.dispose();
+      doorsRef.current = null;
+      portalsRef.current?.dispose();
+      portalsRef.current = null;
       view.dispose();
       viewRef.current = null;
     };
@@ -328,6 +456,87 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     return () => window.clearTimeout(timer);
   }, [gl, scene, specKey, onCharacterBusy]);
 
+  // The men's bodies: a pool built once (see mobBodies.ts), lent to the nearest men on every floor.
+  const hurtPlayerRef = useRef<(m: MobAgent, body: { bounce: () => void }) => void>(() => {});
+  hurtPlayerRef.current = (m, body) => {
+    const w = worldRef.current;
+    const pal = paladinRef.current;
+    if (!w || w.dead) return;
+    const px = w.walker.x * CELL_M;
+    const pz = w.walker.z * CELL_M;
+    const facing = w.walker.yaw + Math.PI;
+    const tx = m.wx - px;
+    const tz = m.wz - pz;
+    const front = (Math.sin(facing) * tx + Math.cos(facing) * tz) / (Math.hypot(tx, tz) || 1);
+    // A raised shield toward the man takes the cut, and his blade glances off.
+    if (blockingRef.current && equipmentRef.current.shield && front > 0.45) {
+      sfxRef.current?.clang();
+      body.bounce();
+      if (pal) pal.shake.value = Math.min(1, pal.shake.value + 0.25);
+      return;
+    }
+    const dmg = m.stats.damage * (0.9 + w.rand() * 0.2) * (1 - armorReduction(armorOf(equipmentRef.current)));
+    w.hp = Math.max(0, w.hp - dmg);
+    sfxRef.current?.hit();
+    if (pal) pal.shake.value = Math.min(1, pal.shake.value + 0.55);
+    if (w.hp <= 0) {
+      w.dead = true;
+      w.deadT = 0;
+    }
+    onHudUpdate({ hp: w.hp, maxHp: w.maxHp, dead: w.dead });
+    onPlayerHurt();
+  };
+  // A handle for headless checks (scripts drive the game through it): the live floor, the paladin
+  // and a way to swing.
+  useEffect(() => {
+    (window as unknown as { __dungeon?: unknown }).__dungeon = {
+      world: () => worldRef.current,
+      paladin: () => paladinRef.current,
+      market: () => marketRef.current,
+      plan: () => planRef.current,
+      doors: () => doorsRef.current,
+      portals: () => portalsRef.current,
+      dressing: () => dressingRef.current,
+      containers: () => containersRef.current,
+      loadModel,
+      attack: () => {
+        attackQueueRef.current = true;
+      },
+    };
+  }, [attackQueueRef, containersRef]);
+
+  useEffect(() => {
+    let disposed = false;
+    const promise = createMobBodies(
+      gl,
+      scene,
+      {
+        solid: (x, y, z) => worldRef.current?.combat.solid?.(x, y, z) ?? false,
+        onPlayerHit: (m, body) => hurtPlayerRef.current(m, body),
+        onSwing: (m, swing) => {
+          const w = worldRef.current;
+          if (w && Math.hypot(m.wx - w.walker.x * CELL_M, m.wz - w.walker.z * CELL_M) < 7) sfxRef.current?.swing(swing);
+        },
+        onClang: () => sfxRef.current?.clang(),
+      },
+      (built, total) => {
+        if (!worldRef.current) onHudUpdate({ loading: `Mustering the garrison... ${built} / ${total}` });
+      }
+    );
+    bodiesPromiseRef.current = promise;
+    promise
+      .then((b) => {
+        if (disposed) b.dispose();
+        else bodiesRef.current = b;
+      })
+      .catch((err: unknown) => console.error("mob bodies failed to load", err));
+    return () => {
+      disposed = true;
+      bodiesRef.current?.dispose();
+      bodiesRef.current = null;
+    };
+  }, [gl, scene, onHudUpdate]);
+
   // Armour changes swap visibility only.
   useEffect(() => {
     const p = paladinRef.current;
@@ -363,7 +572,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const dom = gl.domElement;
     const onKeyDown = (e: KeyboardEvent) => {
       if (!e.repeat) keysRef.current.add(e.code);
-      if (customizingRef.current) return;
+      if (!playingRef.current) return;
       if (e.code === "Space" && worldRef.current) {
         const w = worldRef.current;
         if (w.playerJumpY <= 0.01) w.playerJumpVy = 4.6;
@@ -372,7 +581,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     };
     // Mouse buttons: left swings (once the mouse is captured), right raises the shield.
     const onMouseDown = (e: MouseEvent) => {
-      if (customizingRef.current) return;
+      if (!playingRef.current) return;
       if (e.button === 2) mouseBlockRef.current = true;
       if (e.button === 0 && document.pointerLockElement === dom) attackQueueRef.current = true;
     };
@@ -387,7 +596,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       mouseBlockRef.current = false;
     };
     const onClick = () => {
-      if (lastTouchDownRef.current || customizingRef.current) return;
+      if (lastTouchDownRef.current || !playingRef.current) return;
       if (document.pointerLockElement !== dom) {
         try {
           const p = dom.requestPointerLock?.() as unknown as Promise<void> | undefined;
@@ -444,6 +653,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         sc.lift = Math.max(-0.9, Math.min(0.9, sc.lift + dy * 0.0028 * (sc.zoom / 1.4)));
         return;
       }
+      if (!playingRef.current) return;
       // Hold C in third person to orbit the camera around the paladin without turning him.
       if (!firstPerson && keysRef.current.has("KeyC")) freeLookRef.current -= dx * sens;
       else world.walker.yaw -= dx * sens;
@@ -457,7 +667,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         sc.zoom = Math.max(SHOW_ZOOM_MIN, Math.min(SHOW_ZOOM_MAX, sc.zoom * Math.exp(e.deltaY * 0.0012)));
         return;
       }
-      camDistRef.current = Math.max(1.6, Math.min(5.2, camDistRef.current + e.deltaY * 0.0025));
+      if (!playingRef.current) return;
+      camDistRef.current = Math.max(1.4, Math.min(4.4, camDistRef.current + e.deltaY * 0.0025));
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -527,6 +738,21 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (cancelled) return;
 
       const dungeon = generateDungeon({ seed, rooms: roomCount, loops: 0.35, decor: 0.6, theme });
+      // The market: stalls round the entrance hall, planned from where he will stand, and solid
+      // before the crypt is built (so the wall pilasters beside them become corbels).
+      const probe = createWalker(dungeon);
+      probe.start();
+      const stalls = planMarket(dungeon, MERCHANTS.length, { x: probe.x + dungeon.W / 2, z: probe.z + dungeon.H / 2 });
+      for (const p of stallProps(dungeon, stalls)) dungeon.props.push(p);
+      // Every other room gets a theme and its furnishings, the corridors clutter and chests
+      // (rooms.ts); solid before the crypt is built, like the stalls.
+      const plan = planFloor(dungeon, { x: probe.x + dungeon.W / 2, z: probe.z + dungeon.H / 2 });
+      for (const p of pieceProps(dungeon, plan.pieces)) dungeon.props.push(p);
+      // A fire pit burns: an ember lamp in it, lit and shadowed like the crypt's own.
+      for (const p of plan.pieces) if (p.kind === "guardFire") dungeon.props.push({ kind: "ember", x: p.x - 0.5, y: p.z - 0.5, rot: 0, scale: 1, roomId: p.room });
+      planRef.current = plan;
+      // The stone round every door is solid (the passage is clear either side of it).
+      for (const p of doorwayProps(dungeon, CELL_M)) dungeon.props.push(p);
       const level = buildLevel(dungeon);
       view.setLevel(dungeon, level);
 
@@ -535,13 +761,46 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (cancelled) return;
 
       const lamps = buildCrypt(view, dungeon, level);
+      marketRef.current?.setFloor(dungeon, stalls, CELL_M);
+      dressingRef.current?.dispose();
+      doorsRef.current?.dispose();
+      dressingRef.current = buildDressing(scene, dungeon, plan.pieces, CELL_M);
+      doorsRef.current = createDoors(scene, dungeon, CELL_M, view.materials.dressed);
+      // What every chest holds (deeper rooms and treasuries roll richer); the last floor's are gone.
+      const containers = containersRef.current;
+      containers.clear();
+      // The same chests on every life of this floor (dying is not a reroll).
+      let ls = (Math.imul(seed, 2654435761) + 17) >>> 0;
+      const lootRand = () => (ls = (Math.imul(ls, 1664525) + 1013904223) >>> 0) / 4294967296;
+      chestIdsRef.current = dressingRef.current.chests.map((c, i) => {
+        const room = c.piece.room >= 0 ? dungeon.rooms[c.piece.room] : null;
+        const treasury = room ? plan.modules[room.id] === "treasury" : false;
+        const tier = treasury ? 3 : room ? Math.round(room.difficulty * 2.4) : 1;
+        const id = `chest-${i}`;
+        containers.set(id, { id, kind: "chest", name: treasury ? "Treasure chest" : "Chest", x: c.centre.x, z: c.centre.z, grid: rollChest(lootRand, tier), seen: false });
+        return id;
+      });
+      interactKeyRef.current = "";
       const walker = createWalker(dungeon);
       walker.start();
       const playerFloor = floorAt(dungeon, walker.x + dungeon.W / 2, walker.z + dungeon.H / 2);
       const sim = createMobSimulation(dungeon, walker.x * CELL_M, walker.z * CELL_M);
+      // The way out: five portals at random places, opening from minute five (portals.ts).
+      let ps = (Math.imul(seed ^ 0x51ed27, 2246822519) + Math.imul(life, 362437) + 99) >>> 0;
+      const portalRand = () => (ps = (Math.imul(ps, 1664525) + 1013904223) >>> 0) / 4294967296;
+      portalsRef.current?.dispose();
+      portalsRef.current = createPortals(scene, dungeon, CELL_M, planPortals(dungeon, portalRand, { x: walker.x + dungeon.W / 2, z: walker.z + dungeon.H / 2 }));
 
-      mobGroupRefs.current = sim.mobs.map(() => null);
-      const targets: CombatTarget[] = sim.mobs.map((m) => ({ id: m.id, x: m.wx, y: m.wy, z: m.wz, radius: 0.36 * m.scale, height: 1.62 * m.scale }));
+      // The men need their bodies before the floor opens.
+      if (!bodiesRef.current && bodiesPromiseRef.current) {
+        onHudUpdate({ loading: "Mustering the garrison..." });
+        await bodiesPromiseRef.current.catch(() => null);
+        if (cancelled) return;
+      }
+      bodiesRef.current?.clear();
+      let rs = (seed * 9301 + 49297 + life * 7919) >>> 0;
+      const rand = () => (rs = (Math.imul(rs, 1664525) + 1013904223) >>> 0) / 4294967296;
+      const targets: CombatTarget[] = [];
       const combat: CombatWorld = {
         targets,
         solid: (x, y, z) => {
@@ -557,8 +816,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           return y < floorAt(dungeon, gx, gz) * CELL_M - 0.03;
         },
         onHit: (id, dirX, dirZ) => {
-          sim.hit(id, dirX, dirZ);
-          sfxRef.current?.hit();
+          // The arming sword's cut (fists without it), less the man's armour (npcSim.hit).
+          const dmg = (equipmentRef.current.sword ? ITEMS.sword.damage ?? 30 : 6) * (0.9 + rand() * 0.2);
+          const r = sim.hit(id, dirX, dirZ, dmg);
+          if (r === "blocked") {
+            sfxRef.current?.clang();
+            paladinRef.current?.animator.bounce();
+          } else if (r) sfxRef.current?.hit();
         },
         onClang: () => sfxRef.current?.clang(),
         onSwing: (swing) => sfxRef.current?.swing(swing),
@@ -578,15 +842,33 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         time: 0,
         combat,
         targets,
+        hp: 100,
+        maxHp: 100,
+        dead: false,
+        deadT: 0,
+        lastSerial: paladinRef.current ? paladinRef.current.animator.swingSerial : 0,
+        rand,
+        runT: 0,
+        escaped: false,
       };
-      setMobs(sim.mobs);
+      // Stand him up fresh at the entrance (pose, cloth) after a respawn or a new floor.
+      paladinRef.current?.reset();
       onHudUpdate({
         loading: null,
         name: dungeon.name,
         rooms: dungeon.rooms.length,
         mobs: sim.mobs.length,
         roomLabel: "Entrance",
+        hp: 100,
+        maxHp: 100,
+        dead: false,
+        deathCause: null,
+        runLeft: RUN_SECONDS,
+        portalsOpen: 0,
+        escaped: false,
+        interact: null,
       });
+      floorReadyRef.current();
     };
 
     run().catch((err) => {
@@ -597,7 +879,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [seed, roomCount, theme, onHudUpdate]);
+  }, [seed, roomCount, theme, life, onHudUpdate, scene, containersRef]);
 
   useFrame((_, rawDelta) => {
     const view = viewRef.current;
@@ -651,20 +933,44 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       persp.clearViewOffset();
     }
     const keys = keysRef.current;
+    // In a menu or screen, or once he has fallen, the paladin stops listening (held keys are dropped).
+    if (world.dead) world.deadT += dt;
+    // E at an open portal: he steps through and the run is over (he keeps what he carries).
+    if (escapeQueueRef.current) {
+      escapeQueueRef.current = false;
+      if (!world.dead && !world.escaped) {
+        world.escaped = true;
+        onHudUpdate({ escaped: true, interact: null });
+      }
+    }
+    // The run clock; at ten minutes the dungeon takes whoever is still inside.
+    if (clockRunningRef.current && !world.dead && !world.escaped) {
+      world.runT += dt;
+      if (world.runT >= RUN_SECONDS) {
+        world.runT = RUN_SECONDS;
+        world.hp = 0;
+        world.dead = true;
+        world.deadT = 0;
+        onHudUpdate({ hp: 0, dead: true, deathCause: "The dungeon closed on you", runLeft: 0 });
+      }
+    }
+    const active = playingRef.current && !world.dead && !world.escaped;
+    if (!active) keys.clear();
     const kbForward =
       (keys.has("KeyW") || keys.has("ArrowUp") ? 1 : 0) - (keys.has("KeyS") || keys.has("ArrowDown") ? 1 : 0);
     const kbStrafe =
       (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0) - (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0);
     const tMove = touchMoveRef.current;
-    const still = show.active ? 0 : 1;
+    const still = active ? 1 : 0;
     const forward = Math.max(-1, Math.min(1, kbForward + tMove.forward)) * still;
     const strafe = Math.max(-1, Math.min(1, kbStrafe + tMove.strafe)) * still;
     const stickMag = Math.hypot(tMove.forward, tMove.strafe);
     const sprinting =
       keys.has("ShiftLeft") || keys.has("ShiftRight") || touchSprintRef.current || stickMag > 0.88;
     const paladin = paladinRef.current;
-    const blocking = !show.active && (mouseBlockRef.current || keys.has("KeyQ") || touchBlockRef.current);
-    if (show.active) {
+    const blocking = active && (mouseBlockRef.current || keys.has("KeyQ") || touchBlockRef.current);
+    blockingRef.current = blocking;
+    if (!active) {
       attackQueueRef.current = false;
       jumpQueueRef.current = false;
     }
@@ -679,6 +985,24 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const x0 = walker.x;
     const z0 = walker.z;
     walker.step(dt, forward, strafe, speed);
+    // Men are solid: the paladin is eased out of anyone standing in his way.
+    for (const m of sim.mobs) {
+      if (m.dead) continue;
+      const dx = walker.x * CELL_M - m.wx;
+      const dz = walker.z * CELL_M - m.wz;
+      const dd = Math.hypot(dx, dz);
+      if (dd < 0.62 && dd > 1e-4) {
+        walker.x += ((dx / dd) * (0.62 - dd)) / CELL_M;
+        walker.z += ((dz / dd) * (0.62 - dd)) / CELL_M;
+      }
+    }
+    // Shut doors stop him.
+    if (doorsRef.current) {
+      const at = { x: walker.x * CELL_M, z: walker.z * CELL_M };
+      doorsRef.current.block(at, { x: x0 * CELL_M, z: z0 * CELL_M }, 0.36);
+      walker.x = at.x / CELL_M;
+      walker.z = at.z / CELL_M;
+    }
 
     // Smooth vertical stair/basin height + jump arc.
     const targetFloor = floorAt(dungeon, walker.x + dungeon.W / 2, walker.z + dungeon.H / 2);
@@ -696,14 +1020,25 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const py = world.playerFloor * CELL_M + world.playerJumpY;
     const pz = walker.z * CELL_M;
 
-    // Step all roaming NPCs/mobs first so the blade tests against where they are now.
-    sim.step(dt, px, pz);
-    for (let i = 0; i < sim.mobs.length; i++) {
-      const t = world.targets[i];
-      t.x = sim.mobs[i].wx;
-      t.y = sim.mobs[i].wy;
-      t.z = sim.mobs[i].wz;
+    // Step the men first so the blade tests against where they are now (the living only).
+    const serial = paladin ? paladin.animator.swingSerial : 0;
+    const swingStarted = serial !== world.lastSerial;
+    world.lastSerial = serial;
+    sim.step(dt, {
+      wx: px,
+      wz: pz,
+      swinging: paladin !== null && (paladin.animator.state === "windup" || paladin.animator.state === "strike"),
+      swingStarted,
+      dead: world.dead,
+    });
+    // A man who falls leaves what he carried, to search with E like a chest.
+    for (const m of sim.mobs) {
+      const id = `corpse-${m.id}`;
+      if (!m.dead || containersRef.current.has(id)) continue;
+      containersRef.current.set(id, { id, kind: "corpse", name: m.name, x: m.wx, z: m.wz, grid: rollCorpse(world.rand, m.rarity, m.equipment), seen: false });
     }
+    world.targets.length = 0;
+    for (const m of sim.mobs) if (!m.dead) world.targets.push({ id: m.id, x: m.wx, y: m.wy, z: m.wz, radius: 0.34, height: 1.8 });
 
     // The paladin always squares up to where the camera aims; the gait is driven by the
     // distance actually covered (after wall collision), in his own frame.
@@ -720,9 +1055,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       const vz = dt > 0 ? ((walker.z - z0) * CELL_M) / dt : 0;
       const sinF = Math.sin(facing);
       const cosF = Math.cos(facing);
-      paladin.group.visible = true;
-      paladin.group.position.set(px, py, pz);
+      paladin.group.visible = !world.escaped;
+      // Fallen: over backwards onto the floor (eased in, like gravity).
+      const fall = world.dead ? Math.min(1, world.deadT / 0.55) : 0;
+      paladin.group.position.set(px, py + 0.17 * fall * fall, pz);
+      paladin.group.rotation.order = "YXZ";
       paladin.group.rotation.y = facing;
+      paladin.group.rotation.x = -(Math.PI / 2) * fall * fall;
       paladin.setFirstPerson(fp);
       paladin.update(
         dt,
@@ -733,8 +1072,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           turnRate: !show.active && dt > 0 ? (walker.yaw - prevYawRef.current) / dt : 0,
           air: world.playerJumpY,
           block: blocking,
-          attack: attackQueueRef.current,
+          attack: active && attackQueueRef.current,
           firstPerson: fp,
+          relaxed: world.dead,
         },
         world.playerFloor * CELL_M,
         world.combat
@@ -742,16 +1082,88 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     }
     attackQueueRef.current = false;
     prevYawRef.current = walker.yaw;
-    if (!keys.has("KeyC")) freeLookRef.current *= Math.exp(-dt * 7);
 
-    for (let i = 0; i < sim.mobs.length; i++) {
-      const m = sim.mobs[i];
-      const g = mobGroupRefs.current[i];
-      if (g) {
-        g.position.set(m.wx, m.wy, m.wz);
-        g.rotation.y = m.yaw;
+    // E: a door to work, a draught to drink.
+    if (doorQueueRef.current >= 0) {
+      doorsRef.current?.toggle(doorQueueRef.current, { x: px, z: pz });
+      doorQueueRef.current = -1;
+    }
+    if (healQueueRef.current > 0) {
+      if (!world.dead) {
+        world.hp = Math.min(world.maxHp, world.hp + healQueueRef.current);
+        onHudUpdate({ hp: world.hp });
+      }
+      healQueueRef.current = 0;
+    }
+    const market = marketRef.current;
+    const doorsNow = doorsRef.current;
+    const dressing = dressingRef.current;
+    const men: Array<{ x: number; z: number }> = [];
+    for (const m of sim.mobs) if (!m.dead) men.push({ x: m.wx, z: m.wz });
+    doorsNow?.update(dt, men);
+    portalsRef.current?.update(world.time, world.runT);
+    if (dressing) {
+      dressing.chests.forEach((c, i) => {
+        c.target = containersRef.current.get(chestIdsRef.current[i])?.seen ? 1 : 0;
+      });
+      dressing.update(dt, eyeRef.current.set(px, py, pz));
+    }
+    // What E would do: the nearest stall, chest, fallen man or door he is facing.
+    const facingNow = walker.yaw + Math.PI;
+    const look = (x: number, z: number) => {
+      const dx = x - px;
+      const dz = z - pz;
+      return (Math.sin(facingNow) * dx + Math.cos(facingNow) * dz) / (Math.hypot(dx, dz) || 1);
+    };
+    const best: { it: Interact | null; d: number } = { it: null, d: Infinity };
+    const consider = (it: Interact, dist: number) => {
+      if (dist < best.d) {
+        best.d = dist;
+        best.it = it;
+      }
+    };
+    if (!world.dead && !world.escaped && !show.active) {
+      if (market) {
+        const at = market.reachable(px, pz, facingNow);
+        if (at >= 0) {
+          const who = MERCHANTS.findIndex((m) => m.id === market.stalls[at].merchant);
+          const st = market.stalls[at];
+          consider({ kind: "trade", key: String(who), verb: "Trade with", label: `${MERCHANTS[who].name} · ${MERCHANTS[who].trade}` }, Math.hypot(st.front.x - px, st.front.z - pz));
+        }
+      }
+      containersRef.current.forEach((box) => {
+        const dist = Math.hypot(box.x - px, box.z - pz);
+        if (dist > (box.kind === "chest" ? 1.75 : 1.9) || look(box.x, box.z) < 0.25) return;
+        const empty = box.seen && box.grid.items.length === 0 ? " (empty)" : "";
+        consider({ kind: box.kind, key: box.id, verb: box.kind === "chest" ? "Search" : "Loot", label: `${box.name}${empty}` }, dist - 0.2);
+      });
+      const portals = portalsRef.current;
+      if (portals) {
+        portals.centres.forEach((c, i) => {
+          if (!portals.isOpen(i, world.runT)) return;
+          const dist = Math.hypot(c.x - px, c.z - pz);
+          if (dist < PORTAL_REACH) consider({ kind: "portal", key: String(i), verb: "Escape through", label: "the portal" }, dist - 1);
+        });
+      }
+      if (doorsNow) {
+        const di = doorsNow.reachable(px, pz, facingNow);
+        if (di >= 0) {
+          const dr = doorsNow.doors[di];
+          consider({ kind: "door", key: String(di), verb: dr.target > 0.5 ? "Close" : "Open", label: "door" }, Math.hypot(dr.centre.x - px, dr.centre.z - pz) + 0.5);
+        }
       }
     }
+    const nextKey = best.it ? `${best.it.kind}|${best.it.key}|${best.it.verb}|${best.it.label}` : "";
+    if (nextKey !== interactKeyRef.current && (playingRef.current || !best.it)) {
+      interactKeyRef.current = nextKey;
+      onHudUpdate({ interact: best.it });
+    }
+    if (market) {
+      const tradingStall = tradingRef.current >= 0 ? market.stalls.findIndex((s) => s.merchant === MERCHANTS[tradingRef.current].id) : -1;
+      market.update(dt, eyeRef.current.set(px, py, pz), tradingStall);
+    }
+    if (tradingRef.current >= 0) freeLookRef.current += (0.62 - freeLookRef.current) * (1 - Math.exp(-dt * 5));
+    else if (!keys.has("KeyC")) freeLookRef.current *= Math.exp(-dt * 7);
 
     // Update camera (character showcase, 3rd-person follow with wall/ceiling collision, or 1st-person eye).
     const desiredFov = responsiveFov(firstPerson ? FIRST_PERSON_FOV : 68, size.width, size.height);
@@ -767,15 +1179,14 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     let lightY = py + 0.55;
     let lightZ = pz;
     if (show.active) {
-      // Frame `zoom` metres of him (face .. head to toe) in the part of the screen the panel leaves
-      // free: the view offset slides the picture over, the distance stays inside the open space
-      // found on entry, and the lens makes up the rest.
+      // Frame `zoom` metres of him (face .. head to toe) in `frame`, the part of the screen the
+      // panels leave free: the view offset slides the picture over, the distance stays inside the
+      // open space found on entry, and the lens makes up the rest.
       const W = size.width;
       const Hs = size.height;
-      const right = panel.side === "right";
-      const fracX = right ? Math.max(0.3, 1 - panel.size / W) : 1;
-      const fracY = right ? 1 : Math.max(0.3, 1 - panel.size / Hs);
-      persp.setViewOffset(W, Hs, right ? panel.size / 2 : 0, right ? 0 : panel.size / 2, W, Hs);
+      const fracX = Math.max(0.15, Math.min(1, frame.width / W));
+      const fracY = Math.max(0.2, Math.min(1, frame.height / Hs));
+      persp.setViewOffset(W, Hs, W / 2 - (frame.left + frame.width / 2), Hs / 2 - (frame.top + frame.height / 2), W, Hs);
       const floorY = world.playerFloor * CELL_M + world.playerJumpY;
       const k = Math.max(0, Math.min(1, (sc.zoom - 0.45) / (2.25 - 0.45)));
       const ty = Math.max(floorY + 0.25, Math.min(floorY + 1.8, floorY + 1.62 + (0.98 - 1.62) * k + sc.lift));
@@ -809,6 +1220,17 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       persp.rotation.x = walker.pitch + Math.sin(world.time * 47) * kick * 0.016;
       persp.rotation.z = Math.sin(world.time * 53) * kick * 0.02;
     } else {
+      // While trading, the picture slides into the part of the screen the panel leaves free.
+      const tf = tradeFrameRef.current;
+      if (tf) {
+        persp.setViewOffset(size.width, size.height, size.width / 2 - (tf.left + tf.width / 2), size.height / 2 - (tf.top + tf.height / 2), size.width, size.height);
+        offsetOnRef.current = true;
+      } else if (offsetOnRef.current) {
+        persp.clearViewOffset();
+        offsetOnRef.current = false;
+      }
+      // Narrow portrait screens get less offset so he stays in frame.
+      const shoulderWant = SHOULDER_OFFSET * (aspect < 0.85 ? 0.6 : 1);
       const cam = resolveThirdPersonCam(
         dungeon,
         level,
@@ -817,13 +1239,29 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         pz,
         walker.yaw + freeLookRef.current,
         walker.pitch,
-        camDistRef.current * distScale
+        camDistRef.current * distScale,
+        shoulderRef.current,
+        shoulderWant,
+        (x: number, y: number, z: number) => !!(marketRef.current?.solidAt(x, y, z) || doorsRef.current?.solidAt(x, y, z))
       );
+      // Ease back out to the shoulder; a wall pulls the camera in straight away (no clipping).
+      const shoulderTo = Math.min(shoulderWant, cam.sideMax);
+      shoulderRef.current =
+        shoulderTo < shoulderRef.current ? shoulderTo : shoulderRef.current + (shoulderTo - shoulderRef.current) * (1 - Math.exp(-dt * 6));
       persp.position.set(cam.cx, cam.cy + Math.sin(world.time * 47) * kick * 0.03, cam.cz);
       persp.up.set(0, 1, 0);
       persp.lookAt(cam.tx, cam.ty, cam.tz);
     }
+    // Headless checks can park the camera anywhere (window.__overview = [x, y, z, tx, ty, tz], metres).
+    const overview = (window as unknown as { __overview?: number[] }).__overview;
+    if (overview) {
+      persp.position.set(overview[0], overview[1], overview[2]);
+      persp.lookAt(overview[3], overview[4], overview[5]);
+    }
     persp.updateMatrixWorld();
+
+    // The men: bodies lent to the nearest, animated from the simulation; nameplates over the hostile.
+    bodiesRef.current?.update(dt, sim.mobs, { x: px, y: py, z: pz }, persp, size, platesRef.current);
 
     // Update nearest shadow lamps + render multi-pass crypt frame.
     view.updateLights(dt, walker.x, walker.z, lamps, dungeon);
@@ -835,19 +1273,20 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       onIcons(paladin.renderIcons(gl, 112));
     }
 
-    // Throttle React pose/HUD ticks cleanly (~28 Hz for crisp animations, ~6 Hz for room badge & minimap).
-    animTimerRef.current += dt;
-    if (animTimerRef.current >= 1 / 28) {
-      animTimerRef.current = 0;
-      setAnimTick((t) => t + 1);
-    }
-
+    // Room badge, head count and minimap at ~6 Hz.
     hudTimerRef.current += dt;
     if (hudTimerRef.current >= 0.16) {
       hudTimerRef.current = 0;
       const room = walker.room();
-      const label = room ? `${room.type.charAt(0).toUpperCase()}${room.type.slice(1)} (Room ${room.id + 1})` : "Corridor";
-      onHudUpdate({ roomLabel: label });
+      const mod = room && planRef.current ? MODULES[planRef.current.modules[room.id]] : null;
+      const label = room ? `${mod ? mod.name : room.type} (Room ${room.id + 1})` : "Corridor";
+      const portalsNow = portalsRef.current;
+      onHudUpdate({
+        roomLabel: label,
+        mobs: sim.mobs.reduce((n, m) => n + (m.dead ? 0 : 1), 0),
+        runLeft: Math.max(0, Math.ceil(RUN_SECONDS - world.runT)),
+        portalsOpen: portalsNow ? portalsNow.plans.filter((_, i) => portalsNow.isOpen(i, world.runT)).length : 0,
+      });
 
       const canvas = minimapCanvasRef.current;
       if (canvas) {
@@ -868,13 +1307,56 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
               }
             }
           }
-          // Mobs (red/green dots)
-          ctx.fillStyle = "#6ce88a";
+          // The men: green calm, red hostile, grey fallen.
           for (const m of sim.mobs) {
+            ctx.fillStyle = m.dead ? "#59595c" : m.hostile ? "#ff5a4a" : "#6ce88a";
             ctx.beginPath();
             ctx.arc(ox + m.cx * scale, oy + m.cz * scale, Math.max(2, scale * 0.35), 0, Math.PI * 2);
             ctx.fill();
           }
+          // The merchants' stalls, in their awning colours.
+          for (const st of marketRef.current?.stalls ?? []) {
+            const m = MERCHANTS.find((q) => q.id === st.merchant);
+            const c = stallPoint(st.plan, 0, 0.55);
+            const sz = Math.max(4, scale * 0.9);
+            ctx.fillStyle = css(m?.cloth ?? 0x888888);
+            ctx.strokeStyle = "#e6c48a";
+            ctx.lineWidth = 1;
+            ctx.fillRect(ox + c.x * scale - sz / 2, oy + c.z * scale - sz / 2, sz, sz);
+            ctx.strokeRect(ox + c.x * scale - sz / 2, oy + c.z * scale - sz / 2, sz, sz);
+          }
+          // Doors (shut: a solid bar across the way) and chests not yet searched.
+          for (const dr of doorsRef.current?.doors ?? []) {
+            const a = dr.arch;
+            const cx = ox + (a.x + 0.5) * scale;
+            const cz = oy + (a.y + 0.5) * scale;
+            const l = (a.len * scale) / 2;
+            ctx.strokeStyle = dr.target > 0.5 ? "rgba(176,122,58,0.35)" : "#c08a48";
+            ctx.lineWidth = Math.max(2, scale * 0.35);
+            ctx.beginPath();
+            ctx.moveTo(cx - a.px * l, cz - a.py * l);
+            ctx.lineTo(cx + a.px * l, cz + a.py * l);
+            ctx.stroke();
+          }
+          (dressingRef.current?.chests ?? []).forEach((c, i) => {
+            if (containersRef.current.get(chestIdsRef.current[i])?.seen) return;
+            ctx.fillStyle = "#ffcf5a";
+            const sz = Math.max(3, scale * 0.45);
+            ctx.fillRect(ox + c.piece.x * scale - sz / 2, oy + c.piece.z * scale - sz / 2, sz, sz);
+          });
+          // Open portals: a violet ring that pulses.
+          const portalsMap = portalsRef.current;
+          portalsMap?.plans.forEach((pl, i) => {
+            if (!portalsMap.isOpen(i, world.runT)) return;
+            const r = Math.max(4, scale * 0.9) * (1 + 0.18 * Math.sin(world.time * 5));
+            ctx.fillStyle = "rgba(160,110,255,0.35)";
+            ctx.strokeStyle = "#c9a8ff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(ox + pl.gx * scale, oy + pl.gz * scale, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          });
           // Player Paladin (gold dot)
           ctx.fillStyle = "#ffd84d";
           ctx.beginPath();
@@ -885,32 +1367,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     }
   }, 1);
 
-  // Use animTick to drive smooth pose frame updates on the NPCs (the paladin animates himself).
-  void animTick;
-
-  return (
-    <>
-      {mobs.map((m, idx) => (
-        <group
-          key={m.id}
-          ref={(el) => {
-            mobGroupRefs.current[idx] = el;
-          }}
-          position={[m.wx, m.wy, m.wz]}
-          rotation={[0, m.yaw, 0]}
-        >
-          <CharacterModel
-            classType={m.classType}
-            scale={m.scale}
-            pose={m.pose}
-            animFrame={m.animFrame}
-            expression={m.expression}
-          />
-        </group>
-      ))}
-    </>
-  );
+  // Everything in this scene is added imperatively (the paladin, the men, the dungeon view).
+  return null;
 };
+
+type Screen = "play" | "menu" | "inventory" | "character" | "shop" | "loot";
 
 export interface DungeonAppProps {
   backHref?: string;
@@ -955,7 +1416,26 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     firstPerson: false,
     pointerLocked: false,
     loading: "Initializing...",
+    hp: 100,
+    maxHp: 100,
+    dead: false,
+    deathCause: null,
+    runLeft: RUN_SECONDS,
+    portalsOpen: 0,
+    escaped: false,
+    interact: null,
   });
+  // Respawns rebuild the floor; nameplates are written by the scene each frame; wounds flash red.
+  const [life, setLife] = useState(0);
+  const platesRef = useRef<Array<HTMLDivElement | null>>([]);
+  const [hurtKey, setHurtKey] = useState(0);
+  const handlePlayerHurt = useCallback(() => setHurtKey((k) => k + 1), []);
+  // The run is over (fallen or escaped): losing the mouse then does not open the menu.
+  const runOverRef = useRef(false);
+  useEffect(() => {
+    runOverRef.current = hud.dead || hud.escaped;
+    if ((hud.dead || hud.escaped) && document.pointerLockElement) document.exitPointerLock?.();
+  }, [hud.dead, hud.escaped]);
   const minimapRef = useRef<HTMLCanvasElement | null>(null);
   const touchMoveRef = useRef<{ forward: number; strafe: number }>({ forward: 0, strafe: 0 });
   const touchSprintRef = useRef(false);
@@ -965,30 +1445,120 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const stickPointerRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
   // The character: who he is and what he wears, remembered between visits (CharacterCustomizer.tsx).
   const [spec, setSpec] = useState<HumanSpec>(initialSpec);
-  const [equipment, setEquipment] = useState<ArmorEquipment>(initialEquipment);
-  const [customizing, setCustomizing] = useState(false);
+  // What he carries: gold, the pieces he wears and the bag (playerInv.ts); the body shows what is worn.
+  const [inv, setInv] = useState<PlayerInv>(() => loadInventory(initialEquipment()));
+  useEffect(() => saveInventory(inv), [inv]);
+  // What he carried when this floor's run began: dying (or abandoning the floor) puts him back to
+  // it, so only what he escapes with through a portal is kept.
+  const invRef = useRef(inv);
+  invRef.current = inv;
+  const runStartRef = useRef<PlayerInv>(inv);
+  const escapeQueueRef = useRef(false);
+  // The controls hint goes a few seconds after the mouse is captured (and comes back when freed).
+  const [hintHidden, setHintHidden] = useState(false);
+  useEffect(() => {
+    if (!hud.pointerLocked) {
+      setHintHidden(false);
+      return;
+    }
+    const t = window.setTimeout(() => setHintHidden(true), 6000);
+    return () => window.clearTimeout(t);
+  }, [hud.pointerLocked]);
+  const handleFloorReady = useCallback(() => {
+    runStartRef.current = invRef.current;
+  }, []);
+  /** Leave this floor without escaping: what was found here is lost. */
+  const abandonRun = useCallback(() => setInv(runStartRef.current), []);
+  const equipment = useMemo(() => wornOf(inv), [inv]);
+  // The merchant he is trading with (index into MERCHANTS), and the chest or man being searched.
+  const [shopMerchant, setShopMerchant] = useState(0);
+  const [lootId, setLootId] = useState<string | null>(null);
+  const [, setLootVersion] = useState(0);
+  const containersRef = useRef(new Map<string, Container>());
+  const doorQueueRef = useRef(-1);
+  const healQueueRef = useRef(0);
+  const interactRef = useRef<Interact | null>(null);
+  interactRef.current = hud.interact;
+  // Pictures of the items that are not part of his kit (rendered once from their models).
+  const [itemPics, setItemPics] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let on = true;
+    itemIcons()
+      .then((pics) => on && setItemPics(pics))
+      .catch(() => {});
+    return () => {
+      on = false;
+    };
+  }, []);
+  // What has the screen: the game, the Esc menu, the inventory (Tab) or the character screen.
+  const [screen, setScreen] = useState<Screen>("play");
+  const screenRef = useRef<Screen>("play");
+  screenRef.current = screen;
+  const customizing = screen === "character";
+  const showcasing = screen === "inventory" || customizing;
   const [characterBusy, setCharacterBusy] = useState(true);
   const [customTab, setCustomTab] = useState<CustomizerTab>("face");
   const [icons, setIcons] = useState<Partial<Record<ArmorSlot, string>>>({});
-  const iconsWanted = customizing && customTab === "gear";
+  const iconsWanted = screen === "inventory" || screen === "shop" || screen === "loot";
+  const allIcons = useMemo(() => ({ ...itemPics, ...icons }), [itemPics, icons]);
+  const [inventoryFrame, setInventoryFrame] = useState<FrameRect>(() => ({ left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }));
+  const lockLostAtRef = useRef(-1e9);
   // While the face or hair is being edited the helm comes off (without changing the loadout).
   const shownEquipment = useMemo<ArmorEquipment>(
     () => (customizing && (customTab === "face" || customTab === "hair") ? { ...equipment, helm: false } : equipment),
     [customizing, customTab, equipment]
   );
-  const customizingRef = useRef(false);
-  customizingRef.current = customizing;
   const showcaseRef = useRef<Showcase>({ spin: 0, zoom: SHOW_ZOOM.face, lift: 0 });
   useEffect(() => saveCharacter(spec, equipment), [spec, equipment]);
   const handleCharacterBusy = useCallback((b: boolean) => setCharacterBusy(b), []);
-  const openCustomizer = useCallback((open: boolean) => {
-    if (open) {
+  const openScreen = useCallback((next: Screen) => {
+    if (next === screenRef.current) return;
+    if (next === "character") {
       showcaseRef.current.zoom = SHOW_ZOOM.face;
       showcaseRef.current.lift = 0;
       setCustomTab("face");
+    } else if (next === "inventory") {
+      showcaseRef.current.zoom = SHOW_ZOOM.body;
+      showcaseRef.current.lift = 0;
     }
-    setCustomizing(open);
+    // Set before letting the mouse go, so losing the pointer lock here doesn't open the menu.
+    screenRef.current = next;
+    setScreen(next);
+    if (next !== "play" && document.pointerLockElement) document.exitPointerLock?.();
   }, []);
+  const isTouchUIRef = useRef(false);
+  const resume = useCallback(() => {
+    openScreen("play");
+    // Take the mouse back straight away on desktop (the browser may refuse just after an Esc).
+    const canvas = document.querySelector("canvas");
+    if (canvas && !isTouchUIRef.current && !document.pointerLockElement) {
+      try {
+        const r = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
+        r?.catch?.(() => {});
+      } catch {
+        // Click the view to capture it instead.
+      }
+    }
+  }, [openScreen]);
+  // E (or the touch button): trade at a stall, open or close a door, search a chest or a fallen man.
+  const interactNow = useCallback(
+    (it: Interact | null) => {
+      if (!it) return;
+      if (it.kind === "trade") {
+        setShopMerchant(Number(it.key));
+        openScreen("shop");
+      } else if (it.kind === "door") doorQueueRef.current = Number(it.key);
+      else if (it.kind === "portal") escapeQueueRef.current = true;
+      else {
+        const box = containersRef.current.get(it.key);
+        if (!box) return;
+        box.seen = true;
+        setLootId(it.key);
+        openScreen("loot");
+      }
+    },
+    [openScreen]
+  );
   const handleShowcaseView = useCallback((v: ShowcaseView) => {
     showcaseRef.current.zoom = SHOW_ZOOM[v];
     showcaseRef.current.lift = 0;
@@ -997,6 +1567,24 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const handleHudUpdate = useCallback((patch: Partial<HudInfo>) => {
     setHud((prev) => ({ ...prev, ...patch }));
   }, []);
+
+  isTouchUIRef.current = isTouchUI;
+
+  // Esc while the mouse is captured only releases it (the browser keeps that key), so losing the
+  // lock during play opens the menu, the way Esc does otherwise.
+  useEffect(() => {
+    let locked = !!document.pointerLockElement;
+    const onChange = () => {
+      const now = !!document.pointerLockElement;
+      if (locked && !now && screenRef.current === "play" && !runOverRef.current) {
+        lockLostAtRef.current = performance.now();
+        openScreen("menu");
+      }
+      locked = now;
+    };
+    document.addEventListener("pointerlockchange", onChange);
+    return () => document.removeEventListener("pointerlockchange", onChange);
+  }, [openScreen]);
 
   const handleTouchDetected = useCallback(() => {
     setIsTouchUI(true);
@@ -1027,30 +1615,44 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Tab opens and closes the character screen (and never moves keyboard focus).
+      // Tab opens and closes the inventory (and never moves keyboard focus).
       if (e.code === "Tab") {
         e.preventDefault();
-        if (!e.repeat) openCustomizer(!customizingRef.current);
+        if (!e.repeat) openScreen(screenRef.current === "inventory" ? "play" : "inventory");
         return;
       }
       if (e.repeat) return;
-      if (customizingRef.current) {
-        if (e.code === "Escape") openCustomizer(false);
+      // Esc: the game opens the menu; the menu and the inventory close; the character screen goes back to the menu.
+      if (e.code === "Escape") {
+        // The same press that just released the mouse (and opened the menu) is not a second one.
+        if (performance.now() - lockLostAtRef.current < 300) return;
+        const cur = screenRef.current;
+        if (cur === "play" || cur === "character") openScreen("menu");
+        else if (cur === "menu" || cur === "shop" || cur === "loot") resume();
+        else openScreen("play");
         return;
       }
+      // E: trade, search, loot, open or close what is in front of him (and E again walks away).
+      if (e.code === "KeyE") {
+        if (screenRef.current === "shop" || screenRef.current === "loot") resume();
+        else if (screenRef.current === "play") interactNow(interactRef.current);
+        return;
+      }
+      if (screenRef.current !== "play") return;
       // H lifts the helm off, so the face under it shows in third person.
-      if (e.code === "KeyH") setEquipment((eq) => ({ ...eq, helm: !eq.helm }));
+      if (e.code === "KeyH") {
+        setInv((v) => {
+          if (v.equipped.helm) return unequipToBag(v, "helm") ?? v;
+          const h = v.bag.items.find((q) => q.item.id === "helm");
+          return h ? (equipFromBag(v, h.item.uid) ?? v) : v;
+        });
+      }
       if (e.code === "KeyV") setFirstPerson((v) => !v);
       if (e.code === "KeyM") setShowMap((v) => !v);
-      if (e.code === "KeyR") setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999);
-      if (e.code === "KeyT") {
-        const order: ThemeName[] = ["verdant", "ancient", "molten", "frost", "grim"];
-        setTheme((cur) => order[(order.indexOf(cur) + 1) % order.length]);
-      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [openCustomizer]);
+  }, [openScreen, resume, interactNow]);
 
   const isPortrait = viewport.h > viewport.w;
   const isCompact = viewport.w < 760 || viewport.h < 520;
@@ -1062,7 +1664,51 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     isPortrait && viewport.w < 700
       ? { side: "bottom", size: Math.round(viewport.h * 0.5) }
       : { side: "right", size: Math.round(Math.min(400, Math.max(280, viewport.w * 0.42))) };
-  const showGameHud = !customizing;
+  const showGameHud = screen === "play";
+  const shopCompact = isPortrait && viewport.w < 700;
+  const tradeFrame = useMemo<FrameRect | null>(
+    () =>
+      screen !== "shop"
+        ? null
+        : shopCompact
+          ? { left: 0, top: 0, width: viewport.w, height: Math.round(viewport.h * 0.38) }
+          : { left: 0, top: 0, width: Math.max(200, viewport.w - Math.min(460, viewport.w * 0.46)), height: viewport.h },
+    [screen, shopCompact, viewport.w, viewport.h]
+  );
+  const panelFrame: FrameRect =
+    panel.side === "right"
+      ? { left: 0, top: 0, width: viewport.w - panel.size, height: viewport.h }
+      : { left: 0, top: 0, width: viewport.w, height: viewport.h - panel.size };
+  const nextSeed = () => setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999);
+  // From the menu these leave the floor mid-run (abandoned); after an escape they are free.
+  const leaveFloor = (go: () => void) => {
+    if (!hud.escaped) abandonRun();
+    go();
+  };
+  const nextTheme = () => {
+    const order: ThemeName[] = ["verdant", "ancient", "molten", "frost", "grim"];
+    leaveFloor(() => setTheme((cur) => order[(order.indexOf(cur) + 1) % order.length]));
+  };
+  // What this run has gained over what he came in with (lost if he dies, kept if he escapes).
+  const runGain = (() => {
+    const start = runStartRef.current;
+    const had = new Set<string>();
+    for (const q of start.bag.items) had.add(q.item.uid);
+    for (const k of Object.keys(start.equipped) as ArmorSlot[]) {
+      const it = start.equipped[k];
+      if (it) had.add(it.uid);
+    }
+    let items = 0;
+    for (const q of inv.bag.items) if (!had.has(q.item.uid)) items++;
+    for (const k of Object.keys(inv.equipped) as ArmorSlot[]) {
+      const it = inv.equipped[k];
+      if (it && !had.has(it.uid)) items++;
+    }
+    return { gold: inv.gold - start.gold, items };
+  })();
+  const clock = (sec: number) => `${Math.floor(sec / 60)}:${(sec % 60 < 10 ? "0" : "") + (sec % 60)}`;
+  const runElapsed = RUN_SECONDS - hud.runLeft;
+  const portalsIn = Math.max(0, PORTALS_FROM - runElapsed);
 
   const updateStick = (clientX: number, clientY: number) => {
     const s = stickPointerRef.current;
@@ -1116,13 +1762,20 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           firstPerson={firstPerson}
           spec={spec}
           equipment={shownEquipment}
-          customizing={customizing}
+          customizing={showcasing}
+          playing={screen === "play"}
           showcaseRef={showcaseRef}
-          panel={panel}
+          frame={customizing ? panelFrame : inventoryFrame}
           onCharacterBusy={handleCharacterBusy}
           iconsWanted={iconsWanted}
           onIcons={setIcons}
           onHudUpdate={handleHudUpdate}
+          life={life}
+          platesRef={platesRef}
+          onPlayerHurt={handlePlayerHurt}
+          containersRef={containersRef}
+          doorQueueRef={doorQueueRef}
+          healQueueRef={healQueueRef}
           minimapCanvasRef={minimapRef}
           touchMoveRef={touchMoveRef}
           touchSprintRef={touchSprintRef}
@@ -1130,6 +1783,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           attackQueueRef={attackQueueRef}
           touchBlockRef={touchBlockRef}
           onTouchDetected={handleTouchDetected}
+          trading={screen === "shop" ? shopMerchant : -1}
+          tradeFrame={tradeFrame}
+          clockRunning={screen !== "menu" && screen !== "character"}
+          escapeQueueRef={escapeQueueRef}
+          onFloorReady={handleFloorReady}
         />
       </Canvas>
 
@@ -1137,15 +1795,78 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         <CharacterCustomizer
           spec={spec}
           onSpec={setSpec}
-          equipment={equipment}
-          onEquipment={setEquipment}
           busy={characterBusy}
           layout={panel}
           tab={customTab}
           onTab={setCustomTab}
           onView={handleShowcaseView}
-          onClose={() => openCustomizer(false)}
-          icons={icons}
+          onClose={() => openScreen("menu")}
+        />
+      ) : null}
+
+      {screen === "inventory" ? (
+        <InventoryScreen
+          name={spec.name}
+          inv={inv}
+          onInv={setInv}
+          onUse={(item) => {
+            healQueueRef.current += def(item.id).heal ?? 0;
+            setInv((v) => ({ ...v, bag: removeItem(v.bag, item.uid) }));
+          }}
+          icons={allIcons}
+          viewport={viewport}
+          compact={isPortrait || viewport.w < 760}
+          touch={isTouchUI}
+          onModelRect={setInventoryFrame}
+          onClose={() => openScreen("play")}
+        />
+      ) : null}
+
+      {screen === "shop" ? (
+        <ShopScreen merchant={MERCHANTS[shopMerchant]} inv={inv} onInv={setInv} icons={allIcons} compact={shopCompact} touch={isTouchUI} onClose={resume} />
+      ) : null}
+
+      {screen === "loot" && lootId && containersRef.current.get(lootId)
+        ? (() => {
+            const box = containersRef.current.get(lootId) as Container;
+            return (
+              <LootScreen
+                title={box.name}
+                subtitle={box.kind === "chest" ? "Searched" : "Fallen · what he carried"}
+                container={box.grid}
+                onContainer={(g) => {
+                  box.grid = g;
+                  setLootVersion((n) => n + 1);
+                }}
+                inv={inv}
+                onInv={setInv}
+                icons={allIcons}
+                viewport={viewport}
+                compact={isPortrait || viewport.w < 760}
+                touch={isTouchUI}
+                onClose={resume}
+              />
+            );
+          })()
+        : null}
+
+      {screen === "menu" ? (
+        <PauseMenu
+          dungeonName={hud.name}
+          touch={isTouchUI}
+          onResume={resume}
+          onInventory={() => openScreen("inventory")}
+          onCharacter={() => openScreen("character")}
+          onNewSeed={() => leaveFloor(nextSeed)}
+          onTheme={nextTheme}
+          themeLabel={THEMES[theme].label}
+          rooms={roomCount}
+          onRooms={(n) => leaveFloor(() => setRoomCount(n))}
+          firstPerson={firstPerson}
+          onCamera={() => setFirstPerson((v) => !v)}
+          showMap={showMap}
+          onMap={() => setShowMap((v) => !v)}
+          backHref={backHref}
         />
       ) : null}
 
@@ -1169,10 +1890,16 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           {hud.name}
         </div>
         <div style={{ fontSize: mobileMode ? 11 : 12, color: "#c9d2db", marginTop: 2 }}>
-          <b>{spec.name || "Paladin"}</b> · {hud.roomLabel}
+          <b>{spec.name || "Paladin"}</b> · {hud.roomLabel} · <b style={{ color: "#ffd84d" }}>{inv.gold}</b> gold
         </div>
         <div style={{ fontSize: mobileMode ? 10 : 12, color: "#9fb0bf", marginTop: 1 }}>
-          Rooms: <b>{hud.rooms}</b> (max 10) · Mobs: <b>{hud.mobs}</b> · {THEMES[theme].label}
+          Men: <b>{hud.mobs}</b> · Portals: <b style={{ color: hud.portalsOpen ? "#c9a8ff" : undefined }}>{hud.portalsOpen}</b> / {PORTAL_COUNT}
+          {mobileMode ? (
+            <>
+              {" · "}
+              <b style={{ color: hud.runLeft <= 60 ? "#ff5a4a" : "#f2efe8" }}>{clock(hud.runLeft)}</b>
+            </>
+          ) : null}
         </div>
         <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
           <button
@@ -1180,51 +1907,30 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             onClick={(e) => {
               // Drop focus so Space (jump) does not press the button again.
               e.currentTarget.blur();
-              openCustomizer(true);
+              openScreen("menu");
+            }}
+            style={btnStyle}
+          >
+            {mobileMode ? "Menu" : "Menu (Esc)"}
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              openScreen("inventory");
             }}
             style={{ ...btnStyle, color: "#ffd84d" }}
           >
-            {mobileMode ? "Character" : "Character (Tab)"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999)}
-            style={btnStyle}
-          >
-            {mobileMode ? "Seed" : "New Seed (R)"}
+            {mobileMode ? "Inventory" : "Inventory (Tab)"}
           </button>
           <button type="button" onClick={() => setFirstPerson((v) => !v)} style={btnStyle}>
             {firstPerson ? (mobileMode ? "3rd P" : "3rd Person (V)") : mobileMode ? "1st P" : "1st Person (V)"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const order: ThemeName[] = ["verdant", "ancient", "molten", "frost", "grim"];
-              setTheme((cur) => order[(order.indexOf(cur) + 1) % order.length]);
-            }}
-            style={btnStyle}
-          >
-            {mobileMode ? "Theme" : "Theme (T)"}
           </button>
           {mobileMode ? (
             <button type="button" onClick={() => void enterLandscapeMode()} style={{ ...btnStyle, color: "#7df39b" }}>
               ↻ Wide
             </button>
           ) : null}
-          <label style={{ fontSize: 11, color: "#c9d2db", display: "flex", alignItems: "center", gap: 3 }}>
-            {mobileMode ? "R:" : "Rooms:"}
-            <select
-              value={roomCount}
-              onChange={(e) => setRoomCount(Math.min(10, Math.max(4, Number(e.target.value))))}
-              style={{ background: "#161a22", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, padding: "2px 4px", fontSize: 11 }}
-            >
-              {[5, 6, 7, 8, 9, 10].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
           {backHref ? (
             <a
               href={backHref}
@@ -1298,27 +2004,61 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         </div>
       ) : null}
 
-      {/* Desktop bottom controls hint (hidden when touch controls are visible) */}
-      {showGameHud && !isTouchUI ? (
+      {/* The run clock, top centre on desktop (inside the top-left panel on small screens). */}
+      {showGameHud && !mobileMode && !hud.loading ? (
         <div
           style={{
             position: "fixed",
             left: "50%",
-            bottom: 18,
+            top: 10,
             transform: "translateX(-50%)",
-            padding: "7px 14px",
+            padding: "4px 16px 5px",
             background: "rgba(8, 10, 14, 0.72)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            border: `1px solid ${hud.runLeft <= 60 ? "rgba(255,90,74,0.6)" : "rgba(255,255,255,0.12)"}`,
             borderRadius: 8,
-            fontSize: 12,
+            textAlign: "center",
+            pointerEvents: "none",
+            zIndex: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              fontVariantNumeric: "tabular-nums",
+              letterSpacing: "0.04em",
+              color: hud.runLeft <= 60 ? "#ff5a4a" : "#f2efe8",
+            }}
+          >
+            {clock(hud.runLeft)}
+          </div>
+          <div style={{ fontSize: 11, color: hud.portalsOpen ? "#c9a8ff" : "#9fb0bf", whiteSpace: "nowrap" }}>
+            {hud.portalsOpen ? `${hud.portalsOpen} portal${hud.portalsOpen > 1 ? "s" : ""} open · escape with E` : `Portals open in ${clock(Math.ceil(portalsIn))}`}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Desktop controls hint, bottom left; it fades a few seconds after the mouse is captured. */}
+      {showGameHud && !isTouchUI && !hud.loading && !hintHidden ? (
+        <div
+          style={{
+            position: "fixed",
+            left: 12,
+            bottom: 14,
+            maxWidth: "min(330px, calc(50vw - 180px))",
+            padding: "6px 10px",
+            background: "rgba(8, 10, 14, 0.6)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 8,
+            fontSize: 11,
+            lineHeight: 1.5,
             color: "#dce3ea",
             pointerEvents: "none",
-            whiteSpace: "nowrap",
           }}
         >
           {hud.pointerLocked
-            ? "LMB Swing (click again to chain) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · H Helm · Tab Character · Esc Unlock"
-            : "Click to capture the mouse · F Swing · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · H Helm · Tab Character · M Map"}
+            ? "LMB Swing (click again to chain) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Esc Menu"
+            : "Click to capture the mouse · F Swing · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Esc Menu"}
         </div>
       ) : null}
 
@@ -1502,6 +2242,201 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         </>
       ) : null}
 
+      {/* What E would do here (a button on touch screens). */}
+      {showGameHud && hud.interact && !hud.loading && !hud.dead ? (
+        <div
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: isTouchUI ? "calc(max(18px, env(safe-area-inset-bottom)) + 176px)" : 74,
+            transform: "translateX(-50%)",
+            zIndex: 13,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "7px 14px",
+            background: "rgba(10, 9, 8, 0.82)",
+            border: "1px solid rgba(214,186,128,0.35)",
+            borderRadius: 4,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {isTouchUI ? (
+            <button
+              type="button"
+              onClick={() => interactNow(hud.interact)}
+              style={{ ...btnStyle, background: "linear-gradient(180deg, #f2d27a, #c99a3a)", color: "#1a1408", fontWeight: 800, padding: "6px 12px", fontSize: 12 }}
+            >
+              {hud.interact.kind === "trade"
+                ? "TRADE"
+                : hud.interact.kind === "door"
+                  ? hud.interact.verb.toUpperCase()
+                  : hud.interact.kind === "chest"
+                    ? "SEARCH"
+                    : hud.interact.kind === "portal"
+                      ? "ESCAPE"
+                      : "LOOT"}
+            </button>
+          ) : (
+            <span style={{ display: "inline-block", minWidth: 22, padding: "2px 6px", textAlign: "center", border: "1px solid #e8dcc0", borderRadius: 3, fontSize: 12, fontWeight: 800, color: "#f3e6c4" }}>E</span>
+          )}
+          <span style={{ fontSize: 13, color: "#e8dcc0" }}>
+            {hud.interact.verb} <b style={{ color: "#f3e6c4", fontFamily: "Georgia, 'Times New Roman', serif" }}>{hud.interact.label}</b>
+          </span>
+        </div>
+      ) : null}
+
+      {/* Nameplates over hostile or wounded men (positioned by the scene every frame). */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9, display: showGameHud ? "block" : "none" }}>
+        {Array.from({ length: POOL_SIZE }).map((_, i) => (
+          <div
+            key={i}
+            ref={(el) => {
+              platesRef.current[i] = el;
+            }}
+            style={{ position: "absolute", left: 0, top: 0, display: "none", willChange: "transform" }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, textAlign: "center", textShadow: "0 1px 2px #000, 0 0 4px #000", whiteSpace: "nowrap", marginBottom: 2 }} />
+            <div style={{ width: 86, height: 6, background: "rgba(10,4,3,0.85)", border: "1px solid #000", boxShadow: "0 0 0 1px rgba(214,186,128,0.35)" }}>
+              <div data-fill="" style={{ height: "100%", width: "100%", background: "linear-gradient(180deg, #d9302b, #8e1210)" }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* The paladin's health, bottom centre (above the thumb controls on touch screens). */}
+      {showGameHud && !hud.loading ? (
+        <div
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: isTouchUI ? "calc(max(18px, env(safe-area-inset-bottom)) + 128px)" : 16,
+            transform: "translateX(-50%)",
+            zIndex: 11,
+          }}
+        >
+          <HealthBar name={spec.name} hp={hud.hp} maxHp={hud.maxHp} compact={mobileMode} />
+        </div>
+      ) : null}
+
+      {/* A wound: the edges of the view flash red. */}
+      {hurtKey > 0 && !hud.dead ? (
+        <div
+          key={hurtKey}
+          style={{
+            position: "fixed",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 12,
+            background: "radial-gradient(ellipse at center, transparent 45%, rgba(150,0,0,0.55) 100%)",
+            animation: "simforgeHurt 0.5s ease-out forwards",
+          }}
+        />
+      ) : null}
+      <style>{"@keyframes simforgeHurt { from { opacity: 1; } to { opacity: 0; } }"}</style>
+
+      {/* Fallen. */}
+      {hud.dead ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 19,
+            background: "radial-gradient(ellipse at center, rgba(40,0,0,0.55), rgba(8,0,0,0.92))",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 18,
+            animation: "simforgeDied 1.2s ease-out",
+          }}
+        >
+          <style>{"@keyframes simforgeDied { from { opacity: 0; } to { opacity: 1; } }"}</style>
+          <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: mobileMode ? 38 : 64, letterSpacing: "0.12em", color: "#b3201a", textShadow: "0 0 24px rgba(0,0,0,0.9)" }}>
+            YOU DIED
+          </div>
+          <div style={{ fontSize: 14, color: "#d8c9a8", textAlign: "center", lineHeight: 1.6, maxWidth: 420, padding: "0 16px" }}>
+            {hud.deathCause ? (
+              <div style={{ color: "#f0b0a0" }}>{hud.deathCause}.</div>
+            ) : null}
+            {runGain.gold > 0 || runGain.items > 0
+              ? `Lost with you: ${runGain.gold > 0 ? `${runGain.gold} gold` : ""}${runGain.gold > 0 && runGain.items > 0 ? " and " : ""}${runGain.items > 0 ? `${runGain.items} item${runGain.items > 1 ? "s" : ""}` : ""} found on this floor.`
+              : "You had found nothing yet."}
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              // Back to what he carried in; the floor (and its chests) stand as they were.
+              setInv(runStartRef.current);
+              setLife((l) => l + 1);
+            }}
+            style={{
+              background: "rgba(30,27,23,0.95)",
+              color: "#eee3c8",
+              border: "1px solid rgba(214,186,128,0.4)",
+              borderRadius: 3,
+              padding: "10px 26px",
+              fontSize: 15,
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              cursor: "pointer",
+            }}
+          >
+            RESPAWN
+          </button>
+        </div>
+      ) : null}
+
+      {/* Escaped through a portal: the run's haul is his; the next floor waits. */}
+      {hud.escaped && !hud.dead ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 19,
+            background: "radial-gradient(ellipse at center, rgba(60,30,120,0.55), rgba(6,4,14,0.94))",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 18,
+            animation: "simforgeDied 1s ease-out",
+          }}
+        >
+          <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: mobileMode ? 36 : 60, letterSpacing: "0.12em", color: "#c9a8ff", textShadow: "0 0 28px rgba(140,92,255,0.7)" }}>
+            ESCAPED
+          </div>
+          <div style={{ fontSize: 14, color: "#ddd3f2", textAlign: "center", lineHeight: 1.6, padding: "0 16px" }}>
+            Out with {clock(hud.runLeft)} to spare.
+            <br />
+            {runGain.gold > 0 || runGain.items > 0
+              ? `You keep ${runGain.gold > 0 ? `${runGain.gold} gold` : ""}${runGain.gold > 0 && runGain.items > 0 ? " and " : ""}${runGain.items > 0 ? `${runGain.items} item${runGain.items > 1 ? "s" : ""}` : ""} from this floor.`
+              : "You came out empty-handed."}
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              nextSeed();
+            }}
+            style={{
+              background: "rgba(30,24,44,0.95)",
+              color: "#eee6ff",
+              border: "1px solid rgba(201,168,255,0.5)",
+              borderRadius: 3,
+              padding: "10px 26px",
+              fontSize: 15,
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              cursor: "pointer",
+            }}
+          >
+            NEXT FLOOR
+          </button>
+        </div>
+      ) : null}
+
       {/* Minimap (top-right on touch/mobile so right thumb action pad has clean space) */}
       {showMap && showGameHud ? (
         <div
@@ -1524,7 +2459,13 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             style={{ width: mapPixels, height: mapPixels, display: "block" }}
           />
           <div style={{ fontSize: 10, color: "#9fb0bf", textAlign: "center", marginTop: 2 }}>
-            <span style={{ color: "#ffd84d" }}>●</span> Paladin &nbsp; <span style={{ color: "#6ce88a" }}>●</span> Mobs
+            <span style={{ color: "#ffd84d" }}>●</span> You &nbsp; <span style={{ color: "#6ce88a" }}>●</span> Men &nbsp; <span style={{ color: "#ff5a4a" }}>●</span> Hostile
+            {hud.portalsOpen ? (
+              <>
+                {" "}
+                &nbsp;<span style={{ color: "#c9a8ff" }}>◯</span> Portal
+              </>
+            ) : null}
           </div>
         </div>
       ) : null}

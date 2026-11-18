@@ -286,3 +286,20 @@ export const Splat: React.FC<{
     </group>
   );
 };
+
+/**
+ * The eased pose of a track at `frame` without rendering the toy rig: the actor as authored plus
+ * the blended joint angles and facing that ActorView would show. For labs that drive their own
+ * figures with the same tracks (labs/spy-horse's realistic soldiers).
+ */
+export const easedPose = (track: ActorTrack, frame: number) => {
+  const memo = new Map<number, Actor | null>();
+  const at: Lookup = (f) => {
+    if (!memo.has(f)) memo.set(f, track(f));
+    return memo.get(f) ?? null;
+  };
+  const actor = at(frame);
+  if (!actor) return null;
+  const shown = shownAt(frame, actor, at);
+  return { actor, rig: shown.rig, yaw: shown.yaw };
+};

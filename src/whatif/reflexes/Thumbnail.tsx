@@ -1,6 +1,6 @@
 import type React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
-import { AdventurerUnit, hipHeight } from "../../artifacts/characters/hero";
+import { AdventurerUnit, hipHeight, type FaceKit } from "../../artifacts/characters/hero";
 import { Bleachers, Dodgeball, GarageEave, GymHall, KitchenCounter, LADDER_STEP, MilkGlass, Room, Stepladder, Window } from "../../artifacts/reflexes";
 import { SkyRig, Tilted } from "../../artifacts/sky";
 import { Lawn, SpeedLines, Tree } from "../../artifacts/teleport";
@@ -76,6 +76,74 @@ const YardScene: React.FC<{ frame: number }> = ({ frame }) => (
   </>
 );
 
+/**
+ * v2 set (3-5), after the first three stalled at ~3% CTR: Kit's decal face is
+ * three dots at 168 px, so it is pushed to thumbnail size, the camera goes in
+ * until the head fills half the frame, and the fact pill goes (unreadable small).
+ */
+const BIG_FACE: Partial<FaceKit> = { eyeR: 0.074, eyeYaw: 0.33, mouthScale: 1.6, mouthPitch: 0.45, browSize: 1.5 };
+
+/** Variant 3: the ball a hand's width from Kit's face, Kit seeing it far too early. */
+const BallScene: React.FC<{ frame: number }> = ({ frame }) => (
+  <>
+    <SkyRig tod={0.15} azimuth={-0.5} fogNear={200} fogFar={900} />
+    <GymHall backZ={-6} />
+    <Bleachers position={[0, 0, -7.2]} />
+    <AdventurerUnit classType={KIT} pose="cower" expression="shock" faceKit={BIG_FACE} position={[0.5, 0, Z]} rotation={[0, -0.35, 0]} animFrame={frame} />
+    <Dodgeball position={[-0.05, 1.42, Z + 0.7]} spin={0.6} />
+    <SpeedLines frame={frame} center={[-1.0, 1.42, Z + 0.4]} speed={1} count={16} />
+  </>
+);
+
+/** Variant 4: the glass already past Kit's fingers, his face still catching up. */
+const MilkScene: React.FC<{ frame: number }> = ({ frame }) => (
+  <>
+    <SkyRig tod={0.15} azimuth={-0.5} fogNear={200} fogFar={900} />
+    <Room position={[0, 0, -1.4]} width={12} depth={7} tiles floor="#e9e2d2" floorLine="#d6ccb8" />
+    <KitchenCounter position={[-2.2, 0, -4.4]} length={4} />
+    <Window position={[1.2, 1.5, -4.8]} />
+    <Tilted position={[0.5, 0, Z]} yaw={-0.45} pitch={0.18} pivot={hipHeight(KIT)}>
+      <AdventurerUnit classType={KIT} pose="cheer" expression="shock" faceKit={BIG_FACE} animFrame={frame} />
+    </Tilted>
+    <MilkGlass position={[-0.25, 1.0, Z + 0.6]} tilt={1.9} spin={0.4} milk={0.5} />
+  </>
+);
+
+/** Variant 5: Kit's scared face close, Grandpa's ladder already tipping behind him. */
+const LadderScene: React.FC<{ frame: number }> = ({ frame }) => (
+  <>
+    <SkyRig tod={0.1} azimuth={-0.5} fogNear={40} fogFar={400} />
+    <Lawn />
+    <GarageEave position={[0, 0, -3.4]} length={12} />
+    <Tree position={[-6, 0, -6]} scale={1.4} seed={2} />
+    <Stepladder position={[-0.75, 0, -2.4]} tip={0.3}>
+      <AdventurerUnit classType={TEO} pose="cheer" weapon="none" expression="scared" faceKit={BIG_FACE} position={[0, LADDER_STEP + 0.03, 0]} rotation={[0, 0.4, 0]} animFrame={frame} />
+    </Stepladder>
+    <AdventurerUnit classType={KIT} pose="run" expression="scared" faceKit={BIG_FACE} position={[0.6, 0, Z + 0.6]} rotation={[0, -0.4, 0]} animFrame={frame} />
+  </>
+);
+
+const BIG_CARDS: { lines: { text: string; color: string; size: number }[]; left: number; top: number }[] = [
+  { lines: [{ text: "TOO", color: "#fff", size: 150 }, { text: "SLOW.", color: GOLD, size: 200 }], left: 44, top: 40 },
+  { lines: [{ text: "BRAIN 10×", color: "#fff", size: 118 }, { text: "BODY 1×", color: TANGERINE, size: 150 }], left: 40, top: 46 },
+  { lines: [{ text: "2.3", color: GOLD, size: 240 }, { text: "SEC", color: "#fff", size: 150 }], left: 52, top: 30 },
+];
+
+const BigCard: React.FC<{ variant: number }> = ({ variant }) => {
+  const w = BIG_CARDS[variant - 3];
+  return (
+    <AbsoluteFill style={{ fontFamily: FONT }}>
+      <div style={{ position: "absolute", left: w.left, top: w.top, lineHeight: 0.9, transform: "rotate(-3deg)", whiteSpace: "nowrap" }}>
+        {w.lines.map((l) => (
+          <div key={l.text} style={{ fontSize: l.size, color: l.color, textShadow: stroke(l.size > 180 ? 9 : 7) }}>
+            {l.text}
+          </div>
+        ))}
+      </div>
+    </AbsoluteFill>
+  );
+};
+
 /** The text block and the fact pill, per variant. */
 const CARDS: { top: [string, number]; key: [string, number, string]; pill: React.ReactNode }[] = [
   {
@@ -141,12 +209,19 @@ const CAMS: { position: Vec3; lookAt: Vec3; fov: number }[] = [
   { position: [-0.45, 0.7, Z + 2.7], lookAt: [-0.3, 0.9, Z], fov: 30 },
   { position: [-0.45, 0.8, Z + 3.1], lookAt: [-0.3, 0.98, Z], fov: 30 },
   { position: [-0.35, 0.8, Z + 3.4], lookAt: [-0.4, 1.4, Z], fov: 34 },
+  // v2: the head fills about half the frame height.
+  { position: [-0.55, 1.0, Z + 2.1], lookAt: [-0.05, 1.3, Z], fov: 26 },
+  { position: [-0.55, 1.25, Z + 2.2], lookAt: [-0.05, 1.22, Z], fov: 26 },
+  { position: [-0.2, 1.25, Z + 2.9], lookAt: [-0.05, 1.6, Z], fov: 30 },
 ];
 
 const ThumbScene: React.FC<{ variant: number }> = ({ variant }) => {
   const frame = useCurrentFrame() + 40;
   if (variant === 1) return <KitchenScene frame={frame} />;
   if (variant === 2) return <YardScene frame={frame} />;
+  if (variant === 3) return <BallScene frame={frame} />;
+  if (variant === 4) return <MilkScene frame={frame} />;
+  if (variant === 5) return <LadderScene frame={frame} />;
   return <GymScene frame={frame} />;
 };
 
@@ -168,7 +243,7 @@ const config = (variant: number): EpisodeConfig => {
       backgroundColor: "#a5d2f0",
       postfx: { aoIntensity: 1.3, bloomIntensity: 0.4, bloomThreshold: 0.85, grain: 0 },
     },
-    OverlayComponent: () => <Card variant={variant} />,
+    OverlayComponent: () => (variant >= 3 ? <BigCard variant={variant} /> : <Card variant={variant} />),
   };
 };
 

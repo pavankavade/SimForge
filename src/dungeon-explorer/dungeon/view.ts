@@ -9,7 +9,7 @@ import { THEMES, type ThemeName } from "./themes";
 
 export const CELL_M = 1.5;
 const LIGHT_K = 4 * Math.PI;
-const SEE_THROUGH = 1;
+export const SEE_THROUGH = 1;
 const EARLY_Z = 5;
 
 function bgFromTris(v: number[]) {

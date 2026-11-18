@@ -324,6 +324,17 @@ It is not the chibi cast: never mix the two in one shot.
   chain), `act(f)` (`block`, ...), `equipment`, `character`. Walking needs no input: the gait
   follows how fast `position` moves. It replays the game simulation from frame 0 at a fixed step,
   so every frame is deterministic. Key it to `BEATS` like any actor. He is about 1.8 m tall.
+- **Workwear and acting (non-fantasy humans):** `workwear` (`WORK_SLOTS`: coveralls with reflective
+  tape, rubber boots, hard hat, cap lamp, sunglasses; `MINER_EQUIPMENT` + `MINER_WORKWEAR`) and
+  `outfit` colours dress the same body as a modern worker. `act(f)` takes `relaxed: true` (hanging,
+  swinging arms, square stance, head-only looks), `stance: "sit" | "crouch"` (+ `seatY`) and
+  `arms: "eat" | "hold" | "cheer" | "reach" | "wave" | "shade" | "cross" | "knees"`; the animator eases
+  every change. `floorY` may be a function (riding a lift), `visible(f)` hides him without a rebuild.
+  Check poses in `MineRescueLab` (`src/whatif/mine-rescue/Lab.tsx`).
+- **Long videos:** pass `resets` (the camera cuts) so a still replays only from the last cut (he is
+  settled for `warmup` frames on that frame's input first); without them every still replays from
+  frame 0, which times out past a few hundred frames with several humans. Stills of scenes with many
+  humans take ~45 s: `npm run review -- <Id> ... --concurrency 2 --timeout 240000`.
 - **Example:** `src/lab/PaladinShowcase.tsx` (composition `PaladinShowcase`: the shorts' hall,
   walk in, combo, block). Check changes with
   `node scripts/solo.mjs still PaladinShowcase out/misc/paladin-showcase/wip/f125.png --frame=125`.
@@ -356,7 +367,8 @@ It is not the chibi cast: never mix the two in one shot.
   - Use procedural textures from `src/engine/textures.ts` (`makeMetal`, `makeMasonry`,
     `makeFlagstone`, `makeWood`) through `useSurface`.
   - Add warm `GlowSprite`s, `DustMotes` and hazard stripes on dangerous parts.
-  - Do not use external models or textures.
+  - Do not use external models or textures (this includes Patch's asset library; that is for the
+    game only, see §14).
   - Installs animate in: they drop, unfold or slide in with an overshoot (`easeOutBack`). Never pop.
 - Every contact gets a burst keyed to the same beat as its SFX:
   - feet landing → `dust`;
@@ -655,3 +667,46 @@ one story with new narration (`scripts/dungeon-campaign-audio.py`, script text i
   the last party slides down its chute into the Mimic, the next group of adventurers reads the
   board, the next hallway door opens.
 - `npm run render:dungeon-campaign`, then `npm run check:video -- dungeon-campaign` (16:9 tiles).
+
+## 14. Patch (patch.gg) for the game
+
+`pch` (Patch's CLI, `npm install -g @patchgg/cli`, docs at https://docs.patch.gg/cli) is where the
+dungeon-explorer game will be published once it is ready, and its asset library is a source of
+game assets. Cloud Blender is not used.
+
+### Assets: CC0 only
+
+- The library mixes **CC0-1.0** (Kenney, KayKit, Poly Haven, ambientCG, Patch) and **CC-BY-4.0**
+  (Amazon Berkeley Objects, Polyfork, SimReady, incompetech music, Scenario). **Use CC0-1.0 only.**
+  Always search with `--license CC0-1.0`, and check `pch assets view <id>` says `CC0-1.0` before
+  taking anything. No CC-BY, nothing that asks for attribution, nothing else.
+- Skip AI-generated assets: add `--where "ai=false"` to every search (some CC0 ones are AI;
+  `pch assets view <id> --json` shows `"ai"`).
+- The game only. The shorts (§7) keep their rule: no external models or textures, and their
+  music stays the cleared series theme (§9).
+- Searching needs no login:
+  `pch assets search "torch" --type model --license CC0-1.0 --where "ai=false"`. Look at
+  the thumbnails, since titles don't say how an asset looks.
+- For the explorer game, take models with
+  `python scripts/fetch-patch-assets.py public/dungeon-explorer/assets/models/<set> <ids...>`: it
+  downloads the `preview` variant (512 px, meshopt, about a tenth of the full file; load it with
+  `GLTFLoader` + `MeshoptDecoder`), refuses anything not CC0 or AI-made, checks the hash, and prints
+  the credit lines for `public/dungeon-explorer/CREDITS.md`. The entrance market
+  (`src/dungeon-explorer/marketView.ts`) and the room modules (`dungeon/rooms.ts` plans them,
+  `roomView.ts` builds them, `doorView.ts` hangs the doors) are the examples.
+- `pch assets add <id> --to <folder>` copies the full-size asset and writes `CREDITS.md` and `patch.json`
+  in the **current folder**. Run it from the game's own folder, never from the repo root
+  (`public/music/CREDITS.md` and the shorts are not the game's). Keep the credit line it writes
+  even though CC0 does not require it: it records where every file came from.
+- Assets must fit the look. KayKit/Kenney are low-poly toys and do not match the realistic
+  paladin; prefer materials, HDRIs and sounds, and check them in the game before committing.
+
+### Publishing the game
+
+- Start private: `pch init`, `pch validate`, then `pch publish` with `--channel private`. Patch
+  tests the build on the PC in Patch Desktop and records footage to review. Going public
+  (`pch release submit`, `pch release promote`) is the user's call, never the agent's.
+- Publish only the built game, never this repo. Patch repos are open and remixable by default,
+  and this repo holds licensed music and unreleased work. Use `--visibility private` and run
+  `pch scan` before anything goes Open (Open cannot be undone).
+- Never run `pch agent guide` here: it writes an `AGENTS.md` over this one.

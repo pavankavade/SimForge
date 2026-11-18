@@ -59,6 +59,8 @@ export interface FaceKit {
   /** Extra outward offset of the mouth (sits on top of a beard). */
   mouthLift?: number;
   mouthWidth?: number;
+  /** Uniform mouth size multiplier (thumbnail close-ups push faces past their in-episode size). */
+  mouthScale?: number;
   /** Goblin fangs poking out of the lower lip. */
   fangs?: boolean;
   /** Half-orc tusks: big lower canines at the mouth corners, whatever the mouth does. */
@@ -296,7 +298,9 @@ export const Face: React.FC<{ kit: FaceKit; expression: Expression; blink: boole
         : null}
       {kit.mouth ? (
         <OnHead r={r} yaw={0} pitch={kit.mouthPitch} lift={0.004 + (kit.mouthLift ?? 0)}>
-          <Mouth kit={kit} shape={spec.mouth} />
+          <group scale={kit.mouthScale ?? 1}>
+            <Mouth kit={kit} shape={spec.mouth} />
+          </group>
           {kit.fangs && spec.mouth !== "yell" && spec.mouth !== "o" ? (
             <group position={[0, spec.mouth === "grin" ? 0.012 : 0.002, 0.004]}>
               {[-1, 1].map((s) => (

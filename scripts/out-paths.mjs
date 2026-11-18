@@ -17,8 +17,9 @@ export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 
 export const SERIES = {
   dungeon: ["dungeon-trap", "dungeon-trap-v2", "rolling-boulder", "crushing-walls", "dart-trap", "lava-bridge", "mimic-vault", "dungeon-campaign"],
-  shelter: ["cave-home", "nuclear-bunker", "lighthouse", "castle-wall", "tornado-shelter"],
-  whatif: ["slow-flight", "slow-flight-short", "teleport", "reflexes"],
+  shelter: ["cave-home", "nuclear-bunker", "lighthouse", "castle-wall", "tornado-shelter", "igloo", "spy-horse", "escape-tunnel"],
+  whatif: ["slow-flight", "slow-flight-short", "teleport", "reflexes", "heal", "mine-rescue"],
+  bio: ["mimic", "slime", "dragon"],
 };
 
 /** Series folder for a slug ("misc" for anything not listed, e.g. tests). */

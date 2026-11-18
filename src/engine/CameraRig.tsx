@@ -127,6 +127,8 @@ export const CameraRig: React.FC<CameraRigProps> = ({ config }) => {
       pose[2] + wave(frame, 3) * s * 0.5
     );
     camera.lookAt(new THREE.Vector3(pose[3] + wave(frame, 4) * s * 0.8, pose[4] + wave(frame, 5) * s * 0.8 - kick * 0.3, pose[5]));
+    // The un-shaken look target: PostFX focuses the depth of field on it.
+    camera.userData.focus = [pose[3], pose[4], pose[5]];
     const roll = pose[7] + wave(frame, 6) * amount * 0.05;
     if (roll !== 0) camera.rotateZ(roll);
     const perspective = camera as THREE.PerspectiveCamera;

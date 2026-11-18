@@ -22,12 +22,16 @@ import {
   ARMOR_SLOTS,
   DEFAULT_EQUIPMENT,
   FX_LAYER,
+  NO_WORKWEAR,
+  WORK_SLOTS,
   createPaladin,
   type ArmorEquipment,
   type CombatWorld,
   type HumanSpec,
+  type Outfit,
   type Paladin,
   type PaladinInput,
+  type Workwear,
 } from ".";
 
 /** The base human in Remotion (the game serves the same file from /assets/characters/). */
@@ -40,6 +44,22 @@ export interface PaladinActorProps {
   character?: HumanSpec;
   /** Pieces worn, as changes from full plate (`{ helm: false }`), or a function of the frame. */
   equipment?: Partial<ArmorEquipment> | ((frame: number) => Partial<ArmorEquipment>);
+  /** Workwear worn (coveralls, boots, hard hat, lamp, sunglasses), or a function of the frame. */
+  workwear?: Partial<Workwear> | ((frame: number) => Partial<Workwear>);
+  /** Workwear colours (coveralls, hard hat). */
+  outfit?: Outfit;
+  /** Cap lamp spot light brightness (0 = lens glow and beam only). */
+  lampIntensity?: number;
+  /** Hide him on these frames (he keeps simulating, so nothing is rebuilt). */
+  visible?: (frame: number) => boolean;
+  /**
+   * Frames (camera cuts) where the simulation may start over: he is stood up fresh, settled for
+   * `warmup` frames on that frame's input, and played on from there. A still then replays only
+   * from the last reset, not from frame 0, and a render gives the same frames either way.
+   * Without resets he replays from frame 0 (the game's exact history).
+   */
+  resets?: number[];
+  warmup?: number;
   /** Where his feet are, per frame (world space of the actor's parent). */
   position?: (frame: number) => V3;
   /** Which way he faces, radians about +Y (0 faces +Z), per frame. */
@@ -48,8 +68,8 @@ export interface PaladinActorProps {
   swings?: number[];
   /** Any other input, per frame (block, aimPitch, or moveX/moveZ to override the derived gait). */
   act?: (frame: number) => Partial<PaladinInput>;
-  /** Height of the ground under him (m). */
-  floorY?: number;
+  /** Height of the ground under him (m), or a function of the frame (riding a lift). */
+  floorY?: number | ((frame: number) => number);
   /** Things his blade can strike or glance off (the game's CombatWorld; omit for none). */
   world?: CombatWorld;
   /** Simulation steps per video frame (cloth is steadier with 2). */
@@ -65,6 +85,12 @@ const FULL: ArmorEquipment = { ...DEFAULT_EQUIPMENT };
 export const PaladinActor: React.FC<PaladinActorProps> = ({
   character,
   equipment,
+  workwear,
+  outfit,
+  lampIntensity,
+  visible,
+  resets,
+  warmup = 45,
   position,
   yaw,
   swings,
@@ -90,11 +116,11 @@ export const PaladinActor: React.FC<PaladinActorProps> = ({
   };
 
   // Build him (asynchronously: the base human is a file). A new character means a new build.
-  const characterKey = JSON.stringify(character ?? null);
+  const characterKey = JSON.stringify([character ?? null, outfit ?? null, lampIntensity ?? null]);
   useEffect(() => {
     let alive = true;
     let built: Paladin | null = null;
-    createPaladin(gl, { character, assetUrl: assetUrl ?? paladinAssetUrl() })
+    createPaladin(gl, { character, outfit, lampIntensity, assetUrl: assetUrl ?? paladinAssetUrl() })
       .then((p) => {
         if (!alive) {
           p.dispose();
@@ -127,30 +153,34 @@ export const PaladinActor: React.FC<PaladinActorProps> = ({
   useLayoutEffect(() => {
     if (!paladin) return;
     const p = paladin;
-    const at = (f: number): V3 => (position ? position(f) : [0, floorY, 0]);
+    const floorAt = (f: number): number => (typeof floorY === "function" ? floorY(f) : floorY);
+    const at = (f: number): V3 => (position ? position(f) : [0, floorAt(0), 0]);
     const face = (f: number): number => (yaw ? yaw(f) : 0);
     const wear = (f: number): ArmorEquipment => {
       const e = typeof equipment === "function" ? equipment(f) : equipment;
       return { ...FULL, ...(e || {}) };
     };
+    const worn = (f: number): Workwear => {
+      const w = typeof workwear === "function" ? workwear(f) : workwear;
+      return { ...NO_WORKWEAR, ...(w || {}) };
+    };
     const swingAt = new Set(swings || []);
     const dt = 1 / fps / substeps;
 
-    // Going back in time: replay from the start.
-    if (frame < simFrame.current) {
-      p.reset();
-      simFrame.current = -1;
-    }
-    for (let f = simFrame.current + 1; f <= frame; f++) {
+    const step = (f: number, settle: boolean) => {
       const e = wear(f);
       for (const s of ARMOR_SLOTS) if (p.equipment[s] !== e[s]) p.setEquipped(s, e[s]);
+      const w = worn(f);
+      for (const s of WORK_SLOTS) if (p.workwear[s] !== w[s]) p.setWorn(s, w[s]);
       const pos = at(f);
-      const prev = at(Math.max(0, f - 1));
+      const prev = settle ? pos : at(Math.max(0, f - 1));
       const facing = face(f);
-      const turn = (facing - face(Math.max(0, f - 1))) * fps;
+      const turn = settle ? 0 : (facing - face(Math.max(0, f - 1))) * fps;
       // Ground speed in his own frame (x toward his left, z forward), from the path.
-      const vx = (pos[0] - prev[0]) * fps;
-      const vz = (pos[2] - prev[2]) * fps;
+      // A jump of more than 1.5 m in one frame is a cut (he was moved), not a walk.
+      const jump = Math.hypot(pos[0] - prev[0], pos[2] - prev[2]) > 1.5;
+      const vx = jump ? 0 : (pos[0] - prev[0]) * fps;
+      const vz = jump ? 0 : (pos[2] - prev[2]) * fps;
       const s = Math.sin(facing);
       const c = Math.cos(facing);
       const input: PaladinInput = {
@@ -158,19 +188,33 @@ export const PaladinActor: React.FC<PaladinActorProps> = ({
         moveZ: vx * s + vz * c,
         aimPitch: 0,
         turnRate: turn,
-        air: Math.max(0, pos[1] - floorY),
+        air: Math.max(0, pos[1] - floorAt(f)),
         block: false,
-        attack: swingAt.has(f),
+        attack: !settle && swingAt.has(f),
         firstPerson: false,
         ...(act ? act(f) : {}),
       };
       p.group.position.set(pos[0], pos[1], pos[2]);
       p.group.rotation.y = facing;
       for (let k = 0; k < substeps; k++) {
-        p.update(dt, k === 0 ? input : { ...input, attack: false }, floorY, world);
+        p.update(dt, k === 0 ? input : { ...input, attack: false }, floorAt(f), world);
       }
+    };
+
+    // Where this frame's run starts: frame 0, or the last reset at or before it.
+    let start = 0;
+    if (resets) for (const r of resets) if (r <= frame && r > start) start = r;
+    // Going back in time, or past a reset: start over from there.
+    if (frame < simFrame.current || (resets && start > simFrame.current)) {
+      p.reset();
+      if (resets) for (let k = 0; k < warmup; k++) step(start, true);
+      simFrame.current = start - 1;
     }
+    for (let f = simFrame.current + 1; f <= frame; f++) step(f, false);
     simFrame.current = frame;
+    const shown = visible ? visible(frame) : true;
+    p.group.visible = shown;
+    p.fx.visible = shown;
     if (!released.current) {
       // While rendering, <ThreeCanvas> only draws when the frame number changes, and that draw
       // happened before he finished loading: draw once more with him in it, then let it go.

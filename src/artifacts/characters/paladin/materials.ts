@@ -229,7 +229,7 @@ export function paintSkin(base: THREE.Texture, geo: THREE.BufferGeometry, layers
 }
 
 /** Harness materials re-used on layers cut from the skin, with finer texture repeats for its UVs. */
-export const FIT_KEYS = ["mail", "quilt", "wool", "braies", "leather", "steel"] as const;
+export const FIT_KEYS = ["mail", "quilt", "wool", "braies", "leather", "steel", "coverall"] as const;
 type FitKey = `${(typeof FIT_KEYS)[number]}Fit`;
 
 export type HumanMaterials = Record<"skin" | "eye" | "brows" | "lashes" | "hairCrop" | "hairSwept" | FitKey, THREE.MeshStandardMaterial>;
@@ -711,7 +711,22 @@ export type MatKey =
   | "eye"
   | "braies"
   | "quilt"
-  | "wool";
+  | "wool"
+  // Workwear (miners): coveralls, reflective tape, rubber boots, the hard hat, its lamp, sunglasses.
+  | "coverall"
+  | "reflect"
+  | "rubber"
+  | "hat"
+  | "lamp"
+  | "lens";
+
+/** Colours of the workwear (sRGB 0..1); each person can wear their own. */
+export interface Outfit {
+  coverall: RGB;
+  hat: RGB;
+}
+
+export const DEFAULT_OUTFIT: Outfit = { coverall: [0.86, 0.38, 0.1], hat: [0.93, 0.92, 0.88] };
 
 export interface PaladinMaterials {
   skinned: Record<MatKey, THREE.MeshStandardMaterial>;
@@ -731,7 +746,7 @@ export interface PaladinMaterials {
   dispose: () => void;
 }
 
-export function createPaladinMaterials(renderer: THREE.WebGLRenderer, spec: HumanSpec, ht: HumanTextures): PaladinMaterials {
+export function createPaladinMaterials(renderer: THREE.WebGLRenderer, spec: HumanSpec, ht: HumanTextures, outfit: Outfit = DEFAULT_OUTFIT): PaladinMaterials {
   const env = buildEnvironment(renderer);
   const steel = steelMaps();
   const mail = mailMaps();
@@ -853,6 +868,25 @@ export function createPaladinMaterials(renderer: THREE.WebGLRenderer, spec: Huma
     }),
     quilt: std({ color: 0x5b1a1c, roughness: 0.95, metalness: 0, normalMap: coarse, normalScale: new THREE.Vector2(0.9, 0.9), envMapIntensity: 0.2 }),
     wool: std({ color: 0x2f2a25, roughness: 1, metalness: 0, normalMap: coarse, normalScale: new THREE.Vector2(0.7, 0.7), envMapIntensity: 0.15 }),
+    coverall: std({
+      color: new THREE.Color().setRGB(outfit.coverall[0], outfit.coverall[1], outfit.coverall[2], THREE.SRGBColorSpace),
+      roughness: 0.92,
+      metalness: 0,
+      normalMap: coarse,
+      normalScale: new THREE.Vector2(0.55, 0.55),
+      envMapIntensity: 0.2,
+    }),
+    // Retroreflective tape: pale and a little glossy, with a faint glow so it catches the lamps.
+    reflect: std({ color: 0xd8dcd6, roughness: 0.3, metalness: 0.2, emissive: 0x2a2c28, envMapIntensity: 1.3 }),
+    rubber: std({ color: 0x17181a, roughness: 0.55, metalness: 0, envMapIntensity: 0.5 }),
+    hat: std({
+      color: new THREE.Color().setRGB(outfit.hat[0], outfit.hat[1], outfit.hat[2], THREE.SRGBColorSpace),
+      roughness: 0.32,
+      metalness: 0,
+      envMapIntensity: 0.9,
+    }),
+    lamp: std({ color: 0xfff6e0, emissive: 0xffe7b0, emissiveIntensity: 3, roughness: 0.2, metalness: 0, envMapIntensity: 0.5 }),
+    lens: std({ color: 0x0a0b0e, roughness: 0.06, metalness: 0.4, envMapIntensity: 1.6 }),
   };
   textures.push(ht.skin, ht.eye, ht.brows, ht.lashes, ht.hairCrop, ht.hairCropNormal, ht.hairSwept);
   const card = (map: THREE.Texture, color: THREE.Color, cut: number, p: THREE.MeshStandardMaterialParameters = {}) =>

@@ -21,14 +21,14 @@ import {
   type Influence,
   type Ring,
 } from "./geo";
-import type { BodyBuild } from "./body";
+import { SUIT, profileAt, type BodyBuild, type BodyLandmarks } from "./body";
 import { warpTorso } from "./fit";
-import { fitRing, fitRings, type BodyFit } from "./measure";
+import { fitRing, fitRings, type BodyFit, type Sections } from "./measure";
 import { buildClassicHead } from "./human";
 import type { HumanSpec } from "./spec";
 import type { HumanMaterials, MatKey, PaladinMaterials } from "./materials";
 import type { BodyRig } from "./retarget";
-import { AUTHOR, B, BONE_NAMES, DIM, REST, type BoneName, type Rig } from "./rig";
+import { AUTHOR, B, BONE_NAMES, DIM, EYE_LOCAL, REST, type BoneName, type Rig } from "./rig";
 
 export const SLOTS = [
   "body",
@@ -49,6 +49,10 @@ export const SLOTS = [
   "cuisses",
   "greaves",
   "sabatons",
+  "coverall",
+  "boots",
+  "hardhat",
+  "sunglasses",
 ] as const;
 
 export type Slot = (typeof SLOTS)[number];
@@ -524,6 +528,97 @@ function helm(P: Pieces): void {
   P.put("helm", "gold", "head", sphere(0.016, { p: [0, 0.268, 0] }));
 }
 
+/**
+ * How the hard hat sits: authored upright, then tipped back so the rim runs from just over the
+ * brows at the front down over the back of the skull, and dropped onto the head (no hair band
+ * showing under it).
+ */
+const HAT_SEAT = new THREE.Matrix4().makeTranslation(0, -0.03, 0.022).multiply(new THREE.Matrix4().makeRotationX(-0.12));
+
+/** Where the hard hat's lamp sits and points, in head-bone space (authored like the helm). */
+export const HAT_LAMP = {
+  at: new THREE.Vector3(0, 0.198, 0.155).applyMatrix4(HAT_SEAT),
+  dir: new THREE.Vector3(0, -0.06, 1).transformDirection(HAT_SEAT),
+};
+
+/** Workwear worn on the head: a miner's hard hat with a cap lamp, and sunglasses. */
+function headWear(P: Pieces): void {
+  const n = 2.2;
+  // Hard hat: a shell sized over the helm's (which clears the head and hair), sitting on the brow.
+  const shell: Ring[] = [
+    { y: 0.143, rx: 0.12, rf: 0.147, rb: 0.128, n },
+    { y: 0.185, rx: 0.117, rf: 0.142, rb: 0.126, n },
+    { y: 0.225, rx: 0.105, rf: 0.125, rb: 0.112, n },
+    { y: 0.255, rx: 0.083, rf: 0.097, rb: 0.089, n },
+    { y: 0.277, rx: 0.052, rf: 0.058, rb: 0.056, n },
+    { y: 0.29, rx: 0.016, rf: 0.017, rb: 0.017 },
+  ];
+  const seat = (g: THREE.BufferGeometry) => g.applyMatrix4(HAT_SEAT);
+  P.put("hardhat", "hat", "head", seat(loft(shell, { seg: 32, capTop: true, thick: 0.005 })));
+  // A narrow brim all round with a deeper peak at the front, turned down at the edge.
+  const rim = (r: Ring, side: number, front: number, back: number, dy: number): Ring => ({
+    ...r,
+    y: r.y + dy,
+    rx: r.rx + side,
+    rf: r.rf + front,
+    rb: (r.rb ?? r.rf) + back,
+  });
+  P.put(
+    "hardhat",
+    "hat",
+    "head",
+    seat(loft([rim(shell[0], 0.016, 0.05, 0.022, -0.016), rim(shell[0], 0.012, 0.038, 0.016, -0.006), rim(shell[0], 0, 0, 0, 0.006)], { seg: 40, thick: 0.004 }))
+  );
+  // One raised ridge front to back over the crown.
+  P.put("hardhat", "hat", "head", seat(loft(shell.slice(0, 5).map((r) => grow(r, 0.006)), { seg: 4, arc: [-0.07, 0.07] })));
+  P.put("hardhat", "hat", "head", seat(loft(shell.slice(0, 5).map((r) => grow(r, 0.006)), { seg: 4, arc: [PI - 0.07, PI + 0.07] })));
+  // Cap lamp on its bracket at the front: a black housing and a bright lens.
+  const L = new THREE.Vector3(0, 0.198, 0.155);
+  P.put("hardhat", "rubber", "head", seat(box(0.034, 0.03, 0.014, 0.004, { p: [0, L.y, L.z - 0.016] })));
+  P.put("hardhat", "rubber", "head", seat(cyl(0.024, 0.021, 0.034, { r: [PI / 2, 0, 0], p: [L.x, L.y, L.z] }, 18)));
+  P.put("hardhat", "lamp", "head", seat(cyl(0.019, 0.019, 0.004, { r: [PI / 2, 0, 0], p: [L.x, L.y, L.z + 0.017] }, 18)));
+
+  // Sunglasses, placed from the measured eyes (head-bone space at rest).
+  const E = EYE_LOCAL;
+  const z = E.z + 0.016;
+  const glasses: THREE.BufferGeometry[] = [];
+  const frames: THREE.BufferGeometry[] = [];
+  for (const s of [-1, 1]) {
+    glasses.push(sphere(0.026, { p: [s * 0.033, E.y - 0.002, z], s: [1.08, 0.78, 0.22], r: [0, s * 0.18, 0] }, 18, 10));
+    frames.push(torus(0.026, 0.0026, { p: [s * 0.033, E.y - 0.002, z + 0.001], s: [1.08, 0.8, 1], r: [0, s * 0.18, 0] }));
+    // Temple arms back over the ears.
+    frames.push(box(0.004, 0.006, 0.105, 0.002, { p: [s * 0.071, E.y + 0.006, z - 0.058], r: [0.04, -s * 0.05, 0] }));
+  }
+  frames.push(box(0.016, 0.005, 0.005, 0.002, { p: [0, E.y + 0.008, z + 0.004] }));
+  P.fit("sunglasses", "lens", "head", merge(glasses));
+  P.fit("sunglasses", "dark", "head", merge(frames));
+}
+
+/** Coverall details fitted to the measured body: reflective tape bands and the collar. */
+function workwearPieces(P: Pieces, fit: BodyFit, lm: BodyLandmarks): void {
+  const band = (s: Sections, a: number, b: number, pad: number) => loft(fitRings(s, a, b, 2, () => pad), { seg: 24 });
+  const SL = DIM.legLower;
+  const LU = DIM.armUpper;
+  const LF = DIM.armFore;
+  const legPad = SUIT.leg + 0.004;
+  const armPad = SUIT.arm + 0.004;
+  P.fitPair("coverall", "reflect", "shinL", band(fit.limbs.shinL, -SL * 0.25, -SL * 0.16, legPad));
+  P.fitPair("coverall", "reflect", "shinL", band(fit.limbs.shinL, -SL * 0.41, -SL * 0.32, legPad));
+  P.fitPair("coverall", "reflect", "foreArmL", band(fit.limbs.foreArmL, -LF * 0.58, -LF * 0.46, armPad));
+  P.fitPair("coverall", "reflect", "upperArmL", band(fit.limbs.upperArmL, -LU * 0.66, -LU * 0.54, armPad));
+  // Chest band and pockets, rigid on the chest (model space at rest).
+  const pad = SUIT.torso + 0.004;
+  const ring = (y: number, p: number): Ring => {
+    const [rx, rf, rb] = profileAt(lm.torso, y);
+    return { y, rx: rx + p, rf: rf + p, rb: rb + p, n: 2.3 };
+  };
+  const chestY = lm.waistY + 0.25;
+  P.add("coverall", "reflect", rigid(loft([ring(chestY - 0.024, pad), ring(chestY + 0.024, pad)], { seg: 36 }), B.chest));
+  // Collar standing up round the neck.
+  const neckY = lm.waistY + 0.43;
+  P.add("coverall", "coverall", rigid(loft([ring(neckY - 0.02, SUIT.torso + 0.006), ring(neckY + 0.035, SUIT.torso - 0.004)], { seg: 28, thick: 0.004 }), B.chest));
+}
+
 export interface PaladinModel {
   meshes: Record<Slot, THREE.SkinnedMesh[]>;
   sword: THREE.Group;
@@ -531,39 +626,56 @@ export interface PaladinModel {
 }
 
 /** Blade runs along +Z from the grip; the flats face ±X and the edges ±Y. */
-export const SWORD = { base: 0.09, tip: 0.9 };
+export const SWORD = { base: 0.09, tip: 0.84 };
 
+/**
+ * A knightly arming sword (Oakeshott type XII): a 78 cm blade, 5.3 cm wide at the guard and
+ * tapering steadily to an acute point, lenticular in section with a fuller down the first two
+ * thirds; a plain straight steel cross, a leather grip with risers, and a wheel pommel.
+ */
 function buildSword(mats: PaladinMaterials): THREE.Group {
   const g = new THREE.Group();
   g.name = "paladin-sword";
   const blade = loft(
     [
-      { y: 0.065, rx: 0.0036, rf: 0.026, n: 1.25 },
-      { y: 0.5, rx: 0.0032, rf: 0.0225, n: 1.25 },
-      { y: 0.78, rx: 0.0026, rf: 0.017, n: 1.25 },
-      { y: 0.865, rx: 0.0018, rf: 0.0095, n: 1.25 },
-      { y: SWORD.tip, rx: 0.0004, rf: 0.0008, n: 1.25 },
+      { y: 0.058, rx: 0.0044, rf: 0.0265, n: 1.2 },
+      { y: 0.3, rx: 0.0039, rf: 0.0245, n: 1.2 },
+      { y: 0.55, rx: 0.0034, rf: 0.0205, n: 1.2 },
+      { y: 0.72, rx: 0.0029, rf: 0.0155, n: 1.2 },
+      { y: 0.8, rx: 0.0021, rf: 0.0085, n: 1.2 },
+      { y: SWORD.tip, rx: 0.0004, rf: 0.0006, n: 1.2 },
     ],
-    { seg: 8, flat: true }
+    { seg: 10, flat: true }
   );
-  const fuller = box(0.0078, 0.011, 0.5, 0.002, { p: [0, 0, 0.34] });
-  const bladeMesh = new THREE.Mesh(merge([tf(blade, { r: [PI / 2, 0, 0] }), fuller]), mats.blade);
-  const hilt = merge([
-    box(0.02, 0.2, 0.022, 0.008, { p: [0, 0, 0.056] }),
-    sphere(0.015, { p: [0, 0.1, 0.056], s: [1, 1.2, 1] }),
-    sphere(0.015, { p: [0, -0.1, 0.056], s: [1, 1.2, 1] }),
-    cyl(0.027, 0.027, 0.02, { r: [0, 0, PI / 2], p: [0, 0, -0.078] }, 18),
-    sphere(0.011, { p: [0, 0, -0.078], s: [1.3, 1, 1] }),
+  const bladeMesh = new THREE.Mesh(tf(blade, { r: [PI / 2, 0, 0] }), mats.blade);
+  // The fuller: a duller band down the middle of both flats (where the lenticular blade is thickest),
+  // narrowing out before the point. Boxes this small keep a near-zero corner radius: box() pulls the
+  // faces of centimetre-sized boxes in by about 1.5 radii per side.
+  const fuller = merge([
+    box(0.0078, 0.012, 0.36, 0.0002, { p: [0, 0, 0.25] }),
+    box(0.0066, 0.008, 0.16, 0.0002, { p: [0, 0, 0.5] }),
   ]);
-  const hiltMesh = new THREE.Mesh(hilt, mats.skinned.gold);
+  const fullerMesh = new THREE.Mesh(fuller, mats.skinned.steel);
+  // Straight cross with slightly flared, squared ends and a langet block over the blade's root.
+  const hilt = merge([
+    box(0.016, 0.2, 0.014, 0.0008, { p: [0, 0, 0.05] }),
+    box(0.019, 0.016, 0.017, 0.0008, { p: [0, 0.104, 0.05] }),
+    box(0.019, 0.016, 0.017, 0.0008, { p: [0, -0.104, 0.05] }),
+    box(0.018, 0.03, 0.026, 0.0008, { p: [0, 0, 0.054] }),
+    // Wheel pommel with a raised boss on both faces, and the peened tang end.
+    cyl(0.028, 0.028, 0.019, { r: [0, 0, PI / 2], p: [0, 0, -0.082] }, 24),
+    cyl(0.016, 0.016, 0.027, { r: [0, 0, PI / 2], p: [0, 0, -0.082] }, 18),
+    sphere(0.006, { p: [0, 0, -0.111], s: [1.2, 1, 1] }),
+  ]);
+  const hiltMesh = new THREE.Mesh(hilt, mats.skinned.steel);
   const grip = merge([
-    cyl(0.0145, 0.0165, 0.112, { r: [PI / 2, 0, 0], p: [0, 0, -0.008] }, 12),
-    torus(0.0165, 0.003, { p: [0, 0, 0.04] }),
-    torus(0.016, 0.003, { p: [0, 0, -0.006] }),
-    torus(0.0165, 0.003, { p: [0, 0, -0.055] }),
+    cyl(0.0158, 0.0138, 0.1, { r: [PI / 2, 0, 0], p: [0, 0, -0.008] }, 14),
+    torus(0.0158, 0.0022, { p: [0, 0, 0.026] }),
+    torus(0.0148, 0.0022, { p: [0, 0, -0.008] }),
+    torus(0.0142, 0.0022, { p: [0, 0, -0.042] }),
   ]);
   const gripMesh = new THREE.Mesh(grip, mats.skinned.leather);
-  for (const m of [bladeMesh, hiltMesh, gripMesh]) {
+  for (const m of [bladeMesh, fullerMesh, hiltMesh, gripMesh]) {
     m.castShadow = true;
     m.receiveShadow = true;
     g.add(m);
@@ -699,6 +811,7 @@ export function buildPaladinModel(rig: Rig, mats: PaladinMaterials, spec: HumanS
   armPlate(P);
   legPlate(P);
   helm(P);
+  headWear(P);
   // Torso plates, fauld, gorget and the hanging mail onto the imported torso.
   const lm = o.body.landmarks;
   const torsoBones = [B.hips, B.spine, B.chest, B.neck, B.tassetL, B.tassetR];
@@ -707,6 +820,7 @@ export function buildPaladinModel(rig: Rig, mats: PaladinMaterials, spec: HumanS
     (slot, mat, bone) => torsoBones.indexOf(bone) >= 0 || (slot === "helm" && mat === "mail")
   );
   fittedPlates(P, o.fit);
+  workwearPieces(P, o.fit, lm);
   // Belt buckle on the doublet, at the front of the belly the doublet's belt is cut from.
   P.add("doublet", "gold", rigid(box(0.03, 0.036, 0.008, 0.003, { p: [0, lm.waistY + 0.011, lm.beltFrontZ + 0.016] }), B.hips));
   const meshes = {} as Record<Slot, THREE.SkinnedMesh[]>;

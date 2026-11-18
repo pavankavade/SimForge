@@ -19,7 +19,28 @@ export interface PaladinInput {
   /** True on the frame the attack button went down. */
   attack: boolean;
   firstPerson: boolean;
+  /**
+   * Off duty (no weapons, e.g. a miner): arms hang and swing with the stride instead of holding a
+   * guard, feet stand square, and looking up or down turns the head but not the arms.
+   */
+  relaxed?: boolean;
+  /** Body stance; changes ease in over about a third of a second. */
+  stance?: Stance;
+  /** Hip joint height when sitting (m): about 0.5 on a bench, 0.2 on the ground. */
+  seatY?: number;
+  /** What the arms do (overrides the guard/relaxed arms; switches ease over ~0.3 s). */
+  arms?: ArmsPose;
 }
+
+export type Stance = "stand" | "sit" | "crouch";
+
+/**
+ * Arm poses for acting. eat: right hand to the mouth, left holding food at the chest; hold: both
+ * hands in front (a note, a can); cheer: both arms up; reach: right hand out in front at chest
+ * height; wave: right hand up, waving; shade: right hand at the brow; cross: arms folded;
+ * knees: hands resting on the knees (sitting).
+ */
+export type ArmsPose = "eat" | "hold" | "cheer" | "reach" | "wave" | "shade" | "cross" | "knees";
 
 type V3 = THREE.Vector3;
 const v = (x: number, y: number, z: number): V3 => new THREE.Vector3(x, y, z);
@@ -95,21 +116,72 @@ function lerpPose(out: Pose, a: Pose, b: Pose, t: number): Pose {
   return out;
 }
 
-const SHIELD_LOW = { hl: v(0.1, -0.47, 0.29), el: v(0.8, -0.55, -0.2), sn: v(0.62, 0, 0.78) };
+const SHIELD_LOW = { hl: v(0.12, -0.47, 0.32), el: v(0.8, -0.55, -0.2), sn: v(0.3, -0.05, 0.95) };
 
-/** Ready stance: sword upright at the right shoulder, shield across the left side. */
+/** Ready stance: sword upright at the right shoulder, shield straight ahead and a little low. */
 const GUARD = pose({
   hr: v(-0.235, -0.37, 0.33),
   bd: v(0.2, 0.87, 0.45),
   er: v(-0.55, -0.75, -0.35),
-  hl: v(0.045, -0.41, 0.35),
+  hl: v(0.1, -0.44, 0.38),
   el: v(0.8, -0.55, -0.2),
-  sn: v(0.5, 0.02, 0.86),
+  sn: v(0.18, -0.06, 0.98),
   chestYaw: -0.1,
   hipYaw: -0.22,
   lean: 0.03,
   drop: 0,
 });
+
+/** First-person arms (aim space, like Pose): where the hands, elbows, blade and shield face go. */
+export interface FpArms {
+  hr: V3;
+  bd: V3;
+  er: V3;
+  hl: V3;
+  el: V3;
+  sn: V3;
+  /** Turn of the blade about its own axis (radians), so more of the flat faces the eye. */
+  roll: number;
+}
+
+/**
+ * First person replaces the idle arms (GUARD / CARRY / BLOCK) with poses framed for the eye, the way
+ * first-person games show a sword and board:
+ * - guard: the shield square to the view, low in the bottom-left with its top edge level; the sword
+ *   nearly upright on the right, the hand below the frame;
+ * - block: the shield raised square in front, its top edge just under the crosshair; the sword hand
+ *   drawn back low behind it.
+ * The cuts are untouched. Mutable so the Paladin Lab can tune them live (`L.fpArms`).
+ */
+export const FP_ARMS: { guard: FpArms; block: FpArms } = {
+  // Tuned at 16:9, fov 74 against reference frames: shield top edge level at ~82% down the frame,
+  // its inner edge at ~43% across; blade nearly upright from ~70% across, hand out of frame.
+  guard: {
+    hr: v(-0.37, -0.38, 0.34),
+    bd: v(0.1, 0.96, 0.25),
+    er: v(-0.55, -0.75, -0.35),
+    hl: v(0.23, -0.41, 0.26),
+    el: v(1, -0.2, 0),
+    sn: v(0, 0, 1),
+    roll: 0.5,
+  },
+  // Shield top edge level just under the crosshair (~48% down), spanning ~15-75% across.
+  block: {
+    hr: v(-0.04, -0.42, 0.3),
+    bd: v(0.35, -0.1, 0.93),
+    er: v(-0.55, -0.7, -0.45),
+    hl: v(-0.12, -0.25, 0.31),
+    el: v(0.4, -0.3, 1),
+    sn: v(0, 0.05, 1),
+    roll: 0,
+  },
+};
+const _fpHr = new THREE.Vector3();
+const _fpBd = new THREE.Vector3();
+const _fpEr = new THREE.Vector3();
+const _fpHl = new THREE.Vector3();
+const _fpEl = new THREE.Vector3();
+const _fpSn = new THREE.Vector3();
 
 /** Running carry: weapons lowered and tucked in. */
 const CARRY = pose({
@@ -125,19 +197,143 @@ const CARRY = pose({
   drop: 0,
 });
 
-/** Shield raised across the body, sword drawn back behind it. */
+/** Shield raised high in front of the face, sword drawn back behind it. */
 const BLOCK = pose({
   hr: v(-0.3, -0.52, 0.18),
   bd: v(0.22, 0.5, 0.84),
   er: v(-0.55, -0.7, -0.45),
-  hl: v(-0.05, -0.25, 0.41),
-  el: v(0.72, -0.68, -0.05),
-  sn: v(0.1, 0.06, 0.99),
+  hl: v(0.0, -0.1, 0.42),
+  el: v(0.75, -0.62, -0.1),
+  sn: v(0.04, 0.12, 0.99),
   chestYaw: -0.32,
   hipYaw: -0.3,
   lean: 0.07,
   drop: 0.045,
 });
+
+/** Off duty: arms hanging loose at the sides. */
+const RELAX = pose({
+  hr: v(-0.205, -0.71, 0.02),
+  bd: v(0, -0.15, 1),
+  er: v(-0.3, 0, -1),
+  hl: v(0.205, -0.71, 0.02),
+  el: v(0.3, 0, -1),
+  sn: v(1, 0, 0.1),
+  chestYaw: 0,
+  hipYaw: 0,
+  lean: 0.02,
+  drop: 0,
+});
+
+/** Off duty, running: elbows bent, fists at the hips. */
+const RELAX_RUN = pose({
+  hr: v(-0.2, -0.56, 0.12),
+  bd: v(0.3, 0.2, 1),
+  er: v(-0.3, -0.2, -1),
+  hl: v(0.2, -0.56, 0.12),
+  el: v(0.3, -0.2, -1),
+  sn: v(1, 0, 0.1),
+  chestYaw: 0,
+  hipYaw: 0,
+  lean: 0.04,
+  drop: 0,
+});
+
+const relaxedLeft = () => ({ hl: RELAX.hl.clone(), el: RELAX.el.clone(), sn: RELAX.sn.clone() });
+
+const ARMS: Record<ArmsPose, Pose> = {
+  eat: pose({
+    hr: v(-0.055, -0.12, 0.15),
+    bd: v(0.35, 0.9, 0.1),
+    er: v(-0.6, -0.8, 0),
+    hl: v(0.08, -0.42, 0.27),
+    el: v(0.6, -0.7, -0.3),
+    sn: v(0, -1, 0.1),
+    chestYaw: 0,
+    hipYaw: 0,
+    lean: 0.06,
+    drop: 0,
+  }),
+  hold: pose({
+    hr: v(-0.07, -0.43, 0.3),
+    bd: v(0.4, 0.5, 0.8),
+    er: v(-0.6, -0.7, -0.3),
+    hl: v(0.07, -0.43, 0.3),
+    el: v(0.6, -0.7, -0.3),
+    sn: v(0, -1, 0.2),
+    chestYaw: 0,
+    hipYaw: 0,
+    lean: 0.08,
+    drop: 0,
+  }),
+  cheer: pose({
+    hr: v(-0.3, 0.3, 0.1),
+    bd: v(0, 1, 0.1),
+    er: v(-1, 0, -0.2),
+    hl: v(0.3, 0.3, 0.1),
+    el: v(1, 0, -0.2),
+    sn: v(1, 0, 0),
+    chestYaw: 0,
+    hipYaw: 0,
+    lean: -0.06,
+    drop: 0,
+  }),
+  reach: pose({
+    hr: v(-0.12, -0.3, 0.52),
+    bd: v(0, 0.4, 1),
+    er: v(-0.7, -0.7, 0),
+    ...relaxedLeft(),
+    chestYaw: 0.12,
+    hipYaw: 0.05,
+    lean: 0.14,
+    drop: 0.02,
+  }),
+  wave: pose({
+    hr: v(-0.34, 0.12, 0.12),
+    bd: v(-0.2, 1, 0.2),
+    er: v(-1, -0.3, -0.2),
+    ...relaxedLeft(),
+    chestYaw: 0,
+    hipYaw: 0,
+    lean: 0,
+    drop: 0,
+  }),
+  shade: pose({
+    hr: v(-0.07, 0.0, 0.14),
+    bd: v(1, 0.15, 0.1),
+    er: v(-0.9, -0.4, 0),
+    ...relaxedLeft(),
+    chestYaw: 0,
+    hipYaw: 0,
+    lean: -0.03,
+    drop: 0,
+  }),
+  cross: pose({
+    hr: v(0.07, -0.47, 0.19),
+    bd: v(1, 0.1, 0.1),
+    er: v(-0.5, -0.8, -0.2),
+    hl: v(-0.07, -0.44, 0.21),
+    el: v(0.5, -0.8, -0.2),
+    sn: v(0, 0, 1),
+    chestYaw: 0,
+    hipYaw: 0,
+    lean: -0.02,
+    drop: 0,
+  }),
+  // The hands are moved onto the knees each frame (see toKnee); this is the arm shape.
+  knees: pose({
+    hr: v(-0.14, -0.6, 0.36),
+    bd: v(0, 0.2, 1),
+    er: v(-0.6, 0, -0.8),
+    hl: v(0.14, -0.6, 0.36),
+    el: v(0.6, 0, -0.8),
+    sn: v(1, 0.3, 0),
+    chestYaw: 0,
+    hipYaw: 0,
+    lean: 0.06,
+    drop: 0,
+  }),
+};
 
 interface Swing {
   windup: number;
@@ -342,6 +538,16 @@ export class PaladinAnimator {
   private tassetR = 0;
   private prevPhase = 0;
 
+  // Off-duty acting: eased amounts for the relaxed arms and the stances, and the arm-pose blend.
+  private relaxK = 0;
+  private sitK = 0;
+  private crouchK = 0;
+  private seatY = 0.5;
+  private armsName: ArmsPose | null = null;
+  private armsT = 1;
+  private readonly armsFrom = clonePose(GUARD);
+  private readonly armsOut = clonePose(GUARD);
+
   private readonly sHandR = new Spring3();
   private readonly sBlade = new Spring3();
   private readonly sHandL = new Spring3();
@@ -355,9 +561,9 @@ export class PaladinAnimator {
     if (this.state !== "strike") return;
     copyPose(this.from, this.cur);
     // Kick the wrist back along the way it came.
-    this.from.hr.addScaledVector(this.sHandR.vel, -0.035);
-    this.sHandR.vel.multiplyScalar(-0.55);
-    this.sBlade.vel.multiplyScalar(-0.7);
+    this.from.hr.addScaledVector(this.sHandR.vel, -0.02);
+    this.sHandR.vel.multiplyScalar(-0.25);
+    this.sBlade.vel.multiplyScalar(-0.3);
     this.state = "recover";
     this.t = 0.06;
     this.queued = false;
@@ -381,6 +587,22 @@ export class PaladinAnimator {
     // Where the arms go when not attacking.
     lerpPose(this.rest, GUARD, CARRY, this.run * (1 - this.blockAmount));
     lerpPose(this.rest, this.rest, BLOCK, this.blockAmount);
+    if (this.relaxK > 0) {
+      lerpPose(this.armsOut, RELAX, RELAX_RUN, this.run);
+      lerpPose(this.rest, this.rest, this.armsOut, this.relaxK);
+    }
+    // Acting arms: blend from wherever the arms were to the new pose (or back to the rest arms).
+    const want = input.arms ?? null;
+    if (want !== this.armsName) {
+      copyPose(this.armsFrom, this.cur);
+      this.armsName = want;
+      this.armsT = 0;
+    }
+    this.armsT = Math.min(1, this.armsT + dt / 0.3);
+    if (this.armsName || this.armsT < 1) {
+      const to = this.armsName ? ARMS[this.armsName] : this.rest;
+      lerpPose(this.rest, this.armsFrom, to, ease(this.armsT));
+    }
 
     if (input.attack) {
       if (this.state === "none") this.begin(this.comboTimer > 0 ? (this.swingIndex + 1) % SWINGS.length : 0);
@@ -469,6 +691,29 @@ export class PaladinAnimator {
     out.y = lift * mv;
     out.pitch = pitch * mv;
     out.yaw = idle * (side > 0 ? 0.16 : -0.45);
+    // Off duty: stand square, toes a little out.
+    const r = this.relaxK * idle;
+    if (r > 0) {
+      out.x = lerp(out.x, side * 0.11, r);
+      out.z = lerp(out.z, REST.toeL.z + side * 0.012, r);
+      out.yaw = lerp(out.yaw, side * 0.1, r);
+    }
+    // Sitting: feet planted forward under the knees; crouching: feet a little wider.
+    if (this.sitK > 0) {
+      const k = this.sitK;
+      const ground = smooth(0.42, 0.22, this.seatY);
+      out.x = lerp(out.x, side * lerp(0.12, 0.15, ground), k);
+      out.z = lerp(out.z, REST.toeL.z + lerp(0.42, 0.36, ground), k);
+      out.y = lerp(out.y, 0, k);
+      out.pitch = lerp(out.pitch, -0.15 * ground, k);
+      out.yaw = lerp(out.yaw, side * 0.14, k);
+    }
+    if (this.crouchK > 0) {
+      const k = this.crouchK * idle;
+      out.x = lerp(out.x, side * 0.15, k);
+      out.z = lerp(out.z, REST.toeL.z + side * 0.06, k);
+      out.yaw = lerp(out.yaw, side * 0.22, k);
+    }
     if (this.airBlend > 0) {
       const a = this.airBlend;
       out.x = lerp(out.x, side * 0.105, a);
@@ -522,6 +767,16 @@ export class PaladinAnimator {
     rig.mq[B[pauldron]].copy(_q2).multiply(rig.mq[B[clav]]);
   }
 
+  /** Pull a hand target (aim space) onto the top of that side's knee, by `k`. */
+  private toKnee(rig: Rig, side: 1 | -1, out: V3, k: number): void {
+    const shin = side > 0 ? B.shinL : B.shinR;
+    const eye = _w.copy(EYE_LOCAL).add(rig.mp[B.head]);
+    const kx = rig.mp[shin].x + side * 0.01 - eye.x;
+    const ky = rig.mp[shin].y + 0.075 - eye.y;
+    const kz = rig.mp[shin].z - 0.02 - eye.z;
+    out.set(lerp(out.x, kx, k), lerp(out.y, ky, k), lerp(out.z, kz, k));
+  }
+
   update(dt: number, rig: Rig, input: PaladinInput): void {
     this.time += dt;
     BALL_TO_ANKLE.set(0, REST.footL.y - REST.toeL.y, REST.footL.z - REST.toeL.z);
@@ -529,6 +784,13 @@ export class PaladinAnimator {
     const speed = Math.hypot(input.moveX, input.moveZ);
     const k6 = 1 - Math.exp(-dt * 6);
     const k10 = 1 - Math.exp(-dt * 10);
+
+    // --- Off-duty acting ------------------------------------------------------------------------
+    const k5 = 1 - Math.exp(-dt * 5);
+    this.relaxK += ((input.relaxed ? 1 : 0) - this.relaxK) * k6;
+    this.sitK += ((input.stance === "sit" ? 1 : 0) - this.sitK) * k5;
+    this.crouchK += ((input.stance === "crouch" ? 1 : 0) - this.crouchK) * k6;
+    if (input.seatY !== undefined) this.seatY = input.seatY;
 
     // --- Locomotion state ---------------------------------------------------------------------
     this.moveAmount += (clamp01(speed / 0.6) - this.moveAmount) * k10;
@@ -577,8 +839,8 @@ export class PaladinAnimator {
     const sway = 0.02 * Math.cos(Math.PI * 2 * (this.phase - this.sf / 2)) * this.moveAmount * (1 - 0.6 * this.run);
     const lunge = striking || this.state === "recover" ? P.lean * 0.35 : 0;
     const hipsX = sway;
-    const hipsZ = 0.01 + this.run * 0.03 * forwardness + lunge;
-    let hipTarget = DIM.hipY - 0.025 - P.drop;
+    const hipsZ = 0.01 + this.run * 0.03 * forwardness + lunge - 0.12 * this.crouchK;
+    let hipTarget = DIM.hipY - 0.025 - P.drop - 0.42 * this.crouchK;
     for (const side of [1, -1]) {
       const f = side > 0 ? this.footL : this.footR;
       _q1.setFromEuler(_e.set(f.pitch, f.yaw, 0, "YXZ"));
@@ -589,12 +851,14 @@ export class PaladinAnimator {
       const reach = ay + Math.sqrt(Math.max(0.04, legReach * legReach - ax * ax - az * az)) + (DIM.hipY - REST.thighL.y);
       if (reach < hipTarget) hipTarget = reach;
     }
+    // Sitting: the hips go down onto the seat.
+    if (this.sitK > 0) hipTarget = lerp(hipTarget, this.seatY, ease(this.sitK));
     this.hipY += (hipTarget - this.hipY) * (1 - Math.exp(-dt * 20));
     if (this.hipY > hipTarget + 0.03) this.hipY = hipTarget + 0.03;
 
     const gaitYaw = -lerp(0.07, 0.15, this.run) * Math.cos(Math.PI * 2 * this.phase) * forwardness;
     const leanMove = (0.03 + 0.12 * this.run) * forwardness;
-    const lean = P.lean + leanMove;
+    const lean = P.lean + leanMove + 0.42 * this.crouchK + this.sitK * smooth(0.42, 0.22, this.seatY) * 0.28;
     const breath = Math.sin(this.time * 1.7) * 0.012 * (1 - this.moveAmount * 0.6);
     const pitchUp = input.aimPitch;
 
@@ -629,7 +893,7 @@ export class PaladinAnimator {
 
     // --- Arms ---------------------------------------------------------------------------------
     // Aim space: origin at the eyes (level head), pitched with the look direction.
-    _aim.setFromAxisAngle(_x.set(1, 0, 0), -pitchUp * 0.9);
+    _aim.setFromAxisAngle(_x.set(1, 0, 0), -pitchUp * 0.9 * (1 - this.relaxK));
     const eye = _c.copy(EYE_LOCAL).add(rig.mp[B.head]);
 
     // Weapon sway: the arms trail a turn, and bob with the stride.
@@ -639,30 +903,49 @@ export class PaladinAnimator {
     const stepBob = Math.abs(Math.sin(Math.PI * 2 * this.phase)) * this.moveAmount;
     const bobY = -stepBob * lerp(0.012, 0.03, this.run) + Math.sin(this.time * 1.7) * 0.005;
     const bobX = Math.sin(Math.PI * 2 * this.phase) * this.moveAmount * 0.01;
-    // First person brings the hands up into view; the cuts themselves stay where they are.
-    const fpAmt = this.fp * (this.state === "none" ? 1 : 0.3) * (1 - this.blockAmount * 0.6);
+    // First person: at rest the arms go to FP_ARMS (guard, or block as the shield comes up); during
+    // the cuts only a small lift into view, so the cuts themselves stay where they are.
+    const fpIdle = this.fp * (this.state === "none" ? 1 : 0);
+    const fpAmt = this.fp * (this.state === "none" ? 0 : 0.3);
+    const fg = FP_ARMS.guard;
+    const fb = FP_ARMS.block;
+    const bk = this.blockAmount;
+    _fpHr.lerpVectors(fg.hr, fb.hr, bk);
+    _fpBd.lerpVectors(fg.bd, fb.bd, bk).normalize();
+    _fpEr.lerpVectors(fg.er, fb.er, bk);
+    _fpHl.lerpVectors(fg.hl, fb.hl, bk);
+    _fpEl.lerpVectors(fg.el, fb.el, bk);
+    _fpSn.lerpVectors(fg.sn, fb.sn, bk).normalize();
     const lift = -this.airBlend * 0.03;
 
     const stiff = striking ? 60 : this.state === "windup" ? 26 : 17;
-    const handT = _a.copy(P.hr);
+    const handT = _a.copy(P.hr).lerp(_fpHr, fpIdle);
+    // Off duty, the hanging arms swing against the legs (right arm with the left foot).
+    const acting = this.armsName ? ease(this.armsT) : 0;
+    const armSwing = Math.cos(Math.PI * 2 * this.phase) * this.moveAmount * this.relaxK * (1 - acting) * lerp(0.14, 0.2, this.run);
+    handT.z += armSwing;
+    if (this.armsName === "wave") handT.x += Math.sin(this.time * 9) * 0.07 * acting;
+    if (this.armsName === "knees") this.toKnee(rig, -1, handT, acting);
     handT.x += sw.x + bobX + fpAmt * 0.02;
     handT.y += bobY + lift + fpAmt * 0.16;
     handT.z += fpAmt * 0.08;
-    const hr = this.sHandR.step(handT, stiff, striking ? 0.95 : 0.85, dt);
-    const bladeT = _b.copy(P.bd).normalize();
+    const hr = this.sHandR.step(handT, stiff, striking ? 1 : 0.95, dt);
+    const bladeT = _b.copy(P.bd).normalize().lerp(_fpBd, fpIdle).normalize();
     bladeT.x += Math.sin(this.time * 0.9) * 0.015 - sw.x * 1.2;
     bladeT.z += Math.cos(this.time * 1.3) * 0.012;
-    // The blade is lighter on the wrist than the arm is on the shoulder: it lags, then overshoots.
-    const bd = this.sBlade.step(bladeT, striking ? 34 : 20, striking ? 0.6 : 0.55, dt);
-    const handLT = _z.copy(P.hl);
+    // The blade trails the wrist a touch and settles without overshoot: a steel sword, not a whip.
+    const bd = this.sBlade.step(bladeT, striking ? 40 : 24, striking ? 0.95 : 0.9, dt);
+    const handLT = _z.copy(P.hl).lerp(_fpHl, fpIdle);
+    handLT.z -= armSwing;
+    if (this.armsName === "knees") this.toKnee(rig, 1, handLT, acting);
     handLT.x += sw.x * 0.8 - bobX;
     handLT.y += bobY * 0.8 + lift + fpAmt * 0.1;
     handLT.z += fpAmt * 0.05;
-    const hl = this.sHandL.step(handLT, 16, 0.85, dt);
+    const hl = this.sHandL.step(handLT, 16, 0.95, dt);
 
     // Right arm, then the sword hand: Z along the blade, Y back up the forearm.
     const wristR = _w.copy(hr).applyQuaternion(_aim).add(eye);
-    const poleR = _p.copy(P.er).applyQuaternion(_aim);
+    const poleR = _p.copy(P.er).lerp(_fpEr, fpIdle).applyQuaternion(_aim);
     this.arm(rig, -1, wristR, poleR);
     _z.copy(bd).normalize().applyQuaternion(_aim);
     _y.copy(rig.mp[B.foreArmR]).sub(rig.mp[B.handR]).normalize();
@@ -671,14 +954,20 @@ export class PaladinAnimator {
     _y.normalize();
     this.handUp.copy(_y);
     _x.crossVectors(_y, _z);
+    const roll = lerp(fg.roll, fb.roll, bk) * fpIdle;
+    if (roll > 0.001) {
+      _q1.setFromAxisAngle(_z, roll);
+      _x.applyQuaternion(_q1);
+      _y.applyQuaternion(_q1);
+    }
     basisQuat(rig.mq[B.handR], _x, _y, _z);
 
     // Left arm: roll the forearm so the strapped shield faces where the pose asks.
     const wristL = _w.copy(hl).applyQuaternion(_aim).add(eye);
-    const poleL = _p.copy(P.el).applyQuaternion(_aim);
+    const poleL = _p.copy(P.el).lerp(_fpEl, fpIdle).applyQuaternion(_aim);
     this.arm(rig, 1, wristL, poleL);
     const fq = rig.mq[B.foreArmL];
-    const want = _c.copy(P.sn).normalize().applyQuaternion(_aim);
+    const want = _c.copy(P.sn).normalize().lerp(_fpSn, fpIdle).normalize().applyQuaternion(_aim);
     _x.set(1, 0, 0).applyQuaternion(fq);
     _z.set(0, 0, 1).applyQuaternion(fq);
     rig.twist("foreArmL", Math.atan2(-want.dot(_z), want.dot(_x)));

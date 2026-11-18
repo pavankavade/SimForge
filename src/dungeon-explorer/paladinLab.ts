@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
   CHARACTERS,
+  FP_ARMS,
   FX_LAYER,
   characterByName,
   createPaladin,
@@ -32,6 +33,8 @@ interface LabApi {
   wall: THREE.Object3D;
   dummy: THREE.Object3D;
   hits: { clang: number; hit: number };
+  /** First-person arm poses, live (edit, then step to see them). */
+  fpArms: typeof FP_ARMS;
   state: LabState;
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
@@ -216,7 +219,8 @@ export async function mountPaladinLab(host: HTMLElement): Promise<LabApi> {
       camera.position.copy(eye);
       camera.rotation.order = "YXZ";
       camera.rotation.set(state.pitch, Math.PI, 0);
-      camera.fov = 68;
+      // The game's first-person lens (FIRST_PERSON_FOV in DungeonApp.tsx).
+      camera.fov = 74;
     } else {
       camera.fov = 42;
       controls.update();
@@ -243,6 +247,7 @@ export async function mountPaladinLab(host: HTMLElement): Promise<LabApi> {
     wall,
     dummy,
     hits,
+    fpArms: FP_ARMS,
     state,
     camera,
     controls,

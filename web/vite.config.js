@@ -19,5 +19,13 @@ export default defineConfig({
     ],
     dedupe: ["three", "react", "react-dom", "@react-three/fiber"],
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: here("./index.html"),
+        vardhan: here("./vardhan/index.html"),
+      },
+    },
+  },
   server: { fs: { allow: [".."] } },
 });

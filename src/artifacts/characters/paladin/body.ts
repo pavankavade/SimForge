@@ -16,6 +16,9 @@ const mix = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 type Region = "head" | "neck" | "neckLow" | "torso" | "arm" | "hand" | "leg" | "foot";
 
+/** How far the coveralls stand off the skin (m): loose, so the suit hides the body's shape. */
+export const SUIT = { torso: 0.017, arm: 0.012, leg: 0.016 };
+
 export interface BodyPiece {
   slot: Slot;
   /** A material of the paladin set, or one of the imported human's own. */
@@ -252,6 +255,19 @@ export function buildBody(a: HumanAsset, spec: HumanSpec): BodyBuild {
   // Mail: one shirt-and-chausses layer over everything but the head, hands and feet.
   const mail = is("torso", "neckLow", "arm", "leg");
   pieces.push({ slot: "mail", mat: "mailFit", geometry: shell(body, all3(mail), (i) => (region[i] === "leg" ? 0.005 : 0.0062), N) });
+
+  // ---- Workwear (miners) ---------------------------------------------------------------------------
+  // Coveralls: one loose suit from the collar to the ankles and the wrists (the reflective tape,
+  // pockets and the rest are fitted pieces; see build.ts).
+  const suit = is("torso", "neckLow", "arm", "leg");
+  const suitPad = (i: number) => (region[i] === "arm" ? SUIT.arm : region[i] === "leg" ? SUIT.leg : SUIT.torso);
+  pieces.push({ slot: "coverall", mat: "coverallFit", geometry: shell(body, all3(suit), suitPad, N) });
+  // A work belt over it.
+  const workBelt = (i: number) => region[i] === "torso" && y[i] > waistY - 0.03 && y[i] < waistY + 0.022;
+  pieces.push({ slot: "coverall", mat: "leatherFit", geometry: shell(body, all3(workBelt), () => SUIT.torso + 0.008, N) });
+  // Rubber boots to mid-calf.
+  const boot = (i: number) => region[i] === "foot" || (region[i] === "leg" && y[i] < 0.3);
+  pieces.push({ slot: "boots", mat: "rubber", geometry: shell(body, all3(boot), (i) => (region[i] === "foot" ? 0.009 : SUIT.leg + 0.006), N) });
 
   // ---- Plate that follows the skin: gauntlets ----------------------------------------------------
   // Gauntlets: steel over the back of the hand and every finger joint, a leather palm. The palm

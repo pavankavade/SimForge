@@ -1,0 +1,23 @@
+{
+  "_style": "realistic documentary foley, natural, close-mic, no music, no voices unless asked",
+  "stamp": { "prompt": "heavy rubber stamp pressed down hard on a thick paper file on a wooden desk, single dull thump", "seconds": 1 },
+  "pop": { "prompt": "soft muted paper card flicked onto a table, a short low tap", "seconds": 1 },
+  "ding": { "prompt": "drill pipe spinning freely in empty rock, hollow low clunk then silence", "seconds": 1 },
+  "sparkle": { "prompt": "small metal latch clicking into place with a short air hiss", "seconds": 1 },
+  "collapse": { "prompt": "massive underground rock collapse, deep rumbling cave-in with falling boulders and debris", "seconds": 4 },
+  "cave": { "prompt": "quiet deep underground mine ambience, low distant rumble, slow water drips, still air", "seconds": 8, "loop": true },
+  "clank": { "prompt": "metal tin can set down on a metal shelf, small dull clank", "seconds": 1 },
+  "whoosh": { "prompt": "gentle air whoosh of someone turning quickly in a tunnel", "seconds": 1 },
+  "bubble": { "prompt": "a small sip of milk from a plastic cup, quiet slurp", "seconds": 1 },
+  "snap": { "prompt": "dry cracker snapped in half, crisp crunch", "seconds": 1 },
+  "drill": { "prompt": "large rotary drilling rig boring through rock far below, heavy diesel engine and grinding drill string", "seconds": 4, "loop": true },
+  "grind": { "prompt": "drill bit grinding through the rock ceiling just overhead, loud rising scraping vibration and falling grit", "seconds": 3 },
+  "burst": { "prompt": "steel drill bit punching through a rock ceiling, sharp crack and a shower of gravel falling", "seconds": 2 },
+  "rustle": { "prompt": "paper note folded and tied with plastic tape, rustling paper", "seconds": 1 },
+  "winch": { "prompt": "steel cable winch reeling smoothly, electric motor hum and pulley wheel clicking", "seconds": 3, "loop": true },
+  "cheer": { "prompt": "crowd of people outdoors cheering and clapping in celebration, joyful shouts", "seconds": 4 },
+  "tube": { "prompt": "long narrow metal canister sliding down a pipe and landing in hands, metallic scrape then soft catch", "seconds": 1 },
+  "crack": { "prompt": "hard rock fracturing, sharp stone crack", "seconds": 1 },
+  "thud": { "prompt": "steel capsule jolting and scraping against rock in a shaft, heavy metal thud", "seconds": 1 },
+  "hatch": { "prompt": "small metal hatch door unlatching and swinging open, latch clack and hinge squeak", "seconds": 1 }
+}

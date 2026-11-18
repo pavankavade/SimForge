@@ -350,18 +350,21 @@ function giveRoles(rooms: DungeonRoom[], edges: DungeonEdge[], rng: Rng) {
     return D;
   };
   const dB = distFrom(boss);
+  // The entrance is the market hall: a dead end far from the boss, and roomy enough for the five
+  // stalls (8 cells a side) whenever such a room exists.
   let entrance = -1;
   let bestD = -1;
+  const roomy = (i: number) => (Math.min(rooms[i].w, rooms[i].h) >= 8 ? 1000 : 0);
   for (let i = 0; i < N; i++) {
-    if (i !== boss && rooms[i].degree === 1 && dB[i] > bestD) {
-      bestD = dB[i];
+    if (i !== boss && rooms[i].degree === 1 && dB[i] + roomy(i) > bestD) {
+      bestD = dB[i] + roomy(i);
       entrance = i;
     }
   }
-  if (entrance < 0) {
+  if (entrance < 0 || !roomy(entrance)) {
     for (let i = 0; i < N; i++) {
-      if (i !== boss && dB[i] > bestD) {
-        bestD = dB[i];
+      if (i !== boss && dB[i] > 0 && dB[i] + roomy(i) > bestD) {
+        bestD = dB[i] + roomy(i);
         entrance = i;
       }
     }
@@ -628,13 +631,14 @@ function tryGenerate(seed: number, params: DungeonParams): DungeonData {
       w = rng.i(6, 7);
       h = rng.i(6, 7);
     } else if (t < 0.8) {
+      // Rooms are furnished modules now (rooms.ts), so they stay closer to a real chamber's size.
       arch = "m";
-      w = rng.i(8, 11);
-      h = rng.i(8, 11);
+      w = rng.i(7, 9);
+      h = rng.i(7, 9);
     } else {
       arch = "l";
-      w = rng.i(12, 16);
-      h = rng.i(12, 16);
+      w = rng.i(10, 12);
+      h = rng.i(10, 12);
       large.push(i);
     }
     const st = rng.raw();

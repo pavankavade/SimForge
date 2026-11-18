@@ -23,6 +23,60 @@
         "dev"
       ],
       "port": 5190
+    },
+    {
+      "name": "igloo-lab",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "labs/igloo",
+        "run",
+        "dev"
+      ],
+      "port": 5191
+    },
+    {
+      "name": "spy-horse-lab",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "labs/spy-horse",
+        "run",
+        "dev"
+      ],
+      "port": 5192
+    },
+    {
+      "name": "escape-tunnel-lab",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "labs/escape-tunnel",
+        "run",
+        "dev"
+      ],
+      "port": 5193
+    },
+    {
+      "name": "dungeon-explorer",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/dungeon-explorer.mjs",
+        "--port",
+        "5395"
+      ],
+      "port": 5395
+    },
+    {
+      "name": "web-portal",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "web",
+        "run",
+        "dev"
+      ],
+      "port": 5195
     }
   ]
 }

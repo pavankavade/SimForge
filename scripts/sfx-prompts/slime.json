@@ -1,0 +1,19 @@
+{
+  "_style": "cute fantasy creature foley, close-mic, punchy, no music, no voices",
+  "boing": { "prompt": "big soft jelly blob hopping off the floor, rubbery boing with a wet squish", "seconds": 1 },
+  "splat": { "prompt": "heavy wet jelly body slapping onto a stone floor and spreading out, thick wet splat", "seconds": 1 },
+  "slice": { "prompt": "steel sword swinging fast and cutting cleanly through thick jelly, swish then a wet slice", "seconds": 1 },
+  "gulp": { "prompt": "huge slimy blob swallowing something whole, deep wet gulp", "seconds": 1 },
+  "jelly": { "prompt": "big jelly wobbling after being poked, short wet wobble", "seconds": 1 },
+  "squelch": { "prompt": "thick slime squelching and stretching, gooey wet squelch", "seconds": 1 },
+  "wobble": { "prompt": "water balloon jiggling and sloshing, rubbery wobble fading out", "seconds": 1 },
+  "sizzle": { "prompt": "acid bubbling and fizzing on a body, hissing sizzle", "seconds": 2 },
+  "drip": { "prompt": "single water drop falling into a puddle in a damp cave, clear plink with a little echo", "seconds": 1 },
+  "pour": { "prompt": "thick liquid slime pouring and sliding under a wooden door, slow wet slither", "seconds": 2 },
+  "steam": { "prompt": "water evaporating in hot sun, soft rising hiss of steam", "seconds": 2 },
+  "bubble": { "prompt": "slow thick bubbles rising and popping in goo, a few wet blorps", "seconds": 1 },
+  "pop": { "prompt": "single soft wet bubble pop, short and bright", "seconds": 1 },
+  "whoosh_big": { "prompt": "big soft jelly blob lunging fast through the air, heavy whoosh", "seconds": 1 },
+  "heartbeat": { "prompt": "slow deep heartbeat, soft lub-dub thump", "seconds": 1 },
+  "sparkle": { "prompt": "tiny glittering magical twinkle, gentle chime shimmer", "seconds": 1 }
+}

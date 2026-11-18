@@ -1,0 +1,1231 @@
+[
+  {
+    "startFrame": 10,
+    "endFrame": 187,
+    "text": "If a dragon kept fire burning in its belly, it would roast its own organs in one second.",
+    "words": [
+      {
+        "word": "If",
+        "startFrame": 10,
+        "endFrame": 13
+      },
+      {
+        "word": "a",
+        "startFrame": 13,
+        "endFrame": 16
+      },
+      {
+        "word": "dragon",
+        "startFrame": 16,
+        "endFrame": 37
+      },
+      {
+        "word": "kept",
+        "startFrame": 40,
+        "endFrame": 49
+      },
+      {
+        "word": "fire",
+        "startFrame": 49,
+        "endFrame": 61
+      },
+      {
+        "word": "burning",
+        "startFrame": 61,
+        "endFrame": 73
+      },
+      {
+        "word": "in",
+        "startFrame": 73,
+        "endFrame": 76
+      },
+      {
+        "word": "its",
+        "startFrame": 76,
+        "endFrame": 82
+      },
+      {
+        "word": "belly,",
+        "startFrame": 82,
+        "endFrame": 100
+      },
+      {
+        "word": "it",
+        "startFrame": 106,
+        "endFrame": 109
+      },
+      {
+        "word": "would",
+        "startFrame": 109,
+        "endFrame": 115
+      },
+      {
+        "word": "roast",
+        "startFrame": 115,
+        "endFrame": 127
+      },
+      {
+        "word": "its",
+        "startFrame": 127,
+        "endFrame": 130
+      },
+      {
+        "word": "own",
+        "startFrame": 130,
+        "endFrame": 136
+      },
+      {
+        "word": "organs",
+        "startFrame": 139,
+        "endFrame": 154
+      },
+      {
+        "word": "in",
+        "startFrame": 154,
+        "endFrame": 157
+      },
+      {
+        "word": "one",
+        "startFrame": 157,
+        "endFrame": 169
+      },
+      {
+        "word": "second.",
+        "startFrame": 169,
+        "endFrame": 187
+      }
+    ]
+  },
+  {
+    "startFrame": 200,
+    "endFrame": 317,
+    "text": "So you never store fire. You store fuel.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 200,
+        "endFrame": 206
+      },
+      {
+        "word": "you",
+        "startFrame": 212,
+        "endFrame": 215
+      },
+      {
+        "word": "never",
+        "startFrame": 215,
+        "endFrame": 224
+      },
+      {
+        "word": "store",
+        "startFrame": 224,
+        "endFrame": 251
+      },
+      {
+        "word": "fire.",
+        "startFrame": 251,
+        "endFrame": 272
+      },
+      {
+        "word": "You",
+        "startFrame": 275,
+        "endFrame": 281
+      },
+      {
+        "word": "store",
+        "startFrame": 284,
+        "endFrame": 293
+      },
+      {
+        "word": "fuel.",
+        "startFrame": 293,
+        "endFrame": 317
+      }
+    ]
+  },
+  {
+    "startFrame": 334,
+    "endFrame": 580,
+    "text": "You gorge on piles of rotting plants, and let gut bacteria ferment them into methane, exactly like a cow.",
+    "words": [
+      {
+        "word": "You",
+        "startFrame": 334,
+        "endFrame": 340
+      },
+      {
+        "word": "gorge",
+        "startFrame": 340,
+        "endFrame": 364
+      },
+      {
+        "word": "on",
+        "startFrame": 364,
+        "endFrame": 370
+      },
+      {
+        "word": "piles",
+        "startFrame": 370,
+        "endFrame": 394
+      },
+      {
+        "word": "of",
+        "startFrame": 394,
+        "endFrame": 400
+      },
+      {
+        "word": "rotting",
+        "startFrame": 400,
+        "endFrame": 415
+      },
+      {
+        "word": "plants,",
+        "startFrame": 415,
+        "endFrame": 439
+      },
+      {
+        "word": "and",
+        "startFrame": 442,
+        "endFrame": 445
+      },
+      {
+        "word": "let",
+        "startFrame": 445,
+        "endFrame": 451
+      },
+      {
+        "word": "gut",
+        "startFrame": 451,
+        "endFrame": 460
+      },
+      {
+        "word": "bacteria",
+        "startFrame": 460,
+        "endFrame": 478
+      },
+      {
+        "word": "ferment",
+        "startFrame": 478,
+        "endFrame": 493
+      },
+      {
+        "word": "them",
+        "startFrame": 493,
+        "endFrame": 499
+      },
+      {
+        "word": "into",
+        "startFrame": 499,
+        "endFrame": 505
+      },
+      {
+        "word": "methane,",
+        "startFrame": 505,
+        "endFrame": 529
+      },
+      {
+        "word": "exactly",
+        "startFrame": 535,
+        "endFrame": 553
+      },
+      {
+        "word": "like",
+        "startFrame": 553,
+        "endFrame": 559
+      },
+      {
+        "word": "a",
+        "startFrame": 559,
+        "endFrame": 562
+      },
+      {
+        "word": "cow.",
+        "startFrame": 562,
+        "endFrame": 580
+      }
+    ]
+  },
+  {
+    "startFrame": 593,
+    "endFrame": 764,
+    "text": "Except a cow only vents tiny lazy burps. Barely enough to flicker a candle.",
+    "words": [
+      {
+        "word": "Except",
+        "startFrame": 593,
+        "endFrame": 614
+      },
+      {
+        "word": "a",
+        "startFrame": 614,
+        "endFrame": 617
+      },
+      {
+        "word": "cow",
+        "startFrame": 617,
+        "endFrame": 638
+      },
+      {
+        "word": "only",
+        "startFrame": 638,
+        "endFrame": 644
+      },
+      {
+        "word": "vents",
+        "startFrame": 644,
+        "endFrame": 659
+      },
+      {
+        "word": "tiny",
+        "startFrame": 659,
+        "endFrame": 677
+      },
+      {
+        "word": "lazy",
+        "startFrame": 677,
+        "endFrame": 695
+      },
+      {
+        "word": "burps.",
+        "startFrame": 695,
+        "endFrame": 716
+      },
+      {
+        "word": "Barely",
+        "startFrame": 719,
+        "endFrame": 728
+      },
+      {
+        "word": "enough",
+        "startFrame": 728,
+        "endFrame": 734
+      },
+      {
+        "word": "to",
+        "startFrame": 734,
+        "endFrame": 737
+      },
+      {
+        "word": "flicker",
+        "startFrame": 737,
+        "endFrame": 746
+      },
+      {
+        "word": "a",
+        "startFrame": 746,
+        "endFrame": 749
+      },
+      {
+        "word": "candle.",
+        "startFrame": 749,
+        "endFrame": 764
+      }
+    ]
+  },
+  {
+    "startFrame": 782,
+    "endFrame": 976,
+    "text": "So you evolve a second stomach. A sealed bag of muscle that pumps the methane tight under pressure.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 782,
+        "endFrame": 784
+      },
+      {
+        "word": "you",
+        "startFrame": 784,
+        "endFrame": 788
+      },
+      {
+        "word": "evolve",
+        "startFrame": 788,
+        "endFrame": 800
+      },
+      {
+        "word": "a",
+        "startFrame": 800,
+        "endFrame": 806
+      },
+      {
+        "word": "second",
+        "startFrame": 814,
+        "endFrame": 826
+      },
+      {
+        "word": "stomach.",
+        "startFrame": 826,
+        "endFrame": 844
+      },
+      {
+        "word": "A",
+        "startFrame": 854,
+        "endFrame": 856
+      },
+      {
+        "word": "sealed",
+        "startFrame": 856,
+        "endFrame": 874
+      },
+      {
+        "word": "bag",
+        "startFrame": 874,
+        "endFrame": 886
+      },
+      {
+        "word": "of",
+        "startFrame": 886,
+        "endFrame": 890
+      },
+      {
+        "word": "muscle",
+        "startFrame": 890,
+        "endFrame": 902
+      },
+      {
+        "word": "that",
+        "startFrame": 902,
+        "endFrame": 908
+      },
+      {
+        "word": "pumps",
+        "startFrame": 914,
+        "endFrame": 926
+      },
+      {
+        "word": "the",
+        "startFrame": 926,
+        "endFrame": 928
+      },
+      {
+        "word": "methane",
+        "startFrame": 928,
+        "endFrame": 940
+      },
+      {
+        "word": "tight",
+        "startFrame": 940,
+        "endFrame": 956
+      },
+      {
+        "word": "under",
+        "startFrame": 956,
+        "endFrame": 961
+      },
+      {
+        "word": "pressure.",
+        "startFrame": 961,
+        "endFrame": 976
+      }
+    ]
+  },
+  {
+    "startFrame": 990,
+    "endFrame": 1176,
+    "text": "Except now you are a living bomb. One tiny spark, and your belly detonates.",
+    "words": [
+      {
+        "word": "Except",
+        "startFrame": 990,
+        "endFrame": 1011
+      },
+      {
+        "word": "now",
+        "startFrame": 1014,
+        "endFrame": 1032
+      },
+      {
+        "word": "you",
+        "startFrame": 1035,
+        "endFrame": 1038
+      },
+      {
+        "word": "are",
+        "startFrame": 1038,
+        "endFrame": 1044
+      },
+      {
+        "word": "a",
+        "startFrame": 1044,
+        "endFrame": 1047
+      },
+      {
+        "word": "living",
+        "startFrame": 1047,
+        "endFrame": 1068
+      },
+      {
+        "word": "bomb.",
+        "startFrame": 1068,
+        "endFrame": 1089
+      },
+      {
+        "word": "One",
+        "startFrame": 1095,
+        "endFrame": 1101
+      },
+      {
+        "word": "tiny",
+        "startFrame": 1101,
+        "endFrame": 1113
+      },
+      {
+        "word": "spark,",
+        "startFrame": 1113,
+        "endFrame": 1131
+      },
+      {
+        "word": "and",
+        "startFrame": 1131,
+        "endFrame": 1134
+      },
+      {
+        "word": "your",
+        "startFrame": 1134,
+        "endFrame": 1140
+      },
+      {
+        "word": "belly",
+        "startFrame": 1140,
+        "endFrame": 1155
+      },
+      {
+        "word": "detonates.",
+        "startFrame": 1155,
+        "endFrame": 1176
+      }
+    ]
+  },
+  {
+    "startFrame": 1193,
+    "endFrame": 1502,
+    "text": "Unless there is no oxygen. Fire cannot burn without air. Pure fuel sealed in a tank is completely inert, until it vents past your lips.",
+    "words": [
+      {
+        "word": "Unless",
+        "startFrame": 1193,
+        "endFrame": 1208
+      },
+      {
+        "word": "there",
+        "startFrame": 1208,
+        "endFrame": 1211
+      },
+      {
+        "word": "is",
+        "startFrame": 1211,
+        "endFrame": 1214
+      },
+      {
+        "word": "no",
+        "startFrame": 1214,
+        "endFrame": 1226
+      },
+      {
+        "word": "oxygen.",
+        "startFrame": 1226,
+        "endFrame": 1247
+      },
+      {
+        "word": "Fire",
+        "startFrame": 1271,
+        "endFrame": 1280
+      },
+      {
+        "word": "cannot",
+        "startFrame": 1280,
+        "endFrame": 1292
+      },
+      {
+        "word": "burn",
+        "startFrame": 1292,
+        "endFrame": 1301
+      },
+      {
+        "word": "without",
+        "startFrame": 1301,
+        "endFrame": 1310
+      },
+      {
+        "word": "air.",
+        "startFrame": 1310,
+        "endFrame": 1322
+      },
+      {
+        "word": "Pure",
+        "startFrame": 1340,
+        "endFrame": 1349
+      },
+      {
+        "word": "fuel",
+        "startFrame": 1349,
+        "endFrame": 1364
+      },
+      {
+        "word": "sealed",
+        "startFrame": 1364,
+        "endFrame": 1376
+      },
+      {
+        "word": "in",
+        "startFrame": 1376,
+        "endFrame": 1379
+      },
+      {
+        "word": "a",
+        "startFrame": 1379,
+        "endFrame": 1382
+      },
+      {
+        "word": "tank",
+        "startFrame": 1382,
+        "endFrame": 1394
+      },
+      {
+        "word": "is",
+        "startFrame": 1394,
+        "endFrame": 1397
+      },
+      {
+        "word": "completely",
+        "startFrame": 1397,
+        "endFrame": 1415
+      },
+      {
+        "word": "inert,",
+        "startFrame": 1415,
+        "endFrame": 1433
+      },
+      {
+        "word": "until",
+        "startFrame": 1439,
+        "endFrame": 1454
+      },
+      {
+        "word": "it",
+        "startFrame": 1454,
+        "endFrame": 1460
+      },
+      {
+        "word": "vents",
+        "startFrame": 1460,
+        "endFrame": 1472
+      },
+      {
+        "word": "past",
+        "startFrame": 1472,
+        "endFrame": 1484
+      },
+      {
+        "word": "your",
+        "startFrame": 1484,
+        "endFrame": 1487
+      },
+      {
+        "word": "lips.",
+        "startFrame": 1487,
+        "endFrame": 1502
+      }
+    ]
+  },
+  {
+    "startFrame": 1519,
+    "endFrame": 1729,
+    "text": "So how do you light it? A chemical gland sounds easy, until it touches air at your throat and incinerates your own neck.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1519,
+        "endFrame": 1528
+      },
+      {
+        "word": "how",
+        "startFrame": 1531,
+        "endFrame": 1537
+      },
+      {
+        "word": "do",
+        "startFrame": 1537,
+        "endFrame": 1540
+      },
+      {
+        "word": "you",
+        "startFrame": 1540,
+        "endFrame": 1543
+      },
+      {
+        "word": "light",
+        "startFrame": 1543,
+        "endFrame": 1549
+      },
+      {
+        "word": "it?",
+        "startFrame": 1549,
+        "endFrame": 1555
+      },
+      {
+        "word": "A",
+        "startFrame": 1567,
+        "endFrame": 1568
+      },
+      {
+        "word": "chemical",
+        "startFrame": 1567,
+        "endFrame": 1582
+      },
+      {
+        "word": "gland",
+        "startFrame": 1582,
+        "endFrame": 1594
+      },
+      {
+        "word": "sounds",
+        "startFrame": 1594,
+        "endFrame": 1609
+      },
+      {
+        "word": "easy,",
+        "startFrame": 1609,
+        "endFrame": 1621
+      },
+      {
+        "word": "until",
+        "startFrame": 1627,
+        "endFrame": 1633
+      },
+      {
+        "word": "it",
+        "startFrame": 1633,
+        "endFrame": 1636
+      },
+      {
+        "word": "touches",
+        "startFrame": 1636,
+        "endFrame": 1651
+      },
+      {
+        "word": "air",
+        "startFrame": 1651,
+        "endFrame": 1660
+      },
+      {
+        "word": "at",
+        "startFrame": 1660,
+        "endFrame": 1663
+      },
+      {
+        "word": "your",
+        "startFrame": 1663,
+        "endFrame": 1666
+      },
+      {
+        "word": "throat",
+        "startFrame": 1666,
+        "endFrame": 1681
+      },
+      {
+        "word": "and",
+        "startFrame": 1681,
+        "endFrame": 1687
+      },
+      {
+        "word": "incinerates",
+        "startFrame": 1687,
+        "endFrame": 1708
+      },
+      {
+        "word": "your",
+        "startFrame": 1708,
+        "endFrame": 1711
+      },
+      {
+        "word": "own",
+        "startFrame": 1711,
+        "endFrame": 1717
+      },
+      {
+        "word": "neck.",
+        "startFrame": 1717,
+        "endFrame": 1729
+      }
+    ]
+  },
+  {
+    "startFrame": 1743,
+    "endFrame": 2058,
+    "text": "So you armor your teeth with iron, just like a Komodo dragon. You snap your serrated jaws shut, striking flint and steel to throw sparks right at the exit.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1743,
+        "endFrame": 1749
+      },
+      {
+        "word": "you",
+        "startFrame": 1749,
+        "endFrame": 1758
+      },
+      {
+        "word": "armor",
+        "startFrame": 1758,
+        "endFrame": 1770
+      },
+      {
+        "word": "your",
+        "startFrame": 1770,
+        "endFrame": 1773
+      },
+      {
+        "word": "teeth",
+        "startFrame": 1773,
+        "endFrame": 1788
+      },
+      {
+        "word": "with",
+        "startFrame": 1788,
+        "endFrame": 1794
+      },
+      {
+        "word": "iron,",
+        "startFrame": 1794,
+        "endFrame": 1815
+      },
+      {
+        "word": "just",
+        "startFrame": 1818,
+        "endFrame": 1824
+      },
+      {
+        "word": "like",
+        "startFrame": 1824,
+        "endFrame": 1830
+      },
+      {
+        "word": "a",
+        "startFrame": 1830,
+        "endFrame": 1831
+      },
+      {
+        "word": "Komodo",
+        "startFrame": 1830,
+        "endFrame": 1845
+      },
+      {
+        "word": "dragon.",
+        "startFrame": 1845,
+        "endFrame": 1857
+      },
+      {
+        "word": "You",
+        "startFrame": 1869,
+        "endFrame": 1875
+      },
+      {
+        "word": "snap",
+        "startFrame": 1875,
+        "endFrame": 1887
+      },
+      {
+        "word": "your",
+        "startFrame": 1887,
+        "endFrame": 1893
+      },
+      {
+        "word": "serrated",
+        "startFrame": 1893,
+        "endFrame": 1914
+      },
+      {
+        "word": "jaws",
+        "startFrame": 1914,
+        "endFrame": 1926
+      },
+      {
+        "word": "shut,",
+        "startFrame": 1926,
+        "endFrame": 1941
+      },
+      {
+        "word": "striking",
+        "startFrame": 1947,
+        "endFrame": 1965
+      },
+      {
+        "word": "flint",
+        "startFrame": 1965,
+        "endFrame": 1980
+      },
+      {
+        "word": "and",
+        "startFrame": 1980,
+        "endFrame": 1986
+      },
+      {
+        "word": "steel",
+        "startFrame": 1986,
+        "endFrame": 2001
+      },
+      {
+        "word": "to",
+        "startFrame": 2001,
+        "endFrame": 2004
+      },
+      {
+        "word": "throw",
+        "startFrame": 2004,
+        "endFrame": 2013
+      },
+      {
+        "word": "sparks",
+        "startFrame": 2013,
+        "endFrame": 2034
+      },
+      {
+        "word": "right",
+        "startFrame": 2034,
+        "endFrame": 2040
+      },
+      {
+        "word": "at",
+        "startFrame": 2040,
+        "endFrame": 2043
+      },
+      {
+        "word": "the",
+        "startFrame": 2043,
+        "endFrame": 2046
+      },
+      {
+        "word": "exit.",
+        "startFrame": 2046,
+        "endFrame": 2058
+      }
+    ]
+  },
+  {
+    "startFrame": 2076,
+    "endFrame": 2271,
+    "text": "Except burning gas travels backwards. The flame will race down the fuel stream, straight into your gullet.",
+    "words": [
+      {
+        "word": "Except",
+        "startFrame": 2076,
+        "endFrame": 2091
+      },
+      {
+        "word": "burning",
+        "startFrame": 2097,
+        "endFrame": 2109
+      },
+      {
+        "word": "gas",
+        "startFrame": 2109,
+        "endFrame": 2124
+      },
+      {
+        "word": "travels",
+        "startFrame": 2124,
+        "endFrame": 2139
+      },
+      {
+        "word": "backwards.",
+        "startFrame": 2139,
+        "endFrame": 2163
+      },
+      {
+        "word": "The",
+        "startFrame": 2169,
+        "endFrame": 2172
+      },
+      {
+        "word": "flame",
+        "startFrame": 2172,
+        "endFrame": 2187
+      },
+      {
+        "word": "will",
+        "startFrame": 2187,
+        "endFrame": 2190
+      },
+      {
+        "word": "race",
+        "startFrame": 2190,
+        "endFrame": 2199
+      },
+      {
+        "word": "down",
+        "startFrame": 2199,
+        "endFrame": 2208
+      },
+      {
+        "word": "the",
+        "startFrame": 2208,
+        "endFrame": 2211
+      },
+      {
+        "word": "fuel",
+        "startFrame": 2211,
+        "endFrame": 2223
+      },
+      {
+        "word": "stream,",
+        "startFrame": 2223,
+        "endFrame": 2235
+      },
+      {
+        "word": "straight",
+        "startFrame": 2235,
+        "endFrame": 2244
+      },
+      {
+        "word": "into",
+        "startFrame": 2244,
+        "endFrame": 2250
+      },
+      {
+        "word": "your",
+        "startFrame": 2250,
+        "endFrame": 2256
+      },
+      {
+        "word": "gullet.",
+        "startFrame": 2256,
+        "endFrame": 2271
+      }
+    ]
+  },
+  {
+    "startFrame": 2284,
+    "endFrame": 2476,
+    "text": "So you clench that muscular tank hard. You blast the gas out faster than the flame can crawl back.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 2284,
+        "endFrame": 2287
+      },
+      {
+        "word": "you",
+        "startFrame": 2287,
+        "endFrame": 2293
+      },
+      {
+        "word": "clench",
+        "startFrame": 2293,
+        "endFrame": 2311
+      },
+      {
+        "word": "that",
+        "startFrame": 2311,
+        "endFrame": 2317
+      },
+      {
+        "word": "muscular",
+        "startFrame": 2317,
+        "endFrame": 2338
+      },
+      {
+        "word": "tank",
+        "startFrame": 2338,
+        "endFrame": 2350
+      },
+      {
+        "word": "hard.",
+        "startFrame": 2350,
+        "endFrame": 2374
+      },
+      {
+        "word": "You",
+        "startFrame": 2383,
+        "endFrame": 2386
+      },
+      {
+        "word": "blast",
+        "startFrame": 2386,
+        "endFrame": 2401
+      },
+      {
+        "word": "the",
+        "startFrame": 2401,
+        "endFrame": 2404
+      },
+      {
+        "word": "gas",
+        "startFrame": 2404,
+        "endFrame": 2416
+      },
+      {
+        "word": "out",
+        "startFrame": 2416,
+        "endFrame": 2422
+      },
+      {
+        "word": "faster",
+        "startFrame": 2422,
+        "endFrame": 2434
+      },
+      {
+        "word": "than",
+        "startFrame": 2434,
+        "endFrame": 2437
+      },
+      {
+        "word": "the",
+        "startFrame": 2437,
+        "endFrame": 2440
+      },
+      {
+        "word": "flame",
+        "startFrame": 2440,
+        "endFrame": 2449
+      },
+      {
+        "word": "can",
+        "startFrame": 2449,
+        "endFrame": 2455
+      },
+      {
+        "word": "crawl",
+        "startFrame": 2455,
+        "endFrame": 2464
+      },
+      {
+        "word": "back.",
+        "startFrame": 2464,
+        "endFrame": 2476
+      }
+    ]
+  },
+  {
+    "startFrame": 2492,
+    "endFrame": 2744,
+    "text": "Just like a rocket engine or a kitchen stove, the fire stays locked in front of your face. Congratulations, you are now a walking flamethrower.",
+    "words": [
+      {
+        "word": "Just",
+        "startFrame": 2492,
+        "endFrame": 2498
+      },
+      {
+        "word": "like",
+        "startFrame": 2498,
+        "endFrame": 2501
+      },
+      {
+        "word": "a",
+        "startFrame": 2501,
+        "endFrame": 2504
+      },
+      {
+        "word": "rocket",
+        "startFrame": 2504,
+        "endFrame": 2510
+      },
+      {
+        "word": "engine",
+        "startFrame": 2510,
+        "endFrame": 2528
+      },
+      {
+        "word": "or",
+        "startFrame": 2528,
+        "endFrame": 2531
+      },
+      {
+        "word": "a",
+        "startFrame": 2531,
+        "endFrame": 2534
+      },
+      {
+        "word": "kitchen",
+        "startFrame": 2534,
+        "endFrame": 2543
+      },
+      {
+        "word": "stove,",
+        "startFrame": 2543,
+        "endFrame": 2564
+      },
+      {
+        "word": "the",
+        "startFrame": 2567,
+        "endFrame": 2570
+      },
+      {
+        "word": "fire",
+        "startFrame": 2570,
+        "endFrame": 2585
+      },
+      {
+        "word": "stays",
+        "startFrame": 2585,
+        "endFrame": 2594
+      },
+      {
+        "word": "locked",
+        "startFrame": 2594,
+        "endFrame": 2606
+      },
+      {
+        "word": "in",
+        "startFrame": 2606,
+        "endFrame": 2609
+      },
+      {
+        "word": "front",
+        "startFrame": 2609,
+        "endFrame": 2612
+      },
+      {
+        "word": "of",
+        "startFrame": 2612,
+        "endFrame": 2615
+      },
+      {
+        "word": "your",
+        "startFrame": 2615,
+        "endFrame": 2618
+      },
+      {
+        "word": "face.",
+        "startFrame": 2618,
+        "endFrame": 2630
+      },
+      {
+        "word": "Congratulations,",
+        "startFrame": 2654,
+        "endFrame": 2675
+      },
+      {
+        "word": "you",
+        "startFrame": 2684,
+        "endFrame": 2690
+      },
+      {
+        "word": "are",
+        "startFrame": 2690,
+        "endFrame": 2693
+      },
+      {
+        "word": "now",
+        "startFrame": 2693,
+        "endFrame": 2705
+      },
+      {
+        "word": "a",
+        "startFrame": 2705,
+        "endFrame": 2708
+      },
+      {
+        "word": "walking",
+        "startFrame": 2708,
+        "endFrame": 2723
+      },
+      {
+        "word": "flamethrower.",
+        "startFrame": 2723,
+        "endFrame": 2744
+      }
+    ]
+  }
+]

@@ -26,6 +26,10 @@ export const POSES = [
   "ride",
   "surf",
   "play",
+  "sit",
+  "crawl",
+  "prone",
+  "hoist",
 ] as const;
 export type AdventurerPose = (typeof POSES)[number];
 
@@ -355,6 +359,22 @@ export const solvePose = (pose: AdventurerPose, f: number): RigPose => {
       p.head = [0.1, 0];
       break;
     }
+    case "hoist": {
+      // Both arms straight up, braced: holding a beam or a prize overhead.
+      const s = Math.sin(f * 0.2);
+      p.armL = [-2.8, 0, 0.32];
+      p.armR = [-2.8, 0, -0.32];
+      p.elbowL = -0.3;
+      p.elbowR = -0.3;
+      p.legL = [-0.06, 0, 0.16];
+      p.legR = [0.06, 0, -0.16];
+      p.kneeL = 0.12;
+      p.kneeR = 0.12;
+      p.lean = -0.06;
+      p.bob = -0.02 + s * 0.01;
+      p.head = [-0.12, 0];
+      break;
+    }
     case "carry": {
       // Piggyback carrier: bent forward under the load, hands hooked back
       // under the rider's knees at hip height.
@@ -371,6 +391,55 @@ export const solvePose = (pose: AdventurerPose, f: number): RigPose => {
       p.bob = -0.03 + s * 0.008;
       p.head = [-0.3, 0];
       p.breathe = 1 + s * 0.02;
+      break;
+    }
+    case "crawl": {
+      // Belly crawl (commando): authored upright, the scene lies the body face down with
+      // `lying({ on: "front" })`'s tilt. Arms reach ahead in turn and pull, the opposite knee
+      // draws up to the side, the head stays raised to look forward.
+      const c = Math.sin(f * 0.22);
+      p.armL = [-2.5 - c * 0.45, 0, 0.35];
+      p.armR = [-2.5 + c * 0.45, 0, -0.35];
+      p.elbowL = -0.9 - Math.max(0, c) * 0.6;
+      p.elbowR = -0.9 - Math.max(0, -c) * 0.6;
+      p.legL = [-0.15 - Math.max(0, -c) * 0.5, 0, 0.35 + Math.max(0, -c) * 0.5];
+      p.legR = [-0.15 - Math.max(0, c) * 0.5, 0, -0.35 - Math.max(0, c) * 0.5];
+      p.kneeL = 0.2 + Math.max(0, -c) * 0.9;
+      p.kneeR = 0.2 + Math.max(0, c) * 0.9;
+      p.head = [-1.15, c * 0.06];
+      break;
+    }
+    case "prone": {
+      // Lying still on the belly (same tilt as "crawl"), elbows down and forearms forward as if
+      // holding binoculars or a rifle; legs straight and a little apart; a slow breath.
+      const br = Math.sin(f * 0.08);
+      p.armL = [-2.75, 0, 0.42];
+      p.armR = [-2.75, 0, -0.42];
+      p.elbowL = -1.25;
+      p.elbowR = -1.25;
+      p.legL = [0.05, 0, 0.18];
+      p.legR = [0.05, 0, -0.18];
+      p.kneeL = 0.12;
+      p.kneeR = 0.08;
+      p.head = [-1.25 + br * 0.03, 0];
+      p.breathe = 1 + br * 0.015;
+      break;
+    }
+    case "sit": {
+      // Sitting on the ground (or a bench top) with the legs out in front: the seat rests on the
+      // surface the feet stand on (position = that surface), hands on the knees, a slow breath.
+      const br = Math.sin(f * 0.08);
+      p.armL = [-0.75, 0, -0.18];
+      p.armR = [-0.75, 0, 0.18];
+      p.elbowL = -0.35;
+      p.elbowR = -0.35;
+      p.legL = [-1.45, 0, 0.12];
+      p.legR = [-1.45, 0, -0.12];
+      p.kneeL = 0.3;
+      p.kneeR = 0.22;
+      p.lean = 0.08 + br * 0.015;
+      p.bob = -0.5;
+      p.head = [0.04, br * 0.04];
       break;
     }
     case "ride": {

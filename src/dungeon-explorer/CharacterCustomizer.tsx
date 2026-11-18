@@ -1,8 +1,8 @@
-// The character screen (Tab): who is under the armour and what he wears. Every setting is a field
-// of the HumanSpec the body is baked from, so what this panel can change is exactly what the
-// imported base human supports: face morphs, build, skin, eyes, hair, beard, and the armour slots.
+// The character screen (Esc > Character): who is under the armour. Every setting is a field of the
+// HumanSpec the body is baked from, so what this panel can change is exactly what the imported base
+// human supports: face morphs, build, skin, eyes, hair and beard. What he wears is the inventory's
+// job (Tab, Inventory.tsx).
 import React from "react";
-import { Inventory } from "./Inventory";
 import {
   ARMOR_SLOTS,
   AVERAGE_FACE,
@@ -11,7 +11,6 @@ import {
   DEFAULT_EQUIPMENT,
   characterByName,
   type ArmorEquipment,
-  type ArmorSlot,
   type FaceSpec,
   type HairStyle,
   type HumanSpec,
@@ -119,7 +118,9 @@ const NAMES = ["Aldous", "Bertram", "Cedric", "Edmund", "Godfrey", "Hugh", "Osri
 // A game UI, not a Remotion render: a true random roll is what the Random button wants.
 const roll = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
 
-function randomSpec(): HumanSpec {
+/** A random man (any HumanSpec field the base human supports). `rnd` defaults to a true random roll. */
+export function randomSpec(rnd: () => number = roll): HumanSpec {
+  const roll = rnd;
   const r = (a: number, b: number) => a + roll() * (b - a);
   const pick = <T,>(xs: T[]): T => xs[Math.floor(roll() * xs.length)];
   const face = { ...AVERAGE_FACE };
@@ -257,8 +258,6 @@ const Heading: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 export interface CustomizerProps {
   spec: HumanSpec;
   onSpec: (spec: HumanSpec) => void;
-  equipment: ArmorEquipment;
-  onEquipment: (e: ArmorEquipment) => void;
   /** A new body is being built from the latest settings. */
   busy: boolean;
   layout: PanelLayout;
@@ -266,26 +265,22 @@ export interface CustomizerProps {
   tab: CustomizerTab;
   onTab: (t: CustomizerTab) => void;
   onView: (v: ShowcaseView) => void;
+  /** Back to the Esc menu. */
   onClose: () => void;
-  /** Inventory pictures of the pieces (arrive once rendered). */
-  icons: Partial<Record<ArmorSlot, string>>;
 }
 
-export type CustomizerTab = "body" | "face" | "hair" | "gear";
+export type CustomizerTab = "body" | "face" | "hair";
 type Tab = CustomizerTab;
 
 export const CharacterCustomizer: React.FC<CustomizerProps> = ({
   spec,
   onSpec,
-  equipment,
-  onEquipment,
   busy,
   layout,
   tab,
   onTab: setTab,
   onView,
   onClose,
-  icons,
 }) => {
   const set = (patch: Partial<HumanSpec>) => onSpec({ ...spec, ...patch });
   const setFace = (k: keyof FaceSpec, v: number) => onSpec({ ...spec, face: { ...spec.face, [k]: v } });
@@ -327,10 +322,10 @@ export const CharacterCustomizer: React.FC<CustomizerProps> = ({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close character screen"
+            aria-label="Back to the menu"
             style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.18)", color: "#c3ccd5", borderRadius: 6, padding: "3px 9px", fontSize: 12, cursor: "pointer" }}
           >
-            {right ? "Done (Tab)" : "Done"}
+            {right ? "Back (Esc)" : "Back"}
           </button>
         </div>
         <input
@@ -364,13 +359,13 @@ export const CharacterCustomizer: React.FC<CustomizerProps> = ({
           </Chip>
         </div>
         <div style={{ display: "flex", gap: 4, marginTop: 10 }}>
-          {(["body", "face", "hair", "gear"] as Tab[]).map((t) => (
+          {(["body", "face", "hair"] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => {
                 setTab(t);
-                // Face and hair are easier to judge up close; gear and build from head to toe.
+                // Face and hair are easier to judge up close; the build from head to toe.
                 onView(t === "face" || t === "hair" ? "face" : "body");
               }}
               style={{
@@ -448,20 +443,6 @@ export const CharacterCustomizer: React.FC<CustomizerProps> = ({
             <Heading>Beard</Heading>
             <Slider label="Beard" value={spec.beard} min={0} max={1} ends={["Clean shaven", "Full beard"]} onChange={(v) => set({ beard: v })} />
           </>
-        ) : null}
-
-        {tab === "gear" ? (
-          <Inventory
-            equipment={equipment}
-            onEquipment={onEquipment}
-            icons={icons}
-            cell={Math.min(80, Math.floor(((right ? layout.size - 36 : window.innerWidth - 28) - 18) / 4))}
-            viewRect={
-              right
-                ? { left: 0, top: 0, width: window.innerWidth - layout.size, height: window.innerHeight }
-                : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight - layout.size }
-            }
-          />
         ) : null}
       </div>
 

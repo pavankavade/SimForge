@@ -75,7 +75,7 @@ export class BladeFx {
     const sparks = new THREE.Points(
       this.sparkGeo,
       new THREE.PointsMaterial({
-        size: 0.035,
+        size: 0.016,
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
@@ -117,21 +117,22 @@ export class BladeFx {
       this.sparkPos[i * 3] = point.x;
       this.sparkPos[i * 3 + 1] = point.y;
       this.sparkPos[i * 3 + 2] = point.z;
-      const sp = 1.2 + this.rnd() * 3.4;
+      const sp = 0.8 + this.rnd() * 2.2;
       this.sparkVel[i * 3] = (dir.x * 0.6 + (this.rnd() - 0.5) * 1.5) * sp;
       this.sparkVel[i * 3 + 1] = (dir.y * 0.6 + this.rnd() * 1.1) * sp;
       this.sparkVel[i * 3 + 2] = (dir.z * 0.6 + (this.rnd() - 0.5) * 1.5) * sp;
-      this.sparkLife[i] = 0.25 + this.rnd() * 0.45;
+      this.sparkLife[i] = 0.12 + this.rnd() * 0.22;
     }
   }
 
   update(dt: number): void {
-    const LIFE = 0.11;
+    // Barely there: just enough motion smear to read the arc, no glowing ribbon.
+    const LIFE = 0.06;
     for (let n = 0; n < TRAIL; n++) {
       const i = (this.head - n + TRAIL) % TRAIL;
       this.trailAge[i] += dt;
       const a = Math.max(0, 1 - this.trailAge[i] / LIFE);
-      const fade = a * a * 0.32;
+      const fade = a * a * 0.08;
       const k = i * 6;
       const o = n * 6;
       // Ribbon covers the outer two thirds of the blade.

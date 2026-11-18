@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import {
   BloomEffect,
+  DepthOfFieldEffect,
   EffectComposer,
   EffectPass,
   NormalPass,
@@ -38,6 +39,13 @@ export interface PostFXConfig {
    * scenes. "agx" is softest (washes out the dungeon; rarely right).
    */
   toneMapping?: "aces" | "neutral" | "agx";
+  /**
+   * Depth of field (off by default). The lens focuses on the camera's look
+   * target (CameraRig stores it in camera.userData.focus) and keeps a band of
+   * `range` x the focus distance sharp, so close-ups get a shallow focus and
+   * wide shots stay mostly sharp, like a real lens.
+   */
+  dof?: { bokehScale?: number; range?: number };
 }
 
 const TONE_MAPPING = {
@@ -46,7 +54,7 @@ const TONE_MAPPING = {
   agx: ToneMappingMode.AGX,
 } as const;
 
-const DEFAULTS: Required<Omit<PostFXConfig, "enabled">> = {
+const DEFAULTS: Required<Omit<PostFXConfig, "enabled" | "dof">> = {
   bloomIntensity: 0.34,
   bloomThreshold: 0.86,
   bloomRadius: 0.72,
@@ -75,8 +83,11 @@ export const PostFX: React.FC<PostFXConfig> = (props) => {
     grain: props.grain ?? DEFAULTS.grain,
     toneMapping: props.toneMapping ?? DEFAULTS.toneMapping,
   };
+  const dofOn = props.dof !== undefined;
+  const dofBokeh = props.dof?.bokehScale ?? 3;
+  const dofRange = props.dof?.range ?? 0.45;
 
-  const composer = useMemo(() => {
+  const { composer, dof } = useMemo(() => {
     const instance = new EffectComposer(gl, {
       frameBufferType: THREE.HalfFloatType,
     });
@@ -138,6 +149,17 @@ export const PostFX: React.FC<PostFXConfig> = (props) => {
       );
     }
 
+    // Depth of field sits between the AO and the bloom, each in its own pass:
+    // the blur must not smear the AO's depth test, and highlights bloom after
+    // they have gone soft.
+    let dofEffect: DepthOfFieldEffect | null = null;
+    if (dofOn) {
+      if (effects.length > 0) instance.addPass(new EffectPass(camera, ...effects.splice(0)));
+      dofEffect = new DepthOfFieldEffect(camera, { focusDistance: 6, focusRange: 3, bokehScale: dofBokeh, resolutionScale: 0.75 });
+      dofEffect.target = new THREE.Vector3();
+      instance.addPass(new EffectPass(camera, dofEffect));
+    }
+
     // Bloom for emissives (torches, lava, mana, blade gleam).
     if (cfg.bloomIntensity > 0) {
       effects.push(
@@ -180,8 +202,8 @@ export const PostFX: React.FC<PostFXConfig> = (props) => {
     // Clean up stair-stepping introduced by the render targets.
     instance.addPass(new EffectPass(camera, new SMAAEffect()));
 
-    return instance;
-  }, [gl, scene, camera, cfg.aoIntensity, cfg.aoRadius, cfg.bloomIntensity, cfg.bloomThreshold, cfg.bloomRadius, cfg.grain, cfg.toneMapping]);
+    return { composer: instance, dof: dofEffect };
+  }, [gl, scene, camera, cfg.aoIntensity, cfg.aoRadius, cfg.bloomIntensity, cfg.bloomThreshold, cfg.bloomRadius, cfg.grain, cfg.toneMapping, dofOn, dofBokeh]);
 
   // Exposure is applied on the renderer so it feeds the HDR buffer.
   useEffect(() => {
@@ -193,6 +215,11 @@ export const PostFX: React.FC<PostFXConfig> = (props) => {
   useEffect(() => () => composer.dispose(), [composer]);
 
   useFrame(() => {
+    if (dof && dof.target) {
+      const focus = camera.userData.focus as [number, number, number] | undefined;
+      if (focus) dof.target.set(focus[0], focus[1], focus[2]);
+      dof.cocMaterial.focusRange = Math.max(0.4, camera.position.distanceTo(dof.target) * dofRange);
+    }
     composer.render();
   }, 1);
 

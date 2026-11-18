@@ -1,0 +1,19 @@
+{
+  "name": "escape-tunnel-lab",
+  "private": true,
+  "type": "module",
+  "description": "How a Prison Bed Becomes an Escape Tunnel, filmed in the crypt lab's realistic look (three r187 WebGPURenderer + TSL). Not part of the Remotion episodes.",
+  "scripts": {
+    "dev": "vite --port 5193 --strictPort",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^9.8.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.5"
+  }
+}

@@ -232,6 +232,26 @@ export function renderLanding() {
       </header>
 
       <section class="grid">
+        <article class="card featured" style="border-color: #38bdf8; box-shadow: 0 0 24px rgba(56, 189, 248, 0.25);">
+          <div>
+            <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">Vardhan's Game · Stumble Guys</span>
+            <h2>🏃 Vardhan's Stumble Sandbox</h2>
+            <p>
+              Stumble Guys-style bouncy obstacle course! Jump over rotating foam sweeper arms, bounce on trampoline pads,
+              dodge pinball bumpers, dive-slide, and reach the Winner's Golden Crown.
+            </p>
+            <div class="tags">
+              <span class="tag">Knight / Ninja / Wizard / Goblin</span>
+              <span class="tag">Bouncers &amp; Sweepers</span>
+              <span class="tag">In-Game Workshop</span>
+              <span class="tag">Mobile &amp; Desktop</span>
+            </div>
+          </div>
+          <a class="btn" href="./vardhan" style="background: #38bdf8; color: #0f172a; font-weight: 800;">
+            Play Vardhan's Stumble Sandbox →
+          </a>
+        </article>
+
         <article class="card featured">
           <div>
             <span class="badge">New · Free-Roam 3D</span>
