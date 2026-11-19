@@ -31,6 +31,8 @@ export interface NetPlayer {
   party: string | null;
   leader: boolean;
   size: number;
+  /** His line dropped (a reload): the hub keeps his place in his party for a minute. */
+  offline?: boolean;
 }
 
 export type RunStatus = "loading" | "in" | "dead" | "out";
@@ -48,6 +50,10 @@ export interface RunView {
   status: Record<string, RunStatus>;
   /** Whose game is paused (his window hidden): not targeted, and he runs no monsters. */
   away: Record<string, boolean>;
+  /** Who left only because his game did (a reload): he may join again. */
+  dropped: Record<string, boolean>;
+  /** Whose game runs the monsters (the hub decides, so every game agrees). */
+  auth: string;
 }
 
 export interface PartyView {
@@ -112,6 +118,11 @@ export interface Hello {
   token: string | null;
   look: Look | null;
   zone: "in" | "out";
+  /** His character's id: a reload (or a dropped line) finds his party again. */
+  key: string;
+  /** Where his game is, and the party's dive it is in (a dropped line mid-dive carries on). */
+  place: "town" | "run";
+  run: string | null;
 }
 
 function hubUrl(): string | null {
@@ -310,7 +321,17 @@ class Mp {
         return;
       case "runstate":
         if (st.party?.run && st.party.run.id === m.run) {
-          st.party = { ...st.party, run: { ...st.party.run, status: m.status as Record<string, RunStatus>, away: (m.away as Record<string, boolean>) ?? {} } };
+          st.party = {
+            ...st.party,
+            run: {
+              ...st.party.run,
+              status: m.status as Record<string, RunStatus>,
+              away: (m.away as Record<string, boolean>) ?? {},
+              dropped: (m.dropped as Record<string, boolean>) ?? {},
+              members: (m.members as string[]) ?? st.party.run.members,
+              auth: String(m.auth ?? ""),
+            },
+          };
         }
         this.changed();
         this.emit("runstate", m);
@@ -327,7 +348,7 @@ class Mp {
     this.send({ t: "look", look, cls, name });
   }
   setWhere(place: "town" | "run", zone: "in" | "out") {
-    if (this.hello) this.hello = { ...this.hello, zone };
+    if (this.hello) this.hello = { ...this.hello, zone, place };
     this.send({ t: "where", place, zone });
   }
   chat(text: string, ch: "all" | "party") {
@@ -349,6 +370,22 @@ class Mp {
   }
   startRun(seed: number, rooms: number, theme: string, life: number) {
     this.send({ t: "start", seed, rooms, theme, life });
+  }
+  /** Join the party's dive already under way. */
+  joinRun() {
+    this.send({ t: "joinrun" });
+  }
+  /** The party's dive his game is in now (null: none), told again if the line drops. */
+  setRun(id: string | null) {
+    if (this.hello) this.hello = { ...this.hello, run: id };
+  }
+  /** His party is down there and he may join it (he missed the start, or a reload took him out). */
+  canJoinRun(): boolean {
+    const run = this.state.party?.run;
+    const me = this.state.me;
+    if (!run || !me) return false;
+    const st = run.status[me];
+    return !st || (st === "out" && !!run.dropped?.[me]);
   }
   runStatus(st: "in" | "dead" | "out") {
     this.send({ t: "rs", st });

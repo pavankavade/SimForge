@@ -148,6 +148,25 @@ export const InviteCards: React.FC<{ top: number }> = ({ top }) => {
   );
 };
 
+/** His party went down without him (he was away, or a reload took him out): one click to follow. */
+export const JoinRunCard: React.FC<{ top: number }> = ({ top }) => {
+  const st = useMp();
+  if (st.invites.length || !mp.canJoinRun()) return null;
+  const run = st.party?.run;
+  const down = run ? run.members.filter((id) => id !== st.me && run.status[id] !== "out").map((id) => mp.nameOf(id)) : [];
+  if (!down.length) return null;
+  return (
+    <div style={{ position: "fixed", top, left: "50%", transform: "translateX(-50%)", zIndex: 26, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12, ...panel }}>
+      <span style={{ fontSize: 13 }}>
+        Your party is in the dungeon: <b style={{ color: "#8fd0ff", fontFamily: serif }}>{down.join(", ")}</b>
+      </span>
+      <button type="button" style={gold} onClick={() => mp.joinRun()}>
+        Join them (J)
+      </button>
+    </div>
+  );
+};
+
 /** The party finder: his party, and everyone else online with an invite button. */
 export const PartyScreen: React.FC<{ onClose: () => void; compact: boolean; inDungeon: boolean }> = ({ onClose, compact, inDungeon }) => {
   const st = useMp();
@@ -191,6 +210,7 @@ export const PartyScreen: React.FC<{ onClose: () => void; compact: boolean; inDu
                   <span style={{ flex: 1, fontSize: 14 }}>
                     {name}
                     {p?.user && p.user !== p.name ? <span style={{ color: "#9a8c6c" }}> ({p.user})</span> : null}
+                    {p?.offline ? <span style={{ color: "#b9a982", fontSize: 12 }}> · reconnecting</span> : null}
                     {runSt[id] ? <span style={{ color: "#8fd0ff", fontSize: 12 }}> · {stLabel[runSt[id]]}{party.run?.away?.[id] ? " (away)" : ""}</span> : null}
                   </span>
                   {lead && id !== me && !party.run ? (

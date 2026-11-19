@@ -37,7 +37,7 @@ import { createMobSimulation, type MobAgent, type MobEvent, type PlayerView } fr
 import { mp, useMp, type Pose, type RunView } from "./net/mp";
 import { createRemotes, type Remotes } from "./net/remotes";
 import { createCoop, type Coop } from "./net/coop";
-import { ChatBox, InviteCards, PartyScreen, SpectateBar } from "./Social";
+import { ChatBox, InviteCards, JoinRunCard, PartyScreen, SpectateBar } from "./Social";
 import { computeStats, type Stats } from "./stats";
 import { createPortrait, type Portrait, type ScreenRect } from "./portrait";
 import { createMonsterSfx, type MonsterSfx } from "./monsters/monsterSfx";
@@ -3029,11 +3029,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       const name = spec.name || profile.name;
       if (!joinedRef.current) {
         joinedRef.current = true;
-        mp.connect({ name, cls: heroClass, token: account?.token ?? null, look, zone: "in" });
+        mp.connect({ name, cls: heroClass, token: account?.token ?? null, look, zone: "in", key: profile.id, place: placeRef.current === "dungeon" ? "run" : "town", run: null });
       } else mp.setLook(look, heroClass, name);
     }, 400);
     return () => window.clearTimeout(t);
-  }, [screen, spec, shownEquipment, heroClass, account, profile.name]);
+  }, [screen, spec, shownEquipment, heroClass, account, profile.name, profile.id]);
   // The party leader stepped onto the teleporter: everyone of the party in town goes down with him,
   // to the same floor (seed, rooms, theme and life are the run's).
   useEffect(
@@ -3041,8 +3041,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       mp.on("run", (m) => {
         const run = m.run as RunView;
         if (placeRef.current !== "town" || !run.status[mp.state.me ?? ""]) return;
+        if (coopRef.current?.run.id === run.id) return;
         coopRef.current?.dispose();
         coopRef.current = createCoop(run);
+        mp.setRun(run.id);
         setCoopRun(run.id);
         setWatchPick(0);
         setSeed(run.seed);
@@ -3080,6 +3082,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   useEffect(() => {
     if (place !== "town" || !coopRef.current) return;
     mp.runStatus("out");
+    mp.setRun(null);
     coopRef.current.dispose();
     coopRef.current = null;
     setCoopRun(null);
@@ -3095,6 +3098,14 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const descend = useCallback(() => {
     const party = mp.state.party;
     if (party && party.members.length > 1 && mp.state.status === "online") {
+      // The party is already down there: he follows them (if he may), else he waits for them.
+      if (party.run) {
+        if (mp.canJoinRun()) {
+          setToast("Joining your party in the dungeon...");
+          mp.joinRun();
+        } else setToast("You are out of this dive. Wait for your party to come back up (P to see where they are).");
+        return;
+      }
       if (party.leader !== mp.state.me) {
         setToast(`${mp.nameOf(party.leader)} leads your party: the dive starts when they step onto the teleporter. (P to leave the party.)`);
         return;
@@ -3252,6 +3263,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       const invite = mp.state.invites[0];
       if (invite && (e.code === "KeyY" || e.code === "KeyN")) {
         mp.answer(invite.from, e.code === "KeyY");
+        return;
+      }
+      // J: follow the party into its dive under way.
+      if (e.code === "KeyJ" && placeRef.current === "town" && mp.canJoinRun()) {
+        mp.joinRun();
         return;
       }
       if (screenRef.current !== "play") return;
@@ -4171,6 +4187,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         />
       ) : null}
       {screen === "play" || screen === "party" ? <InviteCards top={mobileMode ? 54 : 80} /> : null}
+      {(screen === "play" || screen === "party") && place === "town" && !coopRun ? <JoinRunCard top={mobileMode ? 54 : 80} /> : null}
       {screen === "party" ? <PartyScreen onClose={resume} compact={mobileMode} inDungeon={place === "dungeon"} /> : null}
       {/* Chat and the party finder, with who is online (top middle; under the run clock below). */}
       {showGameHud && mpState.status !== "off" && !hud.dead && !hud.loading ? (

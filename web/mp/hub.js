@@ -5,13 +5,17 @@
 // sockets with `send(text)` and `close()`.
 //
 // Messages are JSON objects with a type `t`. From a client:
-//   hello  { name, cls, token?, look }       first message: who he is (token: his account session)
+//   hello  { name, cls, token?, look, key, place, run }
+//                                            first message: who he is (token: his account session;
+//                                            key: his character, so a reload finds his party again;
+//                                            place/run: where his game is now)
 //   look   { look?, cls?, name? }            his looks changed (armour on or off, a new face)
 //   where  { place: "town" | "run", zone? }  he went somewhere (zone: tavern "in" or square "out")
 //   s      { ...pose }                       his pose (relayed as is to everyone in the same place)
 //   chat   { text, ch: "all" | "party" }
 //   invite { to } / accept { from } / decline { from } / leave / kick { id }
 //   start  { seed, rooms, theme, life }      the party leader takes the party down
+//   joinrun { }                              he joins his party's dive already under way
 //   rs     { st: "in" | "dead" | "out" }     how he stands in the party's dive
 //   away   { on }                            his window is hidden (his game is paused)
 //   g      { to?, ... }                      game traffic inside a dive (monsters, hits, doors)
@@ -20,6 +24,8 @@
 // err, pong. Every message from a player carries his id as `id` (or `from`).
 
 const MAX_PARTY = 4;
+/** A player whose socket closed keeps his place in his party this long (a reload, a dropped line). */
+const GRACE_MS = 60_000;
 const INVITE_MS = 60_000;
 const CHAT_MAX = 200;
 const NAME_RE = /^[\p{L}\p{N} '._-]{1,24}$/u;
@@ -81,7 +87,30 @@ export class Hub {
     const p = this.bySocket.get(sock);
     if (!p) return;
     this.bySocket.delete(sock);
-    if (!p.ready) return;
+    if (!p.ready || p.sock !== sock) return;
+    p.sock = null;
+    const party = p.party ? this.parties.get(p.party) : null;
+    if (!party) {
+      this.drop(p);
+      return;
+    }
+    // In a party: he keeps his place for a while (a reload or a dropped line comes back to it).
+    // Meanwhile his game runs nothing for the others, so in a dive he counts as away.
+    p.offline = true;
+    if (party.run && party.run.status[p.id] && party.run.status[p.id] !== "out") {
+      party.run.away[p.id] = true;
+      this.runChanged(party);
+    }
+    clearTimeout(p.grace);
+    p.grace = setTimeout(() => this.drop(p), GRACE_MS);
+    this.broadcast({ t: "join", p: this.summary(p) });
+  }
+
+  /** Gone for good: out of his party, off everyone's list. */
+  drop(p) {
+    clearTimeout(p.grace);
+    if (p.sock) return;
+    if (this.players.get(p.id) !== p) return;
     this.leaveParty(p, true);
     this.players.delete(p.id);
     this.broadcast({ t: "gone", id: p.id });
@@ -154,6 +183,9 @@ export class Hub {
       case "start":
         this.start(p, m);
         return;
+      case "joinrun":
+        this.joinRun(p);
+        return;
       case "rs":
         this.runStatus(p, m.st);
         return;
@@ -164,20 +196,42 @@ export class Hub {
   }
 
   async hello(p, m) {
+    let user = null;
+    if (this.verify && typeof m.token === "string" && m.token.length <= 128) {
+      try {
+        user = await this.verify(m.token);
+      } catch {
+        user = null;
+      }
+    }
+    // He may have gone while the account was being checked.
+    if (!this.bySocket.has(p.sock)) return;
+    // The same character again (a reload, a reconnect): he takes his old place, party and all.
+    const key = clean(m.key, 64);
+    const old = key ? [...this.players.values()].find((o) => o.key === key) : null;
+    if (old) {
+      if (old.sock && old.sock !== p.sock) {
+        // A second socket for him (the old one not closed yet): the new one wins.
+        this.bySocket.delete(old.sock);
+        try {
+          old.sock.close();
+        } catch {
+          // already closing
+        }
+      }
+      clearTimeout(old.grace);
+      old.offline = false;
+      old.sock = p.sock;
+      this.bySocket.set(p.sock, old);
+      p = old;
+    } else p.key = key;
     const name = clean(m.name, 24);
     p.name = NAME_RE.test(name) ? name : `Wanderer ${p.id.slice(0, 3)}`;
     p.cls = clean(m.cls, 16) || "fighter";
     p.look = m.look && typeof m.look === "object" ? m.look : null;
     p.zone = m.zone === "out" ? "out" : "in";
-    if (this.verify && typeof m.token === "string" && m.token.length <= 128) {
-      try {
-        p.user = await this.verify(m.token);
-      } catch {
-        p.user = null;
-      }
-    }
-    // He may have gone while the account was being checked.
-    if (!this.bySocket.has(p.sock)) return;
+    p.place = m.place === "run" ? "run" : "town";
+    p.user = user;
     p.ready = true;
     this.players.set(p.id, p);
     this.send(p, {
@@ -186,6 +240,24 @@ export class Hub {
       now: this.now(),
       players: [...this.players.values()].filter((o) => o !== p).map((o) => this.summary(o)),
     });
+    const party = p.party ? this.parties.get(p.party) : null;
+    if (party) {
+      this.send(p, { t: "party", party: this.partyView(party) });
+      const run = party.run;
+      const st = run?.status[p.id];
+      if (run && st && st !== "out") {
+        if (p.place === "run" && m.run === run.id) {
+          // Still down there (the line dropped a moment): back to playing.
+          run.away[p.id] = false;
+        } else {
+          // His game left the dive (a reload starts in town): he can join it again (joinrun).
+          run.status[p.id] = "out";
+          run.dropped[p.id] = true;
+          run.away[p.id] = false;
+        }
+        this.runChanged(party);
+      }
+    }
     this.broadcast({ t: "join", p: this.summary(p) }, p);
     this.sendPoses(p);
   }
@@ -212,10 +284,12 @@ export class Hub {
       party: party ? party.id : null,
       leader: party ? party.leader === p.id : false,
       size: party ? party.members.length : 0,
+      offline: !!p.offline,
     };
   }
 
   send(p, msg) {
+    if (!p.sock) return;
     try {
       p.sock.send(typeof msg === "string" ? msg : JSON.stringify(msg));
     } catch {
@@ -243,9 +317,13 @@ export class Hub {
     for (const o of this.players.values()) if (o !== p && o.place === "town") this.send(o, text);
   }
 
+  partyView(party) {
+    return { id: party.id, leader: party.leader, members: party.members.slice(), run: party.run };
+  }
+
   /** Tell the party (and everyone's party finder) how it stands now. */
   partyChanged(party) {
-    const view = party ? { id: party.id, leader: party.leader, members: party.members.slice(), run: party.run } : null;
+    const view = party ? this.partyView(party) : null;
     if (party) for (const id of party.members) {
       const o = this.players.get(id);
       if (o) this.send(o, { t: "party", party: view });
@@ -418,12 +496,60 @@ export class Hub {
       status,
       // Whose game is paused (window hidden): the monsters pass to someone playing, and leave him be.
       away: {},
+      // Who left it only because his game did (a reload): he may join it again.
+      dropped: {},
+      // Whose game runs the monsters (pickAuth): decided here so every game agrees.
+      auth: "",
     };
     for (const id of party.run.members) {
       const o = this.players.get(id);
       if (o) this.send(o, { t: "run", run: party.run });
     }
+    // Anyone of the party not in town now (still below on his own, offline) can follow later.
+    for (const id of party.members) {
+      const o = this.players.get(id);
+      if (o && !status[id]) this.send(o, { t: "sys", text: `${p.name} took the party into the dungeon. Step onto the teleporter to join them.` });
+    }
     this.partyChanged(party);
+  }
+
+  /** He joins his party's dive under way (he missed the start, or his game left it in a reload). */
+  joinRun(p) {
+    const party = p.party ? this.parties.get(p.party) : null;
+    const run = party?.run;
+    if (!run) {
+      this.send(p, { t: "err", text: "Your party is not in the dungeon." });
+      return;
+    }
+    if (p.place !== "town") {
+      this.send(p, { t: "err", text: "Come back up to town first." });
+      return;
+    }
+    const st = run.status[p.id];
+    if (st && st !== "out") return;
+    if (st === "out" && !run.dropped[p.id]) {
+      this.send(p, { t: "err", text: "You are out of this dive. Wait for your party to come back up." });
+      return;
+    }
+    run.status[p.id] = "loading";
+    delete run.dropped[p.id];
+    run.away[p.id] = false;
+    if (run.members.indexOf(p.id) < 0) run.members.push(p.id);
+    this.send(p, { t: "run", run });
+    this.runChanged(party);
+  }
+
+  /**
+   * Whose game runs the monsters: the one there was while he is on the floor and playing; then the
+   * first in party order who is; with nobody playing, whoever is still on the floor.
+   */
+  pickAuth(run) {
+    const onFloor = (id) => run.status[id] === "in" || run.status[id] === "dead";
+    const playing = (id) => onFloor(id) && !run.away[id];
+    if (run.auth && playing(run.auth)) return;
+    const next = run.members.find(playing);
+    if (next) run.auth = next;
+    else if (!run.auth || !onFloor(run.auth)) run.auth = run.members.find(onFloor) ?? "";
   }
 
   runStatus(p, st) {
@@ -447,9 +573,10 @@ export class Hub {
   runChanged(party) {
     const run = party.run;
     if (!run) return;
+    this.pickAuth(run);
     for (const id of run.members) {
       const o = this.players.get(id);
-      if (o) this.send(o, { t: "runstate", run: run.id, status: run.status, away: run.away });
+      if (o) this.send(o, { t: "runstate", run: run.id, status: run.status, away: run.away, dropped: run.dropped, members: run.members, auth: run.auth });
     }
     // Everyone is back up: the dive is over and the party can go again.
     if (Object.keys(run.status).every((id) => run.status[id] === "out")) {

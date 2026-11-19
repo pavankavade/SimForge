@@ -84,32 +84,29 @@ export function createCoop(run: RunView) {
   let snapN = 0;
 
   const onFloor = (st: RunStatus | undefined) => st === "in" || st === "dead";
-  /** On the floor with his game running (a hidden window pauses it). */
-  const playing = (id: string) => onFloor(status[id]) && !away[id];
   /**
-   * The authority stays while he is on the floor and playing; then the first in party order who
-   * is. With everyone away, the one there was keeps it (nobody is playing anyway).
+   * The hub says whose game runs the monsters (the one there was while he is on the floor and
+   * playing, then the first in party order who is), so a teammate joining late agrees with all.
+   * Alone (the party broke up), it is this game.
    */
-  const pick = () => {
-    if (authority && playing(authority)) return;
-    const next = run.members.find(playing);
-    if (next) authority = next;
-    else if (!authority || !onFloor(status[authority])) authority = run.members.find((id) => onFloor(status[id])) ?? "";
+  const pick = (auth: string) => {
+    authority = auth;
   };
-  pick();
+  pick(run.auth ?? "");
 
   const offs = [
     mp.on("runstate", (m) => {
       if (m.run !== run.id) return;
       status = { ...(m.status as Record<string, RunStatus>) };
       away = { ...((m.away as Record<string, boolean>) ?? {}) };
-      pick();
+      if (Array.isArray(m.members)) run.members = (m.members as string[]).slice();
+      pick(String(m.auth ?? ""));
     }),
     mp.on("party", (m) => {
       // The party broke up (the others went offline): he plays the rest of the floor alone.
       if (!m.party) {
         for (const id of Object.keys(status)) if (id !== me()) status[id] = "out";
-        pick();
+        pick(me());
       }
     }),
     mp.on("g", (m) => {
