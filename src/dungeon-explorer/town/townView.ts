@@ -30,6 +30,8 @@ export interface Town {
   npcSpots: () => Array<{ x: number; z: number }>;
   /** Show the town (and its lights) or hide it while he is below. */
   setActive: (on: boolean) => void;
+  /** The nearest lamp's shadow (off on the lower graphics settings, graphics.ts). */
+  setShadows: (on: boolean) => void;
   /** Which zone is drawn: inside the tavern, or outside (square, street, gate hall). */
   setZone: (zone: "in" | "out") => void;
   zone: () => "in" | "out";
@@ -1336,6 +1338,9 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       }
     },
     zone: () => zoneNow,
+    setShadows(on) {
+      slots[0].light.castShadow = on;
+    },
     setActive(on) {
       active = on;
       group.visible = on;

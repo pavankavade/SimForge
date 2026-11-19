@@ -1,6 +1,8 @@
 // The Esc menu: back to the game, the inventory, the character screen (who is under the armour),
-// and the dungeon options. The world keeps running behind it; only the paladin stops listening.
+// the dungeon options and the graphics setting. The world keeps running behind it; only the
+// paladin stops listening.
 import React from "react";
+import { QUALITIES, QUALITY_LABEL, type Quality } from "./graphics";
 
 export interface PauseMenuProps {
   dungeonName: string;
@@ -21,8 +23,19 @@ export interface PauseMenuProps {
   onCamera: () => void;
   showMap: boolean;
   onMap: () => void;
+  /** The graphics setting (graphics.ts) and the FPS counter. */
+  quality: Quality;
+  onQuality: (q: Quality) => void;
+  showFps: boolean;
+  onFps: () => void;
   backHref?: string;
 }
+
+const QUALITY_HINT: Record<Quality, string> = {
+  low: "For phones: lower resolution, no shadows, bloom or smoothing.",
+  medium: "Full resolution, no lamp shadows or smoothing.",
+  high: "Everything: lamp shadows, contact shadows, bloom, smoothing.",
+};
 
 const GOLD = "#ffd84d";
 
@@ -143,6 +156,42 @@ export const PauseMenu: React.FC<PauseMenuProps> = (p) => (
         {p.inTown
           ? "Theme and room count shape your next dive. Step onto the teleporter in the gate hall to go down."
           : "A new floor, theme or room count (or going back to town) abandons this run: what you found here is lost. Escape through a portal to keep it."}
+      </div>
+
+      <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", margin: "16px 0 8px" }}>GRAPHICS</div>
+      <div role="radiogroup" aria-label="Graphics quality" style={{ display: "flex", gap: 6 }}>
+        {QUALITIES.map((q) => {
+          const on = q === p.quality;
+          return (
+            <button
+              type="button"
+              key={q}
+              role="radio"
+              aria-checked={on}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                p.onQuality(q);
+              }}
+              style={{
+                flex: 1,
+                padding: "8px 0",
+                borderRadius: 3,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                background: on ? "linear-gradient(180deg, rgba(255,216,77,0.2), rgba(255,216,77,0.08))" : "rgba(24,22,19,0.95)",
+                color: on ? GOLD : "#d8ccb0",
+                border: on ? "1px solid rgba(255,216,77,0.6)" : "1px solid rgba(214,186,128,0.2)",
+              }}
+            >
+              {QUALITY_LABEL[q]}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 11, color: "#8f8676", marginTop: 6, lineHeight: 1.4 }}>{QUALITY_HINT[p.quality]}</div>
+      <div style={{ marginTop: 8 }}>
+        <Small onClick={p.onFps}>{p.showFps ? "Hide FPS" : "Show FPS"}</Small>
       </div>
 
       {p.backHref ? (

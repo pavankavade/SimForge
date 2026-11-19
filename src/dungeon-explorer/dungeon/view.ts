@@ -364,6 +364,8 @@ export function createDungeonView(
   hemiLight: THREE.HemisphereLight;
   /** The two lamp shadows on or off (off in town: a dark light's shadow still redraws the scene six times). */
   setShadows: (on: boolean) => void;
+  /** The graphics setting: lamp shadows, contact shadows, bloom and MSAA samples (graphics.ts). */
+  setQuality: (q: { shadows: boolean; ao: boolean; bloom: boolean; msaa: number }) => void;
   setMasonry: (data: { stone: ProceduralTextureData }) => void;
   setScans: (scans: { wall: ScanSet; floor: ScanSet; plaster: ScanSet }) => void;
   setLevel: (d: DungeonData, level: LevelData) => void;
@@ -397,6 +399,13 @@ export function createDungeonView(
     scene.add(light);
     return { light, lamp: null, leaving: false };
   });
+  // The graphics setting (graphics.ts): lamp shadows, contact shadows, bloom and MSAA can each be
+  // turned off for weak GPUs. `shadowsWanted` is what the place asks for (off in town).
+  const quality = { shadows: true, ao: true, bloom: true, msaa: 2 };
+  let shadowsWanted = true;
+  const applyShadows = () => {
+    for (const s of shadowLights) s.light.castShadow = shadowsWanted && quality.shadows;
+  };
 
   const blank = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
   blank.needsUpdate = true;
@@ -1008,13 +1017,15 @@ export function createDungeonView(
   });
   const drawingSize = new THREE.Vector2();
 
+  let rtSamples = -1;
   function setupRTs() {
     renderer.getDrawingBufferSize(drawingSize);
     const sx = Math.max(2, drawingSize.x);
     const sy = Math.max(2, drawingSize.y);
-    if (POST.w === sx && POST.h === sy && POST.rtScene) return;
+    if (POST.w === sx && POST.h === sy && POST.rtScene && rtSamples === quality.msaa) return;
     POST.w = sx;
     POST.h = sy;
+    rtSamples = quality.msaa;
     POST.rtScene?.dispose();
     POST.rtA?.dispose();
     POST.rtB?.dispose();
@@ -1027,7 +1038,7 @@ export function createDungeonView(
       type: THREE.HalfFloatType,
       depthBuffer: true,
       stencilBuffer: false,
-      samples: 2,
+      samples: quality.msaa,
     });
     const pb: THREE.RenderTargetOptions = {
       minFilter: THREE.LinearFilter,
@@ -1285,7 +1296,7 @@ export function createDungeonView(
     camera.layers.enable(SEE_THROUGH);
 
     // 1. Half-resolution depth buffer for contact shadows.
-    if (POST.rtDepth) {
+    if (POST.rtDepth && quality.ao) {
       const ao = POST.ao.uniforms;
       ao.uNear.value = camera.near;
       ao.uFar.value = camera.far;
@@ -1328,7 +1339,7 @@ export function createDungeonView(
     renderer.autoClear = prevAutoClear;
 
     // 3. Bloom pass.
-    if (POST.rtScene && POST.rtA && POST.rtB) {
+    if (quality.bloom && POST.rtScene && POST.rtA && POST.rtB) {
       POST.thresh.uniforms.tS.value = POST.rtScene.texture;
       POST.thresh.uniforms.uPx.value.set(1 / POST.w, 1 / POST.h);
       renderer.setRenderTarget(POST.rtA);
@@ -1376,7 +1387,15 @@ export function createDungeonView(
     carriedLight: carried,
     hemiLight: hemi,
     setShadows(on: boolean) {
-      for (const s of shadowLights) s.light.castShadow = on;
+      shadowsWanted = on;
+      applyShadows();
+    },
+    /** The graphics setting's share of the picture (graphics.ts). */
+    setQuality(q: { shadows: boolean; ao: boolean; bloom: boolean; msaa: number }) {
+      Object.assign(quality, q);
+      applyShadows();
+      POST.fin.uniforms.uAO.value = q.ao ? 1 : 0;
+      POST.fin.uniforms.uBloom.value = q.bloom ? 0.45 : 0;
     },
     markSolid() {
       extraChildren = group.children.slice(baseCount);

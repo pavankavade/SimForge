@@ -19,6 +19,9 @@ import { loadTown, saveTown, withRented, withStash, type TownSave } from "./town
 import { createCloudSync, fetchCloud, loadProfile, saveProfile } from "./profile";
 import { createAccount, loadAccount, saveAccount, type Account } from "./account";
 import { AccountPrompt } from "./AccountPrompt";
+import { PRESETS, loadGraphics, saveGraphics, type Graphics, type QualityPreset } from "./graphics";
+import { FPS_HEIGHT, FpsCounter } from "./FpsCounter";
+import { beginRun, endRun, loadTownSpot, markRunDead, runAtStart, saveTownSpot, updateRun, type RunSnapshot } from "./runSave";
 import { MERCHANTS, css } from "./merchants";
 import { MODULES, pieceProps, planFloor, type FloorPlan } from "./dungeon/rooms";
 import { buildDressing, type FloorDressing } from "./roomView";
@@ -323,8 +326,12 @@ interface DungeonSceneProps {
   clockRunning: boolean;
   /** Set by E at an open portal: he steps through and the run ends. */
   escapeQueueRef: React.RefObject<boolean>;
-  /** A floor is built and he stands at the entrance (the run starts). */
-  onFloorReady: () => void;
+  /** A floor is built and he stands on it: at the entrance (a new run), or where he was (`resumed`). */
+  onFloorReady: (resumed: boolean) => void;
+  /** The graphics setting (graphics.ts). */
+  quality: QualityPreset;
+  /** A run left open last time, to pick up on its floor (runSave.ts). */
+  resume: RunSnapshot | null;
   /** In town or below; where he appears in town (the tavern at the start, the dais back from a dive). */
   place: Place;
   arrival: "tavern" | "gate";
@@ -458,7 +465,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   tavernDoorQueueRef,
   regenQueueRef,
   onArrive,
+  quality,
+  resume,
 }) => {
+  // The run to pick up again (runSave.ts): used by the first floor built, if it is that floor.
+  const resumeRef = useRef(resume);
   const arriveRef = useRef(onArrive);
   arriveRef.current = onArrive;
   const townWalkerRef = useRef<Town.TownWalker | null>(null);
@@ -596,6 +607,52 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       viewRef.current = null;
     };
   }, [gl, scene, camera]);
+
+  // The graphics setting (graphics.ts): what the renderer draws besides the scene.
+  useEffect(() => {
+    const q = { shadows: quality.shadows, ao: quality.ao, bloom: quality.bloom, msaa: quality.msaa };
+    viewRef.current?.setQuality(q);
+    townRef.current?.setShadows(q.shadows);
+  }, [quality.shadows, quality.ao, quality.bloom, quality.msaa]);
+
+  // Where he is, kept every few seconds and when the page is hidden (runSave.ts): his spot in town,
+  // or the run below (floor, clock, health, chests and remains, the dead).
+  const saveProgress = useCallback(() => {
+    const world = worldRef.current;
+    if (!world) return;
+    if (world.place === "town") {
+      const w = townWalkerRef.current;
+      if (w) saveTownSpot({ x: w.x * CELL_M, z: w.z * CELL_M, y: w.y, yaw: w.yaw });
+      return;
+    }
+    if (!world.floor || world.dead || world.escaped) return;
+    const pileYs: Record<string, number> = {};
+    pileYRef.current.forEach((y, id) => (pileYs[id] = y));
+    updateRun(
+      {
+        x: world.walker.x,
+        z: world.walker.z,
+        yaw: world.walker.yaw,
+        hp: world.hp,
+        deadMobs: world.sim.mobs.filter((m) => m.dead).map((m) => ({ id: m.id, x: m.wx, z: m.wz })),
+        containers: [...containersRef.current.values()],
+        pileYs,
+      },
+      Math.max(0, RUN_SECONDS - world.runT),
+    );
+  }, [containersRef]);
+  const saveTimerRef = useRef(0);
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") saveProgress();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", saveProgress);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", saveProgress);
+    };
+  }, [saveProgress]);
 
   // The playable paladin: one rigged body for both first and third person, baked from `spec`.
   // A rebuild takes about half a second, so changes wait for a short pause (slider drags), the old
@@ -967,8 +1024,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     view.carriedLight.intensity = 0.7;
     view.hemiLight.intensity = 0.12;
     const walker = Town.createTownWalker(() => town.dynamicSolids());
-    const spot = Town.SPAWN[arrival];
+    // The first time this page shows the town, he stands where he was last (runSave.ts).
+    const last = townVisit === 0 && arrival === "tavern" ? loadTownSpot() : null;
+    const spot = last ?? Town.SPAWN[arrival];
     walker.place(spot.x, spot.z, spot.yaw);
+    if (last) walker.y = Town.groundAt(last.x, last.z, last.y + 0.4) ?? walker.y;
     townWalkerRef.current = walker;
     // Only the zone he is in is drawn; the dungeon's lamp shadows are off up here.
     view.setShadows(false);
@@ -1180,7 +1240,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       };
       freeLookRef.current = 0;
       prevYawRef.current = walker.yaw;
-      worldRef.current = {
+      const world: WorldState = {
         place: "dungeon",
         floor: { dungeon, level, lamps },
         space: dungeonSpace(dungeon, level),
@@ -1204,8 +1264,44 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         jumpRest: 0,
         regen: { left: 0, rate: 0 },
       };
+      // Coming back to a run left open (runSave.ts): the same floor, the clock where it is now, and
+      // him, the chests, the remains and the dead as they were at the last save.
+      worldRef.current = world;
+      const r = resumeRef.current;
+      resumeRef.current = null;
+      const resumed = !!r && r.seed === seed && r.rooms === roomCount && r.theme === theme && r.life === life;
+      if (r && resumed) {
+        world.runT = Math.min(RUN_SECONDS, Math.max(0, RUN_SECONDS - (r.endsAt - Date.now()) / 1000));
+        const at = r.at;
+        if (at) {
+          walker.x = at.x;
+          walker.z = at.z;
+          walker.yaw = at.yaw;
+          walker.bodyYaw = at.yaw + Math.PI;
+          world.playerFloor = floorAt(dungeon, walker.x + dungeon.W / 2, walker.z + dungeon.H / 2);
+          world.hp = Math.max(1, Math.min(world.maxHp, at.hp));
+          containers.clear();
+          for (const c of at.containers) containers.set(c.id, c);
+          for (const id of Object.keys(at.pileYs)) {
+            pileYRef.current.set(id, at.pileYs[id]);
+            pileSerialRef.current = Math.max(pileSerialRef.current, Number(id.replace("pile-", "")) || 0);
+          }
+          for (const d of at.deadMobs) {
+            const m = sim.mobs.find((o) => o.id === d.id);
+            if (!m) continue;
+            m.dead = true;
+            m.hp = 0;
+            m.deadT = 10;
+            m.hostile = false;
+            m.wx = d.x;
+            m.wz = d.z;
+            m.cx = d.x / CELL_M + dungeon.W / 2;
+            m.cz = d.z / CELL_M + dungeon.H / 2;
+          }
+        }
+      }
       arriveRef.current();
-      // Stand him up fresh at the entrance (pose, cloth) after a respawn or a new floor.
+      // Stand him up fresh (pose, cloth) after a respawn, a new floor or a resumed run.
       paladinRef.current?.reset();
       onHudUpdate({
         loading: null,
@@ -1213,16 +1309,16 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         rooms: dungeon.rooms.length,
         mobs: sim.mobs.length,
         roomLabel: "Entrance",
-        hp: statsRef.current.maxHealth,
-        maxHp: statsRef.current.maxHealth,
+        hp: world.hp,
+        maxHp: world.maxHp,
         dead: false,
         deathCause: null,
-        runLeft: RUN_SECONDS,
+        runLeft: Math.max(0, Math.ceil(RUN_SECONDS - world.runT)),
         portalsOpen: 0,
         escaped: false,
         interact: null,
       });
-      floorReadyRef.current();
+      floorReadyRef.current(resumed);
     };
 
     run().catch((err) => {
@@ -1944,6 +2040,14 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       onIcons(paladin.renderIcons(gl, 112));
     }
 
+    // Where he is, kept every two seconds of real time (runSave.ts; game time is capped per frame,
+    // so a slow phone would otherwise save far less often).
+    const nowMs = performance.now();
+    if (nowMs - saveTimerRef.current >= 2000) {
+      saveTimerRef.current = nowMs;
+      saveProgress();
+    }
+
     // Room badge, head count and minimap at ~6 Hz.
     hudTimerRef.current += dt;
     if (hudTimerRef.current >= 0.16) {
@@ -2067,12 +2171,19 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const initialTheme: ThemeName =
     requestedTheme && VALID_THEMES.indexOf(requestedTheme) !== -1 ? requestedTheme : "verdant";
 
-  const [seed, setSeed] = useState(initialSeed);
-  const [roomCount, setRoomCount] = useState(initialRooms);
-  const [theme, setTheme] = useState<ThemeName>(initialTheme);
+  // The run he left last time (runSave.ts): picked up again if the dungeon is still open, or lost.
+  const startRun = useMemo(runAtStart, []);
+  const resumeRun = startRun?.kind === "resume" ? startRun.run : null;
+  const [seed, setSeed] = useState(resumeRun?.seed ?? initialSeed);
+  const [roomCount, setRoomCount] = useState(resumeRun?.rooms ?? initialRooms);
+  const [theme, setTheme] = useState<ThemeName>(resumeRun?.theme ?? initialTheme);
   const [firstPerson, setFirstPerson] = useState(false);
   const [showMap, setShowMap] = useState(true);
   const [isTouchUI, setIsTouchUI] = useState(detectInitialTouch);
+  // The graphics setting (Esc menu) and the FPS counter; touch devices start on Low.
+  const [graphics, setGraphics] = useState<Graphics>(() => loadGraphics(detectInitialTouch()));
+  useEffect(() => saveGraphics(graphics), [graphics]);
+  const quality = PRESETS[graphics.quality];
   const [viewport, setViewport] = useState(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 1280,
     h: typeof window !== "undefined" ? window.innerHeight : 720,
@@ -2100,7 +2211,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     interact: null,
   });
   // Respawns rebuild the floor; nameplates are written by the scene each frame; wounds flash red.
-  const [life, setLife] = useState(0);
+  const [life, setLife] = useState(resumeRun?.life ?? 0);
   const platesRef = useRef<Array<HTMLDivElement | null>>([]);
   const [hurtKey, setHurtKey] = useState(0);
   const handlePlayerHurt = useCallback(() => setHurtKey((k) => k + 1), []);
@@ -2152,13 +2263,15 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [heroClass, setHeroClass] = useState<ClassId>(() => (profile.cls && classById(profile.cls).available ? profile.cls : "fighter"));
   const className = classById(heroClass).name;
   // What he carries: gold, the pieces he wears and the bag (playerInv.ts); the body shows what is worn.
-  const [inv, setInv] = useState<PlayerInv>(() => loadInventory(initialEquipment()));
+  // A run that was lost while he was away (the dungeon closed, or he had fallen) puts him back to
+  // what he carried in, as a death would.
+  const [inv, setInv] = useState<PlayerInv>(() => (startRun?.kind === "lost" ? startRun.runStart : loadInventory(initialEquipment())));
   useEffect(() => saveInventory(inv), [inv]);
   // What he carried when this floor's run began: dying (or abandoning the floor) puts him back to
   // it, so only what he escapes with through a portal is kept.
   const invRef = useRef(inv);
   invRef.current = inv;
-  const runStartRef = useRef<PlayerInv>(inv);
+  const runStartRef = useRef<PlayerInv>(resumeRun?.runStart ?? inv);
   const escapeQueueRef = useRef(false);
   // The controls hint goes a few seconds after the mouse is captured (and comes back when freed).
   const [hintHidden, setHintHidden] = useState(false);
@@ -2170,11 +2283,20 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     const t = window.setTimeout(() => setHintHidden(true), 6000);
     return () => window.clearTimeout(t);
   }, [hud.pointerLocked]);
-  const handleFloorReady = useCallback(() => {
-    runStartRef.current = invRef.current;
-  }, []);
   // In town or below, where he comes up in town, and each arrival there (it places him again).
-  const [place, setPlace] = useState<Place>("town");
+  const [place, setPlace] = useState<Place>(resumeRun ? "dungeon" : "town");
+  // A floor is up: a fresh run starts with what he carries now (kept in case he leaves mid-run); a
+  // resumed run keeps what he carried in then.
+  const resumedRef = useRef(false);
+  const floorRef = useRef({ seed, roomCount, theme, life });
+  floorRef.current = { seed, roomCount, theme, life };
+  const handleFloorReady = useCallback((resumed: boolean) => {
+    resumedRef.current = resumed;
+    if (resumed) return;
+    runStartRef.current = invRef.current;
+    const f = floorRef.current;
+    beginRun({ seed: f.seed, rooms: f.roomCount, theme: f.theme, life: f.life, endsAt: Date.now() + RUN_SECONDS * 1000, runStart: invRef.current });
+  }, []);
   const [arrival, setArrival] = useState<"tavern" | "gate">("tavern");
   const [townVisit, setTownVisit] = useState(0);
   // The rooms he rents upstairs and what their chests hold (town/townSave.ts).
@@ -2307,8 +2429,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     };
   }, []);
   // What has the screen: the game, the Esc menu, the inventory (Tab) or the character screen.
-  const [screen, setScreen] = useState<Screen>("class");
-  const screenRef = useRef<Screen>("class");
+  // Back in a run he left open: the Esc menu over the floor (Resume), not the class screen.
+  const [screen, setScreen] = useState<Screen>(() => (resumeRun && account ? "menu" : "class"));
+  const screenRef = useRef<Screen>(screen);
   screenRef.current = screen;
   stashOpenRef.current = screen === "loot" && stashAt ? stashAt : null;
   const customizing = screen === "character";
@@ -2320,8 +2443,36 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   useEffect(() => {
     if (hud.loading || welcomedRef.current || place !== "town" || screen !== "play") return;
     welcomedRef.current = true;
+    // A run left open last time that could not be picked up again is lost, as a death would be.
+    if (startRun?.kind === "lost") {
+      setToast(
+        startRun.why === "fell"
+          ? "You fell in the dungeon last time. What you found on that floor is lost."
+          : "The dungeon closed while you were away. What you found on that floor is lost.",
+      );
+      return;
+    }
     setToast(`Welcome to the Wayfarer's Rest, ${spec.name || profile.name}. The gate to the dungeon is at the end of the market street.`);
-  }, [hud.loading, place, spec.name, profile, screen]);
+  }, [hud.loading, place, spec.name, profile, screen, startRun]);
+  // Back in a run left open: how long the dungeon stays open.
+  const resumeNotedRef = useRef(false);
+  useEffect(() => {
+    if (resumeNotedRef.current || hud.loading || place !== "dungeon" || !resumedRef.current) return;
+    resumeNotedRef.current = true;
+    const s = hud.runLeft;
+    setToast(`Back in ${hud.name}. ${Math.floor(s / 60)}:${s % 60 < 10 ? "0" : ""}${s % 60} left before the dungeon closes.`);
+  }, [hud.loading, hud.name, hud.runLeft, place]);
+  // The run's record (runSave.ts): over once he is back in town or out through a portal; marked when
+  // he falls (coming back then counts as the death it was).
+  useEffect(() => {
+    if (place === "town") endRun();
+  }, [place]);
+  useEffect(() => {
+    if (place === "dungeon" && hud.dead) markRunDead();
+  }, [place, hud.dead]);
+  useEffect(() => {
+    if (hud.escaped) endRun();
+  }, [hud.escaped]);
   const [characterBusy, setCharacterBusy] = useState(true);
   const [customTab, setCustomTab] = useState<CustomizerTab>("face");
   const [icons, setIcons] = useState<Partial<Record<ArmorSlot, string>>>({});
@@ -2636,7 +2787,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       <Canvas
         flat
         linear
-        dpr={[1, 1.5]}
+        dpr={quality.dpr}
         shadows={{ type: THREE.PCFShadowMap }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
         camera={{ fov: 68, near: 0.1, far: 240 }}
@@ -2688,6 +2839,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           clockRunning={place === "dungeon" && screen !== "menu" && screen !== "character"}
           escapeQueueRef={escapeQueueRef}
           onFloorReady={handleFloorReady}
+          quality={quality}
+          resume={resumeRun}
           place={place}
           arrival={arrival}
           townVisit={townVisit}
@@ -2845,9 +2998,15 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onCamera={() => setFirstPerson((v) => !v)}
           showMap={showMap}
           onMap={() => setShowMap((v) => !v)}
+          quality={graphics.quality}
+          onQuality={(q) => setGraphics((g) => ({ ...g, quality: q }))}
+          showFps={graphics.showFps}
+          onFps={() => setGraphics((g) => ({ ...g, showFps: !g.showFps }))}
           backHref={backHref}
         />
       ) : null}
+
+      {graphics.showFps ? <FpsCounter /> : null}
 
       {/* Top-left compact HUD */}
       <div
@@ -3512,7 +3671,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           style={{
             position: "fixed",
             right: "max(10px, env(safe-area-inset-right))",
-            top: mobileMode ? "max(10px, env(safe-area-inset-top))" : undefined,
+            // Below the FPS counter when it is shown.
+            top: mobileMode ? `calc(max(10px, env(safe-area-inset-top)) + ${graphics.showFps ? FPS_HEIGHT : 0}px)` : undefined,
             bottom: mobileMode ? undefined : 14,
             background: "rgba(8, 10, 14, 0.78)",
             border: "1px solid rgba(255,255,255,0.14)",
