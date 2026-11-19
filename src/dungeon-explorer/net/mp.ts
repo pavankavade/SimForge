@@ -8,8 +8,8 @@
 import { useSyncExternalStore } from "react";
 import type { ArmorEquipment, HumanSpec } from "../../artifacts/characters/paladin";
 
-/** The deployed hub (web/mp-worker). Empty: no hub online yet, so the live game plays alone. */
-export const MP_URL = "";
+/** The deployed hub (web/mp-worker, `npm run deploy:mp`). Empty: the live game plays alone. */
+export const MP_URL = "wss://simforge-game-mp.pavandev.workers.dev/ws";
 const LOCAL_PORT = 5397;
 
 export interface Look {
