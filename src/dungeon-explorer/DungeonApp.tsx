@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { OUTPUT_HEIGHT } from "../engine/viewport";
 import { buildCrypt, type CryptLamp } from "./dungeon/crypt";
 import { floorAt } from "./dungeon/floors";
@@ -22,8 +23,8 @@ import { buildDressing, type FloorDressing } from "./roomView";
 import { createDoors, doorwayProps, type Doors } from "./doorView";
 import { rollChest, rollMobLoot, type Container } from "./loot";
 import { LootScreen } from "./LootScreen";
-import { BELT_SLOTS, arrowCount, equipFromBag, loadInventory, normalizeInventory, saveInventory, spendArrow, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
-import { def, removeItem } from "./items";
+import { BELT_SLOTS, arrowCount, equipFromBag, heldOf, loadInventory, normalizeInventory, saveInventory, spendArrow, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
+import { addItem, def, emptyGrid, removeItem, type ItemInst } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
 import { ShopScreen } from "./ShopScreen";
@@ -232,7 +233,7 @@ interface HudInfo {
 
 /** Something within reach: a stall, a door, a chest, a fallen man; in town a room, a stash, the teleporter. */
 interface Interact {
-  kind: "trade" | "door" | "chest" | "corpse" | "portal" | "rent" | "roomdoor" | "stash" | "teleport" | "tavernDoor";
+  kind: "trade" | "door" | "chest" | "corpse" | "pile" | "portal" | "rent" | "roomdoor" | "stash" | "teleport" | "tavernDoor";
   /** Merchant index, door index or container id. */
   key: string;
   verb: string;
@@ -309,6 +310,8 @@ interface DungeonSceneProps {
   attackQueueRef: React.RefObject<boolean>;
   /** Attack is held down (mouse, F or the touch button): the bow draws while it is. */
   attackHeldRef: React.RefObject<boolean>;
+  /** Pieces dragged out of the inventory: dropped on the ground at his feet (a sack to search). */
+  groundQueueRef: React.RefObject<ItemInst[]>;
   touchBlockRef: React.RefObject<boolean>;
   onTouchDetected: () => void;
   /** The merchant being traded with (-1: none), and where the trade panel leaves the view free. */
@@ -436,6 +439,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   jumpQueueRef,
   attackQueueRef,
   attackHeldRef,
+  groundQueueRef,
   touchBlockRef,
   onTouchDetected,
   trading,
@@ -1229,6 +1233,89 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     };
   }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef]);
 
+  // What he drops on the ground lies in a sack at his feet (a container to search with E): pieces
+  // dropped close together share one sack; an emptied sack is gone.
+  const pileMeshesRef = useRef(new Map<string, THREE.Object3D>());
+  const pileSerialRef = useRef(0);
+  const sackRef = useRef<{ geo: THREE.BufferGeometry; tie: THREE.BufferGeometry; mat: THREE.Material; rope: THREE.Material } | null>(null);
+  useEffect(() => {
+    const body = new THREE.SphereGeometry(0.2, 18, 12);
+    body.scale(1, 0.72, 1);
+    body.translate(0, 0.13, 0);
+    const neck = new THREE.CylinderGeometry(0.05, 0.08, 0.12, 12);
+    neck.translate(0, 0.3, 0);
+    const tie = new THREE.TorusGeometry(0.055, 0.012, 6, 16).rotateX(Math.PI / 2).translate(0, 0.27, 0);
+    sackRef.current = {
+      geo: mergeGeometries([body, neck]) ?? body,
+      tie,
+      mat: new THREE.MeshStandardMaterial({ color: 0x7a5c3a, roughness: 0.95 }),
+      rope: new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.9 }),
+    };
+    const meshes = pileMeshesRef.current;
+    return () => {
+      meshes.forEach((m) => scene.remove(m));
+      meshes.clear();
+      const s = sackRef.current;
+      if (s) {
+        s.geo.dispose();
+        s.tie.dispose();
+        s.mat.dispose();
+        s.rope.dispose();
+      }
+      sackRef.current = null;
+    };
+  }, [scene]);
+  const dropToGround = (facing: number, px: number, py: number, pz: number) => {
+    const queue = groundQueueRef.current;
+    const containers = containersRef.current;
+    while (queue.length) {
+      const item = queue.shift() as ItemInst;
+      const x = px + Math.sin(facing) * 0.7;
+      const z = pz + Math.cos(facing) * 0.7;
+      let pile: Container | null = null;
+      containers.forEach((c) => {
+        if (!pile && c.kind === "pile" && Math.hypot(c.x - x, c.z - z) < 1.2) pile = c;
+      });
+      const into = pile as Container | null;
+      const g = into ? addItem(into.grid, item) : null;
+      if (into && g) into.grid = g;
+      else {
+        const id = `pile-${++pileSerialRef.current}`;
+        const grid = addItem(emptyGrid(8, 6), item) ?? emptyGrid(8, 6);
+        containers.set(id, { id, kind: "pile", name: "Dropped sack", x, z, grid, seen: true });
+        pileYRef.current.set(id, py);
+      }
+    }
+    // The sacks on the ground: one per pile with something in it.
+    const sack = sackRef.current;
+    if (!sack) return;
+    const meshes = pileMeshesRef.current;
+    containers.forEach((c) => {
+      if (c.kind !== "pile") return;
+      let m = meshes.get(c.id);
+      if (!m) {
+        const g = new THREE.Group();
+        const b = new THREE.Mesh(sack.geo, sack.mat);
+        const t = new THREE.Mesh(sack.tie, sack.rope);
+        b.castShadow = true;
+        g.add(b, t);
+        g.position.set(c.x, pileYRef.current.get(c.id) ?? 0, c.z);
+        g.rotation.y = (c.x * 7.3 + c.z * 3.1) % (Math.PI * 2);
+        scene.add(g);
+        meshes.set(c.id, g);
+        m = g;
+      }
+      m.visible = c.grid.items.length > 0;
+    });
+    meshes.forEach((m, id) => {
+      if (!containers.has(id)) {
+        scene.remove(m);
+        meshes.delete(id);
+      }
+    });
+  };
+  const pileYRef = useRef(new Map<string, number>());
+
   /** What the monsters did to (or near) the fighter this step: blows land, bows twang, slimes plop. */
   const handleMobEvents = (events: MobEvent[], px: number, pz: number) => {
     const ms = monsterSfxRef.current;
@@ -1445,6 +1532,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       dead: world.dead,
     });
     handleMobEvents(sim.events, px, pz);
+    dropToGround(world.walker.yaw + Math.PI, px, world.playerFloor * CELL_M, pz);
     // A fallen monster leaves its crystal and what it carried, to search with E like a chest.
     for (const m of sim.mobs) {
       const id = `corpse-${m.id}`;
@@ -1677,6 +1765,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       containersRef.current.forEach((box) => {
         const dist = Math.hypot(box.x - px, box.z - pz);
         if (dist > (box.kind === "chest" ? 1.75 : 1.9) || look(box.x, box.z) < 0.25) return;
+        if (box.kind === "pile" && box.grid.items.length === 0) return;
         const empty = box.seen && box.grid.items.length === 0 ? " (empty)" : "";
         consider({ kind: box.kind, key: box.id, verb: box.kind === "chest" ? "Search" : "Loot", label: `${box.name}${empty}` }, dist - 0.2);
       });
@@ -2025,6 +2114,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const jumpQueueRef = useRef(false);
   const attackQueueRef = useRef(false);
   const attackHeldRef = useRef(false);
+  const groundQueueRef = useRef<ItemInst[]>([]);
   const crosshairRef = useRef<HTMLDivElement | null>(null);
   const touchBlockRef = useRef(false);
   const stickPointerRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
@@ -2119,21 +2209,17 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [flashKey, setFlashKey] = useState(0);
   const [doorFadeKey, setDoorFadeKey] = useState(0);
   /**
-   * Key 1 takes up (or puts away) the sword and shield, key 2 the recurve bow; taking up one puts
-   * the other away.
+   * Keys 1 and 2 take up (or put away) weapon set 1 or 2: its main hand and off hand together (a
+   * sword and shield, a bow). Taking up one set puts the other away.
    */
-  const toggleDraw = useCallback((which: "melee" | "bow") => {
-    const eq = invRef.current.equipped;
-    if (which === "melee" && !eq.sword && !eq.shield) {
-      setToast("Nothing in your main or off hand slot to take up.");
+  const toggleDraw = useCallback((set: 1 | 2) => {
+    const h = heldOf(invRef.current, set);
+    if (!h.main && !h.off) {
+      setToast(`Weapon set ${set} is empty. Put a weapon in its main or off hand in the inventory (Tab).`);
       return;
     }
-    if (which === "bow" && !eq.bow) {
-      setToast("No bow in your ranged slot. The weaponsmith sells a recurve bow and arrows.");
-      return;
-    }
-    if (which === "bow" && arrowCount(invRef.current) === 0) setToast("No arrows in your bag.");
-    setDrawn((d) => (which === "melee" ? { melee: !d.melee, bow: false } : { melee: false, bow: !d.bow }));
+    if (h.bow && arrowCount(invRef.current) === 0) setToast("No arrows in your bag.");
+    setActiveSet((a) => (a === set ? 0 : set));
   }, []);
   /** Keys 3 and 4: use what is on that belt slot (the next of its kind in the bag takes its place). */
   const applyBeltSlot = useCallback((i: number) => {
@@ -2157,17 +2243,18 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   }, []);
   /** Leave this floor without escaping: what was found here is lost. */
   const abandonRun = useCallback(() => setInv(runStartRef.current), []);
-  const equipment = useMemo(() => wornOf(inv), [inv]);
-  // His stats: the class's base attributes plus everything he wears (no levels: gear is growth).
-  const stats = useMemo(() => computeStats(classById(heroClass).attributes, inv.equipped), [heroClass, inv.equipped]);
+  // What he holds: weapon set 1 (key 1) or set 2 (key 2); the sets stay in their slots and are
+  // only in hand once taken up. He arrives everywhere with everything put away (0).
+  const [activeSet, setActiveSet] = useState<0 | 1 | 2>(0);
+  const handleArrive = useCallback(() => setActiveSet(0), []);
+  // The kit as the showcases and his inventory picture show it: the set in hand, or set 1.
+  const equipment = useMemo(() => wornOf(inv, activeSet || 1), [inv, activeSet]);
+  // His stats: the class's base attributes plus what he wears and the set in hand (gear is growth).
+  const stats = useMemo(() => computeStats(classById(heroClass).attributes, inv.equipped, activeSet || 1), [heroClass, inv.equipped, activeSet]);
   const statsNowRef = useRef(stats);
   statsNowRef.current = stats;
-  // What he holds: the sword and shield (key 1) or the bow (key 2) stay in their slots but are only
-  // in hand once taken up. He arrives everywhere with everything put away.
-  const [drawn, setDrawn] = useState({ melee: false, bow: false });
-  const handleArrive = useCallback(() => setDrawn({ melee: false, bow: false }), []);
   const arrows = arrowCount(inv);
-  const bowInHand = drawn.bow && !!inv.equipped.bow;
+  const bowInHand = heldOf(inv, activeSet).bow;
   const handleArrowShot = useCallback(() => setInv((v) => spendArrow(v) ?? v), []);
   const tavernDoorQueueRef = useRef<"in" | "out" | null>(null);
   const regenQueueRef = useRef<{ amount: number; seconds: number } | null>(null);
@@ -2218,9 +2305,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   // While the face or hair is being edited the helm comes off (without changing the loadout).
   // In play the weapons show only when drawn; the inventory and character screens show the whole kit.
   const shownEquipment = useMemo<ArmorEquipment>(() => {
-    const held = showcasing ? equipment : { ...equipment, sword: equipment.sword && drawn.melee, shield: equipment.shield && drawn.melee };
+    const held = showcasing ? equipment : wornOf(inv, activeSet);
     return customizing && (customTab === "face" || customTab === "hair") ? { ...held, helm: false } : held;
-  }, [customizing, showcasing, customTab, equipment, drawn]);
+  }, [customizing, showcasing, customTab, equipment, inv, activeSet]);
   const showcaseRef = useRef<Showcase>({ spin: 0, zoom: SHOW_ZOOM.body, lift: 0 });
   useEffect(() => saveCharacter(spec, equipment), [spec, equipment]);
   const handleCharacterBusy = useCallback((b: boolean) => setCharacterBusy(b), []);
@@ -2402,8 +2489,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         });
       }
       if (e.code === "KeyV") setFirstPerson((v) => !v);
-      if (e.code === "Digit1") toggleDraw("melee");
-      if (e.code === "Digit2") toggleDraw("bow");
+      if (e.code === "Digit1") toggleDraw(1);
+      if (e.code === "Digit2") toggleDraw(2);
       if (e.code === "Digit3") applyBeltSlot(0);
       if (e.code === "Digit4") applyBeltSlot(1);
       if (e.code === "KeyM") setShowMap((v) => !v);
@@ -2565,6 +2652,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           jumpQueueRef={jumpQueueRef}
           attackQueueRef={attackQueueRef}
           attackHeldRef={attackHeldRef}
+          groundQueueRef={groundQueueRef}
           touchBlockRef={touchBlockRef}
           onTouchDetected={handleTouchDetected}
           trading={screen === "shop" ? shopMerchant : -1}
@@ -2637,6 +2725,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             const v = portraitViewRef.current;
             v.zoom = Math.max(0.35, Math.min(1.1, v.zoom * Math.exp(dy * 0.0012)));
           }}
+          onGround={(item) => groundQueueRef.current.push(item)}
           onClose={resume}
         />
       ) : null}
@@ -3185,12 +3274,16 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {[
-            { key: "1", id: inv.equipped.sword ? "sword" : inv.equipped.shield ? "shield" : null, on: drawn.melee && !!(inv.equipped.sword || inv.equipped.shield), act: () => toggleDraw("melee"), count: 0 },
-            { key: "2", id: inv.equipped.bow ? inv.equipped.bow.id : null, on: bowInHand, act: () => toggleDraw("bow"), count: inv.equipped.bow ? arrows : 0 },
+            // Weapon sets: the main hand's picture, the off hand's small in the corner (a bow shows its arrows).
+            ...([1, 2] as const).map((n) => {
+              const h = heldOf(inv, n);
+              const first = h.main ?? h.off;
+              return { key: String(n), id: first ? first.id : null, sub: h.main && h.off ? h.off.id : null, on: activeSet === n && !!first, act: () => toggleDraw(n), count: h.bow ? arrows : 0 };
+            }),
             ...Array.from({ length: BELT_SLOTS }, (_, i) => {
               const b = (inv.belt || [])[i] ?? null;
               const count = b ? 1 + inv.bag.items.filter((q) => q.item.id === b.id).length : 0;
-              return { key: String(i + 3), id: b ? b.id : null, on: false, act: () => applyBeltSlot(i), count };
+              return { key: String(i + 3), id: b ? b.id : null, sub: null as string | null, on: false, act: () => applyBeltSlot(i), count };
             }),
           ].map((h) => (
             <button
@@ -3219,6 +3312,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
               }}
             >
               {h.id ? <ItemIcon id={h.id} icons={allIcons} w={isTouchUI ? 34 : 39} h={isTouchUI ? 34 : 39} ghost={!h.on && Number(h.key) <= 2} /> : null}
+              {h.sub ? (
+                <span style={{ position: "absolute", right: 1, bottom: 1, pointerEvents: "none" }}>
+                  <ItemIcon id={h.sub} icons={allIcons} w={isTouchUI ? 16 : 19} h={isTouchUI ? 16 : 19} ghost={!h.on} />
+                </span>
+              ) : null}
               <span style={{ position: "absolute", left: 3, top: 1, fontSize: 10, fontWeight: 800, color: "#e8dcc0", textShadow: "0 1px 2px #000", pointerEvents: "none" }}>{h.key}</span>
               {h.count > 1 ? (
                 <span style={{ position: "absolute", right: 3, bottom: 1, fontSize: 10, fontWeight: 700, color: "#f3e6c4", textShadow: "0 1px 2px #000", pointerEvents: "none" }}>×{h.count}</span>

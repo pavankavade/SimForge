@@ -3,8 +3,7 @@
 // levels; a character grows by what he wears. The magic stats (Will, Knowledge) are already here,
 // so spells only need to read them: magical power, magic resistance, casting speed and memory.
 // The curves are our own numbers (AGENTS.md §16).
-import { ARMOR_SLOTS } from "../artifacts/characters/paladin";
-import { def, itemOf, rarityRank, type GearSlot, type ItemInst, type Rarity } from "./items";
+import { WEAR_SLOTS, def, handOf, itemOf, rarityRank, type GearSlot, type ItemInst, type Rarity } from "./items";
 
 export const ATTRIBUTES = ["str", "vig", "agi", "dex", "wil", "kno", "res"] as const;
 export type AttributeId = (typeof ATTRIBUTES)[number];
@@ -131,18 +130,19 @@ export interface Stats {
   memoryCapacity: number;
 }
 
-/** Everything he has on that counts (worn pieces and the weapons in their slots). */
-const gearOf = (equipped: Partial<Record<GearSlot, ItemInst>>): ItemInst[] =>
-  (ARMOR_SLOTS as readonly GearSlot[])
-    .concat(["bow"])
+/** Everything that counts: the armour he wears and the weapon set `set` (only weapons in hand count). */
+const gearOf = (equipped: Partial<Record<GearSlot, ItemInst>>, set: 1 | 2): ItemInst[] =>
+  (WEAR_SLOTS as GearSlot[])
+    .concat(set === 1 ? ["main1", "off1"] : ["main2", "off2"])
     .map((s) => equipped[s])
     .filter((x): x is ItemInst => !!x);
 
-export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot, ItemInst>>): Stats {
+/** His stats with weapon set `set` in hand (the sheet shows set 1 while nothing is drawn). */
+export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot, ItemInst>>, set: 1 | 2 = 1): Stats {
   const add = {} as Record<ModId, number>;
   for (const m of MOD_IDS) add[m] = 0;
   let armor = 0;
-  for (const it of gearOf(equipped)) {
+  for (const it of gearOf(equipped, set)) {
     const d = itemOf(it);
     armor += d.armor ?? 0;
     for (const [m, v] of it.mods ?? []) add[m] += v;
@@ -153,8 +153,9 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
   const magicalPower = a.wil + add.magicalPower;
   const armorRating = armor + add.armorRating;
   const magicResist = MAGIC_RESIST(a.wil) + add.magicResist;
-  const sword = equipped.sword ? itemOf(equipped.sword).damage ?? 30 : 6;
-  const bow = equipped.bow ? itemOf(equipped.bow).damage ?? 30 : 0;
+  const main = equipped[set === 1 ? "main1" : "main2"];
+  const sword = main && handOf(main.id) === "main" ? itemOf(main).damage ?? 30 : 6;
+  const bow = main && handOf(main.id) === "both" ? itemOf(main).damage ?? 30 : 0;
   const physicalBonus = PHYS_BONUS(physicalPower);
   return {
     attributes: a,

@@ -3,7 +3,7 @@
 // time he starts in the basic kit (padding, sword, shield) with a little gold. An earlier save (a
 // purse of owned slots) is carried over.
 import { ARMOR_SLOTS, type ArmorEquipment, type ArmorSlot } from "../artifacts/characters/paladin";
-import { addItem, def, emptyGrid, fitsAt, newItem, placeItem, removeItem, sortGrid, type GearSlot, type Grid, type ItemInst } from "./items";
+import { WEAPON_SLOTS, WEAR_SLOTS, addItem, def, emptyGrid, fitsAt, handOf, isWeaponSlot, newItem, placeItem, removeItem, sortGrid, type GearSlot, type Grid, type ItemInst, type WeaponSlot } from "./items";
 
 export const BAG_W = 12;
 export const BAG_H = 8;
@@ -24,12 +24,14 @@ export const BELT_SLOTS = 2;
 export const beltable = (id: string) => !!def(id).heal;
 
 export const BASIC_KIT: ArmorSlot[] = ["doublet", "sword", "shield"];
+/** Where the basic kit goes: the doublet on him, sword and shield as weapon set 1. */
+const KIT_SLOT: Partial<Record<ArmorSlot, GearSlot>> = { sword: "main1", shield: "off1" };
 export const START_GOLD = 10000;
 const KEY = "simforge.explorer.inventory.v3";
 
 function fresh(): PlayerInv {
   const equipped: PlayerInv["equipped"] = {};
-  for (const s of BASIC_KIT) equipped[s] = newItem(s);
+  for (const s of BASIC_KIT) equipped[KIT_SLOT[s] ?? s] = newItem(s);
   let bag = emptyGrid(BAG_W, BAG_H);
   bag = addItem(bag, newItem("apple")) ?? bag;
   bag = addItem(bag, newItem("bandage")) ?? bag;
@@ -58,7 +60,7 @@ export function loadInventory(wornBefore: ArmorEquipment): PlayerInv {
     if (raw) {
       const s = JSON.parse(raw) as PlayerInv;
       if (s && s.bag && Array.isArray(s.bag.items)) {
-        return withGrant(withBelt({ gold: Math.max(0, Math.floor(s.gold || 0)), equipped: s.equipped || {}, bag: { w: BAG_W, h: BAG_H, items: s.bag.items }, belt: s.belt, granted: s.granted }));
+        return withSets(withGrant(withBelt({ gold: Math.max(0, Math.floor(s.gold || 0)), equipped: s.equipped || {}, bag: { w: BAG_W, h: BAG_H, items: s.bag.items }, belt: s.belt, granted: s.granted })));
       }
     }
     // The purse of the first market build: the slots he owned, worn or in the bag.
@@ -68,7 +70,7 @@ export function loadInventory(wornBefore: ArmorEquipment): PlayerInv {
       const inv: PlayerInv = { gold: Math.max(0, Math.floor(p.gold || 0)), equipped: {}, bag: emptyGrid(BAG_W, BAG_H), belt: [null, null] };
       for (const s of ARMOR_SLOTS) {
         if (!p.owned?.[s]) continue;
-        if (wornBefore[s]) inv.equipped[s] = newItem(s);
+        if (wornBefore[s]) inv.equipped[KIT_SLOT[s] ?? s] = newItem(s);
         else inv.bag = addItem(inv.bag, newItem(s)) ?? inv.bag;
       }
       return inv;
@@ -87,32 +89,86 @@ export function saveInventory(inv: PlayerInv): void {
   }
 }
 
-/** What the body shows: a slot is worn when an item is in it. */
-export function wornOf(inv: PlayerInv): ArmorEquipment {
+/** What the body shows: the armour he wears, and in his hands what weapon set `set` holds (0: none). */
+export function wornOf(inv: PlayerInv, set: 0 | 1 | 2 = 1): ArmorEquipment {
   const e = {} as ArmorEquipment;
   for (const s of ARMOR_SLOTS) e[s] = !!inv.equipped[s];
+  const h = heldOf(inv, set);
+  e.sword = h.sword;
+  e.shield = h.shield;
   return e;
+}
+
+/** What weapon set `set` puts in his hands. */
+export function heldOf(inv: PlayerInv, set: 0 | 1 | 2): { sword: boolean; shield: boolean; bow: boolean; main: ItemInst | null; off: ItemInst | null } {
+  const main = set ? inv.equipped[set === 1 ? "main1" : "main2"] ?? null : null;
+  const off = set ? inv.equipped[set === 1 ? "off1" : "off2"] ?? null : null;
+  return { sword: !!main && handOf(main.id) === "main", shield: !!off && handOf(off.id) === "off", bow: !!main && handOf(main.id) === "both", main, off };
+}
+
+/** A save from before the weapon sets: the sword and shield become set 1, the bow set 2. */
+function withSets(inv: PlayerInv): PlayerInv {
+  const eq = inv.equipped as Record<string, ItemInst | undefined>;
+  if (!eq.sword && !eq.shield && !eq.bow) return inv;
+  const next: Record<string, ItemInst | undefined> = { ...eq };
+  if (eq.sword && !next.main1) next.main1 = eq.sword;
+  if (eq.shield && !next.off1) next.off1 = eq.shield;
+  if (eq.bow && !next.main2) next.main2 = eq.bow;
+  delete next.sword;
+  delete next.shield;
+  delete next.bow;
+  return { ...inv, equipped: next as PlayerInv["equipped"] };
+}
+
+/**
+ * The slot a bag piece goes in: armour in its own; a weapon in the weapon slot it was dropped on if
+ * that hand fits it, else the first set with that hand free, else set 1.
+ */
+export function slotFor(inv: PlayerInv, id: string, target?: GearSlot): GearSlot | null {
+  const d = def(id);
+  if (!d.slot) return null;
+  const hand = handOf(id);
+  if (!hand) return d.slot as GearSlot;
+  const fits = (s: WeaponSlot) => (hand === "off" ? s.startsWith("off") : s.startsWith("main"));
+  if (target && isWeaponSlot(target)) return fits(target) ? target : null;
+  const order: WeaponSlot[] = hand === "off" ? ["off1", "off2"] : ["main1", "main2"];
+  return order.find((s) => !inv.equipped[s]) ?? order[0];
 }
 
 /**
  * Put a bag item on (it must be wearable). What was in that slot goes into the bag where the new
  * piece was, or anywhere it fits; with no room the swap does not happen.
  */
-export function equipFromBag(inv: PlayerInv, uid: string): PlayerInv | null {
+export function equipFromBag(inv: PlayerInv, uid: string, target?: GearSlot): PlayerInv | null {
   const p = inv.bag.items.find((q) => q.item.uid === uid);
-  const slot = p ? def(p.item.id).slot : undefined;
+  const slot = p ? slotFor(inv, p.item.id, target) : null;
   if (!p || !slot) return null;
   let bag = removeItem(inv.bag, uid);
-  const old = inv.equipped[slot];
-  if (old) {
-    if (fitsAt(bag, old.id, p.x, p.y)) bag = placeItem(bag, old, p.x, p.y);
+  const equipped = { ...inv.equipped };
+  // What has to come off: whatever was in the slot, and for a two-handed bow the set's off hand
+  // (or the bow, when a shield goes in beside it).
+  const off: ItemInst[] = [];
+  const was = equipped[slot];
+  if (was) off.push(was);
+  if (isWeaponSlot(slot)) {
+    const n = slot.endsWith("1") ? "1" : "2";
+    const other = (slot.startsWith("main") ? `off${n}` : `main${n}`) as WeaponSlot;
+    const o = equipped[other];
+    if (o && (handOf(p.item.id) === "both" || handOf(o.id) === "both")) {
+      off.push(o);
+      delete equipped[other];
+    }
+  }
+  for (const [i, it] of off.entries()) {
+    if (i === 0 && fitsAt(bag, it.id, p.x, p.y)) bag = placeItem(bag, it, p.x, p.y);
     else {
-      const b = addItem(bag, old);
+      const b = addItem(bag, it);
       if (!b) return null;
       bag = b;
     }
   }
-  return { ...inv, bag, equipped: { ...inv.equipped, [slot]: p.item } };
+  equipped[slot] = p.item;
+  return { ...inv, bag, equipped };
 }
 
 /** Take a piece off into the bag (at a cell, or the first gap); null when it doesn't fit. */
@@ -137,7 +193,7 @@ export const sortBag = (inv: PlayerInv): PlayerInv => ({ ...inv, bag: sortGrid(i
 
 /** Every item he has (worn, on the belt and carried), for weights and counts. */
 export function allItems(inv: PlayerInv): ItemInst[] {
-  const worn = (ARMOR_SLOTS as readonly GearSlot[]).concat(["bow"]).map((s) => inv.equipped[s]).filter((x): x is ItemInst => !!x);
+  const worn = (WEAR_SLOTS as GearSlot[]).concat(WEAPON_SLOTS).map((s) => inv.equipped[s]).filter((x): x is ItemInst => !!x);
   const belt = (inv.belt || []).filter((x): x is ItemInst => !!x);
   return worn.concat(belt, inv.bag.items.map((p) => p.item));
 }
@@ -149,7 +205,7 @@ function withGrant(inv: PlayerInv): PlayerInv {
   return { ...inv, gold: Math.max(inv.gold, START_GOLD), granted: START_GOLD };
 }
 
-export const normalizeInventory = (inv: PlayerInv): PlayerInv => withGrant(withBelt(inv));
+export const normalizeInventory = (inv: PlayerInv): PlayerInv => withSets(withGrant(withBelt(inv)));
 
 /** Arrows he carries (every stack in the bag). */
 export const arrowCount = (inv: PlayerInv): number => inv.bag.items.reduce((a, p) => a + (p.item.id === "arrows" ? (p.item.qty ?? 1) : 0), 0);

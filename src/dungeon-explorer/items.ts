@@ -36,8 +36,24 @@ export const RARITY_PRICE: Record<Rarity, number> = { common: 1, uncommon: 1.7, 
 
 export type ItemCategory = "armor" | "weapon" | "valuable" | "trophy" | "consumable" | "coins" | "crystal" | "material" | "ammo";
 
-/** Where a piece is worn or held: an armour slot on the rig, or the bow (the game's ranged slot). */
-export type GearSlot = ArmorSlot | "bow";
+/**
+ * Where a piece is worn or held: an armour slot, or one of the two weapon sets (Dark and Darker
+ * style): set 1 and set 2 each have a main hand and an off hand. Keys 1 and 2 take a set up.
+ * (The rig's "sword" and "shield" slots are only what is in his hands; items never sit there.)
+ */
+export type WeaponSlot = "main1" | "off1" | "main2" | "off2";
+export type GearSlot = ArmorSlot | WeaponSlot;
+export const WEAPON_SLOTS: WeaponSlot[] = ["main1", "off1", "main2", "off2"];
+/** The armour slots items are worn in (every rig slot but the hands). */
+export const WEAR_SLOTS: ArmorSlot[] = ARMOR_SLOTS.filter((s) => s !== "sword" && s !== "shield");
+
+/** Which hand a weapon goes in: the sword in the main hand, the shield in the off hand, the bow in both. */
+export function handOf(id: string): "main" | "off" | "both" | null {
+  const s = def(id).slot;
+  return s === "sword" ? "main" : s === "shield" ? "off" : s === "bow" ? "both" : null;
+}
+export const isWeaponSlot = (s: GearSlot): s is WeaponSlot => (WEAPON_SLOTS as GearSlot[]).indexOf(s) >= 0;
+export const setOf = (s: WeaponSlot): 1 | 2 => (s.endsWith("1") ? 1 : 2);
 /** Arrows come in stacks of this many. */
 export const ARROW_STACK = 30;
 
@@ -56,8 +72,8 @@ export interface ItemDef {
   weight: number;
   /** What a merchant asks for it (gold); they pay two fifths. */
   value: number;
-  /** Wearable: the fighter's armour slot (or the bow slot). */
-  slot?: GearSlot;
+  /** Wearable: the fighter's armour slot; for weapons the hand ("sword" main, "shield" off, "bow" both). */
+  slot?: ArmorSlot | "bow";
   armor?: number;
   damage?: number;
   block?: number;

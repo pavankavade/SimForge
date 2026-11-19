@@ -15,7 +15,8 @@ export const CORPSE_H = 6;
 
 export interface Container {
   id: string;
-  kind: "chest" | "corpse";
+  /** A chest, a fallen monster, or a pile the fighter dropped on the ground. */
+  kind: "chest" | "corpse" | "pile";
   name: string;
   /** Where it is (world metres) for reach checks. */
   x: number;

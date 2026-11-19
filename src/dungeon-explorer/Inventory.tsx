@@ -3,10 +3,10 @@
 // takes up its real footprint. Items move by drag and drop (mouse or finger); right-click, or a
 // double-click / double-tap, puts a piece on or takes it off, and drinks or eats what can be used.
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { RARITY, arrowsIn, def, fitsAt, itemOf, placeItem, removeItem, type GearSlot, type ItemInst } from "./items";
+import { RARITY, arrowsIn, def, fitsAt, handOf, isWeaponSlot, itemOf, placeItem, removeItem, type GearSlot, type ItemInst, type WeaponSlot } from "./items";
 import { DragGhost, GOLD, GridView, ItemIcon, ItemTooltip, PANEL_BG, PANEL_BORDER, btn, useItemDrag, type DragFrom, type DragState, type DropTarget, type Icons } from "./itemsUi";
 import { ATTRIBUTES, ATTRIBUTE_INFO, statLines, type Attributes, type Stats } from "./stats";
-import { BAG_H, BAG_W, BELT_SLOTS, allItems, beltable, equipFromBag, fromBelt, sortBag, toBelt, unequipToBag, type PlayerInv } from "./playerInv";
+import { BAG_H, BAG_W, BELT_SLOTS, allItems, beltable, equipFromBag, fromBelt, slotFor, sortBag, toBelt, unequipToBag, type PlayerInv } from "./playerInv";
 
 export { ITEMS, RARITY } from "./items";
 
@@ -20,13 +20,21 @@ export interface FrameRect {
 
 // Head to waist (and the sword and bow) on his left; what goes over and under, the legs (and the
 // shield) on his right.
-const LEFT: GearSlot[] = ["helm", "gorget", "pauldrons", "cuirass", "arms", "gauntlets", "waist", "sword", "bow"];
-const RIGHT: GearSlot[] = ["cape", "tabard", "mail", "doublet", "cuisses", "greaves", "sabatons", "shield"];
-const WEAPONS: GearSlot[] = ["sword", "shield", "bow"];
+const LEFT: GearSlot[] = ["helm", "gorget", "pauldrons", "cuirass", "arms", "gauntlets", "waist"];
+const RIGHT: GearSlot[] = ["cape", "tabard", "mail", "doublet", "cuisses", "greaves", "sabatons"];
+/** The two weapon sets (keys 1 and 2), each a main hand and an off hand, under his picture. */
+const SETS: Array<[WeaponSlot, WeaponSlot]> = [
+  ["main1", "off1"],
+  ["main2", "off2"],
+];
+const WEAPONS: GearSlot[] = ["main1", "off1", "main2", "off2"];
 /** The rows in the tallest column (the slots are sized to fit it). */
 const ROWS = LEFT.length;
 const SLOT_KIND: Record<GearSlot, string> = {
-  bow: "Ranged",
+  main1: "Main hand",
+  off1: "Off hand",
+  main2: "Main hand",
+  off2: "Off hand",
   helm: "Head",
   gorget: "Neck",
   cuirass: "Chest",
@@ -66,10 +74,12 @@ export interface InventoryScreenProps {
   /** Drag across his picture to turn him, scroll on it to zoom (desktop). */
   onTurn: (dx: number) => void;
   onZoom: (dy: number) => void;
+  /** A piece dragged out of the window: it is dropped on the ground at his feet. */
+  onGround: (item: ItemInst) => void;
   onClose: () => void;
 }
 
-export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClass, stats: sheet, base, inv, onInv, onUse, icons, viewport, compact, touch, onModelRect, onTurn, onZoom, onClose }) => {
+export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClass, stats: sheet, base, inv, onInv, onUse, icons, viewport, compact, touch, onModelRect, onTurn, onZoom, onGround, onClose }) => {
   const [toast, setToast] = useState<string | null>(null);
   const modelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -102,6 +112,22 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
   const drop = (d: DragState, t: DropTarget) => {
     if (!t) return;
     const it = def(d.item.id);
+    if (t.kind === "ground") {
+      // Out of the window: off him (or out of the bag or belt) and onto the floor.
+      if (d.from.kind === "grid") onInv({ ...inv, bag: removeItem(inv.bag, d.item.uid) });
+      else if (d.from.kind === "slot") {
+        const equipped = { ...inv.equipped };
+        delete equipped[d.from.slot];
+        onInv({ ...inv, equipped });
+      } else {
+        const belt = inv.belt.slice();
+        belt[d.from.index] = null;
+        onInv({ ...inv, belt });
+      }
+      onGround(d.item);
+      setToast(`Dropped the ${it.name.toLowerCase()}`);
+      return;
+    }
     if (t.kind === "belt") {
       if (d.from.kind === "belt") {
         const belt = inv.belt.slice();
@@ -130,10 +156,24 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
       } else onInv({ ...inv, bag: placeItem(inv.bag, d.item, t.x, t.y) });
       return;
     }
+    // A weapon moved from one set to the other (the two swap if they can).
+    if (d.from.kind === "slot" && t.kind === "slot" && isWeaponSlot(d.from.slot) && isWeaponSlot(t.slot) && d.from.slot !== t.slot) {
+      const a = d.from.slot;
+      const b = t.slot;
+      const fits = (id: string, s: WeaponSlot) => slotFor(inv, id, s) === s && !(handOf(id) === "both" && inv.equipped[(s.startsWith("main") ? "off" : "main") + s.slice(-1) as WeaponSlot]);
+      if (!fits(d.item.id, b)) return setToast(`The ${it.name.toLowerCase()} doesn't go in that hand`);
+      const other = inv.equipped[b];
+      if (other && !fits(other.id, a)) return setToast("Those two can't swap hands");
+      const equipped = { ...inv.equipped, [b]: d.item };
+      if (other) equipped[a] = other;
+      else delete equipped[a];
+      return onInv({ ...inv, equipped });
+    }
     if (d.from.kind !== "grid") return;
-    if (t.kind === "body" || (t.kind === "slot" && t.slot === it.slot)) {
+    const target = t.kind === "slot" ? slotFor(inv, d.item.id, t.slot) : null;
+    if (t.kind === "body" || (t.kind === "slot" && target === t.slot)) {
       if (!it.slot) return setToast(it.heal ? "Right-click it to use it" : `The ${it.name.toLowerCase()} isn't something to wear`);
-      const next = equipFromBag(inv, d.item.uid);
+      const next = equipFromBag(inv, d.item.uid, t.kind === "slot" ? t.slot : undefined);
       if (next) onInv(next);
       else setToast("No room in the bag for what you are wearing");
     } else if (t.kind === "slot") setToast(it.slot ? `The ${it.name.toLowerCase()} goes in the ${it.kind.toLowerCase()} slot` : `The ${it.name.toLowerCase()} isn't something to wear`);
@@ -150,9 +190,9 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
   const topBar = compact ? 44 : 46;
   const slot = compact
     ? Math.max(30, Math.min(58, Math.floor((vw - 24 - 8 * 5) / 9)))
-    : Math.max(28, Math.min(60, Math.floor((vh - topBar - 40) / ROWS) - 7));
+    : Math.max(28, Math.min(58, Math.floor((vh - topBar - 70) / (ROWS + 1.4)) - 7));
   const portraitW = Math.max(150, Math.min(250, Math.round(slot * 3.4)));
-  const bagBudget = vw * 0.72 - (2 * slot + portraitW + (wide ? 250 : 0) + 90);
+  const bagBudget = vw * 0.8 - (2 * slot + portraitW + (wide ? 250 : 0) + 90);
   const cell = compact
     ? Math.max(20, Math.min(42, Math.floor((vw - 28) / BAG_W)))
     : Math.max(18, Math.min(44, Math.floor(Math.min(bagBudget / BAG_W, (vh - topBar - (wide ? 110 : 190)) / BAG_H))));
@@ -176,9 +216,13 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
   const wornSlots = (Object.keys(inv.equipped) as GearSlot[]).filter((s) => inv.equipped[s]);
   const wornDef = (s: GearSlot) => def((inv.equipped[s] as ItemInst).id);
   const armor = wornSlots.reduce((a, s) => a + (wornDef(s).armor ?? 0), 0);
-  const bowInst = inv.equipped.bow;
-  const swordInst = inv.equipped.sword;
-  const shieldInst = inv.equipped.shield;
+  const setLine = (n: 1 | 2) => {
+    const main = inv.equipped[n === 1 ? "main1" : "main2"];
+    const off = inv.equipped[n === 1 ? "off1" : "off2"];
+    const names = [main, off].filter((x): x is ItemInst => !!x).map((x) => def(x.id).name);
+    const bow = main && handOf(main.id) === "both" ? ` · ${arrowsIn(inv.bag)} arrows` : "";
+    return names.length ? names.join(" + ") + bow : "Empty";
+  };
   const weight = wornSlots.reduce((a, s) => a + wornDef(s).weight, 0);
   const carried = inv.bag.items.reduce((a, p) => a + def(p.item.id).weight, 0);
   const stats: Array<[string, string]> = [
@@ -187,9 +231,8 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
     ["Magic resist", `${Math.round(sheet.magicResist)} (${Math.round(sheet.magicalReduction * 100)}%)`],
     ["Worn weight", `${weight.toFixed(1)} kg`],
     ["Bag weight", `${carried.toFixed(1)} kg`],
-    ["Main hand", swordInst ? `${Math.round(sheet.swordDamage)} dmg` : "Fists"],
-    ["Off hand", shieldInst ? `${itemOf(shieldInst).block}% block` : "Empty"],
-    ["Ranged", bowInst ? `${Math.round(sheet.bowDamage)} dmg · ${arrowsIn(inv.bag)} arrows` : "Empty"],
+    ["Set 1", setLine(1)],
+    ["Set 2", setLine(2)],
     ["Gold", String(inv.gold)],
   ];
   void allItems;
@@ -219,8 +262,11 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
 
   const SlotBox = (s: GearSlot) => {
     const item = inv.equipped[s];
+    // An off hand beside a bow: the bow takes both hands (shown faded, nothing goes there).
+    const partner = isWeaponSlot(s) && s.startsWith("off") ? inv.equipped[`main${s.slice(-1)}` as WeaponSlot] : undefined;
+    const bothHands = !item && !!partner && handOf(partner.id) === "both";
     const it = item ? itemOf(item) : null;
-    const target = drag !== null && drag.from.kind === "grid" && def(drag.item.id).slot === s;
+    const target = drag !== null && drag.from.kind !== "belt" && def(drag.item.id).slot !== undefined && slotFor(inv, drag.item.id, s) === s;
     const weapon = WEAPONS.indexOf(s) !== -1;
     return (
       <div
@@ -251,8 +297,10 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
           touchAction: "none",
         }}
       >
-        <ItemIcon id={item ? item.id : s === "bow" ? "recurve_bow" : s} icons={icons} w={slot - 8} h={slot - 8} ghost={!item} />
-        {!item ? (
+        <ItemIcon id={item ? item.id : bothHands && partner ? partner.id : s === "main1" || s === "main2" ? "sword" : s === "off1" || s === "off2" ? "shield" : s} icons={icons} w={slot - 8} h={slot - 8} ghost={!item} />
+        {!item && bothHands ? (
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 2, fontSize: 9, color: "#8a7f6b", textAlign: "center", letterSpacing: "0.04em", textTransform: "uppercase", pointerEvents: "none" }}>Both hands</div>
+        ) : !item ? (
           <div style={{ position: "absolute", left: 0, right: 0, bottom: 2, fontSize: 9, color: "#6b6355", textAlign: "center", letterSpacing: "0.04em", textTransform: "uppercase", pointerEvents: "none" }}>
             {SLOT_KIND[s]}
           </div>
@@ -273,8 +321,8 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
           // Put on the first piece in the bag for every empty slot.
           let next = inv;
           for (const p of inv.bag.items) {
-            const s = def(p.item.id).slot;
-            if (s && !next.equipped[s]) next = equipFromBag(next, p.item.uid) ?? next;
+            const s = slotFor(next, p.item.id);
+            if (s && !next.equipped[s]) next = equipFromBag(next, p.item.uid, s) ?? next;
           }
           onInv(next);
         }}
@@ -318,13 +366,13 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
   );
 
   // On a desktop the header sits over the docked panel only (the game shows to its left).
-  const panelW = (wide ? 258 : 0) + 2 * (slot + 16) + portraitW + BAG_W * cell + 28 + 50;
+  void topBar;
   const header = (
     <div
       style={{
         height: topBar,
         flex: `0 0 ${topBar}px`,
-        ...(compact ? {} : { width: Math.min(vw, panelW), alignSelf: "flex-end", boxSizing: "border-box" as const }),
+
         display: "flex",
         alignItems: "center",
         gap: 12,
@@ -390,11 +438,21 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
 
   const column = (slots: GearSlot[]) => (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, justifyContent: "center", pointerEvents: "auto" }}>
-      {slots.map((s, i) => (
-        <React.Fragment key={s}>
-          {WEAPONS.indexOf(s) >= 0 && (i === 0 || WEAPONS.indexOf(slots[i - 1]) < 0) ? <div style={{ height: 4 }} /> : null}
-          {SlotBox(s)}
-        </React.Fragment>
+      {slots.map((s) => (
+        <React.Fragment key={s}>{SlotBox(s)}</React.Fragment>
+      ))}
+    </div>
+  );
+
+  // Weapon set 1 (key 1) and set 2 (key 2): a main hand and an off hand each (a bow takes both).
+  const WeaponSets = (
+    <div style={{ display: "flex", justifyContent: "center", gap: compact ? 10 : 18, padding: compact ? "6px 0" : "8px 10px", background: compact ? "transparent" : PANEL_BG, border: compact ? "none" : PANEL_BORDER, borderTop: "none", pointerEvents: "auto" }}>
+      {SETS.map(([m, o], i) => (
+        <div key={m} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: GOLD, width: 14, textAlign: "center" }}>{i + 1}</div>
+          {SlotBox(m)}
+          {SlotBox(o)}
+        </div>
       ))}
     </div>
   );
@@ -455,12 +513,26 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
     : undefined;
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 16, display: "flex", flexDirection: "column", color: "#eee6d4", fontFamily: "system-ui, sans-serif", userSelect: "none", pointerEvents: "none" }}>
-      {header}
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 16,
+        display: "flex",
+        flexDirection: "column",
+        ...(compact ? {} : { alignItems: "center", justifyContent: "center" }),
+        color: "#eee6d4",
+        fontFamily: "system-ui, sans-serif",
+        userSelect: "none",
+        pointerEvents: "none",
+      }}
+    >
+      {compact ? header : null}
       {compact ? (
         <>
           {modelSpace}
           <div
+            data-drop="panel"
             style={{
               flex: "0 0 auto",
               maxHeight: "60%",
@@ -476,6 +548,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
             <div style={{ display: "grid", gridTemplateColumns: `repeat(9, ${slot}px)`, gap: 5, justifyContent: "center" }}>
               {LEFT.concat(RIGHT).map((s) => SlotBox(s))}
             </div>
+            {WeaponSets}
             <div style={{ height: 10 }} />
             {Attrs}
             {StatsStrip}
@@ -485,7 +558,10 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
           </div>
         </>
       ) : (
-        <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 8, padding: "10px 14px 14px", justifyContent: "flex-end", alignItems: "flex-start" }}>
+        // The window, centred over the live game; drag a piece out of it to drop it on the ground.
+        <div data-drop="panel" style={{ display: "flex", flexDirection: "column", maxWidth: "96vw", maxHeight: "96vh", pointerEvents: "auto", boxShadow: "0 18px 60px rgba(0,0,0,0.65)" }}>
+        {header}
+        <div style={{ display: "flex", gap: 8, padding: "8px 10px 10px", alignItems: "flex-start", background: "rgba(8,7,6,0.35)" }}>
           {wide ? (
             <div style={{ width: 230, flex: "0 0 230px", alignSelf: "flex-start", background: PANEL_BG, border: PANEL_BORDER, padding: "14px 16px", pointerEvents: "auto" }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: GOLD }}>{name || heroClass}</div>
@@ -498,10 +574,13 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
               {StatsRows.slice(3)}
             </div>
           ) : null}
-          <div style={{ display: "flex", gap: 0, alignSelf: "flex-start", height: ROWS * (slot + 7) + 30 }}>
-            <div style={{ background: PANEL_BG, border: PANEL_BORDER, borderRight: "none", padding: "8px 8px", display: "flex" }}>{column(LEFT)}</div>
-            {modelSpace}
-            <div style={{ background: PANEL_BG, border: PANEL_BORDER, borderLeft: "none", padding: "8px 8px", display: "flex" }}>{column(RIGHT)}</div>
+          <div style={{ display: "flex", flexDirection: "column", alignSelf: "flex-start" }}>
+            <div style={{ display: "flex", gap: 0, height: ROWS * (slot + 7) + 20 }}>
+              <div style={{ background: PANEL_BG, border: PANEL_BORDER, borderRight: "none", padding: "8px 8px", display: "flex" }}>{column(LEFT)}</div>
+              {modelSpace}
+              <div style={{ background: PANEL_BG, border: PANEL_BORDER, borderLeft: "none", padding: "8px 8px", display: "flex" }}>{column(RIGHT)}</div>
+            </div>
+            {WeaponSets}
           </div>
           <div style={{ flex: "0 0 auto", alignSelf: "flex-start", background: PANEL_BG, border: PANEL_BORDER, padding: "12px 14px", pointerEvents: "auto" }}>
             {!wide ? Attrs : null}
@@ -516,6 +595,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
             {Belt}
             {BagButtons}
           </div>
+        </div>
         </div>
       )}
 

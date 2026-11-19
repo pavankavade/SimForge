@@ -119,7 +119,17 @@ export interface DragState {
   cell: number;
 }
 
-export type DropTarget = { kind: "grid"; grid: string; x: number; y: number } | { kind: "slot"; slot: GearSlot } | { kind: "belt"; index: number } | { kind: "body" } | null;
+/**
+ * Where a dragged piece lands: a grid cell, a slot, the belt, his picture, the window itself (no
+ * drop), or the ground (anywhere outside the window: it is dropped at his feet).
+ */
+export type DropTarget =
+  | { kind: "grid"; grid: string; x: number; y: number }
+  | { kind: "slot"; slot: GearSlot }
+  | { kind: "belt"; index: number }
+  | { kind: "body" }
+  | { kind: "ground" }
+  | null;
 
 /** What lies under the pointer: a grid cell (for the piece's top-left), an equipment slot or his body. */
 export function dropTargetAt(d: Pick<DragState, "x" | "y" | "gx" | "gy" | "item">): DropTarget {
@@ -139,6 +149,8 @@ export function dropTargetAt(d: Pick<DragState, "x" | "y" | "gx" | "gy" | "item"
   if (tag.startsWith("slot:")) return { kind: "slot", slot: tag.slice(5) as GearSlot };
   if (tag.startsWith("belt:")) return { kind: "belt", index: Number(tag.slice(5)) || 0 };
   if (tag === "body") return { kind: "body" };
+  // Outside every window (the live game shows there): onto the ground.
+  if (!t) return { kind: "ground" };
   return null;
 }
 

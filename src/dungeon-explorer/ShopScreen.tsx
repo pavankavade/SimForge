@@ -64,8 +64,8 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ merchant, inv, onInv, ic
   }, [note]);
 
   const have = (id: string) => {
-    const slot = def(id).slot;
-    return (slot && inv.equipped[slot] ? 1 : 0) + inv.bag.items.filter((p) => p.item.id === id).length;
+    const worn = Object.keys(inv.equipped).filter((k) => inv.equipped[k as keyof typeof inv.equipped]?.id === id).length;
+    return worn + inv.bag.items.filter((p) => p.item.id === id).length;
   };
 
   const act = (r: Row) => {
