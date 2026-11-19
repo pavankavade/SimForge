@@ -13,6 +13,10 @@ export interface MonsterSfx {
   squelch: (big?: number) => void;
   plop: (big?: number) => void;
   sizzle: () => void;
+  /** Traps (traps.ts): a spike plate's mechanism catching, its spikes shooting up, a log's blow. */
+  trapClick: () => void;
+  spikes: () => void;
+  thud: () => void;
   dispose: () => void;
 }
 
@@ -120,6 +124,22 @@ export function createMonsterSfx(volume = 0.45): MonsterSfx {
     },
     sizzle() {
       hiss("highpass", 3000, 5000, 0.8, 0.07, 0.02, 0.4);
+    },
+    trapClick() {
+      // Two dry ratchet clicks.
+      hiss("bandpass", 3200, 2200, 8, 0.16, 0.001, 0.03);
+      tone(1400, 900, 0.05, 0.001, 0.03, "square");
+      hiss("bandpass", 2800, 1900, 8, 0.13, 0.001, 0.03, 0.09);
+    },
+    spikes() {
+      // Steel sliding out fast: a bright scrape over a low knock.
+      hiss("highpass", 2500, 6000, 1.2, 0.2, 0.004, 0.16);
+      tone(2600, 1700, 0.05, 0.002, 0.14, "sawtooth");
+      tone(160, 70, 0.14, 0.002, 0.1, "sine");
+    },
+    thud() {
+      hiss("lowpass", 700, 120, 1.2, 0.3, 0.003, 0.18);
+      tone(110, 55, 0.18, 0.003, 0.16, "sine");
     },
     dispose() {
       void ctx?.close();

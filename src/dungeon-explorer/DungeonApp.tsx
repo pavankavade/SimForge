@@ -41,6 +41,7 @@ import { BOW_TIP, arrowGeometry, bowGeometry } from "./monsters/props";
 import { POOL_SIZE, createMobBodies, type MobBodies } from "./mobBodies";
 import { HealthBar } from "./HealthBar";
 import { PORTAL_COUNT, PORTAL_REACH, PORTALS_FROM, RUN_SECONDS, createPortals, planPortals, type Portals } from "./portals";
+import { createTraps, planTraps, type TrapHit, type Traps } from "./traps";
 import {
   CharacterCustomizer,
   initialEquipment,
@@ -486,6 +487,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const dressingRef = useRef<FloorDressing | null>(null);
   const doorsRef = useRef<Doors | null>(null);
   const portalsRef = useRef<Portals | null>(null);
+  const trapsRef = useRef<Traps | null>(null);
   const townRef = useRef<TownView | null>(null);
   const clockRunningRef = useRef(clockRunning);
   clockRunningRef.current = clockRunning;
@@ -610,6 +612,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       doorsRef.current = null;
       portalsRef.current?.dispose();
       portalsRef.current = null;
+      trapsRef.current?.dispose();
+      trapsRef.current = null;
       view.dispose();
       viewRef.current = null;
     };
@@ -810,6 +814,30 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     onHudUpdate({ hp: w.hp, maxHp: w.maxHp, dead: w.dead });
     onPlayerHurt();
   };
+  // A trap caught him: armour softens it (no shield blocks spikes from below), a log throws him back.
+  const hurtByTrap = (hit: TrapHit) => {
+    const w = worldRef.current;
+    const pal = paladinRef.current;
+    if (!w || w.dead) return;
+    const dmg = hit.damage * (0.9 + w.rand() * 0.2) * (1 - statsRef.current.physicalReduction);
+    w.hp = Math.max(0, w.hp - dmg);
+    sfxRef.current?.hit();
+    if (pal) pal.shake.value = Math.min(1, pal.shake.value + 0.5);
+    if (hit.push) {
+      w.walker.x = hit.push.x / CELL_M;
+      w.walker.z = hit.push.z / CELL_M;
+      // The dungeon walker keeps its velocity: stop it, or he runs straight back in.
+      const v = w.walker as unknown as { vx?: number; vz?: number };
+      if (typeof v.vx === "number") v.vx = 0;
+      if (typeof v.vz === "number") v.vz = 0;
+    }
+    if (w.hp <= 0) {
+      w.dead = true;
+      w.deadT = 0;
+      onHudUpdate({ hp: w.hp, maxHp: w.maxHp, dead: true, deathCause: hit.cause });
+    } else onHudUpdate({ hp: w.hp, maxHp: w.maxHp, dead: false });
+    onPlayerHurt();
+  };
   // A handle for headless checks (scripts drive the game through it): the live floor, the paladin
   // and a way to swing.
   useEffect(() => {
@@ -820,6 +848,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       plan: () => planRef.current,
       doors: () => doorsRef.current,
       portals: () => portalsRef.current,
+      traps: () => trapsRef.current,
       dressing: () => dressingRef.current,
       town: () => townRef.current,
       layout: Town,
@@ -1063,6 +1092,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     doorsRef.current = null;
     portalsRef.current?.dispose();
     portalsRef.current = null;
+    trapsRef.current?.dispose();
+    trapsRef.current = null;
     planRef.current = null;
     bodiesRef.current?.clear();
     containersRef.current.clear();
@@ -1254,6 +1285,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       const portalRand = () => (ps = (Math.imul(ps, 1664525) + 1013904223) >>> 0) / 4294967296;
       portalsRef.current?.dispose();
       portalsRef.current = createPortals(scene, dungeon, CELL_M, planPortals(dungeon, portalRand, { x: walker.x + dungeon.W / 2, z: walker.z + dungeon.H / 2 }));
+      // Five traps in the corridors (traps.ts), from the seed alone: the same ones every life.
+      let ts = (Math.imul(seed ^ 0x2c1b3c6d, 2654435761) + 7) >>> 0;
+      const trapRand = () => (ts = (Math.imul(ts, 1664525) + 1013904223) >>> 0) / 4294967296;
+      trapsRef.current?.dispose();
+      trapsRef.current = createTraps(scene, dungeon, CELL_M, planTraps(dungeon, plan.pieces, { x: walker.x + dungeon.W / 2, z: walker.z + dungeon.H / 2 }, trapRand));
 
       // The men need their bodies before the floor opens.
       if (!bodiesRef.current && bodiesPromiseRef.current) {
@@ -1686,6 +1722,18 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           sfxRef.current?.step(1);
         }
       }
+    }
+
+    // The corridor traps (traps.ts): they keep moving when he is down; only the living are caught.
+    const traps = fl ? trapsRef.current : null;
+    if (traps) {
+      const hits = traps.update(
+        dt,
+        world.time,
+        { x: walker.x * CELL_M, z: walker.z * CELL_M, prevX: x0 * CELL_M, prevZ: z0 * CELL_M, air: world.playerJumpY, alive: !world.dead && !world.escaped },
+        monsterSfxRef.current,
+      );
+      for (const h of hits) hurtByTrap(h);
     }
 
     const px = walker.x * CELL_M;
@@ -2237,6 +2285,35 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             const sz = Math.max(3, scale * 0.45);
             ctx.fillRect(ox + c.piece.x * scale - sz / 2, oy + c.piece.z * scale - sz / 2, sz, sz);
           });
+          // Traps: a spike plate as a red crossed square, a log as an orange bar across the corridor.
+          for (const t of trapsRef.current?.plans ?? []) {
+            const cx = ox + t.gx * scale;
+            const cz = oy + t.gz * scale;
+            const h = Math.max(2.5, scale * 0.42);
+            if (t.kind === "spikes") {
+              ctx.strokeStyle = "#ff6a4a";
+              ctx.lineWidth = 1.5;
+              ctx.strokeRect(cx - h, cz - h, h * 2, h * 2);
+              ctx.beginPath();
+              ctx.moveTo(cx - h, cz - h);
+              ctx.lineTo(cx + h, cz + h);
+              ctx.moveTo(cx + h, cz - h);
+              ctx.lineTo(cx - h, cz + h);
+              ctx.stroke();
+            } else {
+              ctx.strokeStyle = "#ff9f2e";
+              ctx.lineWidth = Math.max(2, scale * 0.3);
+              ctx.beginPath();
+              if (t.along === "x") {
+                ctx.moveTo(cx, cz - scale * 0.5);
+                ctx.lineTo(cx, cz + scale * 0.5);
+              } else {
+                ctx.moveTo(cx - scale * 0.5, cz);
+                ctx.lineTo(cx + scale * 0.5, cz);
+              }
+              ctx.stroke();
+            }
+          }
           // Open portals: a violet ring that pulses.
           const portalsMap = portalsRef.current;
           portalsMap?.plans.forEach((pl, i) => {
