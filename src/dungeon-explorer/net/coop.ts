@@ -60,6 +60,8 @@ export interface DoorIn {
 }
 
 const SNAP_S = 0.1;
+/** A blow older than this when his game gets to it (it was paused) is dropped, not piled on. */
+const HURT_TTL_MS = 1500;
 /** Calm monsters further than this from every teammate go in every tenth snapshot only. */
 const NEAR_M = 34;
 
@@ -68,22 +70,31 @@ const r2 = (v: number) => Math.round(v * 100);
 export function createCoop(run: RunView) {
   const me = () => mp.state.me ?? "";
   let status: Record<string, RunStatus> = { ...run.status };
+  let away: Record<string, boolean> = { ...(run.away ?? {}) };
   let authority = "";
   /** The monsters' count on the authority's floor as built (higher ids were made later). */
   let builtMobs = -1;
   const snaps: MobSnap[] = [];
   const hits: HitIn[] = [];
   const shots: ShotIn[] = [];
-  const hurts: HurtIn[] = [];
+  /** Blows on him, stamped when they came in (performance.now()). */
+  const hurts: Array<HurtIn & { at: number }> = [];
   const doors: DoorIn[] = [];
   let snapT = 0;
   let snapN = 0;
 
   const onFloor = (st: RunStatus | undefined) => st === "in" || st === "dead";
-  /** The authority stays while he is on the floor; then the first in party order who is. */
+  /** On the floor with his game running (a hidden window pauses it). */
+  const playing = (id: string) => onFloor(status[id]) && !away[id];
+  /**
+   * The authority stays while he is on the floor and playing; then the first in party order who
+   * is. With everyone away, the one there was keeps it (nobody is playing anyway).
+   */
   const pick = () => {
-    if (authority && onFloor(status[authority])) return;
-    authority = run.members.find((id) => onFloor(status[id])) ?? "";
+    if (authority && playing(authority)) return;
+    const next = run.members.find(playing);
+    if (next) authority = next;
+    else if (!authority || !onFloor(status[authority])) authority = run.members.find((id) => onFloor(status[id])) ?? "";
   };
   pick();
 
@@ -91,6 +102,7 @@ export function createCoop(run: RunView) {
     mp.on("runstate", (m) => {
       if (m.run !== run.id) return;
       status = { ...(m.status as Record<string, RunStatus>) };
+      away = { ...((m.away as Record<string, boolean>) ?? {}) };
       pick();
     }),
     mp.on("party", (m) => {
@@ -116,7 +128,7 @@ export function createCoop(run: RunView) {
           shots.push(m as unknown as ShotIn);
           return;
         case "hurt":
-          hurts.push(m as unknown as HurtIn);
+          hurts.push({ ...(m as unknown as HurtIn), at: performance.now() });
           return;
         case "door":
           doors.push(m as unknown as DoorIn);
@@ -208,6 +220,8 @@ export function createCoop(run: RunView) {
     authority: () => authority,
     /** This game runs the monsters (also when he is alone on the floor). */
     leads: () => authority === me() || !authority,
+    /** His game is paused (window hidden): the monsters leave him be until he is back. */
+    isAway: (id: string) => !!away[id],
     /** The others on the floor (alive or down, not gone). */
     mates: () => run.members.filter((id) => id !== me() && onFloor(status[id])),
     /** The floor was built with this many monsters (ids above it come from the authority later). */
@@ -249,7 +263,11 @@ export function createCoop(run: RunView) {
     sendHurt(to: string, h: HurtIn) {
       mp.game({ k: "hurt", to, ...h });
     },
-    takeHurts: () => hurts.splice(0),
+    /** Blows to take now; any that waited out a paused game (hidden window) are let go. */
+    takeHurts: (): HurtIn[] => {
+      const now = performance.now();
+      return hurts.splice(0).filter((h) => now - h.at < HURT_TTL_MS);
+    },
     sendDoor(d: DoorIn) {
       mp.game({ k: "door", ...d });
     },

@@ -1822,7 +1822,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           const v = remotesRef.current?.view(id);
           if (!v) continue;
           ids.push(id);
-          others.push({ wx: v.x, wy: v.y, wz: v.z, swinging: v.swinging, swingStarted: v.swingStarted, dead: v.dead || v.escaped });
+          // A teammate whose game is paused (window hidden) is left alone until he is back.
+          others.push({ wx: v.x, wy: v.y, wz: v.z, swinging: v.swinging, swingStarted: v.swingStarted, dead: v.dead || v.escaped || coop.isAway(id) });
         }
       }
       // The monsters in two half steps on a slow frame (so a long step never carries one through a wall).
@@ -3056,6 +3057,18 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       }),
     [resume]
   );
+  // His window hidden in a party's dive (another tab, another app, minimised): his game pauses, so
+  // the others are told; a teammate takes over the monsters and they leave him be till he is back.
+  useEffect(() => {
+    if (!coopRun) return;
+    const tell = () => mp.away(document.visibilityState === "hidden");
+    tell();
+    document.addEventListener("visibilitychange", tell);
+    return () => {
+      document.removeEventListener("visibilitychange", tell);
+      mp.away(false);
+    };
+  }, [coopRun]);
   // How he stands in the party's dive: down (the others see it, and he can watch them), and out
   // (through a portal, or back in town), which ends the party's link to this floor for him.
   useEffect(() => {

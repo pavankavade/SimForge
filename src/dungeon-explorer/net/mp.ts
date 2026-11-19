@@ -46,6 +46,8 @@ export interface RunView {
   /** Who went down, in party order: the first still on the floor runs the monsters. */
   members: string[];
   status: Record<string, RunStatus>;
+  /** Whose game is paused (his window hidden): not targeted, and he runs no monsters. */
+  away: Record<string, boolean>;
 }
 
 export interface PartyView {
@@ -307,7 +309,9 @@ class Mp {
         this.emit("run", m);
         return;
       case "runstate":
-        if (st.party?.run && st.party.run.id === m.run) st.party = { ...st.party, run: { ...st.party.run, status: m.status as Record<string, RunStatus> } };
+        if (st.party?.run && st.party.run.id === m.run) {
+          st.party = { ...st.party, run: { ...st.party.run, status: m.status as Record<string, RunStatus>, away: (m.away as Record<string, boolean>) ?? {} } };
+        }
         this.changed();
         this.emit("runstate", m);
         return;
@@ -348,6 +352,10 @@ class Mp {
   }
   runStatus(st: "in" | "dead" | "out") {
     this.send({ t: "rs", st });
+  }
+  /** His window was hidden or shown again during a party's dive. */
+  away(on: boolean) {
+    this.send({ t: "away", on });
   }
   pose(p: Pose) {
     this.send({ t: "s", ...p });

@@ -191,7 +191,7 @@ export const PartyScreen: React.FC<{ onClose: () => void; compact: boolean; inDu
                   <span style={{ flex: 1, fontSize: 14 }}>
                     {name}
                     {p?.user && p.user !== p.name ? <span style={{ color: "#9a8c6c" }}> ({p.user})</span> : null}
-                    {runSt[id] ? <span style={{ color: "#8fd0ff", fontSize: 12 }}> · {stLabel[runSt[id]]}</span> : null}
+                    {runSt[id] ? <span style={{ color: "#8fd0ff", fontSize: 12 }}> · {stLabel[runSt[id]]}{party.run?.away?.[id] ? " (away)" : ""}</span> : null}
                   </span>
                   {lead && id !== me && !party.run ? (
                     <button type="button" style={button} onClick={() => mp.kick(id)}>

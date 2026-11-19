@@ -13,6 +13,7 @@
 //   invite { to } / accept { from } / decline { from } / leave / kick { id }
 //   start  { seed, rooms, theme, life }      the party leader takes the party down
 //   rs     { st: "in" | "dead" | "out" }     how he stands in the party's dive
+//   away   { on }                            his window is hidden (his game is paused)
 //   g      { to?, ... }                      game traffic inside a dive (monsters, hits, doors)
 //   ping   { }
 // From the hub: welcome, join, gone, look, where, s, chat, invite, party, run, runstate, g, sys,
@@ -155,6 +156,9 @@ export class Hub {
         return;
       case "rs":
         this.runStatus(p, m.st);
+        return;
+      case "away":
+        this.runAway(p, !!m.on);
         return;
     }
   }
@@ -412,6 +416,8 @@ export class Hub {
       // Who went down, in party order: the first still on the floor runs the monsters.
       members: Object.keys(status).sort((a, b) => party.members.indexOf(a) - party.members.indexOf(b)),
       status,
+      // Whose game is paused (window hidden): the monsters pass to someone playing, and leave him be.
+      away: {},
     };
     for (const id of party.run.members) {
       const o = this.players.get(id);
@@ -430,12 +436,20 @@ export class Hub {
     this.runChanged(party);
   }
 
+  runAway(p, on) {
+    const party = p.party ? this.parties.get(p.party) : null;
+    const run = party?.run;
+    if (!run || !run.status[p.id] || !!run.away[p.id] === on) return;
+    run.away[p.id] = on;
+    this.runChanged(party);
+  }
+
   runChanged(party) {
     const run = party.run;
     if (!run) return;
     for (const id of run.members) {
       const o = this.players.get(id);
-      if (o) this.send(o, { t: "runstate", run: run.id, status: run.status });
+      if (o) this.send(o, { t: "runstate", run: run.id, status: run.status, away: run.away });
     }
     // Everyone is back up: the dive is over and the party can go again.
     if (Object.keys(run.status).every((id) => run.status[id] === "out")) {

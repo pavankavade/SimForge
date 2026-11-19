@@ -271,9 +271,10 @@ export function createRemotes(gl: THREE.WebGLRenderer, scene: THREE.Scene, layer
         const mate = !!party && party.members.indexOf(a.id) >= 0;
         a.plate.style.display = "block";
         a.plate.style.transform = `translate(${((_v.x + 1) / 2) * ctx.view.width}px, ${((1 - _v.y) / 2) * ctx.view.height}px) translate(-50%, -100%)`;
-        const label = `${mate ? "◆ " : ""}${info.name}${info.user && info.user !== info.name ? ` (${info.user})` : ""}${dead ? " — down" : ""}`;
+        const away = ctx.place === "run" && !!party?.run?.away?.[a.id];
+        const label = `${mate ? "◆ " : ""}${info.name}${info.user && info.user !== info.name ? ` (${info.user})` : ""}${dead ? " — down" : away ? " — away" : ""}`;
         if (a.name.textContent !== label) a.name.textContent = label;
-        a.plate.style.color = dead ? "#c98a80" : mate ? "#8fd0ff" : "#e8dcc0";
+        a.plate.style.color = dead ? "#c98a80" : away ? "#a8a08c" : mate ? "#8fd0ff" : "#e8dcc0";
         a.bar.style.display = ctx.place === "run" ? "block" : "none";
         a.fill.style.width = `${Math.max(0, Math.min(100, (100 * next.hp) / (next.mh || 100)))}%`;
       }
