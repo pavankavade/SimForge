@@ -31,7 +31,7 @@ export interface NetPlayer {
   party: string | null;
   leader: boolean;
   size: number;
-  /** His line dropped (a reload): the hub keeps his place in his party for a minute. */
+  /** His line dropped (a reload): the hub keeps his place in his party for two minutes. */
   offline?: boolean;
 }
 
@@ -393,6 +393,10 @@ class Mp {
   /** His window was hidden or shown again during a party's dive. */
   away(on: boolean) {
     this.send({ t: "away", on });
+  }
+  /** A blow on another player in the arena (`ko`: he went down to it, sent back to the winner). */
+  pvp(to: string, dmg: number, dx: number, dz: number, ko = false) {
+    this.send({ t: "pvp", to, dmg, dx, dz, ko });
   }
   pose(p: Pose) {
     this.send({ t: "s", ...p });

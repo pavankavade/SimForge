@@ -38,6 +38,8 @@ import { mp, useMp, type Pose, type RunView } from "./net/mp";
 import { createRemotes, type Remotes } from "./net/remotes";
 import { createCoop, type Coop } from "./net/coop";
 import { ChatBox, InviteCards, JoinRunCard, PartyScreen, SpectateBar } from "./Social";
+import { QuestScreen } from "./QuestScreen";
+import { abandon as abandonQuest, accept as acceptQuest, loadQuests, record as recordQuest, saveQuests, turnIn as turnInQuest, type QuestEvent, type QuestState } from "./quests";
 import { computeStats, type Stats } from "./stats";
 import { createPortrait, type Portrait, type ScreenRect } from "./portrait";
 import { createMonsterSfx, type MonsterSfx } from "./monsters/monsterSfx";
@@ -244,7 +246,7 @@ interface HudInfo {
 
 /** Something within reach: a stall, a door, a chest, a fallen man; in town a room, a stash, the teleporter. */
 interface Interact {
-  kind: "trade" | "door" | "chest" | "corpse" | "pile" | "portal" | "rent" | "roomdoor" | "stash" | "teleport" | "tavernDoor" | "player";
+  kind: "trade" | "door" | "chest" | "corpse" | "pile" | "portal" | "rent" | "roomdoor" | "stash" | "teleport" | "tavernDoor" | "player" | "quest";
   /** Merchant index, door index or container id. */
   key: string;
   verb: string;
@@ -361,7 +363,16 @@ interface DungeonSceneProps {
   coopRef: React.RefObject<Coop | null>;
   spectateRef: React.RefObject<string | null>;
   remoteLayerRef: React.RefObject<HTMLDivElement | null>;
+  /** Something a quest may count (a monster fallen near him, an escape), and the arena's news. */
+  onQuestEvent: (e: QuestEvent) => void;
+  onArenaEvent: (e: ArenaEvent) => void;
 }
+
+/** The arena in town: he was knocked out (and is back up), or he knocked someone out. */
+export type ArenaEvent = { type: "down"; by: string } | { type: "up" } | { type: "win"; over: string };
+
+/** Seconds a knockout in the arena keeps him down before he is back at the gate. */
+const ARENA_KO_S = 4;
 
 /** Over-the-shoulder camera: the pivot sits this far right of his head, at about ear height. */
 const SHOULDER_OFFSET = 0.52;
@@ -476,7 +487,6 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   rentedRef,
   roomDoorQueueRef,
   stashOpenRef,
-  tavernDoorQueueRef,
   regenQueueRef,
   onArrive,
   quality,
@@ -487,6 +497,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   coopRef,
   spectateRef,
   remoteLayerRef,
+  onQuestEvent,
+  onArenaEvent,
 }) => {
   // The run to pick up again (runSave.ts): used by the first floor built, if it is that floor.
   const resumeRef = useRef(resume);
@@ -933,6 +945,24 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   }, [gl, scene, remoteLayerRef]);
   /** His pose as last sent to the hub, and where he last said he was. */
   const poseRef = useRef({ t: 0, key: "", where: "" });
+  const questRef = useRef(onQuestEvent);
+  questRef.current = onQuestEvent;
+  const arenaRef = useRef(onArenaEvent);
+  arenaRef.current = onArenaEvent;
+  /** Monsters already seen fallen on this floor (a quest counts each once). */
+  const fallenRef = useRef<{ floor: unknown; ids: Set<number> }>({ floor: null, ids: new Set() });
+  // The arena: other players in the ring as targets for his blade (target id -> player id), the
+  // blows that reached him, and a knockout under way.
+  const pvpTargetsRef = useRef(new Map<number, string>());
+  const pvpInRef = useRef<Array<{ from: string; dmg: number; dx: number; dz: number; ko: boolean }>>([]);
+  const knockRef = useRef<{ t: number } | null>(null);
+  useEffect(
+    () =>
+      mp.on("pvp", (m) => {
+        pvpInRef.current.push({ from: String(m.from), dmg: Math.max(0, Math.min(200, Number(m.dmg) || 0)), dx: Number(m.dx) || 0, dz: Number(m.dz) || 0, ko: !!m.ko });
+      }),
+    []
+  );
 
   // Armour changes swap visibility only.
   useEffect(() => {
@@ -1149,16 +1179,21 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     walker.place(spot.x, spot.z, spot.yaw);
     if (last) walker.y = Town.groundAt(last.x, last.z, last.y + 0.4) ?? walker.y;
     townWalkerRef.current = walker;
-    // Only the zone he is in is drawn; the dungeon's lamp shadows are off up here.
+    // The dungeon's lamp shadows are off up here; the stalls stand out on Guild Street.
     view.setShadows(false);
-    const zone = Town.zoneAt(spot.x, spot.z);
-    town.setZone(zone);
-    marketRef.current?.setVisible(zone === "out");
+    marketRef.current?.setVisible(true);
     const targets: CombatTarget[] = [];
     const combat: CombatWorld = {
       targets,
       solid: (x, y, z) => town.solid(x, y, z),
-      onHit: () => {},
+      // Only in the arena are there targets: other players in the ring (the hub carries the blow).
+      onHit: (id, dirX, dirZ) => {
+        const to = pvpTargetsRef.current.get(id);
+        if (!to) return;
+        const dmg = (equipmentRef.current.sword ? weaponDamageRef.current : 6) * (0.9 + (worldRef.current?.rand() ?? 0.5) * 0.2);
+        mp.pvp(to, Math.round(dmg * 10) / 10, dirX, dirZ);
+        sfxRef.current?.hit();
+      },
       onClang: () => sfxRef.current?.clang(),
       onSwing: (swing) => sfxRef.current?.swing(swing),
       onFootstep: () => sfxRef.current?.step(walker.speedNow > 2 ? 1 : 0),
@@ -1870,6 +1905,85 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       }
     }
     dropToGround(world.walker.yaw + Math.PI, px, world.playerFloor * CELL_M, pz);
+    // Quests: a monster that falls near him counts (his party's kills too); those already down
+    // when the floor came up (a resumed run) do not.
+    if (fl) {
+      const fallen = fallenRef.current;
+      if (fallen.floor !== fl) {
+        fallen.floor = fl;
+        fallen.ids = new Set(sim.mobs.filter((m) => m.dead).map((m) => m.id));
+      }
+      for (const m of sim.mobs) {
+        if (!m.dead || fallen.ids.has(m.id)) continue;
+        fallen.ids.add(m.id);
+        if (!world.dead && Math.hypot(m.wx - px, m.wz - pz) < 18) questRef.current({ type: "kill", family: m.family === "slime" ? "slime" : "skeleton", elite: m.elite, boss: !!m.kind.boss });
+      }
+    }
+    // The arena (town): players in the ring are his blade's targets while he is in it too; blows
+    // that reached him land (his shield and armour count); a knockout lays him down a moment and
+    // stands him up at the gate, with nothing lost.
+    if (town) {
+      const inRing = Town.inArena(px, pz) && !world.dead;
+      const tmap = pvpTargetsRef.current;
+      tmap.clear();
+      world.targets.length = 0;
+      if (inRing) {
+        let n = 9000;
+        for (const o of remotesRef.current?.views() ?? []) {
+          if (o.dead || !Town.inArena(o.x, o.z)) continue;
+          tmap.set(++n, o.id);
+          world.targets.push({ id: n, x: o.x, y: o.y - o.air, z: o.z, radius: 0.4, height: 1.8 });
+        }
+      }
+      for (const h of pvpInRef.current.splice(0)) {
+        if (h.ko) {
+          arenaRef.current({ type: "win", over: h.from });
+          continue;
+        }
+        if (!inRing || world.dead) continue;
+        const facing = world.walker.yaw + Math.PI;
+        const front = -(Math.sin(facing) * h.dx + Math.cos(facing) * h.dz) / (Math.hypot(h.dx, h.dz) || 1);
+        if (blockingRef.current && equipmentRef.current.shield && front > 0.45) {
+          sfxRef.current?.clang();
+          if (paladin) paladin.shake.value = Math.min(1, paladin.shake.value + 0.25);
+          continue;
+        }
+        world.hp = Math.max(0, world.hp - h.dmg * (1 - statsRef.current.physicalReduction));
+        sfxRef.current?.hit();
+        if (paladin) paladin.shake.value = Math.min(1, paladin.shake.value + 0.5);
+        onPlayerHurt();
+        if (world.hp <= 0) {
+          world.dead = true;
+          world.deadT = 0;
+          knockRef.current = { t: 0 };
+          mp.pvp(h.from, 0, 0, 0, true);
+          arenaRef.current({ type: "down", by: h.from });
+        }
+        onHudUpdate({ hp: Math.round(world.hp) });
+      }
+      const ko = knockRef.current;
+      if (ko) {
+        ko.t += dt;
+        if (ko.t >= ARENA_KO_S) {
+          knockRef.current = null;
+          world.dead = false;
+          world.hp = world.maxHp;
+          const spot = Town.SPAWN.arena;
+          townWalkerRef.current?.place(spot.x, spot.z, spot.yaw);
+          world.playerFloor = 0;
+          world.playerJumpY = 0;
+          world.playerJumpVy = 0;
+          prevYawRef.current = spot.yaw;
+          paladinRef.current?.reset();
+          onHudUpdate({ hp: world.hp, maxHp: world.maxHp });
+          arenaRef.current({ type: "up" });
+        }
+      } else if (!Town.inArena(px, pz) && world.hp < world.maxHp && !world.dead) {
+        // Out of the ring he gets his breath back quickly.
+        world.hp = Math.min(world.maxHp, world.hp + world.maxHp * 0.2 * dt);
+        if (Math.floor(world.hp) % 5 === 0 || world.hp >= world.maxHp) onHudUpdate({ hp: Math.round(world.hp) });
+      }
+    }
     // A fallen monster leaves its crystal and what it carried, to search with E like a chest.
     for (const m of sim.mobs) {
       const id = `corpse-${m.id}`;
@@ -1878,8 +1992,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       const name = m.family === "slime" ? `${m.name} remains` : `${m.name} bones`;
       containersRef.current.set(id, { id, kind: "corpse", name, x: m.wx, z: m.wz, grid, seen: grid.items.length === 0 });
     }
-    world.targets.length = 0;
-    for (const m of sim.mobs) if (!m.dead) world.targets.push({ id: m.id, x: m.wx, y: m.wy, z: m.wz, radius: m.radius + 0.04, height: m.height });
+    if (fl) {
+      world.targets.length = 0;
+      for (const m of sim.mobs) if (!m.dead) world.targets.push({ id: m.id, x: m.wx, y: m.wy, z: m.wz, radius: m.radius + 0.04, height: m.height });
+    }
 
     // The paladin always squares up to where the camera aims; the gait is driven by the
     // distance actually covered (after wall collision), in his own frame.
@@ -2036,24 +2152,6 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       roomDoorQueueRef.current = -1;
     }
     if (town) {
-      const through = tavernDoorQueueRef.current;
-      const tw = townWalkerRef.current;
-      if (through && tw) {
-        tavernDoorQueueRef.current = null;
-        const spot = through === "out" ? Town.SPAWN.doorOut : Town.SPAWN.doorIn;
-        tw.place(spot.x, spot.z, spot.yaw);
-        world.playerFloor = tw.y / CELL_M;
-        world.playerJumpY = 0;
-        world.playerJumpVy = 0;
-        prevYawRef.current = tw.yaw;
-        freeLookRef.current = 0;
-      }
-      // The zone follows him (the door above, or anything else that moves him).
-      const zoneHere = Town.zoneAt(walker.x * CELL_M, walker.z * CELL_M);
-      if (zoneHere !== town.zone()) {
-        town.setZone(zoneHere);
-        marketRef.current?.setVisible(zoneHere === "out");
-      }
       town.setRented(rentedRef.current);
       const open = stashOpenRef.current;
       Town.ROOMS.forEach((r, ri) => r.chests.forEach((_, ci) => town.setChestOpen(ri, ci, !!open && open.room === ri && open.slot === ci)));
@@ -2130,12 +2228,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (town) {
         const rented = rentedRef.current;
         const feet = world.playerFloor * CELL_M;
-        // The front door, from inside or out.
-        const zoneNow = town.zone();
-        const ds = Town.DOOR_SPOT[zoneNow];
+        // The guild representative at his desk: quests to take and to turn in.
+        const ds = Town.DESK_SPOT;
         const dd = Math.hypot(ds.x - px, ds.z - pz);
-        if (dd < Town.DOOR_SPOT.reach && feet < 1 && look(ds.x, zoneNow === "in" ? Town.TAVERN.z0 - 1 : Town.TAVERN.z0 + 1) > 0.2) {
-          consider({ kind: "tavernDoor", key: zoneNow === "in" ? "out" : "in", verb: zoneNow === "in" ? "Leave" : "Enter", label: "the Wayfarer's Rest" }, dd);
+        if (dd < ds.reach && feet < 1 && look(Town.CLERK.x, Town.CLERK.z) > 0.3) {
+          consider({ kind: "quest", key: "0", verb: "Speak with", label: "the Guild Representative" }, dd);
         }
         // The teleporter: anywhere on the dais near its middle.
         if (feet > Town.DAIS.h * 0.6 && Math.hypot(px - Town.DAIS.x, pz - Town.DAIS.z) < Town.DAIS_REACH) {
@@ -2586,7 +2683,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   return null;
 };
 
-type Screen = "play" | "menu" | "inventory" | "character" | "shop" | "loot" | "class" | "party";
+type Screen = "play" | "menu" | "inventory" | "character" | "shop" | "loot" | "class" | "party" | "quests";
 
 export interface DungeonAppProps {
   backHref?: string;
@@ -2746,6 +2843,34 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [watchPick, setWatchPick] = useState(0);
   const remoteLayerRef = useRef<HTMLDivElement | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  // The guild's quests (quests.ts): taken at the representative's desk, counted as he plays.
+  const [quests, setQuests] = useState<QuestState>(loadQuests);
+  useEffect(() => saveQuests(quests), [quests]);
+  const handleQuestEvent = useCallback((e: QuestEvent) => {
+    setQuests((q) => {
+      const r = recordQuest(q, e);
+      if (r.finished.length) setToast(`Quest complete: ${r.finished.join(", ")}. See the guild representative for your reward.`);
+      return r.state;
+    });
+  }, []);
+  // Into the ring: what it is (once each time he steps onto the sand).
+  const inRing = hud.roomLabel === "The Arena (fighting ground)";
+  useEffect(() => {
+    if (inRing) setToast("The fighting ground: other players can strike you here, and you them. A knockout costs nothing.");
+  }, [inRing]);
+  // The arena's news: knocked out (and back up), or a bout won.
+  const [knockedBy, setKnockedBy] = useState<string | null>(null);
+  const handleArenaEvent = useCallback(
+    (e: ArenaEvent) => {
+      if (e.type === "down") setKnockedBy(mp.nameOf(e.by));
+      else if (e.type === "up") setKnockedBy(null);
+      else {
+        setToast(`You bested ${mp.nameOf(e.over)} in the arena!`);
+        handleQuestEvent({ type: "arenaWin" });
+      }
+    },
+    [handleQuestEvent]
+  );
   // A floor is up: a fresh run starts with what he carries now (kept in case he leaves mid-run); a
   // resumed run keeps what he carried in then.
   const resumedRef = useRef(false);
@@ -3130,6 +3255,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       else if (it.kind === "portal") escapeQueueRef.current = true;
       else if (it.kind === "teleport") descend();
       else if (it.kind === "player") mp.invite(it.key);
+      else if (it.kind === "quest") openScreen("quests");
       else if (it.kind === "tavernDoor") {
         // The screen goes dark, he steps through while it is, and the other side fades in.
         setDoorFadeKey((k) => k + 1);
@@ -3244,13 +3370,13 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         if (performance.now() - lockLostAtRef.current < 300) return;
         const cur = screenRef.current;
         if (cur === "play" || cur === "character") openScreen("menu");
-        else if (cur === "menu" || cur === "shop" || cur === "loot" || cur === "party") resume();
+        else if (cur === "menu" || cur === "shop" || cur === "loot" || cur === "party" || cur === "quests") resume();
         else openScreen("play");
         return;
       }
       // E: trade, search, loot, open or close what is in front of him (and E again walks away).
       if (e.code === "KeyE") {
-        if (screenRef.current === "shop" || screenRef.current === "loot") resume();
+        if (screenRef.current === "shop" || screenRef.current === "loot" || screenRef.current === "quests") resume();
         else if (screenRef.current === "play") interactNow(interactRef.current);
         return;
       }
@@ -3365,10 +3491,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const escapedNow = hud.escaped && !hud.dead && place === "dungeon";
   useEffect(() => {
     if (!escapedNow) return;
+    handleQuestEvent({ type: "escape", party: !!coopRef.current && coopRef.current.run.members.length > 1 });
     const g = runGainRef.current;
     setToast(g.gold > 0 || g.items > 0 ? `Back through the gate. You keep ${haul(g)} from the dungeon.` : "Back through the gate, empty-handed.");
     goToTown("gate");
-  }, [escapedNow, goToTown]);
+  }, [escapedNow, goToTown, handleQuestEvent]);
   const runElapsed = RUN_SECONDS - hud.runLeft;
   const portalsIn = Math.max(0, PORTALS_FROM - runElapsed);
 
@@ -3480,6 +3607,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           coopRef={coopRef}
           spectateRef={spectateRef}
           remoteLayerRef={remoteLayerRef}
+          onQuestEvent={handleQuestEvent}
+          onArenaEvent={handleArenaEvent}
         />
       </Canvas>
 
@@ -4154,7 +4283,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
                             ? "DESCEND"
                             : hud.interact.kind === "player"
                               ? "INVITE"
-                              : "LOOT"}
+                              : hud.interact.kind === "quest"
+                                ? "QUESTS"
+                                : "LOOT"}
             </button>
           ) : (
             <span style={{ display: "inline-block", minWidth: 22, padding: "2px 6px", textAlign: "center", border: "1px solid #e8dcc0", borderRadius: 3, fontSize: 12, fontWeight: 800, color: "#f3e6c4" }}>E</span>
@@ -4189,6 +4320,29 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       {screen === "play" || screen === "party" ? <InviteCards top={mobileMode ? 54 : 80} /> : null}
       {(screen === "play" || screen === "party") && place === "town" && !coopRun ? <JoinRunCard top={mobileMode ? 54 : 80} /> : null}
       {screen === "party" ? <PartyScreen onClose={resume} compact={mobileMode} inDungeon={place === "dungeon"} /> : null}
+      {screen === "quests" ? (
+        <QuestScreen
+          quests={quests}
+          compact={mobileMode}
+          onClose={resume}
+          onAccept={(id) => setQuests((q) => acceptQuest(q, id))}
+          onAbandon={(id) => setQuests((q) => abandonQuest(q, id))}
+          onTurnIn={(id) => {
+            const r = turnInQuest(quests, id);
+            if (!r.reward) return;
+            setQuests(r.state);
+            setInv((v) => ({ ...v, gold: v.gold + r.reward }));
+            setToast(`The guild pays you ${r.reward} gold.`);
+          }}
+        />
+      ) : null}
+      {/* Knocked out in the arena: a moment on the sand, then back at the gate (nothing is lost). */}
+      {knockedBy && place === "town" ? (
+        <div style={{ position: "fixed", top: "38%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 19, textAlign: "center", pointerEvents: "none" }}>
+          <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: mobileMode ? 26 : 40, letterSpacing: "0.1em", color: "#e0a040", textShadow: "0 0 18px rgba(0,0,0,0.9), 0 2px 4px #000" }}>KNOCKED OUT</div>
+          <div style={{ fontSize: 13, color: "#e8dcc0", textShadow: "0 1px 3px #000", marginTop: 6 }}>{knockedBy} wins the bout. Back on your feet at the gate in a moment. Nothing is lost.</div>
+        </div>
+      ) : null}
       {/* Chat and the party finder, with who is online (top middle; under the run clock below). */}
       {showGameHud && mpState.status !== "off" && !hud.dead && !hud.loading ? (
         <div

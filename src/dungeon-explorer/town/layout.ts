@@ -1,8 +1,15 @@
-// The town above the dungeon, as plain data (world metres; x east, z south, y up). The Wayfarer's
-// Rest is a two-storey tavern: the common room with the bar, the kitchen behind it and the hearth
-// on the ground floor; a gallery over the back of the hall with three rooms to rent upstairs. Its
-// door opens on a little square and the market street, stalls down both sides, which ends at the
-// gate hall: a vaulted stone room where the teleporter dais sends him down into the dungeon.
+// The town above the dungeon, as plain data (world metres; x east, z south, y up): one walled
+// plot with the Adventurers' Guild along its south side and Guild Street in front of it.
+//
+// The guild is one building of three parts under one roof, open to each other through arches:
+// - the great hall in the middle: the open entrance from the street, the guild representative's
+//   desk (quests) and, at the back, the teleporter dais that sends him down into the dungeon;
+// - the Wayfarer's Rest on the left (west): the common room with the bar and the hearth, a stair up
+//   to a gallery and the three rooms to rent;
+// - the arena on the right (east): a sand ring behind a fence where players may fight each other
+//   (and lose nothing: a knockout only puts him back at the gate).
+// The merchants' stalls stand against the guild's front wall either side of the entrance. A
+// castle wall closes the street on its other three sides, so nobody walks off the edge.
 //
 // Walking: the floor is a set of regions, each flat, a ramp (the stairs) or a disc (the dais). He
 // stands on the highest region under him within a step of his feet, and a move with no floor in
@@ -16,42 +23,64 @@ export const STEP_UP = 0.5;
 export const STEP_DOWN = 0.62;
 export const BODY_RADIUS = 0.3;
 
-/** Storey heights (m): the upper floor's boards, the slab under it, the tavern's ceiling. */
+/** Storey heights (m): the tavern's upper floor boards, the slab under it, its ceiling. */
 export const UPPER_Y = 3.6;
 export const SLAB_Y = 3.4;
-export const TAVERN_TOP = 7.2;
-/** The hall ceiling and the street's open sky (the camera's lid outdoors). */
+export const TAVERN_TOP = 7.4;
+/** The great hall's and the arena's ceilings, and the street's open sky (the camera's lid). */
 export const HALL_TOP = 12;
+export const ARENA_TOP = 10;
 const SKY = 40;
+/** Outer wall thickness, the partitions between the three parts, the border wall's height. */
+export const WT = 0.6;
+const PT = 0.3;
+export const BORDER_H = 5.5;
 
 // ---- Footprints --------------------------------------------------------------------------------
 
-export const TAVERN = { x0: -10, x1: 10, z0: 0, z1: 14 };
-/** The back of the ground floor sits under the upper storey from here (z). */
-export const GALLERY_Z = 7.5;
-/** The gallery walkway's far edge (z) and the rooms' front wall. */
-export const ROOMS_Z = 9.5;
-/** The upper storey ends here (x); above the kitchen is the loft, closed off. */
-export const UPPER_X1 = 4.4;
-/** The stair along the west wall: from the floor at z0 to the gallery at z1. */
-export const STAIR = { x0: -10, x1: -8.6, z0: 1.4, z1: GALLERY_Z };
-/** The kitchen, behind the bar. */
-export const KITCHEN = { x0: 4.4, x1: 10, z0: GALLERY_Z, z1: 14 };
-/** The bar counter (an L: the long run faces the hall). */
-export const BAR = { x0: 3.7, x1: 4.3, z0: 1.4, z1: 6.0 };
-export const FRONT_DOOR = { x0: -1.1, x1: 1.1, top: 2.7 };
-/** Doors through the kitchen walls: from behind the bar (in the z = GALLERY_Z wall) and from the hall (x = 4.4 wall). */
-export const KITCHEN_DOOR_S = { x0: 6.9, x1: 8.2 };
-export const KITCHEN_DOOR_W = { z0: 10.0, z1: 11.3 };
+/** The whole plot inside the border wall. */
+export const SITE = { x0: -32, x1: 32, z0: -22, z1: 26 };
+/** The guild building (inner faces of its outer walls; the front wall stands at z -WT..0). */
+export const GUILD = { x0: -32, x1: 32, z0: 0, z1: 26 };
+/** Guild Street in front of it. */
+export const STREET = { x0: -32, x1: 32, z0: -22, z1: -WT };
+/** The three parts (inner faces; the partitions stand at x = ±10). */
+export const TAVERN = { x0: -32, x1: -10 - PT, z0: 0, z1: 26 };
+export const HALL = { x0: -10 + PT, x1: 10 - PT, z0: 0, z1: 26 };
+export const ARENA_WING = { x0: 10 + PT, x1: 32, z0: 0, z1: 26 };
+/** The open entrance in the front wall, and the arches from the hall into either wing. */
+export const ENTRANCE = { x0: -2.6, x1: 2.6, top: 5.6 };
+export const SIDE_ARCH = { z0: 8, z1: 14, top: 4.8 };
 
-export const SQUARE = { x0: -10, x1: 10, z0: -6, z1: 0 };
-export const STREET = { x0: -5, x1: 5, z0: -46, z1: -6 };
-export const GATEWAY = { x0: -3, x1: 3, z0: -48, z1: -46, top: 6.6 };
-export const HALL = { x0: -11, x1: 11, z0: -74, z1: -48 };
-/** The teleporter dais in the gate hall. */
-export const DAIS = { x: 0, z: -61, r: 3.0, step: 0.5, h: 0.36 };
+/** The tavern's upper storey starts here (z): the gallery, then the rooms from ROOMS_Z. */
+export const GALLERY_Z = 15.5;
+export const ROOMS_Z = 18;
+/** The stair along the tavern's west wall: from the floor at z0 to the gallery at z1. */
+export const STAIR = { x0: -32, x1: -30.6, z0: 7.3, z1: GALLERY_Z };
+/** The bar counter (along z, facing west into the room; the barkeep works on its east side). */
+export const BAR = { x0: -14.6, x1: -14.0, z0: 1.2, z1: 6.6 };
+
+/** The guild representative's desk in the hall, and where he stands behind it. */
+export const DESK = { x0: -3.2, x1: 3.2, z0: 9.6, z1: 10.2 };
+export const CLERK = { x: 0, z: 11.1 };
+/** Where E reaches the desk from (in front of it), and how near is near enough (m). */
+export const DESK_SPOT = { x: 0, z: 8.9, reach: 2.4 };
+/** The quest board beside the desk (its face looks north). */
+export const QUEST_BOARD = { x: 5.4, z: 10.2 };
+
+/** The teleporter dais at the back of the hall. */
+export const DAIS = { x: 0, z: 20.2, r: 2.8, step: 0.5, h: 0.36 };
 /** How close to the dais centre E sends him down (m). */
 export const DAIS_REACH = 2.4;
+
+/** The arena's sand ring (inside the fence) and its gate on the west side (z range). */
+export const RING = { x0: 14.5, x1: 30, z0: 5, z1: 21 };
+export const RING_GATE = { z0: 11.5, z1: 14.5 };
+/** Inside the ring (fighting ground): players may strike each other only here. */
+export const inArena = (x: number, z: number) => x > RING.x0 + 0.15 && x < RING.x1 - 0.15 && z > RING.z0 + 0.15 && z < RING.z1 - 0.15;
+
+/** The fountain in the middle of the street. */
+export const FOUNTAIN = { x: 0, z: -12, r: 2.1 };
 
 // ---- Rooms to rent -----------------------------------------------------------------------------
 
@@ -71,9 +100,9 @@ export interface RentRoom {
 }
 
 const ROOM_EDGES: Array<[number, number]> = [
-  [-10, -5.3],
-  [-5.1, -0.5],
-  [-0.3, UPPER_X1],
+  [TAVERN.x0, -25],
+  [-24.8, -17.6],
+  [-17.4, TAVERN.x1],
 ];
 /** Rent for rooms I, II and III (paid once; the room is his for good). */
 export const ROOM_RENT = [100, 250, 450];
@@ -89,37 +118,28 @@ export const ROOMS: RentRoom[] = ROOM_EDGES.map(([x0, x1], i) => {
     z0: ROOMS_Z,
     z1: TAVERN.z1,
     door: { x0: mid - 0.55, x1: mid + 0.55 },
-    chests: [10.75, 11.95, 13.15].map((z) => ({ x: x1 - 0.36, z })),
+    chests: [19.4, 20.6, 21.8].map((z) => ({ x: x1 - 0.36, z })),
     bed: { x: x0 + 1.05, z: TAVERN.z1 - 1.1 },
   };
 });
 
 // ---- The market stalls (in the market's own frame: cells, with the grid's origin at 0) ---------
 
-/** Stalls along the street: west side facing east, east side facing west (z of each, m). */
-const STALL_SPOTS: Array<{ side: -1 | 1; z: number }> = [
-  { side: -1, z: -12 },
-  { side: 1, z: -16.5 },
-  { side: -1, z: -22 },
-  { side: 1, z: -27 },
-  { side: -1, z: -32 },
-];
+/** Stalls against the guild's front wall, either side of the entrance, facing the street (x, m). */
+export const STALL_XS = [-8, 8, -14, 14, -20];
 
 export function townStalls(): StallPlan[] {
-  return STALL_SPOTS.map((s, i) => {
-    const nx = -s.side;
-    return {
-      merchant: i,
-      x: (s.side * STREET.x1) / CELL_M,
-      z: s.z / CELL_M,
-      nx,
-      nz: 0,
-      // Along the wall = the normal turned a quarter to the left (as dungeon/market.ts).
-      tx: 0,
-      tz: nx,
-      floor: 0,
-    };
-  });
+  return STALL_XS.map((x, i) => ({
+    merchant: i,
+    x: x / CELL_M,
+    z: -WT / CELL_M,
+    // Out of the wall toward the street (north), and along it = the normal turned a quarter left.
+    nx: 0,
+    nz: -1,
+    tx: 1,
+    tz: 0,
+    floor: 0,
+  }));
 }
 
 // ---- Floor regions -----------------------------------------------------------------------------
@@ -133,21 +153,24 @@ export type Region =
 const flat = (x0: number, x1: number, z0: number, z1: number, y = 0): Region => ({ kind: "flat", x0, x1, z0, z1, y });
 
 export const REGIONS: Region[] = [
-  // Tavern ground floor (round the stair foot). The front door is shut: E there takes him through.
-  flat(TAVERN.x0, STAIR.x1, TAVERN.z0, STAIR.z0),
-  flat(TAVERN.x0, STAIR.x1, STAIR.z1, TAVERN.z1),
-  flat(STAIR.x1, TAVERN.x1, TAVERN.z0, TAVERN.z1),
-  // The stair and the upper storey: gallery and the three rooms.
-  { kind: "rampZ", x0: STAIR.x0, x1: STAIR.x1, z0: STAIR.z0, z1: STAIR.z1, y0: 0, y1: UPPER_Y },
-  flat(TAVERN.x0, UPPER_X1, GALLERY_Z, ROOMS_Z, UPPER_Y),
-  ...ROOMS.map((r) => flat(r.x0, r.x1, r.z0, r.z1, UPPER_Y)),
-  // Outside: the square, the street, the gateway and the hall, with the dais and its step.
-  flat(SQUARE.x0, SQUARE.x1, SQUARE.z0, SQUARE.z1 - 0.45),
+  // The street, and the entrance through the front wall.
   flat(STREET.x0, STREET.x1, STREET.z0, STREET.z1),
-  flat(GATEWAY.x0, GATEWAY.x1, GATEWAY.z0, GATEWAY.z1),
+  flat(ENTRANCE.x0, ENTRANCE.x1, -WT, 0),
+  // The great hall, the dais and its step, and the arches either side.
   flat(HALL.x0, HALL.x1, HALL.z0, HALL.z1),
   { kind: "disc", x: DAIS.x, z: DAIS.z, r: DAIS.r + DAIS.step, y: DAIS.h / 2 },
   { kind: "disc", x: DAIS.x, z: DAIS.z, r: DAIS.r, y: DAIS.h },
+  flat(TAVERN.x1, HALL.x0, SIDE_ARCH.z0, SIDE_ARCH.z1),
+  flat(HALL.x1, ARENA_WING.x0, SIDE_ARCH.z0, SIDE_ARCH.z1),
+  // The tavern's ground floor (round the stair foot), the stair and the upper storey.
+  flat(TAVERN.x0, STAIR.x1, TAVERN.z0, STAIR.z0),
+  flat(TAVERN.x0, STAIR.x1, STAIR.z1, TAVERN.z1),
+  flat(STAIR.x1, TAVERN.x1, TAVERN.z0, TAVERN.z1),
+  { kind: "rampZ", x0: STAIR.x0, x1: STAIR.x1, z0: STAIR.z0, z1: STAIR.z1, y0: 0, y1: UPPER_Y },
+  flat(TAVERN.x0, TAVERN.x1, GALLERY_Z, ROOMS_Z, UPPER_Y),
+  ...ROOMS.map((r) => flat(r.x0, r.x1, r.z0, r.z1, UPPER_Y)),
+  // The arena wing.
+  flat(ARENA_WING.x0, ARENA_WING.x1, ARENA_WING.z0, ARENA_WING.z1),
 ];
 
 function regionY(r: Region, x: number, z: number): number | null {
@@ -183,7 +206,7 @@ export interface Solid {
 
 const S = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: number, walk = true): Solid => ({ x0, x1, y0, y1, z0, z1, walk });
 
-/** A wall along x or z with gaps cut out (each gap open from the floor to `top`). */
+/** A wall along x (from x0 to x1, z0..z1 thick) with gaps cut out (each open from the floor to `top`). */
 function wallX(z0: number, z1: number, x0: number, x1: number, y0: number, y1: number, gaps: Array<{ a: number; b: number; top: number }> = []): Solid[] {
   const out: Solid[] = [];
   let at = x0;
@@ -195,62 +218,100 @@ function wallX(z0: number, z1: number, x0: number, x1: number, y0: number, y1: n
   if (at < x1) out.push(S(at, x1, z0, z1, y0, y1));
   return out;
 }
+/** The same along z (x0..x1 thick, from z0 to z1). */
 function wallZ(x0: number, x1: number, z0: number, z1: number, y0: number, y1: number, gaps: Array<{ a: number; b: number; top: number }> = []): Solid[] {
   return wallX(x0, x1, z0, z1, y0, y1, gaps).map((s) => S(s.z0, s.z1, s.x0, s.x1, s.y0, s.y1));
 }
 
-const T = 0.4; // outer wall thickness
+/** Which part a structure box belongs to (the 3D view picks its stone, plaster or wood by it). */
+export type Part = "border" | "tavern" | "hall" | "arena" | "inner" | "ceiling" | "slab" | "rooms" | "rail" | "stair";
+export interface Wall extends Solid {
+  part: Part;
+}
+const P = (part: Part, list: Solid[]): Wall[] => list.map((s) => ({ ...s, part }));
 
-/** Walls, slabs and partitions (the 3D view builds them from this list too). */
-export const STRUCTURE: Solid[] = [
-  // Tavern shell.
-  ...wallX(TAVERN.z0 - T, TAVERN.z0, TAVERN.x0 - T, TAVERN.x1 + T, 0, TAVERN_TOP, [{ a: FRONT_DOOR.x0, b: FRONT_DOOR.x1, top: FRONT_DOOR.top }]),
-  // The front door, shut.
-  S(FRONT_DOOR.x0, FRONT_DOOR.x1, TAVERN.z0 - T, TAVERN.z0, 0, FRONT_DOOR.top),
-  S(TAVERN.x0 - T, TAVERN.x1 + T, TAVERN.z1, TAVERN.z1 + T, 0, TAVERN_TOP),
-  S(TAVERN.x0 - T, TAVERN.x0, TAVERN.z0, TAVERN.z1, 0, TAVERN_TOP),
-  S(TAVERN.x1, TAVERN.x1 + T, TAVERN.z0, TAVERN.z1, 0, TAVERN_TOP),
-  S(TAVERN.x0 - T, TAVERN.x1 + T, TAVERN.z0 - T, TAVERN.z1 + T, TAVERN_TOP, TAVERN_TOP + 0.3),
-  // The upper floor's slab (the stair comes up through the gap at its west end).
-  S(STAIR.x1, TAVERN.x1, GALLERY_Z, TAVERN.z1, SLAB_Y, UPPER_Y, false),
-  S(TAVERN.x0, STAIR.x1, GALLERY_Z + 0.0, TAVERN.z1, SLAB_Y, UPPER_Y, false),
-  // Kitchen walls (ground floor), with their doors.
-  ...wallX(GALLERY_Z - 0.1, GALLERY_Z + 0.1, KITCHEN.x0, TAVERN.x1, 0, SLAB_Y, [{ a: KITCHEN_DOOR_S.x0, b: KITCHEN_DOOR_S.x1, top: 2.3 }]),
-  ...wallZ(KITCHEN.x0 - 0.1, KITCHEN.x0 + 0.1, GALLERY_Z, TAVERN.z1, 0, SLAB_Y, [{ a: KITCHEN_DOOR_W.z0, b: KITCHEN_DOOR_W.z1, top: 2.3 }]),
-  // Upstairs: the loft wall over the kitchen, the rooms' front wall and the partitions.
-  S(UPPER_X1, UPPER_X1 + 0.2, GALLERY_Z, TAVERN.z1, UPPER_Y, TAVERN_TOP),
-  ...wallX(ROOMS_Z, ROOMS_Z + 0.2, TAVERN.x0, UPPER_X1, UPPER_Y, TAVERN_TOP, ROOMS.map((r) => ({ a: r.door.x0, b: r.door.x1, top: UPPER_Y + 2.25 }))),
-  S(-5.3, -5.1, ROOMS_Z + 0.2, TAVERN.z1, UPPER_Y, TAVERN_TOP),
-  S(-0.5, -0.3, ROOMS_Z + 0.2, TAVERN.z1, UPPER_Y, TAVERN_TOP),
+/** Walls, slabs, partitions, stairs and railings (the 3D view builds them from this list too). */
+export const STRUCTURE: Wall[] = [
+  // The border wall round the street (the guild's own walls close the south side).
+  ...P("border", [
+    S(SITE.x0 - 1.2, SITE.x0, SITE.z0 - 1.2, -WT, 0, BORDER_H),
+    S(SITE.x1, SITE.x1 + 1.2, SITE.z0 - 1.2, -WT, 0, BORDER_H),
+    S(SITE.x0, SITE.x1, SITE.z0 - 1.2, SITE.z0, 0, BORDER_H),
+  ]),
+  // The front wall: the tavern's stretch, the hall's with the entrance, the arena's.
+  ...P("tavern", wallX(-WT, 0, GUILD.x0 - WT, -10 - PT, 0, TAVERN_TOP)),
+  ...P("hall", wallX(-WT, 0, -10 - PT, 10 + PT, 0, HALL_TOP, [{ a: ENTRANCE.x0, b: ENTRANCE.x1, top: ENTRANCE.top }])),
+  ...P("arena", wallX(-WT, 0, 10 + PT, GUILD.x1 + WT, 0, ARENA_TOP)),
+  // The back wall, the same three stretches.
+  ...P("tavern", [S(GUILD.x0 - WT, -10 - PT, GUILD.z1, GUILD.z1 + WT, 0, TAVERN_TOP)]),
+  ...P("hall", [S(-10 - PT, 10 + PT, GUILD.z1, GUILD.z1 + WT, 0, HALL_TOP)]),
+  ...P("arena", [S(10 + PT, GUILD.x1 + WT, GUILD.z1, GUILD.z1 + WT, 0, ARENA_TOP)]),
+  // The end walls.
+  ...P("tavern", [S(GUILD.x0 - WT, GUILD.x0, 0, GUILD.z1, 0, TAVERN_TOP)]),
+  ...P("arena", [S(GUILD.x1, GUILD.x1 + WT, 0, GUILD.z1, 0, ARENA_TOP)]),
+  // The partitions, each with its arch, up to the hall's ceiling.
+  ...P("inner", wallZ(-10 - PT, -10 + PT, 0, GUILD.z1, 0, HALL_TOP, [{ a: SIDE_ARCH.z0, b: SIDE_ARCH.z1, top: SIDE_ARCH.top }])),
+  ...P("inner", wallZ(10 - PT, 10 + PT, 0, GUILD.z1, 0, HALL_TOP, [{ a: SIDE_ARCH.z0, b: SIDE_ARCH.z1, top: SIDE_ARCH.top }])),
+  // Ceilings (the roofs over them are drawn, not solid: nobody gets up there).
+  ...P("ceiling", [
+    S(GUILD.x0 - WT, -10 - PT, -WT, GUILD.z1 + WT, TAVERN_TOP, TAVERN_TOP + 0.3),
+    S(-10 - PT, 10 + PT, -WT, GUILD.z1 + WT, HALL_TOP, HALL_TOP + 0.4),
+    S(10 + PT, GUILD.x1 + WT, -WT, GUILD.z1 + WT, ARENA_TOP, ARENA_TOP + 0.3),
+  ]),
+  // The tavern's upper floor slab (the stair comes up beside it, at the west wall).
+  ...P("slab", [S(TAVERN.x0, TAVERN.x1, GALLERY_Z, TAVERN.z1, SLAB_Y, UPPER_Y, false)]),
+  // Upstairs: the rooms' front wall with their doorways, and the walls between the rooms.
+  ...P("rooms", wallX(ROOMS_Z, ROOMS_Z + 0.2, TAVERN.x0, TAVERN.x1, UPPER_Y, TAVERN_TOP, ROOMS.map((r) => ({ a: r.door.x0, b: r.door.x1, top: UPPER_Y + 2.25 })))),
+  ...P("rooms", [S(-25, -24.8, ROOMS_Z + 0.2, TAVERN.z1, UPPER_Y, TAVERN_TOP), S(-17.6, -17.4, ROOMS_Z + 0.2, TAVERN.z1, UPPER_Y, TAVERN_TOP)]),
   // Gallery and stair railings (waist high).
-  S(STAIR.x1, UPPER_X1, GALLERY_Z - 0.06, GALLERY_Z + 0.06, UPPER_Y, UPPER_Y + 1.0),
-  S(STAIR.x1 - 0.06, STAIR.x1 + 0.06, STAIR.z0 + 0.6, GALLERY_Z, 0.9, UPPER_Y + 1.0),
+  ...P("rail", [
+    S(STAIR.x1, TAVERN.x1, GALLERY_Z - 0.06, GALLERY_Z + 0.06, UPPER_Y, UPPER_Y + 1.0),
+    S(STAIR.x1 - 0.06, STAIR.x1 + 0.06, STAIR.z0 + 0.6, GALLERY_Z, 0.9, UPPER_Y + 1.0),
+  ]),
   // The stair's body, as the treads (feet walk the ramp; the camera keeps out).
-  ...Array.from({ length: 18 }, (_, i) => {
-    const z0 = STAIR.z0 + ((STAIR.z1 - STAIR.z0) * i) / 18;
-    const z1 = STAIR.z0 + ((STAIR.z1 - STAIR.z0) * (i + 1)) / 18;
-    return S(STAIR.x0, STAIR.x1, z0, z1, 0, (UPPER_Y * (i + 1)) / 18 - 0.02, false);
-  }),
-  // The square's sides and the street's house fronts.
-  S(SQUARE.x0 - 1.2, SQUARE.x0, SQUARE.z0, SQUARE.z1, 0, 5.4),
-  S(SQUARE.x1, SQUARE.x1 + 1.2, SQUARE.z0, SQUARE.z1, 0, 5.4),
-  S(SQUARE.x0 - 1.2, STREET.x0, STREET.z0, SQUARE.z0, 0, 6),
-  S(STREET.x1, SQUARE.x1 + 1.2, STREET.z0, SQUARE.z0, 0, 6),
-  // The hall's north wall with the gateway, and the hall's shell.
-  ...wallX(GATEWAY.z0, GATEWAY.z1, HALL.x0 - 1, HALL.x1 + 1, 0, HALL_TOP, [{ a: GATEWAY.x0, b: GATEWAY.x1, top: GATEWAY.top }]),
-  S(HALL.x0 - 1, HALL.x0, HALL.z0, HALL.z1, 0, HALL_TOP),
-  S(HALL.x1, HALL.x1 + 1, HALL.z0, HALL.z1, 0, HALL_TOP),
-  S(HALL.x0 - 1, HALL.x1 + 1, HALL.z0 - 1, HALL.z0, 0, HALL_TOP),
-  S(HALL.x0 - 1, HALL.x1 + 1, HALL.z0 - 1, HALL.z1, HALL_TOP, HALL_TOP + 0.6),
+  ...P(
+    "stair",
+    Array.from({ length: 20 }, (_, i) => {
+      const z0 = STAIR.z0 + ((STAIR.z1 - STAIR.z0) * i) / 20;
+      const z1 = STAIR.z0 + ((STAIR.z1 - STAIR.z0) * (i + 1)) / 20;
+      return S(STAIR.x0, STAIR.x1, z0, z1, 0, (UPPER_Y * (i + 1)) / 20 - 0.02, false);
+    })
+  ),
 ];
 
 /** The hall's piers (centre x, z) and their half width. */
-export const PIERS: Array<{ x: number; z: number }> = [-52.5, -59, -65.5, -71].reduce<Array<{ x: number; z: number }>>((a, z) => a.concat([{ x: -8.6, z }, { x: 8.6, z }]), []);
+export const PIERS: Array<{ x: number; z: number }> = [4.5, 17, 23].reduce<Array<{ x: number; z: number }>>((a, z) => a.concat([{ x: -7.4, z }, { x: 7.4, z }]), []);
 export const PIER_HALF = 0.7;
+
+/** The arena fence: rails round the ring, open at its gate (boxes; bodies bump them). */
+export const FENCE: Solid[] = [
+  S(RING.x0 - 0.08, RING.x1 + 0.08, RING.z0 - 0.08, RING.z0 + 0.08, 0, 1.15),
+  S(RING.x0 - 0.08, RING.x1 + 0.08, RING.z1 - 0.08, RING.z1 + 0.08, 0, 1.15),
+  S(RING.x1 - 0.08, RING.x1 + 0.08, RING.z0, RING.z1, 0, 1.15),
+  S(RING.x0 - 0.08, RING.x0 + 0.08, RING.z0, RING_GATE.z0, 0, 1.15),
+  S(RING.x0 - 0.08, RING.x0 + 0.08, RING_GATE.z1, RING.z1, 0, 1.15),
+];
 
 /** Furniture and fittings that bodies bump (boxes; the 3D view places the models over them). */
 export interface Furn {
-  kind: "table" | "barCounter" | "barBack" | "hearth" | "stools" | "kitchenFire" | "worktable" | "kitchenShelf" | "barrels" | "bed" | "chest" | "commode" | "pier" | "brazier" | "gate" | "obelisk";
+  kind:
+    | "table"
+    | "barCounter"
+    | "barBack"
+    | "hearth"
+    | "bed"
+    | "chest"
+    | "commode"
+    | "pier"
+    | "brazier"
+    | "obelisk"
+    | "desk"
+    | "board"
+    | "bench"
+    | "rack"
+    | "fountain"
+    | "lamppost"
+    | "barrels";
   x: number;
   z: number;
   /** Footprint half sizes (m) and height. */
@@ -266,23 +327,27 @@ export interface Furn {
 
 /** Common-room tables: a table along x with a bench either side (z ± 1). */
 export const TABLES: Array<{ x: number; z: number }> = [
-  { x: -5.2, z: 3.1 },
-  { x: -5.2, z: 6.15 },
-  { x: 1.1, z: 5.0 },
-  { x: -3.6, z: 11.0 },
-  { x: 1.2, z: 11.6 },
+  { x: -25.6, z: 4.2 },
+  { x: -25.6, z: 10.4 },
+  { x: -19.8, z: 4.2 },
+  { x: -19.8, z: 10.4 },
+  { x: -24.6, z: 21.2 },
+  { x: -18.2, z: 21.2 },
+];
+
+/** Benches round the arena for those watching (along the north wall and the back wall). */
+export const ARENA_BENCHES: Array<{ x: number; z: number; yaw: number }> = [
+  ...[15.5, 19.5, 23.5, 27.5].map((x) => ({ x, z: 1.6, yaw: 0 })),
+  ...[15.5, 19.5, 23.5, 27.5].map((x) => ({ x, z: 24.4, yaw: Math.PI })),
 ];
 
 export const FURNITURE: Furn[] = [
+  // The tavern.
   ...TABLES.map((t): Furn => ({ kind: "table", x: t.x, z: t.z, hx: 1.25, hz: 1.28, h: 0.9 })),
   { kind: "barCounter", x: (BAR.x0 + BAR.x1) / 2, z: (BAR.z0 + BAR.z1) / 2, hx: (BAR.x1 - BAR.x0) / 2, hz: (BAR.z1 - BAR.z0) / 2, h: 1.1 },
-  { kind: "barCounter", x: 6.4, z: BAR.z0 - 0.0, hx: 2.1, hz: 0.3, h: 1.1 },
-  { kind: "barBack", x: 9.55, z: 3.6, hx: 0.45, hz: 2.6, h: 2.2 },
-  { kind: "hearth", x: -6.6, z: 13.25, hx: 1.3, hz: 0.75, h: 3.4 },
-  { kind: "kitchenFire", x: 8.6, z: 12.9, hx: 1.1, hz: 0.9, h: 1.0 },
-  { kind: "worktable", x: 6.9, z: 10.9, hx: 0.6, hz: 1.25, h: 0.9 },
-  { kind: "kitchenShelf", x: 9.6, z: 9.6, hx: 0.4, hz: 1.4, h: 2.0 },
-  { kind: "barrels", x: 5.0, z: 13.4, hx: 0.6, hz: 0.6, h: 1.1 },
+  { kind: "barBack", x: TAVERN.x1 - 0.45, z: 3.8, hx: 0.45, hz: 2.8, h: 2.2 },
+  { kind: "hearth", x: TAVERN.x0 + 0.75, z: 3.3, hx: 0.75, hz: 1.3, h: 3.4 },
+  { kind: "barrels", x: -12.2, z: 24.8, hx: 1.6, hz: 0.7, h: 1.1 },
   ...ROOMS.reduce<Furn[]>(
     (a, r, ri) =>
       a.concat([
@@ -292,23 +357,40 @@ export const FURNITURE: Furn[] = [
       ]),
     []
   ),
+  // The hall: piers, the desk and the board, braziers by the dais, the obelisks round it.
   ...PIERS.map((p): Furn => ({ kind: "pier", x: p.x, z: p.z, hx: PIER_HALF, hz: PIER_HALF, h: HALL_TOP })),
-  { kind: "brazier", x: -4.2, z: -70.6, hx: 0.45, hz: 0.45, h: 1.3 },
-  { kind: "brazier", x: 4.2, z: -70.6, hx: 0.45, hz: 0.45, h: 1.3 },
-  { kind: "gate", x: 0, z: HALL.z0 + 0.4, hx: 3.4, hz: 0.4, h: 7.5 },
+  { kind: "desk", x: 0, z: (DESK.z0 + DESK.z1) / 2, hx: (DESK.x1 - DESK.x0) / 2, hz: (DESK.z1 - DESK.z0) / 2, h: 1.1 },
+  { kind: "desk", x: DESK.x0 + 0.3, z: 11.1, hx: 0.3, hz: 0.9, h: 1.1 },
+  { kind: "desk", x: DESK.x1 - 0.3, z: 11.1, hx: 0.3, hz: 0.9, h: 1.1 },
+  { kind: "board", x: QUEST_BOARD.x, z: QUEST_BOARD.z, hx: 1.0, hz: 0.18, h: 2.4 },
+  { kind: "brazier", x: -4.4, z: DAIS.z + 3.6, hx: 0.45, hz: 0.45, h: 1.3 },
+  { kind: "brazier", x: 4.4, z: DAIS.z + 3.6, hx: 0.45, hz: 0.45, h: 1.3 },
   ...[0, 1, 2, 3].map((i): Furn => {
     const a = Math.PI / 4 + (i * Math.PI) / 2;
-    return { kind: "obelisk", x: DAIS.x + Math.sin(a) * (DAIS.r + 1.6), z: DAIS.z + Math.cos(a) * (DAIS.r + 1.6), hx: 0.4, hz: 0.4, h: 3.2, yaw: a };
+    return { kind: "obelisk", x: DAIS.x + Math.sin(a) * (DAIS.r + 1.5), z: DAIS.z + Math.cos(a) * (DAIS.r + 1.5), hx: 0.4, hz: 0.4, h: 3.2, yaw: a };
   }),
+  // The arena: benches, weapon racks, braziers at the ring's corners.
+  ...ARENA_BENCHES.map((b): Furn => ({ kind: "bench", x: b.x, z: b.z, hx: 0.95, hz: 0.3, h: 0.5, yaw: b.yaw })),
+  { kind: "rack", x: ARENA_WING.x1 - 0.4, z: 9.5, hx: 0.35, hz: 1.2, h: 1.9 },
+  { kind: "rack", x: ARENA_WING.x1 - 0.4, z: 16.5, hx: 0.35, hz: 1.2, h: 1.9 },
+  ...[
+    [RING.x0 - 0.9, RING.z0 - 0.9],
+    [RING.x1 + 0.9, RING.z0 - 0.9],
+    [RING.x0 - 0.9, RING.z1 + 0.9],
+    [RING.x1 + 0.9, RING.z1 + 0.9],
+  ].map(([x, z]): Furn => ({ kind: "brazier", x, z, hx: 0.45, hz: 0.45, h: 1.3 })),
+  // The street: the fountain, and lamp posts down both sides.
+  { kind: "fountain", x: FOUNTAIN.x, z: FOUNTAIN.z, hx: FOUNTAIN.r, hz: FOUNTAIN.r, h: 0.75 },
+  ...[-24, -12, 12, 24].reduce<Furn[]>((a, x) => a.concat([{ kind: "lamppost", x, z: -6.5, hx: 0.18, hz: 0.18, h: 3.6 }, { kind: "lamppost", x, z: -17.5, hx: 0.18, hz: 0.18, h: 3.6 }]), []),
 ];
 
 /** Bar stools in front of the counter (bodies bump them a little). */
-export const BAR_STOOLS = [2.0, 3.0, 4.0, 5.0].map((z) => ({ x: BAR.x0 - 0.55, z }));
+export const BAR_STOOLS = [2.0, 3.2, 4.4, 5.6].map((z) => ({ x: BAR.x0 - 0.55, z }));
 
 const furnSolids = (): Solid[] =>
   FURNITURE.map((f) => {
     const y = f.y ?? 0;
-    // Chests stand side-on (turned a quarter): their footprint swaps.
+    // Chests and benches turned a quarter: their footprint swaps.
     const quarter = f.yaw !== undefined && Math.abs(Math.sin(f.yaw)) > 0.7 && f.kind !== "obelisk";
     const hx = quarter ? f.hz : f.hx;
     const hz = quarter ? f.hx : f.hz;
@@ -316,12 +398,13 @@ const furnSolids = (): Solid[] =>
   }).concat(BAR_STOOLS.map((s) => S(s.x - 0.2, s.x + 0.2, s.z - 0.2, s.z + 0.2, 0, 0.75)));
 
 /** Posts under the gallery's edge (x). */
-export const GALLERY_POSTS = [-7.4, -3.4, 1.0];
+export const GALLERY_POSTS = [-27.2, -21.2, -15.2];
 
-const stallSolids = (): Solid[] =>
-  STALL_SPOTS.map((s) => (s.side < 0 ? S(STREET.x0, STREET.x0 + 1.62, s.z - 1.2, s.z + 1.2, 0, 2.7) : S(STREET.x1 - 1.62, STREET.x1, s.z - 1.2, s.z + 1.2, 0, 2.7)));
+/** The stalls against the front wall (their counters and awnings). */
+const stallSolids = (): Solid[] => STALL_XS.map((x) => S(x - 1.2, x + 1.2, -WT - 1.62, -WT, 0, 2.7));
 
-export const SOLIDS: Solid[] = STRUCTURE.concat(
+export const SOLIDS: Solid[] = (STRUCTURE as Solid[]).concat(
+  FENCE,
   furnSolids(),
   stallSolids(),
   GALLERY_POSTS.map((x) => S(x - 0.16, x + 0.16, GALLERY_Z - 0.16, GALLERY_Z + 0.16, 0, SLAB_Y))
@@ -345,13 +428,15 @@ export interface Air {
 }
 
 export const AIR: Air[] = [
+  { x0: STREET.x0, x1: STREET.x1, z0: STREET.z0, z1: STREET.z1, y0: 0, y1: SKY },
+  { x0: ENTRANCE.x0, x1: ENTRANCE.x1, z0: -WT - 0.01, z1: 0.01, y0: 0, y1: ENTRANCE.top },
+  { x0: HALL.x0, x1: HALL.x1, z0: HALL.z0, z1: HALL.z1, y0: 0, y1: HALL_TOP },
+  { x0: TAVERN.x1 - 0.01, x1: HALL.x0 + 0.01, z0: SIDE_ARCH.z0, z1: SIDE_ARCH.z1, y0: 0, y1: SIDE_ARCH.top },
+  { x0: HALL.x1 - 0.01, x1: ARENA_WING.x0 + 0.01, z0: SIDE_ARCH.z0, z1: SIDE_ARCH.z1, y0: 0, y1: SIDE_ARCH.top },
   { x0: TAVERN.x0, x1: TAVERN.x1, z0: TAVERN.z0, z1: GALLERY_Z, y0: 0, y1: TAVERN_TOP },
   { x0: TAVERN.x0, x1: TAVERN.x1, z0: GALLERY_Z, z1: TAVERN.z1, y0: 0, y1: SLAB_Y },
-  { x0: TAVERN.x0, x1: UPPER_X1, z0: GALLERY_Z, z1: TAVERN.z1, y0: UPPER_Y, y1: TAVERN_TOP },
-  { x0: SQUARE.x0, x1: SQUARE.x1, z0: SQUARE.z0, z1: SQUARE.z1 - 0.4, y0: 0, y1: SKY },
-  { x0: STREET.x0, x1: STREET.x1, z0: STREET.z0, z1: STREET.z1, y0: 0, y1: SKY },
-  { x0: GATEWAY.x0, x1: GATEWAY.x1, z0: GATEWAY.z0, z1: GATEWAY.z1, y0: 0, y1: GATEWAY.top },
-  { x0: HALL.x0, x1: HALL.x1, z0: HALL.z0, z1: HALL.z1, y0: 0, y1: HALL_TOP },
+  { x0: TAVERN.x0, x1: TAVERN.x1, z0: GALLERY_Z, z1: TAVERN.z1, y0: UPPER_Y, y1: TAVERN_TOP },
+  { x0: ARENA_WING.x0, x1: ARENA_WING.x1, z0: ARENA_WING.z0, z1: ARENA_WING.z1, y0: 0, y1: ARENA_TOP },
 ];
 
 const inBox = (s: Solid, x: number, y: number, z: number, m: number) => x > s.x0 - m && x < s.x1 + m && z > s.z0 - m && z < s.z1 + m && y > s.y0 - m && y < s.y1 + m;
@@ -396,39 +481,36 @@ export function clampAirY(x: number, y: number, z: number): number {
 
 // ---- Places ------------------------------------------------------------------------------------
 
+/** Inside the guild's walls (lit by its lamps, not the night sky). */
+export const indoors = (x: number, z: number) => z > -0.05 && x > GUILD.x0 - 0.1 && x < GUILD.x1 + 0.1;
+
 /** What to call where he stands. */
 export function areaName(x: number, z: number, y: number): string {
-  if (z >= TAVERN.z0 && z <= TAVERN.z1 && x >= TAVERN.x0 && x <= TAVERN.x1) {
+  if (!indoors(x, z)) return "Guild Street";
+  if (x < TAVERN.x1 + 0.2) {
     if (y > UPPER_Y - 0.4) {
       const r = ROOMS.findIndex((q) => x >= q.x0 && x <= q.x1 && z >= q.z0 + 0.2);
       return r >= 0 ? ROOMS[r].name : "Upstairs gallery";
     }
     if (x >= STAIR.x0 && x <= STAIR.x1 && z >= STAIR.z0 && z <= STAIR.z1 && y > 0.3) return "Stairs";
-    if (x > KITCHEN.x0 && z > KITCHEN.z0) return "Kitchen";
-    if (x > BAR.x1 && z < GALLERY_Z) return "Behind the bar";
-    return "Common room";
+    if (x > BAR.x1 && z < BAR.z1 + 0.5) return "Behind the bar";
+    return "The Wayfarer's Rest";
   }
-  if (z > SQUARE.z0) return "Tavern square";
-  if (z > STREET.z0) return "Market Street";
-  return "Gate of the Deep";
+  if (x > ARENA_WING.x0 - 0.2) return inArena(x, z) ? "The Arena (fighting ground)" : "The Arena";
+  if (z > DAIS.z - DAIS.r - 2.5) return "Gate of the Deep";
+  return "Adventurers' Guild";
 }
 
-/** Whether a point is inside the tavern (NPCs there are only drawn when he can see in). */
-export const inTavern = (x: number, z: number) => x > TAVERN.x0 && x < TAVERN.x1 && z > TAVERN.z0 - 0.5 && z < TAVERN.z1;
+/** Whether a point is inside the tavern part. */
+export const inTavern = (x: number, z: number) => x > TAVERN.x0 && x < TAVERN.x1 && z > TAVERN.z0 && z < TAVERN.z1;
 
-/** The zone a point is in: the tavern is drawn on its own, the outside on its own. */
-export const zoneAt = (x: number, z: number): "in" | "out" => (inTavern(x, z) && z > TAVERN.z0 ? "in" : "out");
 
-/** Where E works the front door from either side (m), and how near is near enough. */
-export const DOOR_SPOT = { in: { x: 0, z: TAVERN.z0 + 0.7 }, out: { x: 0, z: TAVERN.z0 - 1.2 }, reach: 1.7 };
-
-/** Where he stands on arrival: in the common room at the start, on the dais back from a dive. */
+/** Where he stands on arrival: in the tavern at the start, on the dais back from a dive. */
 export const SPAWN = {
-  tavern: { x: -0.4, z: 2.2, yaw: Math.PI },
-  /** Just inside the front door (facing in) and just outside it (facing the street). */
-  doorIn: { x: 0, z: TAVERN.z0 + 1.0, yaw: Math.PI },
-  doorOut: { x: 0, z: TAVERN.z0 - 2.7, yaw: 0 },
-  gate: { x: DAIS.x, z: DAIS.z + 1.2, yaw: Math.PI },
+  tavern: { x: -17.5, z: 7.6, yaw: -Math.PI / 2 },
+  gate: { x: DAIS.x, z: DAIS.z - 1.2, yaw: 0 },
+  /** Back on his feet after a knockout in the arena: outside the ring's gate, looking in. */
+  arena: { x: RING.x0 - 1.8, z: (RING_GATE.z0 + RING_GATE.z1) / 2, yaw: -Math.PI / 2 },
 };
 
 // ---- Townsfolk ---------------------------------------------------------------------------------
@@ -451,91 +533,106 @@ export interface NpcPlan {
   /** Pace (m/s) for walkers. */
   pace?: number;
   /** The clothes over the base body. */
-  dress: Array<"doublet" | "waist" | "cape" | "mail" | "gauntlets" | "tabard">;
+  dress: Array<"doublet" | "waist" | "cape" | "mail" | "gauntlets" | "tabard" | "cuirass" | "pauldrons" | "helm">;
   seed: number;
 }
 
 const BENCH = 1.0; // a bench's middle from its table's middle (z)
 const SEAT_IN = 0.06; // sitter's hips a touch toward the table from the bench's middle
+/** Facing: yaw 0 looks +z (south, into the guild), PI looks -z (north, to the street). */
+const NORTH = Math.PI;
+const EAST = Math.PI / 2;
+const WEST = -Math.PI / 2;
 
 export const NPCS: NpcPlan[] = [
+  // The guild representative behind his desk, two guards at the entrance, an adventurer about.
+  {
+    name: "Guild Representative",
+    kind: "walk",
+    pace: 0.7,
+    route: [
+      { x: CLERK.x, z: CLERK.z, wait: 9, arms: "hold", face: NORTH },
+      { x: CLERK.x - 1.4, z: CLERK.z, wait: 4, arms: "cross", face: NORTH },
+      { x: CLERK.x, z: CLERK.z, wait: 8, arms: "hold", face: NORTH },
+      { x: CLERK.x + 1.4, z: CLERK.z, wait: 4, arms: "reach", face: NORTH },
+    ],
+    dress: ["doublet", "tabard", "waist"],
+    seed: 101,
+  },
+  { name: "Guard", kind: "walk", pace: 0.6, route: [{ x: -3.7, z: 1.4, wait: 30, arms: "cross", face: NORTH }], dress: ["mail", "cuirass", "pauldrons", "helm", "tabard"], seed: 103 },
+  { name: "Guard", kind: "walk", pace: 0.6, route: [{ x: 3.7, z: 1.4, wait: 30, arms: "cross", face: NORTH }], dress: ["mail", "cuirass", "pauldrons", "helm", "tabard"], seed: 107 },
+  {
+    name: "Adventurer",
+    kind: "walk",
+    pace: 0.9,
+    route: [
+      { x: 5.4, z: 9.0, wait: 7, arms: "hold", face: 0 },
+      { x: 2.0, z: 6.5 },
+      { x: -1.0, z: 15.5, wait: 4, arms: "cross", face: 0 },
+      { x: -5.5, z: 12.0 },
+      { x: 4.0, z: 7.0 },
+    ],
+    dress: ["doublet", "waist", "cape"],
+    seed: 109,
+  },
+  // The tavern.
   {
     name: "Barkeep",
     kind: "walk",
     pace: 0.8,
     route: [
-      { x: 5.0, z: 2.3, wait: 5, arms: "hold", face: -Math.PI / 2 },
-      { x: 5.0, z: 4.0, wait: 3, arms: "hold", face: -Math.PI / 2 },
-      { x: 5.2, z: 5.4, wait: 4, arms: "cross", face: -Math.PI / 2 },
-      { x: 8.6, z: 4.4, wait: 3, arms: "reach", face: Math.PI / 2 },
+      { x: -13.2, z: 2.2, wait: 5, arms: "hold", face: WEST },
+      { x: -13.2, z: 4.0, wait: 3, arms: "hold", face: WEST },
+      { x: -13.2, z: 5.8, wait: 4, arms: "cross", face: WEST },
+      { x: -11.4, z: 4.4, wait: 3, arms: "reach", face: EAST },
     ],
     dress: ["doublet", "waist"],
     seed: 11,
   },
-  {
-    name: "Cook",
-    kind: "walk",
-    pace: 0.9,
-    route: [
-      { x: 8.1, z: 11.6, wait: 6, arms: "reach", face: 0 },
-      { x: 7.9, z: 9.3 },
-      { x: 6.0, z: 9.4, wait: 5, arms: "hold", face: Math.PI / 2 },
-      { x: 6.0, z: 12.2, wait: 4, arms: "hold", face: Math.PI / 2 },
-      { x: 6.0, z: 9.4 },
-      { x: 7.9, z: 9.3 },
-    ],
-    dress: ["doublet"],
-    seed: 23,
-  },
   { name: "Patron", kind: "sit", seat: { x: TABLES[0].x - 0.5, z: TABLES[0].z - BENCH + SEAT_IN, yaw: 0, arms: "eat" }, dress: ["doublet", "cape"], seed: 31 },
-  { name: "Patron", kind: "sit", seat: { x: TABLES[2].x + 0.4, z: TABLES[2].z + BENCH - SEAT_IN, yaw: Math.PI, arms: "knees" }, dress: ["doublet", "waist"], seed: 37 },
+  { name: "Patron", kind: "sit", seat: { x: TABLES[2].x + 0.4, z: TABLES[2].z + BENCH - SEAT_IN, yaw: NORTH, arms: "knees" }, dress: ["doublet", "waist"], seed: 37 },
   { name: "Patron", kind: "sit", seat: { x: TABLES[3].x + 0.5, z: TABLES[3].z - BENCH + SEAT_IN, yaw: 0, arms: "eat" }, dress: ["mail"], seed: 41 },
-  { name: "Patron", kind: "sit", seat: { x: TABLES[1].x + 0.3, z: TABLES[1].z + BENCH - SEAT_IN, yaw: Math.PI, arms: "hold" }, dress: ["doublet"], seed: 47 },
-  {
-    name: "Patron",
-    kind: "walk",
-    pace: 1.1,
-    route: [
-      { x: 0.0, z: 1.2, wait: 1.5 },
-      { x: 2.6, z: 2.0 },
-      { x: 2.8, z: 3.5, wait: 6, arms: "hold", face: Math.PI / 2 },
-      { x: 2.55, z: 7.0 },
-      { x: 2.2, z: 8.3 },
-      { x: -1.4, z: 8.3 },
-      { x: -5.6, z: 9.3 },
-      { x: -6.6, z: 11.9, wait: 7, arms: "cross", face: 0 },
-      { x: -5.6, z: 9.3 },
-      { x: -1.2, z: 8.9 },
-      { x: -1.6, z: 3.4, wait: 2 },
-    ],
-    dress: ["doublet", "waist", "cape"],
-    seed: 53,
-  },
+  { name: "Patron", kind: "sit", seat: { x: TABLES[4].x + 0.3, z: TABLES[4].z + BENCH - SEAT_IN, yaw: NORTH, arms: "hold" }, dress: ["doublet"], seed: 47 },
   {
     name: "Patron",
     kind: "walk",
     pace: 1.0,
     route: [
-      { x: -2.6, z: 1.6 },
-      { x: -2.6, z: 8.6 },
-      { x: 3.0, z: 8.8 },
-      { x: 2.55, z: 6.9, wait: 5, arms: "hold", face: Math.PI / 2 },
-      { x: 2.55, z: 2.6 },
-      { x: -1.2, z: 1.0, wait: 3, arms: "cross" },
+      { x: -16.2, z: 3.0, wait: 6, arms: "hold", face: EAST },
+      { x: -17.0, z: 7.4 },
+      { x: -22.6, z: 7.4 },
+      { x: -28.6, z: 3.4, wait: 7, arms: "cross", face: WEST },
+      { x: -22.6, z: 13.6 },
+      { x: -16.6, z: 13.6, wait: 3 },
     ],
-    dress: ["tabard", "mail"],
-    seed: 59,
+    dress: ["doublet", "waist", "cape"],
+    seed: 53,
   },
+  // The arena: its master by the gate, a watcher on a bench.
+  {
+    name: "Arena Master",
+    kind: "walk",
+    pace: 0.8,
+    route: [
+      { x: 12.4, z: 10.2, wait: 10, arms: "cross", face: EAST },
+      { x: 12.4, z: 15.8, wait: 10, arms: "cross", face: EAST },
+    ],
+    dress: ["mail", "cuirass", "gauntlets", "tabard"],
+    seed: 113,
+  },
+  { name: "Spectator", kind: "sit", seat: { x: ARENA_BENCHES[1].x, z: ARENA_BENCHES[1].z - 0.05, yaw: 0, arms: "knees" }, dress: ["doublet", "cape"], seed: 117 },
+  // The street.
   {
     name: "Townsman",
     kind: "walk",
     pace: 1.15,
     route: [
-      { x: -2.0, z: -3.0, wait: 3, arms: "cross" },
-      { x: -1.6, z: -20 },
-      { x: -1.2, z: -42, wait: 4, arms: "hold", face: Math.PI },
-      { x: 1.8, z: -28 },
-      { x: 2.0, z: -8 },
+      { x: -26, z: -10, wait: 3, arms: "cross" },
+      { x: -6, z: -5.0 },
+      { x: 6, z: -5.0 },
+      { x: 26, z: -10, wait: 4, arms: "hold", face: NORTH },
+      { x: 6, z: -19 },
+      { x: -6, z: -19 },
     ],
     dress: ["doublet", "cape"],
     seed: 67,
@@ -545,11 +642,11 @@ export const NPCS: NpcPlan[] = [
     kind: "walk",
     pace: 1.0,
     route: [
-      { x: 1.6, z: -40 },
-      { x: 1.7, z: -27.6, wait: 5, arms: "hold", face: Math.PI / 2 },
-      { x: 1.2, z: -4.0, wait: 3 },
-      { x: -2.4, z: -14.0 },
-      { x: -1.8, z: -31.5, wait: 5, arms: "hold", face: -Math.PI / 2 },
+      { x: 3.6, z: -15, wait: 6, arms: "hold", face: NORTH },
+      { x: 10, z: -9 },
+      { x: 14, z: -4.6, wait: 5, arms: "hold", face: 0 },
+      { x: -8, z: -4.6, wait: 5, arms: "hold", face: 0 },
+      { x: -10, z: -12 },
     ],
     dress: ["doublet", "waist"],
     seed: 71,
@@ -559,28 +656,28 @@ export const NPCS: NpcPlan[] = [
 // ---- Walking -----------------------------------------------------------------------------------
 
 /** Bodies bump solids at their own height: from the knees to the top of the head. */
-function pushOut(P: { x: number; z: number }, feet: number, r: number, extra: Solid[]) {
+function pushOut(Pt: { x: number; z: number }, feet: number, r: number, extra: Solid[]) {
   const test = (s: Solid) => {
     if (!s.walk || s.y1 <= feet + 0.3 || s.y0 >= feet + 1.7) return;
-    const nx = Math.max(s.x0, Math.min(P.x, s.x1));
-    const nz = Math.max(s.z0, Math.min(P.z, s.z1));
-    const dx = P.x - nx;
-    const dz = P.z - nz;
+    const nx = Math.max(s.x0, Math.min(Pt.x, s.x1));
+    const nz = Math.max(s.z0, Math.min(Pt.z, s.z1));
+    const dx = Pt.x - nx;
+    const dz = Pt.z - nz;
     const q = dx * dx + dz * dz;
     if (q >= r * r) return;
     if (q > 1e-9) {
       const l = Math.sqrt(q);
-      P.x = nx + (dx / l) * r;
-      P.z = nz + (dz / l) * r;
+      Pt.x = nx + (dx / l) * r;
+      Pt.z = nz + (dz / l) * r;
       return;
     }
     // Inside: out by the nearest face.
-    const e = [P.x - s.x0, s.x1 - P.x, P.z - s.z0, s.z1 - P.z];
+    const e = [Pt.x - s.x0, s.x1 - Pt.x, Pt.z - s.z0, s.z1 - Pt.z];
     const m = e.indexOf(Math.min(...e));
-    if (m === 0) P.x = s.x0 - r;
-    if (m === 1) P.x = s.x1 + r;
-    if (m === 2) P.z = s.z0 - r;
-    if (m === 3) P.z = s.z1 + r;
+    if (m === 0) Pt.x = s.x0 - r;
+    if (m === 1) Pt.x = s.x1 + r;
+    if (m === 2) Pt.z = s.z0 - r;
+    if (m === 3) Pt.z = s.z1 + r;
   };
   for (let i = 0; i < 2; i++) {
     for (const s of SOLIDS) test(s);
@@ -593,7 +690,7 @@ function pushOut(P: { x: number; z: number }, feet: number, r: number, extra: So
  * CELL_M, so the game loop treats both alike); `y` is the floor under him (m).
  */
 export function createTownWalker(extraSolids: () => Solid[]) {
-  const P = { x: 0, z: 0 };
+  const Pt = { x: 0, z: 0 };
   const w = {
     x: 0,
     z: 0,
@@ -641,13 +738,13 @@ export function createTownWalker(extraSolids: () => Solid[]) {
       const steps = Math.max(1, Math.ceil(Math.hypot(mx, mz) / 0.12));
       // A move goes through when there is floor in reach where it ends; otherwise each axis on its own (sliding).
       const tryMove = (nx: number, nz: number) => {
-        P.x = nx;
-        P.z = nz;
-        pushOut(P, y, BODY_RADIUS, extra);
-        const g = groundAt(P.x, P.z, y);
+        Pt.x = nx;
+        Pt.z = nz;
+        pushOut(Pt, y, BODY_RADIUS, extra);
+        const g = groundAt(Pt.x, Pt.z, y);
         if (g === null) return false;
-        x = P.x;
-        z = P.z;
+        x = Pt.x;
+        z = Pt.z;
         y = g;
         return true;
       };

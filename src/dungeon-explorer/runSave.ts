@@ -11,7 +11,8 @@ import type { Container } from "./loot";
 import type { PlayerInv } from "./playerInv";
 
 const RUN_KEY = "simforge.explorer.run.v1";
-const TOWN_KEY = "simforge.explorer.townspot.v1";
+// v2: the town became the Adventurers' Guild (2026-11-19); spots in the old streets are void.
+const TOWN_KEY = "simforge.explorer.townspot.v2";
 /** Less than this left on the clock and the run is not worth resuming. */
 const MIN_LEFT_MS = 5000;
 

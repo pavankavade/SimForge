@@ -12,6 +12,22 @@ Dungeon Forge by Majid Manzarpour, MIT: the generator, room roles and post-proce
 
 "Dirt Floor" by eye-candy.xyz (Poly Haven, https://polyhaven.com/a/dirt_floor), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
 
+The Adventurers' Guild in town (assets/materials/, from Patch's asset library):
+
+"Wood Floor Worn" by Dimitrios Savva (Poly Haven, https://polyhaven.com/a/wood_floor_worn), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
+
+"Cobblestone Pavement" by Charlotte Baglioni (Poly Haven, https://polyhaven.com/a/cobblestone_pavement), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
+
+"Stone Tiles 02" by Charlotte Baglioni (Poly Haven, https://polyhaven.com/a/stone_tiles_02), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
+
+"Castle Wall Variation" by Rob Tuytel (Poly Haven, https://polyhaven.com/a/castle_wall_varriation), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
+
+"Roof Tiles" by Stephan Seeliger (Poly Haven, https://polyhaven.com/a/roof_tiles), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
+
+"Dark Wooden Planks" by Amal Kumar (Poly Haven, https://polyhaven.com/a/dark_wooden_planks), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
+
+"Aerial Sand" by Rob Tuytel (Poly Haven, https://polyhaven.com/a/aerial_sand), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
+
 three.js: MIT, the three.js authors. https://github.com/mrdoob/three.js. Its notice, with the other libraries', is in THIRD-PARTY-NOTICES.md.
 
 Base human (body, eyes, eyebrows, eyelashes, short02 and short04 hair, young and middle-aged male skins, eye textures): MakeHuman (https://www.makehumancommunity.org), the MakeHuman system assets, licensed CC0 1.0 Universal. Exported with MPFB by scripts/blender/export-human.py; changed by Patch: one male body with face and build morphs, textures resized. MPFB itself is not distributed.

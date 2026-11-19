@@ -19,13 +19,14 @@
 //   rs     { st: "in" | "dead" | "out" }     how he stands in the party's dive
 //   away   { on }                            his window is hidden (his game is paused)
 //   g      { to?, ... }                      game traffic inside a dive (monsters, hits, doors)
+//   pvp    { to, dmg, dx, dz, ko? }          a blow in the town's arena (ko: word back to the winner)
 //   ping   { }
 // From the hub: welcome, join, gone, look, where, s, chat, invite, party, run, runstate, g, sys,
 // err, pong. Every message from a player carries his id as `id` (or `from`).
 
 const MAX_PARTY = 4;
 /** A player whose socket closed keeps his place in his party this long (a reload, a dropped line). */
-const GRACE_MS = 60_000;
+const GRACE_MS = 120_000;
 const INVITE_MS = 60_000;
 const CHAT_MAX = 200;
 const NAME_RE = /^[\p{L}\p{N} '._-]{1,24}$/u;
@@ -192,6 +193,14 @@ export class Hub {
       case "away":
         this.runAway(p, !!m.on);
         return;
+      case "pvp": {
+        // A blow in the arena (or word of a knockout back to the winner): only between two in town.
+        const o = this.players.get(m.to);
+        if (!o || o === p || o.place !== "town" || p.place !== "town") return;
+        const dmg = Math.max(0, Math.min(200, Number(m.dmg) || 0));
+        this.send(o, { t: "pvp", from: p.id, dmg, dx: Number(m.dx) || 0, dz: Number(m.dz) || 0, ko: !!m.ko });
+        return;
+      }
     }
   }
 

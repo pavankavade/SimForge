@@ -1,16 +1,18 @@
-// The town in 3D, built once from layout.ts: the Wayfarer's Rest (timber, plaster and stone, the
-// bar, the kitchen, the hearth, the gallery and the three rooms to rent), the market street lined
-// with houses, and the gate hall with the teleporter dais. Furniture is CC0 Patch models (the
-// same sets as the dungeon rooms); the shell is boxes with world-scaled procedural textures, merged
-// per material. A small pool of point lights follows him round the lamps, so the shader's light
-// count never changes. The townsfolk are the same realistic humans as the merchants.
+// The town in 3D, built once from layout.ts: the Adventurers' Guild (the great hall with the
+// guild representative's desk and the teleporter dais, the Wayfarer's Rest with its gallery and
+// rooms to rent, and the arena's sand ring), Guild Street in front of it with the merchants' stalls
+// and a fountain, and the castle wall round it all. The surfaces are the same family of scanned
+// CC0 materials as the dungeon below (stone blocks, plaster, worn boards, cobbles, roof tiles,
+// sand); furniture is CC0 Patch models. The shell is boxes with world-scaled UVs, merged per
+// material. A small pool of point lights follows him round the lamps, so the shader's light count
+// never changes. The townsfolk are the same realistic humans as the merchants.
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { ARMOR_SLOTS, createPaladin, type ArmorSlot, type Paladin } from "../../artifacts/characters/paladin";
-import { makeFabric, makeFlagstone, makeMasonry, makeWood, type SurfaceSet } from "../../engine/textures";
+import { makeFabric } from "../../engine/textures";
 import { randomSpec } from "../CharacterCustomizer";
 import { MERCHANTS, css } from "../merchants";
-import { loadModel, placeModel } from "../props3d";
+import { placeModel } from "../props3d";
 import { hingeLid } from "../roomView";
 import * as L from "./layout";
 
@@ -32,7 +34,7 @@ export interface Town {
   setActive: (on: boolean) => void;
   /** The nearest lamp's shadow (off on the lower graphics settings, graphics.ts). */
   setShadows: (on: boolean) => void;
-  /** Which zone is drawn: inside the tavern, or outside (square, street, gate hall). */
+  /** One open place now: kept for callers (no part is swapped out). */
   setZone: (zone: "in" | "out") => void;
   zone: () => "in" | "out";
   update: (dt: number, time: number, player: THREE.Vector3) => void;
@@ -155,65 +157,6 @@ function canvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D)
   return t;
 }
 
-/** Lime plaster: warm off-white with soft blotches and a few cracks. */
-function plasterTexture(seed: number, base: [number, number, number]): THREE.CanvasTexture {
-  let s = seed >>> 0;
-  const rnd = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
-  return canvasTexture(256, 256, (g) => {
-    g.fillStyle = `rgb(${base[0]},${base[1]},${base[2]})`;
-    g.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 260; i++) {
-      const x = rnd() * 256;
-      const y = rnd() * 256;
-      const r = 6 + rnd() * 30;
-      const k = rnd() < 0.5 ? 0 : 255;
-      const grad = g.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, `rgba(${k},${k * 0.95},${k * 0.85},${0.05 + rnd() * 0.05})`);
-      grad.addColorStop(1, "rgba(0,0,0,0)");
-      g.fillStyle = grad;
-      for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) g.fillRect(x - r + ox, y - r + oy, r * 2, r * 2);
-    }
-    g.strokeStyle = "rgba(60,45,30,0.22)";
-    g.lineWidth = 1;
-    for (let i = 0; i < 6; i++) {
-      let x = rnd() * 256;
-      let y = rnd() * 256;
-      g.beginPath();
-      g.moveTo(x, y);
-      for (let k = 0; k < 6; k++) {
-        x += (rnd() - 0.5) * 18;
-        y += rnd() * 12;
-        g.lineTo(x, y);
-      }
-      g.stroke();
-    }
-  });
-}
-
-/** Roof slates in staggered rows. */
-function slateTexture(): THREE.CanvasTexture {
-  let s = 99;
-  const rnd = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
-  return canvasTexture(256, 256, (g) => {
-    g.fillStyle = "#1c1d22";
-    g.fillRect(0, 0, 256, 256);
-    const rows = 8;
-    const rh = 256 / rows;
-    for (let r = 0; r < rows; r++) {
-      const off = r % 2 ? 16 : 0;
-      for (let c = -1; c < 9; c++) {
-        const x = c * 32 + off;
-        const l = 52 + Math.floor(rnd() * 26);
-        g.fillStyle = `rgb(${l},${l + 2},${l + 8})`;
-        g.fillRect(x + 1, r * rh + 1, 30, rh - 3);
-        g.fillStyle = "rgba(0,0,0,0.35)";
-        g.fillRect(x + 1, r * rh + rh - 6, 30, 4);
-      }
-    }
-  });
-}
-
-/** Painted board with lettering (signs, plaques). */
 function signTexture(lines: string[], bg: string, fg: string, w = 512, h = 128): THREE.CanvasTexture {
   return canvasTexture(w, h, (g) => {
     g.fillStyle = bg;
@@ -323,28 +266,78 @@ function skyTexture(): THREE.CanvasTexture {
   });
 }
 
-/** Boards running up and down (the planks texture turned a quarter; its normal map left off, since turning it would light the grooves wrongly). */
-function uprightPlanks(set: SurfaceSet): SurfaceSet {
-  for (const t of [set.map, set.roughnessMap]) {
-    if (!t) continue;
-    t.center.set(0.5, 0.5);
-    t.rotation = Math.PI / 2;
-  }
-  set.normalMap?.dispose();
-  return { ...set, normalMap: null };
+// ---- Scanned surfaces --------------------------------------------------------------------------
+
+const scanLoader = new THREE.TextureLoader();
+
+/**
+ * A scanned PBR surface from public/dungeon-explorer/assets/materials (1K maps, the same family as
+ * the dungeon's stone and plaster), optionally tinted. Its maps are shared by `variant`s.
+ */
+function scanned(dir: string, file: string, own: (t: THREE.Texture) => void, opts: { tint?: number; roughness?: number; normal?: number } = {}) {
+  const tex = (map: string, srgb: boolean) => {
+    const t = scanLoader.load(`/assets/materials/${dir}/${file}_${map}.jpg`);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+    t.anisotropy = 8;
+    own(t);
+    return t;
+  };
+  const maps = { map: tex("baseColor", true), normalMap: tex("normal", false), roughnessMap: tex("roughness", false) };
+  const make = (o: { tint?: number; roughness?: number; normal?: number } = {}) => {
+    const n = o.normal ?? 1;
+    return new THREE.MeshStandardMaterial({ ...maps, color: o.tint ?? 0xffffff, roughness: o.roughness ?? 1, metalness: 0, normalScale: new THREE.Vector2(n, n) });
+  };
+  return { mat: make(opts), variant: make };
 }
 
-const surface = (set: SurfaceSet, extra: THREE.MeshStandardMaterialParameters = {}) => {
-  const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0, ...extra });
-  m.map = set.map;
-  m.normalMap = set.normalMap;
-  m.roughnessMap = set.roughnessMap;
-  return m;
-};
+/** UVs of a shape's own geometry (an extruded roof, a cylinder) scaled to `1 / tile` per metre. */
+function scaleUV(g: THREE.BufferGeometry, k: number) {
+  const uv = g.getAttribute("uv") as THREE.BufferAttribute | undefined;
+  if (!uv) return g;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * k, uv.getY(i) * k);
+  uv.needsUpdate = true;
+  return g;
+}
+
+/** The quest board's notices: pinned parchment of different sizes, a few lines of scrawl each. */
+function noticesTexture(): THREE.CanvasTexture {
+  let s = 41;
+  const rnd = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
+  return canvasTexture(512, 512, (g) => {
+    g.fillStyle = "#4a2f1a";
+    g.fillRect(0, 0, 512, 512);
+    g.fillStyle = "#e8d4a0";
+    g.font = "bold 44px Georgia, 'Times New Roman', serif";
+    g.textAlign = "center";
+    g.fillText("NOTICES", 256, 58);
+    const notes = [
+      [40, 96, 200, 170],
+      [262, 92, 210, 150],
+      [56, 290, 170, 190],
+      [250, 262, 220, 210],
+    ];
+    notes.forEach(([x, y, w, h], i) => {
+      g.save();
+      g.translate(x + w / 2, y + h / 2);
+      g.rotate((rnd() - 0.5) * 0.12);
+      g.fillStyle = i % 2 ? "#e6d3a3" : "#dcc690";
+      g.fillRect(-w / 2, -h / 2, w, h);
+      g.fillStyle = "#3a2a18";
+      g.font = "bold 22px Georgia, serif";
+      g.fillText(["WANTED", "BOUNTY", "REWARD", "HELP"][i], 0, -h / 2 + 32);
+      g.fillStyle = "rgba(58,42,24,0.75)";
+      for (let k = 0; k < 4; k++) g.fillRect(-w / 2 + 16, -h / 2 + 52 + k * 24, w - 32 - rnd() * 50, 5);
+      g.fillStyle = "#8a1d14";
+      g.beginPath();
+      g.arc(0, -h / 2 + 8, 7, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    });
+  });
+}
 
 // ---- Lamps -------------------------------------------------------------------------------------
-
-type Zone = "in" | "out" | "hall";
 
 interface Lamp {
   at: THREE.Vector3;
@@ -352,10 +345,9 @@ interface Lamp {
   power: number;
   range: number;
   flicker: number;
-  zone: Zone;
+  /** Lit inside the guild (else out on the street). */
+  indoors: boolean;
 }
-
-const zoneOf = (x: number, z: number): Zone => (L.inTavern(x, z) && z > 0 ? "in" : z < L.GATEWAY.z0 + 0.6 ? "hall" : "out");
 
 // ---- The town ----------------------------------------------------------------------------------
 
@@ -366,75 +358,76 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   const owned: Array<{ dispose: () => void }> = [];
   let alive = true;
   const live = () => alive;
-
-  // Materials.
   const own = <T extends { dispose: () => void }>(x: T): T => {
     owned.push(x);
     return x;
   };
-  const texSet = (set: SurfaceSet) => {
-    for (const t of [set.map, set.normalMap, set.roughnessMap]) if (t) owned.push(t);
-    return set;
+  const ownTex = (t: THREE.Texture) => {
+    owned.push(t);
   };
+
+  /** Woven cloth (banners, the rugs): the procedural weave, its maps owned here. */
+  const fabric = (base: string, seed: number, twoSided: boolean) => {
+    const set = makeFabric({ size: 256, base, seed });
+    for (const t of [set.map, set.normalMap, set.roughnessMap]) if (t) owned.push(t);
+    return new THREE.MeshStandardMaterial({ map: set.map, normalMap: set.normalMap, roughnessMap: set.roughnessMap, roughness: 0.95, side: twoSided ? THREE.DoubleSide : THREE.FrontSide });
+  };
+  /** No gloss: the scan's roughness map off (tiles under the night sky turned to mirrors). */
+  const matte = (m: THREE.MeshStandardMaterial) => {
+    m.roughnessMap = null;
+    m.roughness = 0.95;
+    return m;
+  };
+  // Materials: the scans, and a few plain ones for iron, flame and glass.
+  const blocks = scanned("medievalBlocks05", "medieval_blocks_05", ownTex);
+  const wood = scanned("darkWoodenPlanks", "dark_wooden_planks", ownTex, { roughness: 0.9 });
   const M = {
-    plaster: own(new THREE.MeshStandardMaterial({ map: own(plasterTexture(5, [214, 200, 172])), roughness: 0.95 })),
-    plasterOut: own(new THREE.MeshStandardMaterial({ map: own(plasterTexture(9, [196, 180, 150])), roughness: 0.95 })),
-    timber: own(surface(texSet(makeWood({ size: 256, planks: 3, base: "#3e2716", baseAlt: "#35210f", seam: "#160c05", seed: 21 })), { roughness: 0.82 })),
-    boards: own(surface(texSet(makeWood({ size: 512, planks: 6, base: "#7a5232", baseAlt: "#6b4629", seam: "#26160a", seed: 4 })), { roughness: 0.78 })),
-    panel: own(surface(texSet(makeWood({ size: 256, planks: 5, base: "#5a3a20", baseAlt: "#4e321b", seam: "#1d1008", seed: 8 })), { roughness: 0.8 })),
-    doorWood: own(surface(texSet(uprightPlanks(makeWood({ size: 256, planks: 5, base: "#5e3c20", baseAlt: "#4f321a", seam: "#160b04", seed: 33 }))), { roughness: 0.78 })),
-    stone: own(surface(texSet(makeMasonry({ size: 512, rows: 6, cols: 3, base: "#7b756b", baseAlt: "#6a645b", mortar: "#2f2b26", seed: 3 })))),
-    darkStone: own(surface(texSet(makeMasonry({ size: 512, rows: 5, cols: 2, base: "#4f4c48", baseAlt: "#45423e", mortar: "#1e1c1a", seed: 13 })))),
-    cobbles: own(surface(texSet(makeFlagstone({ size: 512, cells: 9, base: "#58534c", baseAlt: "#68625a", grout: "#24221f", seed: 17 })))),
-    flags: own(surface(texSet(makeFlagstone({ size: 512, cells: 4, base: "#5a5852", baseAlt: "#4c4a45", grout: "#1d1c1a", seed: 29 })))),
-    slate: own(new THREE.MeshStandardMaterial({ map: own(slateTexture()), roughness: 0.85 })),
+    blocks: own(blocks.mat),
+    darkBlocks: own(blocks.variant({ tint: 0x8c867e })),
+    castle: own(scanned("castleWall", "castle_wall_varriation", ownTex).mat),
+    plaster: own(scanned("medievalWall01", "medieval_wall_01", ownTex, { tint: 0xfff2dc }).mat),
+    hallFloor: own(scanned("stoneTiles02", "stone_tiles_02", ownTex, { roughness: 0.85 }).mat),
+    boards: own(scanned("woodFloorWorn", "wood_floor_worn", ownTex, { roughness: 0.8 }).mat),
+    cobbles: own(scanned("cobblestonePavement", "cobblestone_pavement", ownTex).mat),
+    roof: own(matte(scanned("roofTiles", "roof_tiles", ownTex, { tint: 0xe8c8b0 }).mat)),
+    sand: own(scanned("aerialSand", "aerial_sand", ownTex, { tint: 0xf2e2c4 }).mat),
+    wood: own(wood.mat),
+    lightWood: own(wood.variant({ tint: 0xd8b48a, roughness: 0.85 })),
     iron: own(new THREE.MeshStandardMaterial({ color: 0x232325, roughness: 0.5, metalness: 0.85 })),
     soot: own(new THREE.MeshStandardMaterial({ color: 0x0b0908, roughness: 1 })),
-    void: own(new THREE.MeshBasicMaterial({ color: 0x010101 })),
-    glassWarm: own(new THREE.MeshStandardMaterial({ color: 0x2a1a08, emissive: 0xffa448, emissiveIntensity: 0.75, roughness: 0.3 })),
-    glassNight: own(new THREE.MeshStandardMaterial({ color: 0x0c1220, emissive: 0x1a2a48, emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.2 })),
+    glassWarm: own(new THREE.MeshStandardMaterial({ color: 0x2a1a08, emissive: 0xffa448, emissiveIntensity: 0.8, roughness: 0.3 })),
     glassDark: own(new THREE.MeshStandardMaterial({ color: 0x0a0c12, roughness: 0.25, metalness: 0.3 })),
     flame: own(new THREE.MeshBasicMaterial({ color: 0xffb860, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, depthWrite: false })),
     flameCore: own(new THREE.MeshBasicMaterial({ color: 0xfff0c0 })),
     candle: own(new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.7 })),
-    banner: own(surface(texSet(makeFabric({ size: 256, base: "#5e1414", seed: 5 })), { side: THREE.DoubleSide, roughness: 0.95 })),
-    rug: own(surface(texSet(makeFabric({ size: 256, base: "#6a2a20", seed: 12 })), { roughness: 0.98 })),
-    gold: own(new THREE.MeshStandardMaterial({ color: 0xc8a050, roughness: 0.4, metalness: 0.7 })),
+    bannerRed: own(fabric("#7a1612", 5, true)),
+    bannerBlue: own(fabric("#1c2f6a", 6, true)),
+    rug: own(fabric("#6a1e1a", 12, false)),
+    gold: own(new THREE.MeshStandardMaterial({ color: 0xd8b060, roughness: 0.35, metalness: 0.8 })),
+    water: own(new THREE.MeshStandardMaterial({ color: 0x14303c, emissive: 0x0c2a3a, emissiveIntensity: 0.6, roughness: 0.08, metalness: 0.4, transparent: true, opacity: 0.85 })),
   };
   const tiles = new Map<THREE.Material, number>([
-    [M.plaster, 2.4],
-    [M.plasterOut, 2.4],
-    [M.timber, 1.6],
-    [M.boards, 2.4],
-    [M.panel, 1.2],
-    [M.doorWood, 1.1],
-    [M.stone, 2.6],
-    [M.darkStone, 3.2],
+    [M.blocks, 3],
+    [M.darkBlocks, 3],
+    [M.castle, 4],
+    [M.plaster, 3.2],
+    [M.hallFloor, 3],
+    [M.boards, 2.6],
     [M.cobbles, 3.2],
-    [M.flags, 4],
-    [M.slate, 1.6],
+    [M.roof, 3],
+    [M.sand, 5],
+    [M.wood, 2],
+    [M.lightWood, 2],
+    [M.rug, 1.4],
+    [M.bannerRed, 2],
+    [M.bannerBlue, 2],
   ]);
-  // Two zones drawn one at a time: inside the tavern (both floors), and outside (the square, the
-  // street and the gate hall). The front door between them is shut; walking through it swaps them.
-  const inside = new THREE.Group();
-  inside.name = "tavern";
-  const outside = new THREE.Group();
-  outside.name = "outside";
-  group.add(inside, outside);
-  const Bin = new Builder(tiles);
-  const Bout = new Builder(tiles);
-  let B = Bin;
-  let G: THREE.Group = inside;
-  const solidMat = (s: L.Solid): THREE.Material => {
-    if (s.z1 <= L.GATEWAY.z1 + 0.01) return M.darkStone;
-    if (s.y0 >= L.TAVERN_TOP - 0.01) return M.panel;
-    if (s.y0 >= L.SLAB_Y - 0.01 && s.y1 <= L.UPPER_Y + 0.01) return M.panel;
-    return M.plaster;
-  };
+  const B = new Builder(tiles);
+  const G = group;
 
   const lamps: Lamp[] = [];
   const lamp = (x: number, y: number, z: number, color: number, power: number, range: number, flicker = 0.12) =>
-    lamps.push({ at: new THREE.Vector3(x, y, z), color: new THREE.Color(color), power, range, flicker, zone: zoneOf(x, z) });
+    lamps.push({ at: new THREE.Vector3(x, y, z), color: new THREE.Color(color), power, range, flicker, indoors: L.indoors(x, z) });
   /** Flames that flicker: small additive cones (animated in update). */
   const flames: Array<{ m: THREE.Mesh; base: number; seed: number }> = [];
   const flameGeo = own(new THREE.ConeGeometry(0.07, 0.24, 8));
@@ -458,623 +451,340 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     }
   };
   const M3 = (path: string, at: [number, number, number], o: { yaw?: number; pitch?: number; roll?: number; scale?: number } = {}) => placeModel(G, path, at, o, live);
-  /**
-   * A plank door on a wall face: (x, y, z) the foot of the doorway's middle on the face, (nx, nz) the
-   * way out (along an axis). A timber surround stands proud of the face, the leaves (boards running
-   * up, two iron straps from the hinge side, a ring pull) sit back inside it. `leaves: 0` builds the
-   * surround alone (round a doorway with a hung door of its own).
-   */
-  const plankDoor = (Bx: Builder, x: number, y: number, z: number, nx: number, nz: number, w: number, h: number, leaves: 0 | 1 | 2, opts: { step?: boolean; canopy?: boolean } = {}) => {
+  /** A flat sign on a wall face, `nx, nz` the way it faces (along an axis). */
+  const sign = (lines: string[], x: number, y: number, z: number, nx: number, nz: number, w: number, h: number, bg = "#2c1c0e", fg = "#f2d27a") => {
+    const tex = own(signTexture(lines, bg, fg, 512, Math.round((512 * h) / w)));
+    const face = own(new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7 }));
+    const m = new THREE.Mesh(own(new THREE.PlaneGeometry(w, h)), face);
+    m.position.set(x + nx * 0.06, y, z + nz * 0.06);
+    m.rotation.y = Math.atan2(nx, nz);
+    G.add(m);
+    B.box(M.wood, x - w / 2 - 0.08 + Math.min(0, nx) * 0.05, x + w / 2 + 0.08 + Math.max(0, nx) * 0.05, y - h / 2 - 0.08, y + h / 2 + 0.08, z - (nz ? 0.02 : w / 2 + 0.08), z + (nz ? 0.02 : w / 2 + 0.08));
+  };
+  /** A hanging banner (a cloth panel with a pole along its top), facing `nx, nz`. */
+  const banner = (mat: THREE.Material, x: number, y0: number, y1: number, z: number, nx: number, nz: number, w = 1.3) => {
     const tx = -nz;
     const tz = nx;
-    const box = (mat: THREE.Material, u0: number, u1: number, v0: number, v1: number, d0: number, d1: number) => {
-      const xa = x + tx * u0 + nx * d0;
-      const xb = x + tx * u1 + nx * d1;
-      const za = z + tz * u0 + nz * d0;
-      const zb = z + tz * u1 + nz * d1;
-      Bx.box(mat, Math.min(xa, xb), Math.max(xa, xb), y + v0, y + v1, Math.min(za, zb), Math.max(za, zb));
-    };
-    const half = w / 2;
-    const F = 0.16;
-    box(M.timber, -half - F, -half, 0, h + F, 0, 0.12);
-    box(M.timber, half, half + F, 0, h + F, 0, 0.12);
-    box(M.timber, -half, half, h, h + F, 0, 0.12);
-    box(M.timber, -half - F - 0.05, half + F + 0.05, h + F, h + F + 0.09, 0, 0.17);
-    const lw = leaves ? w / leaves : 0;
-    for (let i = 0; i < leaves; i++) {
-      const u0 = -half + i * lw;
-      const u1 = u0 + lw;
-      const hingeLeft = leaves === 1 || i === 0;
-      box(M.doorWood, u0 + 0.006, u1 - 0.006, 0.01, h, -0.02, 0.05);
-      for (const v of [0.2 * h, 0.8 * h]) {
-        const a = hingeLeft ? u0 + 0.03 : u1 - 0.03 - lw * 0.74;
-        box(M.iron, a, a + lw * 0.74, v - 0.035, v + 0.035, 0.05, 0.066);
-      }
-      const hu = hingeLeft ? u1 - 0.15 : u0 + 0.15;
-      box(M.iron, hu - 0.045, hu + 0.045, h * 0.47 - 0.07, h * 0.47 + 0.07, 0.05, 0.068);
-      box(M.iron, hu - 0.07, hu + 0.07, h * 0.47 - 0.17, h * 0.47 - 0.145, 0.068, 0.09);
-      box(M.iron, hu - 0.07, hu - 0.05, h * 0.47 - 0.17, h * 0.47 - 0.06, 0.068, 0.09);
-      box(M.iron, hu + 0.05, hu + 0.07, h * 0.47 - 0.17, h * 0.47 - 0.06, 0.068, 0.09);
-    }
-    if (opts.step) box(M.stone, -half - 0.25, half + 0.25, 0, 0.05, 0, 0.42);
-    if (opts.canopy) {
-      box(M.slate, -half - 0.4, half + 0.4, h + 0.5, h + 0.6, 0, 0.78);
-      for (const u of [-half - 0.22, half + 0.12]) box(M.timber, u, u + 0.1, h + 0.27, h + 0.5, 0.0, 0.7);
-    }
+    const cx = x + nx * 0.1;
+    const cz = z + nz * 0.1;
+    const m = new THREE.Mesh(own(new THREE.PlaneGeometry(w, y1 - y0)), mat);
+    m.position.set(cx, (y0 + y1) / 2, cz);
+    m.rotation.y = Math.atan2(nx, nz);
+    G.add(m);
+    // A gold trim at the foot and the pole.
+    B.box(M.gold, Math.min(cx - tx * w * 0.5, cx + tx * w * 0.5) - 0.02, Math.max(cx - tx * w * 0.5, cx + tx * w * 0.5) + 0.02, y0 - 0.06, y0, Math.min(cz - tz * w * 0.5, cz + tz * w * 0.5) - 0.02, Math.max(cz - tz * w * 0.5, cz + tz * w * 0.5) + 0.02);
+    B.turned(M.iron, w + 0.3, 0.06, 0.06, [cx, y1 + 0.04, cz], [0, Math.atan2(tx, tz) - Math.PI / 2, 0]);
   };
-
-  // ---- The tavern shell --------------------------------------------------------------------------
-  const T0 = L.TAVERN;
-  for (const s of L.STRUCTURE) {
-    // The street's and hall's shells are built below with their own facades (the hall's here).
-    if (s.z1 <= L.TAVERN.z0 - L.SQUARE.z1 + 0.01 && s.z0 < L.TAVERN.z0 - 0.5) {
-      if (s.z1 <= L.GATEWAY.z1 + 0.01) Bout.box(s.y0 >= L.HALL_TOP - 0.01 ? M.darkStone : M.stone, s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
-      continue;
-    }
-    if (s.z1 <= L.TAVERN.z0 - 0.5) continue;
-    // Stair treads are wood, with a nosing standing proud of each.
-    if (s.x0 === L.STAIR.x0 && s.x1 === L.STAIR.x1 && !s.walk && s.z1 <= L.STAIR.z1 + 1e-6) {
-      Bin.box(M.panel, s.x0, s.x1, s.y0, s.y1 - 0.03, s.z0, s.z1);
-      Bin.box(M.timber, s.x0, s.x1, s.y1 - 0.06, s.y1, s.z0 - 0.02, s.z1 + 0.03);
-      continue;
-    }
-    // Railings are drawn as rails and balusters below; the upper floor's slab below too.
-    if (s.y1 - s.y0 <= 1.01 && s.y0 >= L.UPPER_Y - 0.01 && s.z1 - s.z0 < 0.2) continue;
-    if (s.x1 - s.x0 < 0.2 && s.y0 > 0.5 && s.y1 < L.UPPER_Y + 1.1) continue;
-    if (s.y0 >= L.SLAB_Y - 0.01 && s.y1 <= L.UPPER_Y + 0.01) continue;
-    Bin.box(solidMat(s), s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
-    // The outer walls and the roof's underside are seen from outside too.
-    const outer = s.x0 <= T0.x0 - 0.39 || s.x1 >= T0.x1 + 0.39 || s.z0 >= T0.z1 - 0.01 || s.y0 >= L.TAVERN_TOP - 0.01;
-    if (outer) Bout.box(solidMat(s), s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
-  }
-  const T = L.TAVERN;
-  // Floors: boards in the tavern, boards on the upper storey.
-  B.box(M.boards, T.x0, T.x1, -0.12, 0, T.z0 - 0.4, T.z1);
-  // The upper floor: boards on top of a timber slab (one box each, so no faces lie on each other).
-  B.box(M.panel, T.x0, T.x1, L.SLAB_Y, L.UPPER_Y - 0.04, L.GALLERY_Z, T.z1);
-  B.box(M.boards, T.x0, T.x1, L.UPPER_Y - 0.04, L.UPPER_Y, L.GALLERY_Z, T.z1);
-  // Ceiling beams under the roof and under the upper floor; the gallery's fascia and its posts.
-  for (let x = T.x0 + 1.2; x < T.x1; x += 2.3) B.box(M.timber, x - 0.13, x + 0.13, L.TAVERN_TOP - 0.3, L.TAVERN_TOP, T.z0, T.z1);
-  for (const z of [8.7, 10.6, 12.5]) B.box(M.timber, T.x0, T.x1, L.SLAB_Y - 0.26, L.SLAB_Y, z - 0.12, z + 0.12);
-  B.box(M.timber, L.STAIR.x1, T.x1, L.SLAB_Y - 0.3, L.UPPER_Y + 0.02, L.GALLERY_Z - 0.16, L.GALLERY_Z + 0.04);
-  for (const x of L.GALLERY_POSTS) {
-    B.box(M.timber, x - 0.15, x + 0.15, 0, L.SLAB_Y - 0.3, L.GALLERY_Z - 0.15, L.GALLERY_Z + 0.15);
-    // Braces up to the beam.
-    B.turned(M.timber, 0.1, 1.0, 0.1, [x - 0.3, L.SLAB_Y - 0.62, L.GALLERY_Z], [0, 0, -0.75]);
-    B.turned(M.timber, 0.1, 1.0, 0.1, [x + 0.3, L.SLAB_Y - 0.62, L.GALLERY_Z], [0, 0, 0.75]);
-  }
-  // Gallery railing: top and bottom rails and balusters.
-  B.box(M.timber, L.STAIR.x1, L.UPPER_X1, L.UPPER_Y + 0.92, L.UPPER_Y + 1.0, L.GALLERY_Z - 0.07, L.GALLERY_Z + 0.07);
-  B.box(M.timber, L.STAIR.x1, L.UPPER_X1, L.UPPER_Y + 0.06, L.UPPER_Y + 0.13, L.GALLERY_Z - 0.05, L.GALLERY_Z + 0.05);
-  for (let x = L.STAIR.x1 + 0.15; x < L.UPPER_X1; x += 0.34) B.box(M.timber, x - 0.03, x + 0.03, L.UPPER_Y + 0.13, L.UPPER_Y + 0.92, L.GALLERY_Z - 0.03, L.GALLERY_Z + 0.03);
-  // Stair railing: a sloped rail on posts, one per two treads.
-  {
-    const S0 = L.STAIR;
-    const run = S0.z1 - (S0.z0 + 0.6);
-    const rise = L.UPPER_Y * (run / (S0.z1 - S0.z0));
-    const y0 = (L.UPPER_Y * 0.6) / (S0.z1 - S0.z0);
-    const len = Math.hypot(run, rise);
-    B.turned(M.timber, 0.09, 0.08, len, [S0.x1, y0 + 0.95 + rise / 2, S0.z0 + 0.6 + run / 2], [-Math.atan2(rise, run), 0, 0]);
-    for (let i = 0; i <= 9; i++) {
-      const z = S0.z0 + 0.6 + (run * i) / 9;
-      const y = (L.UPPER_Y * (z - S0.z0)) / (S0.z1 - S0.z0);
-      B.box(M.timber, S0.x1 - 0.035, S0.x1 + 0.035, y, y + 0.95, z - 0.035, z + 0.035);
-    }
-    B.box(M.timber, S0.x1 - 0.07, S0.x1 + 0.07, 0, 1.15, S0.z0 + 0.53, S0.z0 + 0.67);
-  }
-  // Wainscot round the common room, and timber posts in the plaster.
-  {
-    const y1 = 1.1;
-    B.box(M.panel, T.x0, T.x0 + 0.05, 0, y1, T.z0, T.z1);
-    B.box(M.panel, T.x1 - 0.05, T.x1, 0, y1, T.z0, L.GALLERY_Z - 0.1);
-    B.box(M.panel, T.x0, L.KITCHEN.x0 - 0.1, 0, y1, T.z1 - 0.05, T.z1);
-    B.box(M.panel, T.x0, L.FRONT_DOOR.x0 - 0.16, 0, y1, T.z0, T.z0 + 0.05);
-    B.box(M.panel, L.FRONT_DOOR.x1 + 0.16, T.x1, 0, y1, T.z0, T.z0 + 0.05);
-    for (const x of [-6.1, -2.9, 2.9, 6.1]) {
-      B.box(M.timber, x - 0.12, x + 0.12, y1, L.TAVERN_TOP, T.z0, T.z0 + 0.07);
-      if (x < L.KITCHEN.x0 - 0.3) B.box(M.timber, x - 0.12, x + 0.12, y1, L.SLAB_Y, T.z1 - 0.07, T.z1);
-    }
-    for (let z = T.z0 + 2.6; z < T.z1; z += 3.1) {
-      B.box(M.timber, T.x0, T.x0 + 0.07, y1, z > L.GALLERY_Z ? L.SLAB_Y : L.TAVERN_TOP, z - 0.12, z + 0.12);
-      B.box(M.timber, T.x1 - 0.07, T.x1, y1, z > L.GALLERY_Z ? L.SLAB_Y : L.TAVERN_TOP, z - 0.12, z + 0.12);
-    }
-    // The front door from inside: two shut leaves in a timber surround.
-    plankDoor(Bin, 0, 0, T.z0, 0, 1, L.FRONT_DOOR.x1 - L.FRONT_DOOR.x0, L.FRONT_DOOR.top, 2);
-  }
-  // Windows: the front and back walls (warm outside, moonlit glass inside).
-  const windowAt = (x: number, y0: number, y1: number, zWall: number, outward: number, w = 1.1) => {
-    const zo = zWall + outward * 0.06;
-    B.box(M.timber, x - w / 2 - 0.1, x + w / 2 + 0.1, y0 - 0.12, y0, zWall - 0.06, zWall + 0.06 + outward * 0.08);
-    B.box(M.timber, x - w / 2 - 0.1, x + w / 2 + 0.1, y1, y1 + 0.1, zWall - 0.06, zWall + 0.06 + outward * 0.06);
-    B.box(M.glassWarm, x - w / 2, x + w / 2, y0, y1, Math.min(zo, zo + outward * 0.01), Math.max(zo, zo + outward * 0.01));
-    B.box(M.timber, x - 0.03, x + 0.03, y0, y1, Math.min(zo, zo + outward * 0.03), Math.max(zo, zo + outward * 0.03));
+  /** A torch in an iron bracket on a wall face, lit. */
+  const torch = (x: number, y: number, z: number, nx: number, nz: number) => {
+    B.box(M.iron, x - 0.05 + Math.min(0, nx) * 0.25, x + 0.05 + Math.max(0, nx) * 0.25, y - 0.05, y + 0.05, z - 0.05 + Math.min(0, nz) * 0.25, z + 0.05 + Math.max(0, nz) * 0.25);
+    const tx = x + nx * 0.25;
+    const tz = z + nz * 0.25;
+    B.turned(M.wood, 0.07, 0.5, 0.07, [tx, y + 0.2, tz], [nz * 0.25, 0, -nx * 0.25]);
+    flame(tx + nx * 0.06, y + 0.44, tz + nz * 0.06, 1.25);
+    lamp(tx + nx * 0.3, y + 0.5, tz + nz * 0.3, 0xff9a48, 4.2, 10, 0.25);
   };
-  for (const x of [-8.1, -4.5, 4.5, 8.1]) {
-    B = Bout;
-    windowAt(x, 1.2, 2.4, T.z0 - 0.44, -1);
-    windowAt(x, 4.4, 5.7, T.z0 - 0.44, -1);
-    B = Bin;
-    // Inside: night glass.
-    B.box(M.glassNight, x - 0.55, x + 0.55, 4.4, 5.7, T.z0 + 0.0, T.z0 + 0.02);
-    if (Math.abs(x) > 5) B.box(M.glassNight, x - 0.55, x + 0.55, 1.2, 2.4, T.z0 + 0.0, T.z0 + 0.02);
-  }
-  for (const r of L.ROOMS) {
-    const x = (r.x0 + r.x1) / 2 - 0.9;
-    B.box(M.glassNight, x - 0.5, x + 0.5, L.UPPER_Y + 1.1, L.UPPER_Y + 2.2, T.z1 - 0.02, T.z1);
-    B.box(M.timber, x - 0.6, x + 0.6, L.UPPER_Y + 1.0, L.UPPER_Y + 1.1, T.z1 - 0.12, T.z1);
-    B.box(M.timber, x - 0.03, x + 0.03, L.UPPER_Y + 1.1, L.UPPER_Y + 2.2, T.z1 - 0.05, T.z1);
-  }
-
-  // The facade outside: stone plinth, timber frame, the jetty line, the sign and two lanterns.
-  B = Bout;
-  G = outside;
-  {
-    const zf = T.z0 - 0.4;
-    const D = L.FRONT_DOOR;
-    B.box(M.stone, T.x0 - 0.5, D.x0 - 0.16, 0, 1.0, zf - 0.12, zf);
-    B.box(M.stone, D.x1 + 0.16, T.x1 + 0.5, 0, 1.0, zf - 0.12, zf);
-    B.box(M.plasterOut, T.x0 - 0.42, D.x0 - 0.16, 1.0, L.TAVERN_TOP, zf - 0.04, zf);
-    B.box(M.plasterOut, D.x1 + 0.16, T.x1 + 0.42, 1.0, L.TAVERN_TOP, zf - 0.04, zf);
-    B.box(M.plasterOut, D.x0 - 0.16, D.x1 + 0.16, D.top + 0.16, L.TAVERN_TOP, zf - 0.04, zf);
-    // The front door: two leaves in a surround, a step and a slate canopy on brackets.
-    plankDoor(Bout, 0, 0, zf - 0.04, 0, -1, D.x1 - D.x0, D.top, 2, { step: true, canopy: true });
-    for (const x of [-10.2, -6.1, -2.9, 2.9, 6.1, 10.2]) B.box(M.timber, x - 0.14, x + 0.14, 1.0, L.TAVERN_TOP, zf - 0.12, zf);
-    for (const y of [3.4, L.TAVERN_TOP - 0.15]) B.box(M.timber, T.x0 - 0.45, T.x1 + 0.45, y - 0.13, y + 0.13, zf - 0.14, zf);
-    // The roof: a pitched slate roof over the whole house, gables filled.
-    const eave = L.TAVERN_TOP + 0.1;
-    const ridge = 11.4;
-    const z0 = T.z0 - 1.0;
-    const z1 = T.z1 + 1.0;
-    const span = z1 - z0;
-    const prism = gablePrism(eave, ridge, span - 1.6, T.x1 - T.x0 + 0.8);
-    // The prism's triangle is in (x: along z, y); turn it to run along x.
-    prism.rotateY(Math.PI / 2);
-    prism.translate(T.x0 - 0.4, 0, z0 + 0.8 + (span - 1.6));
-    B.geo(M.plasterOut, prism);
-    const half = span / 2;
-    const slope = Math.atan2(ridge - eave, half - 0.8);
-    const slab = Math.hypot(half, ridge - eave + 0.4) + 0.1;
-    B.turned(M.slate, T.x1 - T.x0 + 1.6, 0.22, slab, [0, (eave + ridge) / 2 - 0.05, z0 + half / 2], [-slope, 0, 0]);
-    B.turned(M.slate, T.x1 - T.x0 + 1.6, 0.22, slab, [0, (eave + ridge) / 2 - 0.05, z1 - half / 2], [slope, 0, 0]);
-    // The chimney over the hearth.
-    B.box(M.stone, -7.5, -5.7, 6.0, ridge + 1.4, T.z1 - 0.9, T.z1 + 0.5);
-    B.box(M.darkStone, -7.65, -5.55, ridge + 1.4, ridge + 1.6, T.z1 - 1.05, T.z1 + 0.65);
-    // The name board over the door, flat on the facade.
-    const signTex = own(signTexture(["The Wayfarer's Rest"], "#3a2412", "#e8c878", 1024, 160));
-    const signMat = own(new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.8 }));
-    const sign = new THREE.Mesh(own(new THREE.BoxGeometry(4.4, 0.7, 0.08)), [M.timber, M.timber, M.timber, M.timber, M.timber, signMat]);
-    sign.position.set(0, 4.15, zf - 0.2);
-    sign.castShadow = true;
-    G.add(sign);
-    const lanternGeo = own(new THREE.BoxGeometry(0.22, 0.32, 0.22));
-    for (const x of [L.FRONT_DOOR.x0 - 0.65, L.FRONT_DOOR.x1 + 0.65]) {
-      B.box(M.iron, x - 0.03, x + 0.03, 2.4, 2.46, zf - 0.4, zf);
-      const l = new THREE.Mesh(lanternGeo, M.glassWarm);
-      l.position.set(x, 2.22, zf - 0.38);
-      G.add(l);
-      lamp(x, 2.1, zf - 0.6, 0xffb46a, 2.2, 9);
+  /** An iron hoop of candles on chains, hung from `top`. */
+  const hoop = own(new THREE.TorusGeometry(0.85, 0.04, 8, 32));
+  const wax = own(new THREE.CylinderGeometry(0.03, 0.035, 0.16, 8));
+  const chandelier = (x: number, y: number, z: number, top: number, power = 7, range = 14) => {
+    const h = new THREE.Mesh(hoop, M.iron);
+    h.position.set(x, y, z);
+    h.rotation.x = Math.PI / 2;
+    G.add(h);
+    for (let k = 0; k < 4; k++) {
+      const a = (k / 4) * Math.PI * 2 + 0.4;
+      B.turned(M.iron, 0.02, top - y, 0.02, [x + Math.sin(a) * 0.4, (top + y) / 2, z + Math.cos(a) * 0.4], [0, 0, 0]);
     }
-  }
-
-  // ---- Inside: bar, tables, hearth, kitchen ------------------------------------------------------
-  B = Bin;
-  G = inside;
-  const TOP = 0.877;
-  L.TABLES.forEach((t, i) => {
-    M3("rooms/dining_table", [t.x, 0, t.z]);
-    M3("rooms/painted_wooden_bench", [t.x, 0, t.z + 1.0], { yaw: Math.PI });
-    M3("rooms/painted_wooden_bench", [t.x, 0, t.z - 1.0]);
-    M3("rooms/carved_wooden_plate", [t.x - 0.55, TOP, t.z - 0.3]);
-    M3("rooms/carved_wooden_plate", [t.x + 0.45, TOP, t.z + 0.3]);
-    M3("market/brass_goblets", [t.x + 0.1 * (i % 3), TOP, t.z - 0.05], { scale: 0.6, yaw: i });
-    if (i % 2 === 0) M3("rooms/food_apple_01", [t.x - 0.5, TOP + 0.035, t.z - 0.3]);
-    if (i % 2 === 1) M3("market/wooden_bowl_01", [t.x + 0.45, TOP, t.z + 0.3], { scale: 0.8 });
-  });
-  // The bar: a long counter, its return, the back shelves with barrels.
-  {
-    const counter = (x0: number, x1: number, z0: number, z1: number) => {
-      B.box(M.panel, x0 + 0.05, x1 - 0.05, 0, 1.03, z0 + 0.05, z1 - 0.05);
-      B.box(M.timber, x0 - 0.06, x1 + 0.06, 1.03, 1.1, z0 - 0.06, z1 + 0.06);
-      B.box(M.timber, x0, x1, 0, 0.12, z0, z1);
-    };
-    counter(L.BAR.x0, L.BAR.x1, L.BAR.z0, L.BAR.z1);
-    counter(L.BAR.x1 + 0.08, 8.5, L.BAR.z0 - 0.3, L.BAR.z0 + 0.3);
-    for (const s of L.BAR_STOOLS) M3("market/wooden_stool_01", [s.x, 0, s.z], { yaw: s.z });
-    M3("market/brass_goblets", [4.0, 1.1, 2.4], { scale: 0.7 });
-    M3("market/brass_goblets", [4.0, 1.1, 4.7], { scale: 0.7, yaw: 1 });
-    M3("market/brass_goblets", [6.0, 1.1, 1.4], { scale: 0.7, yaw: 2 });
-    M3("market/wooden_bowl_01", [4.0, 1.1, 3.6], { scale: 0.7 });
-    M3("market/wine_barrel_01", [9.45, 0, 1.75], { scale: 0.9 });
-    M3("market/wine_barrel_01", [9.45, 0, 2.75], { scale: 0.9, yaw: 1 });
-    M3("market/painted_wooden_shelves", [9.75, 0, 4.15], { yaw: -Math.PI / 2, scale: 1.2 });
-    M3("market/painted_wooden_shelves", [9.75, 0, 5.4], { yaw: -Math.PI / 2, scale: 1.2 });
-    M3("market/brass_vase_01", [9.6, 1.1, 1.75], { scale: 0.6 });
-    // A lantern over the counter.
-    lamp(5.6, 2.8, 3.6, 0xffbe78, 3.4, 9);
-    B.box(M.iron, 5.57, 5.63, 2.95, L.TAVERN_TOP, 3.57, 3.63);
-    const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.24, 0.34, 0.24)), M.glassWarm);
-    l.position.set(5.6, 2.8, 3.6);
-    G.add(l);
-  }
-  // Chandeliers over the front tables: an iron hoop of candles on chains.
-  {
-    const hoop = own(new THREE.TorusGeometry(0.7, 0.035, 8, 32));
-    const wax = own(new THREE.CylinderGeometry(0.03, 0.035, 0.16, 8));
-    const spots = [L.TABLES[0], L.TABLES[1], L.TABLES[2]].map((t) => ({ x: t.x, z: t.z }));
-    spots[0] = { x: (L.TABLES[0].x + L.TABLES[1].x) / 2, z: (L.TABLES[0].z + L.TABLES[1].z) / 2 };
-    spots[1] = { x: L.TABLES[2].x, z: L.TABLES[2].z };
-    spots.length = 2;
-    spots.push({ x: -1.6, z: 3.2 });
-    for (const c of spots) {
-      const y = 4.0;
-      const h = new THREE.Mesh(hoop, M.iron);
-      h.position.set(c.x, y, c.z);
-      h.rotation.x = Math.PI / 2;
-      G.add(h);
-      for (let k = 0; k < 4; k++) {
-        const a = (k / 4) * Math.PI * 2 + 0.4;
-        B.turned(M.iron, 0.02, L.TAVERN_TOP - y, 0.02, [c.x + Math.sin(a) * 0.35, (L.TAVERN_TOP + y) / 2, c.z + Math.cos(a) * 0.35], [0, 0, 0]);
-      }
-      for (let k = 0; k < 6; k++) {
-        const a = (k / 6) * Math.PI * 2;
-        const x = c.x + Math.sin(a) * 0.7;
-        const z = c.z + Math.cos(a) * 0.7;
-        const m = new THREE.Mesh(wax, M.candle);
-        m.position.set(x, y + 0.1, z);
-        G.add(m);
-        flame(x, y + 0.18, z, 0.7);
-      }
-      lamp(c.x, y - 0.1, c.z, 0xffc888, 6.5, 12);
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      const cx = x + Math.sin(a) * 0.85;
+      const cz = z + Math.cos(a) * 0.85;
+      const m = new THREE.Mesh(wax, M.candle);
+      m.position.set(cx, y + 0.1, cz);
+      G.add(m);
+      flame(cx, y + 0.18, cz, 0.7);
     }
-  }
-  // Lanterns hung under the gallery.
-  for (const [x, z] of [
-    [-3.6, 9.6],
-    [1.2, 10.2],
-    [-8.0, 11.0],
-  ]) {
-    M3("rooms/wooden_lantern_01", [x, 2.25, z]);
-    B.box(M.iron, x - 0.02, x + 0.02, 2.75, L.SLAB_Y - 0.26, z - 0.02, z + 0.02);
-    flame(x, 2.42, z, 0.6);
-    lamp(x, 2.5, z, 0xffb870, 2.8, 8);
-  }
-  // The hearth: a stone fireplace with a mantel, the fire, a stack of logs.
-  {
-    const hx = -6.6;
-    const zb = T.z1;
-    B.box(M.stone, hx - 1.3, hx - 0.72, 0, 1.6, zb - 1.5, zb);
-    B.box(M.stone, hx + 0.72, hx + 1.3, 0, 1.6, zb - 1.5, zb);
-    B.box(M.timber, hx - 1.45, hx + 1.45, 1.6, 1.78, zb - 1.62, zb);
-    B.box(M.stone, hx - 1.15, hx + 1.15, 1.78, L.SLAB_Y, zb - 1.2, zb);
-    B.box(M.soot, hx - 0.72, hx + 0.72, 0, 1.6, zb - 0.25, zb - 0.05);
-    B.box(M.soot, hx - 0.72, hx + 0.72, 1.45, 1.6, zb - 1.5, zb - 0.05);
-    B.box(M.darkStone, hx - 1.3, hx + 1.3, 0, 0.08, zb - 2.1, zb - 1.5);
-    M3("rooms/stone_fire_pit", [hx, 0, zb - 0.78], { scale: 0.62 });
-    fire(hx, 0.12, zb - 0.78, 0.35);
-    lamp(hx, 0.9, zb - 1.6, 0xff8a3a, 6.0, 13, 0.3);
-    M3("market/brass_vase_01", [hx - 1.0, 1.78, zb - 0.9], { scale: 0.7 });
-    M3("market/brass_goblets", [hx + 0.9, 1.78, zb - 0.9], { scale: 0.7 });
-  }
-  // The kitchen: a fire under a hood with a pot, the worktable, shelves, barrels and sundries.
-  {
-    const K = L.KITCHEN;
-    B.box(M.darkStone, 7.5, 9.7, 0, 0.18, 12.0, 13.8);
-    B.box(M.stone, 7.4, 9.8, 2.1, L.SLAB_Y, 12.0, K.z1);
-    B.box(M.stone, 7.4, 9.8, 1.9, 2.1, 11.85, K.z1);
-    M3("rooms/stone_fire_pit", [8.6, 0.18, 12.9], { scale: 0.55 });
-    fire(8.6, 0.28, 12.9, 0.3);
+    lamp(x, y - 0.1, z, 0xffc888, power, range);
+  };
+  /** An iron brazier with a fire in it. */
+  const brazier = (x: number, z: number) => {
+    const bowl = new THREE.Mesh(own(new THREE.CylinderGeometry(0.45, 0.25, 0.32, 16, 1, true)), M.iron);
+    bowl.position.set(x, 1.05, z);
+    G.add(bowl);
+    B.box(M.iron, x - 0.05, x + 0.05, 0, 0.9, z - 0.05, z + 0.05);
     for (let k = 0; k < 3; k++) {
       const a = (k / 3) * Math.PI * 2;
-      B.turned(M.iron, 0.04, 1.5, 0.04, [8.6 + Math.sin(a) * 0.35, 0.9, 12.9 + Math.cos(a) * 0.35], [Math.cos(a) * 0.22, 0, -Math.sin(a) * 0.22]);
+      B.turned(M.iron, 0.04, 1.0, 0.04, [x + Math.sin(a) * 0.22, 0.5, z + Math.cos(a) * 0.22], [Math.cos(a) * 0.35, 0, -Math.sin(a) * 0.35]);
     }
-    M3("market/brass_pot_01", [8.6, 0.72, 12.9], { scale: 1.1 });
-    lamp(8.6, 1.0, 12.2, 0xff8a3a, 4.6, 10, 0.3);
-    M3("rooms/dining_table", [6.9, 0, 10.9], { yaw: Math.PI / 2 });
-    M3("rooms/wooden_cutting_board", [6.9, TOP, 10.4], { yaw: 1.3 });
-    M3("market/wooden_bowl_01", [6.8, TOP, 11.3]);
-    M3("rooms/food_apple_01", [7.05, TOP, 11.55]);
-    M3("rooms/food_apple_01", [6.75, TOP, 11.75], { yaw: 2 });
-    M3("market/brass_pot_01", [7.0, TOP, 9.95], { scale: 0.8 });
-    M3("market/painted_wooden_shelves", [9.75, 0, 9.0], { yaw: -Math.PI / 2, scale: 1.2 });
-    M3("market/painted_wooden_shelves", [9.75, 0, 10.2], { yaw: -Math.PI / 2, scale: 1.2 });
-    M3("market/wine_barrel_01", [4.95, 0, 13.0], { scale: 0.8 });
-    M3("market/wine_barrel_01", [5.6, 0, 13.6], { scale: 0.75, yaw: 1 });
-    M3("market/wooden_bucket_01", [9.4, 0, 11.6], { scale: 0.9 });
-    M3("market/wicker_basket_01", [5.2, 0, 8.2]);
-    M3("rooms/wooden_crate_02", [9.4, 0, 8.0], { yaw: Math.PI / 2 });
-  }
-
-  // ---- Upstairs: the rooms -----------------------------------------------------------------------
-  interface DoorView {
-    pivot: THREE.Group;
-    open: number;
-    target: number;
-    plaque: THREE.MeshStandardMaterial;
-    tex: THREE.CanvasTexture | null;
-  }
-  const doors: DoorView[] = [];
-  const chestLids: Array<Array<{ pivot: THREE.Object3D | null; open: number; target: number }>> = L.ROOMS.map(() => []);
-  const leafGeo = own(new THREE.BoxGeometry(1.08, 2.22, 0.07));
-  leafGeo.translate(0.54, 1.11, 0);
-  worldUV(leafGeo, 1.1);
-  const bandGeo = own(new THREE.BoxGeometry(0.8, 0.07, 0.09));
-  const ringGeo = own(new THREE.TorusGeometry(0.06, 0.011, 6, 16));
-  const plaqueGeo = own(new THREE.BoxGeometry(0.9, 0.34, 0.04));
-  L.ROOMS.forEach((r, ri) => {
-    const Y = L.UPPER_Y;
-    M3("rooms/GothicBed_01", [r.bed.x, Y, r.bed.z], { yaw: Math.PI });
-    const cx = (r.x0 + r.x1) / 2 + 0.2;
-    M3("rooms/GothicCommode_01", [cx, Y, T.z1 - 0.33], { yaw: Math.PI });
-    M3("rooms/wooden_lantern_01", [cx - 0.3, Y + 1.21, T.z1 - 0.35]);
-    flame(cx - 0.3, Y + 1.38, T.z1 - 0.35, 0.6);
-    lamp(cx - 0.3, Y + 1.6, T.z1 - 0.9, 0xffbc78, 2.6, 7.5);
-    // A rug in the middle.
-    B.box(M.rug, (r.x0 + r.x1) / 2 - 1.1, (r.x0 + r.x1) / 2 + 1.3, Y, Y + 0.02, 10.6, 12.6);
-    r.chests.forEach((c) => {
-      const slot = { pivot: null as THREE.Object3D | null, open: 0, target: 0 };
-      chestLids[ri].push(slot);
-      M3("rooms/treasure_chest", [c.x, Y, c.z], { yaw: -Math.PI / 2 }).then((o) => {
-        if (o) slot.pivot = hingeLid(o);
-      });
-    });
-    // The door: a plank leaf with iron bands, hung on the west post; a plaque over it.
-    const pivot = new THREE.Group();
-    pivot.position.set(r.door.x0 + 0.01, Y, L.ROOMS_Z + 0.1);
-    G.add(pivot);
-    const leaf = new THREE.Mesh(leafGeo, M.doorWood);
-    leaf.castShadow = true;
-    leaf.receiveShadow = true;
-    pivot.add(leaf);
-    for (const y of [0.45, 1.78]) {
-      const band = new THREE.Mesh(bandGeo, M.iron);
-      band.position.set(0.44, y, 0);
-      pivot.add(band);
-    }
-    for (const side of [-1, 1]) {
-      const ring = new THREE.Mesh(ringGeo, M.iron);
-      ring.position.set(0.92, 1.0, side * 0.05);
-      pivot.add(ring);
-    }
-    const mid = (r.door.x0 + r.door.x1) / 2;
-    const dw = r.door.x1 - r.door.x0;
-    plankDoor(B, mid, Y, L.ROOMS_Z, 0, -1, dw, 2.25, 0);
-    plankDoor(B, mid, Y, L.ROOMS_Z + 0.2, 0, 1, dw, 2.25, 0);
-    const plaque = own(new THREE.MeshStandardMaterial({ roughness: 0.7 }));
-    const pm = new THREE.Mesh(plaqueGeo, [M.timber, M.timber, M.timber, M.timber, M.timber, plaque]);
-    pm.position.set((r.door.x0 + r.door.x1) / 2, Y + 2.8, L.ROOMS_Z - 0.04);
-    G.add(pm);
-    doors.push({ pivot, open: 0, target: 0, plaque, tex: null });
-    // Sconce on the gallery wall beside the door.
-    const sx = r.door.x1 + 0.55;
-    if (sx < L.UPPER_X1 - 0.3) {
-      B.box(M.iron, sx - 0.04, sx + 0.04, Y + 1.7, Y + 1.78, L.ROOMS_Z - 0.25, L.ROOMS_Z);
-      const w = new THREE.Mesh(own(new THREE.CylinderGeometry(0.03, 0.035, 0.14, 8)), M.candle);
-      w.position.set(sx, Y + 1.85, L.ROOMS_Z - 0.22);
-      G.add(w);
-      flame(sx, Y + 1.92, L.ROOMS_Z - 0.22, 0.6);
-      lamp(sx, Y + 2.0, L.ROOMS_Z - 0.6, 0xffc080, 1.6, 6.5);
-    }
-  });
-  const setPlaque = (ri: number, rented: boolean) => {
-    const d = doors[ri];
-    d.tex?.dispose();
-    const r = L.ROOMS[ri];
-    d.tex = signTexture(rented ? [r.name, "Yours"] : [r.name, `To let · ${r.rent} gold`], rented ? "#2c2410" : "#3a2412", rented ? "#f2d27a" : "#e8c878", 256, 96);
-    d.plaque.map = d.tex;
-    d.plaque.needsUpdate = true;
+    fire(x, 1.1, z, 0.22);
+    lamp(x, 1.7, z, 0xff8a3a, 5.5, 12, 0.3);
   };
 
-  // ---- Outside: the square and the street ---------------------------------------------------------
-  B = Bout;
-  G = outside;
-  B.box(M.cobbles, L.SQUARE.x0 - 1.2, L.SQUARE.x1 + 1.2, -0.12, 0, L.STREET.z0, L.SQUARE.z1 - 0.4);
-  // The square's side walls, with coping.
-  for (const side of [-1, 1]) {
-    const x0 = side < 0 ? L.SQUARE.x0 - 1.2 : L.SQUARE.x1;
-    B.box(M.stone, x0, x0 + 1.2, 0, 5.4, L.SQUARE.z0, L.SQUARE.z1);
-    B.box(M.darkStone, x0 - 0.1, x0 + 1.3, 5.4, 5.7, L.SQUARE.z0, L.SQUARE.z1);
-    const lx = side * (L.SQUARE.x1 - 0.25);
-    B.box(M.iron, lx - 0.25 * side, lx, 3.2, 3.26, -3.03, -2.97);
-    const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.22, 0.32, 0.22)), M.glassWarm);
-    l.position.set(lx - 0.3 * side, 3.0, -3);
-    G.add(l);
-    lamp(lx - 0.6 * side, 2.9, -3, 0xffb46a, 2.4, 10);
-  }
-  // A well in the square.
-  {
-    const ring = own(new THREE.CylinderGeometry(0.85, 0.9, 0.8, 20, 1, true));
-    const m = new THREE.Mesh(ring, M.stone);
-    m.position.set(-6.4, 0.4, -3.2);
-    m.castShadow = true;
-    G.add(m);
-    const water = new THREE.Mesh(own(new THREE.CircleGeometry(0.82, 20)), M.glassNight);
-    water.rotation.x = -Math.PI / 2;
-    water.position.set(-6.4, 0.25, -3.2);
-    G.add(water);
-    B.box(M.timber, -7.35, -7.2, 0, 2.2, -3.27, -3.13);
-    B.box(M.timber, -5.6, -5.45, 0, 2.2, -3.27, -3.13);
-    B.box(M.timber, -7.4, -5.4, 2.1, 2.22, -3.3, -3.1);
-    M3("market/wooden_bucket_01", [-6.4, 1.25, -3.2], { scale: 0.7 });
-    M3("market/wine_barrel_01", [7.4, 0, -4.8], { scale: 0.8 });
-    M3("market/wooden_crate_01", [8.4, 0, -4.6], { yaw: 0.4 });
-  }
-  // The houses down both sides: stone plinth, a jettied plaster storey in a timber frame, slate roofs.
-  const stallZ = (side: number) => L.townStalls().filter((p) => Math.sign(p.x) === side).map((p) => p.z * 1.5);
-  let hs = 31;
-  const hr = () => ((hs = (Math.imul(hs, 1664525) + 1013904223) >>> 0) / 4294967296);
-  for (const side of [-1, 1]) {
-    const edges = [L.SQUARE.z0, -13.6, -21.0, -28.8, -36.6, L.STREET.z0];
-    for (let i = 0; i < edges.length - 1; i++) {
-      const za = edges[i + 1];
-      const zb = edges[i];
-      const H = 6.2 + hr() * 2.6;
-      const xf = side * L.STREET.x1;
-      const out = (d: number) => xf - side * d; // toward the street by d
-      const back = side * (L.STREET.x1 + 5.5);
-      const lo = (a: number, b: number) => [Math.min(a, b), Math.max(a, b)] as [number, number];
-      const [bx0, bx1] = lo(xf, back);
-      B.box(M.stone, bx0, bx1, 0, 0.9, za, zb);
-      B.box(M.plasterOut, bx0, bx1, 0.9, 3.2, za, zb);
-      const [jx0, jx1] = lo(out(0.4), back);
-      B.box(M.plasterOut, jx0, jx1, 3.3, H, za + 0.02, zb - 0.02);
-      const [px0, px1] = lo(out(0.08), xf);
-      for (const z of [za + 0.15, zb - 0.15, (za + zb) / 2]) B.box(M.timber, px0, px1, 0.9, 3.2, z - 0.12, z + 0.12);
-      const [qx0, qx1] = lo(out(0.48), out(0.38));
-      for (const z of [za + 0.15, zb - 0.15, (za + zb) / 2]) B.box(M.timber, qx0, qx1, 3.3, H, z - 0.12, z + 0.12);
-      const [rx0, rx1] = lo(out(0.5), xf);
-      B.box(M.timber, rx0, rx1, 3.15, 3.35, za, zb);
-      B.box(M.timber, qx0, qx1, H - 0.2, H, za, zb);
-      // Knee braces from the posts up to the top beam.
-      for (const z of [za + 0.15, (za + zb) / 2, zb - 0.15]) {
-        for (const dir of [-1, 1]) {
-          if ((z === za + 0.15 && dir < 0) || (z === zb - 0.15 && dir > 0)) continue;
-          B.turned(M.timber, 0.1, 0.12, 0.85, [out(0.43), H - 0.5, z + dir * 0.32], [-side * dir * 0.8, 0, 0]);
-        }
-      }
-      // Windows upstairs (lit or dark), a door below where no stall stands.
-      for (const z of [za + (zb - za) * 0.27, za + (zb - za) * 0.73]) {
-        const lit = hr() < 0.55;
-        const [wx0, wx1] = lo(out(0.44), out(0.5));
-        B.box(lit ? M.glassWarm : M.glassDark, wx0, wx1, 4.3, 5.4, z - 0.45, z + 0.45);
-        B.box(M.timber, wx0 - 0.02, wx1 + 0.02, 4.2, 4.3, z - 0.55, z + 0.55);
-      }
-      const stalls = stallZ(side);
-      const doorZ = [za + 1.3, (za + zb) / 2 + 1.1, zb - 1.3].find((z) => stalls.every((s) => Math.abs(s - z) > 2.0));
-      if (doorZ !== undefined) plankDoor(B, xf, 0, doorZ, -side, 0, 1.05, 2.15, 1, { step: true, canopy: true });
-      // The roof: a prism and two slate slopes, ridge along the street.
-      const span = 5.5 + 0.6;
-      const eave = H;
-      const ridge = H + 2.6;
-      const prism = gablePrism(eave, ridge, span, zb - za);
-      prism.translate(side < 0 ? back - 0.1 : out(0.5), 0, za);
-      // The triangle's x runs from the street side when side > 0; mirror for the west side.
-      B.geo(M.plasterOut, prism);
-      const slope = Math.atan2(ridge - eave, span / 2);
-      const len = Math.hypot(span / 2, ridge - eave) + 0.5;
-      const mid = side < 0 ? back - 0.1 + span / 2 : out(0.5) + span / 2;
-      B.turned(M.slate, len, 0.2, zb - za - 0.02, [mid - span / 4 - 0.12, (eave + ridge) / 2 + 0.08, (za + zb) / 2], [0, 0, slope]);
-      B.turned(M.slate, len, 0.2, zb - za - 0.02, [mid + span / 4 + 0.12, (eave + ridge) / 2 + 0.08, (za + zb) / 2], [0, 0, -slope]);
-      if (hr() < 0.6) {
-        const cz = za + (zb - za) * (0.3 + hr() * 0.4);
-        const cxm = mid + side * 1.2;
-        B.box(M.stone, cxm - 0.4, cxm + 0.4, ridge - 1.2, ridge + 1.0, cz - 0.4, cz + 0.4);
-      }
+  // ---- The shell -----------------------------------------------------------------------------------
+  for (const s of L.STRUCTURE) {
+    if (s.part === "rail") continue;
+    if (s.part === "stair") {
+      // Wooden treads, each with a nosing standing proud.
+      B.box(M.lightWood, s.x0, s.x1, s.y0, s.y1 - 0.03, s.z0, s.z1);
+      B.box(M.wood, s.x0, s.x1, s.y1 - 0.06, s.y1, s.z0 - 0.02, s.z1 + 0.03);
+      continue;
     }
+    const mat = s.part === "border" ? M.castle : s.part === "ceiling" || s.part === "slab" ? M.wood : s.part === "rooms" ? M.plaster : M.blocks;
+    B.box(mat, s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
   }
-  // Wall lanterns down the street (between the stalls).
-  for (const [side, z] of [
-    [1, -9.5],
-    [-1, -17],
-    [1, -21.8],
-    [-1, -27],
-    [1, -32],
-    [-1, -38.5],
-    [1, -42],
-  ] as Array<[number, number]>) {
-    const x = side * (L.STREET.x1 - 0.5);
-    B.box(M.iron, Math.min(x, side * L.STREET.x1), Math.max(x, side * L.STREET.x1), 3.6, 3.66, z - 0.03, z + 0.03);
-    const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.22, 0.32, 0.22)), M.glassWarm);
-    l.position.set(x, 3.42, z);
-    G.add(l);
-    lamp(x - side * 0.4, 3.2, z, 0xffb46a, 2.6, 11);
+  const T = L.TAVERN;
+  const H = L.HALL;
+  const A = L.ARENA_WING;
+  const WT = L.WT;
+  // The tavern's walls are plastered inside, over a wooden wainscot (the hall and the arena keep
+  // the bare stone, like the dungeon below).
+  {
+    const lin = 0.03;
+    const plasterWall = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: number) => {
+      B.box(M.plaster, x0, x1, Math.max(y0, 1.1), y1, z0, z1);
+    };
+    // Front, back and west walls (ground floor and upstairs).
+    plasterWall(T.x0, T.x1, 0, lin, 0, L.TAVERN_TOP);
+    plasterWall(T.x0, T.x1, T.z1 - lin, T.z1, 0, L.SLAB_Y);
+    plasterWall(T.x0, T.x0 + lin, 0, T.z1, 0, L.SLAB_Y);
+    plasterWall(T.x0, T.x0 + lin, 0, L.GALLERY_Z, L.SLAB_Y, L.TAVERN_TOP);
+    // The partition's west face, round its arch.
+    plasterWall(T.x1 - lin, T.x1, 0, L.SIDE_ARCH.z0, 0, L.TAVERN_TOP);
+    plasterWall(T.x1 - lin, T.x1, L.SIDE_ARCH.z1, T.z1, 0, L.TAVERN_TOP);
+    B.box(M.plaster, T.x1 - lin, T.x1, L.SIDE_ARCH.top, L.TAVERN_TOP, L.SIDE_ARCH.z0, L.SIDE_ARCH.z1);
+    // Upstairs, in the rooms.
+    plasterWall(T.x0, T.x1, T.z1 - lin, T.z1, L.UPPER_Y, L.TAVERN_TOP);
+    plasterWall(T.x0, T.x0 + lin, L.GALLERY_Z, T.z1, L.UPPER_Y, L.TAVERN_TOP);
+    // The wainscot: boards up to the dado rail, round the ground floor.
+    const ws = 0.05;
+    B.box(M.wood, T.x0 + 1.4, T.x1, 0, 1.1, 0, ws);
+    B.box(M.wood, T.x0, T.x0 + ws, L.STAIR.z1, T.z1, 0, 1.1);
+    B.box(M.wood, T.x1 - ws, T.x1, 0, L.SIDE_ARCH.z0, 0, 1.1);
+    B.box(M.wood, T.x1 - ws, T.x1, L.SIDE_ARCH.z1, T.z1, 0, 1.1);
+    B.box(M.wood, T.x0, T.x1, 0, 1.1, T.z1 - ws, T.z1);
+    // Posts and beams in the plaster: a timber frame.
+    for (const x of [-27.5, -21.5, -15.5]) {
+      B.box(M.wood, x - 0.14, x + 0.14, 1.1, L.TAVERN_TOP, 0.03, 0.12);
+      B.box(M.wood, x - 0.14, x + 0.14, 0, L.SLAB_Y, T.z1 - 0.12, T.z1 - 0.03);
+    }
+    for (let z = 2; z < T.z1; z += 3) B.box(M.wood, T.x0, T.x1, L.TAVERN_TOP - 0.32, L.TAVERN_TOP, z - 0.14, z + 0.14);
+    for (let x = T.x0 + 2.5; x < T.x1; x += 3.4) B.box(M.wood, x - 0.12, x + 0.12, L.SLAB_Y - 0.3, L.SLAB_Y, L.GALLERY_Z, T.z1);
   }
 
-  // ---- The gate hall ------------------------------------------------------------------------------
-  const H0 = L.HALL;
-  B.box(M.flags, H0.x0, H0.x1, -0.12, 0, H0.z0, L.GATEWAY.z1);
-  // The facade on the street: pilasters, an arch of voussoirs over the gateway, crenellations, a carved name.
+  // ---- Floors ----------------------------------------------------------------------------------
+  B.box(M.cobbles, L.STREET.x0, L.STREET.x1, -0.12, 0, L.STREET.z0, L.STREET.z1);
+  B.box(M.darkBlocks, L.ENTRANCE.x0, L.ENTRANCE.x1, -0.12, 0, -WT, 0);
+  B.box(M.hallFloor, H.x0, H.x1, -0.12, 0, H.z0, H.z1);
+  B.box(M.darkBlocks, T.x1, H.x0, -0.12, 0, L.SIDE_ARCH.z0, L.SIDE_ARCH.z1);
+  B.box(M.darkBlocks, H.x1, A.x0, -0.12, 0, L.SIDE_ARCH.z0, L.SIDE_ARCH.z1);
+  B.box(M.boards, T.x0, T.x1, -0.12, 0, T.z0, T.z1);
+  B.box(M.boards, T.x0, T.x1, L.UPPER_Y - 0.03, L.UPPER_Y, L.GALLERY_Z, T.z1);
+  B.box(M.hallFloor, A.x0, A.x1, -0.12, 0, A.z0, A.z1);
+  B.box(M.sand, L.RING.x0, L.RING.x1, 0, 0.012, L.RING.z0, L.RING.z1);
+  // A red runner from the door to the desk, and from the desk to the dais.
+  B.box(M.rug, -1.3, 1.3, 0, 0.015, 0.6, L.DESK.z0 - 0.4);
+  B.box(M.rug, -1.3, 1.3, 0, 0.015, 12.6, L.DAIS.z - L.DAIS.r - L.DAIS.step - 0.3);
+
+  // ---- The street front ----------------------------------------------------------------------------
   {
-    const zf = L.GATEWAY.z1;
-    for (const x of [-4.4, 4.4]) B.box(M.stone, x - 0.7, x + 0.7, 0, L.HALL_TOP + 0.3, zf, zf + 0.5);
-    for (let i = 0; i <= 12; i++) {
-      const a = (i / 12) * Math.PI;
-      const r = 3.45;
-      B.turned(M.stone, 0.62, 0.95, 0.5, [Math.cos(a) * r, 5.0 + Math.sin(a) * r, zf + 0.2], [0, 0, a - Math.PI / 2]);
-    }
-    for (let x = H0.x0 - 1; x < H0.x1 + 1; x += 1.6) B.box(M.darkStone, x, x + 0.9, L.HALL_TOP, L.HALL_TOP + 0.9, L.GATEWAY.z0, zf + 0.1);
-    const tex = own(signTexture(["GATE OF THE DEEP"], "#3c3a36", "#d8c9a0", 1024, 160));
-    const mat = own(new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }));
-    const plaque = new THREE.Mesh(own(new THREE.PlaneGeometry(5.6, 0.88)), mat);
-    plaque.position.set(0, 9.6, zf + 0.04);
-    G.add(plaque);
-    for (const x of [-3.6, 3.6]) {
-      B.box(M.iron, x - 0.04, x + 0.04, 4.6, 4.66, zf, zf + 0.55);
-      const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.26, 0.36, 0.26)), M.glassWarm);
-      l.position.set(x, 4.4, zf + 0.55);
+    const zf = -WT;
+    // A dark stone plinth along the whole front, and string courses on the wings.
+    B.box(M.darkBlocks, L.GUILD.x0 - WT, L.GUILD.x1 + WT, 0, 0.7, zf - 0.14, zf);
+    B.box(M.darkBlocks, L.GUILD.x0 - WT, -10.3, L.SLAB_Y + 0.1, L.SLAB_Y + 0.35, zf - 0.12, zf);
+    B.box(M.darkBlocks, 10.3, L.GUILD.x1 + WT, 4.6, 4.85, zf - 0.12, zf);
+    // The entrance: pilasters, a lintel and keystone, the guild's name over it, lanterns.
+    const E = L.ENTRANCE;
+    B.box(M.darkBlocks, E.x0 - 0.8, E.x0, 0, E.top + 0.6, zf - 0.4, zf);
+    B.box(M.darkBlocks, E.x1, E.x1 + 0.8, 0, E.top + 0.6, zf - 0.4, zf);
+    B.box(M.darkBlocks, E.x0 - 0.95, E.x1 + 0.95, E.top, E.top + 0.75, zf - 0.5, zf);
+    B.box(M.gold, -0.3, 0.3, E.top + 0.05, E.top + 0.7, zf - 0.56, zf - 0.5);
+    for (const x of [E.x0, E.x1]) B.box(M.darkBlocks, x - 0.12, x + 0.12, 0, E.top, -WT, 0);
+    sign(["ADVENTURERS' GUILD"], 0, E.top + 1.75, zf, 0, -1, 8.4, 1.25, "#1e1a2a", "#f2d27a");
+    for (const x of [E.x0 - 1.4, E.x1 + 1.4]) {
+      B.box(M.iron, x - 0.04, x + 0.04, 3.6, 3.68, zf - 0.45, zf);
+      const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.26, 0.38, 0.26)), M.glassWarm);
+      l.position.set(x, 3.4, zf - 0.42);
       G.add(l);
-      lamp(x, 4.3, zf + 1.0, 0xffaa60, 3.0, 12);
+      lamp(x, 3.3, zf - 1.1, 0xffbe78, 4.5, 11);
     }
-  }
-  // Piers with bases and capitals, ribs across the vault, banners between.
-  for (const p of L.PIERS) {
-    const h = L.PIER_HALF;
-    B.box(M.stone, p.x - h, p.x + h, 0, L.HALL_TOP, p.z - h, p.z + h);
-    B.box(M.darkStone, p.x - h - 0.15, p.x + h + 0.15, 0, 0.6, p.z - h - 0.15, p.z + h + 0.15);
-    B.box(M.darkStone, p.x - h - 0.2, p.x + h + 0.2, 9.6, 10.1, p.z - h - 0.2, p.z + h + 0.2);
-  }
-  for (const z of [-52.5, -59, -65.5, -71]) B.box(M.darkStone, H0.x0, H0.x1, 10.9, L.HALL_TOP, z - 0.45, z + 0.45);
-  // Torches on the inner faces of the piers.
-  for (const p of L.PIERS.filter((q) => q.z > -70)) {
-    const fx = p.x - Math.sign(p.x) * (L.PIER_HALF + 0.12);
-    B.box(M.iron, Math.min(fx, p.x - Math.sign(p.x) * L.PIER_HALF), Math.max(fx, p.x - Math.sign(p.x) * L.PIER_HALF), 3.0, 3.08, p.z - 0.04, p.z + 0.04);
-    const cup = new THREE.Mesh(own(new THREE.CylinderGeometry(0.09, 0.05, 0.16, 8)), M.iron);
-    cup.position.set(fx, 3.12, p.z);
-    G.add(cup);
-    flame(fx, 3.2, p.z, 1.1);
-    lamp(fx - Math.sign(p.x) * 0.3, 3.4, p.z, 0xffa055, 4.0, 11, 0.25);
-  }
-  B.box(M.darkStone, -0.45, 0.45, 11.05, L.HALL_TOP, H0.z0, H0.z1);
-  for (const side of [-1, 1]) {
-    for (const z of [-55.75, -62.25, -68.25]) {
-      const x = side * (H0.x1 - 0.08);
-      const ban = new THREE.Mesh(own(new THREE.PlaneGeometry(1.8, 5)), M.banner);
-      ban.position.set(x, 6.2, z);
-      ban.rotation.y = -side * (Math.PI / 2);
-      G.add(ban);
-      B.box(M.iron, Math.min(x, x - side * 0.15), Math.max(x, x - side * 0.15), 8.7, 8.8, z - 1.05, z + 1.05);
-      const emblem = new THREE.Mesh(own(new THREE.CircleGeometry(0.42, 24)), M.gold);
-      emblem.position.set(x - side * 0.05, 6.9, z);
-      emblem.rotation.y = -side * (Math.PI / 2);
-      G.add(emblem);
-    }
-  }
-  // The sealed gate in the south wall: a dark arch, the iron gate, heavy jambs.
-  {
-    const zg = H0.z0;
-    B.box(M.void, -3.2, 3.2, 0, 7.2, zg - 0.02, zg + 0.02);
-    for (const x of [-3.8, 3.8]) B.box(M.stone, x - 0.6, x + 0.6, 0, 8.2, zg, zg + 0.7);
-    B.box(M.stone, -4.4, 4.4, 7.2, 8.6, zg, zg + 0.7);
-    loadModel("rooms/large_iron_gate")
-      .then((src) => {
-        if (!alive) return;
-        const o = src.clone(true);
-        const box = new THREE.Box3().setFromObject(o);
-        const size = box.getSize(new THREE.Vector3());
-        const k = Math.min(6.4 / Math.max(0.01, size.x), 7.1 / Math.max(0.01, size.y));
-        o.scale.setScalar(k);
-        o.position.set(-((box.min.x + box.max.x) / 2) * k, -box.min.y * k, zg + 0.35 - ((box.min.z + box.max.z) / 2) * k);
-        G.add(o);
-      })
-      .catch(() => {});
-    // Braziers either side.
-    const bowl = own(new THREE.CylinderGeometry(0.42, 0.22, 0.32, 16, 1, true));
-    const leg = own(new THREE.CylinderGeometry(0.035, 0.035, 1.0, 6));
-    for (const f of L.FURNITURE.filter((q) => q.kind === "brazier")) {
-      const b = new THREE.Mesh(bowl, M.iron);
-      b.position.set(f.x, 1.1, f.z);
-      G.add(b);
-      for (let k = 0; k < 3; k++) {
-        const a = (k / 3) * Math.PI * 2;
-        const m = new THREE.Mesh(leg, M.iron);
-        m.position.set(f.x + Math.sin(a) * 0.22, 0.5, f.z + Math.cos(a) * 0.22);
-        m.rotation.set(Math.cos(a) * 0.18, 0, -Math.sin(a) * 0.18);
-        G.add(m);
+    // Banners on the hall front, and the guild's crest colours on the wings.
+    for (const x of [-7, 7]) banner(M.bannerBlue, x, 3.4, 10.6, zf - 0.02, 0, -1, 1.5);
+    banner(M.bannerRed, -21, 4.0, 6.8, zf - 0.02, 0, -1, 1.2);
+    banner(M.bannerRed, 21, 5.2, 9.2, zf - 0.02, 0, -1, 1.2);
+    // Crenellations along the hall's top, a cornice on the wings.
+    for (let x = -10.1; x < 10.2; x += 1.6) B.box(M.blocks, x, Math.min(x + 0.9, 10.3), L.HALL_TOP + 0.4, L.HALL_TOP + 1.3, zf - 0.1, 0.3);
+    B.box(M.darkBlocks, -10.3, 10.3, L.HALL_TOP + 0.2, L.HALL_TOP + 0.4, zf - 0.25, L.GUILD.z1 + WT);
+    // Windows: the tavern's warm ones (both storeys), the arena's high slits.
+    for (const x of [-29, -24.5, -17, -13]) {
+      for (const [y0, y1] of [
+        [1.4, 2.9],
+        [4.4, 6.0],
+      ]) {
+        B.box(M.glassWarm, x - 0.55, x + 0.55, y0, y1, zf - 0.03, zf + 0.02);
+        B.box(M.wood, x - 0.68, x + 0.68, y0 - 0.12, y0, zf - 0.12, zf);
+        B.box(M.wood, x - 0.68, x + 0.68, y1, y1 + 0.1, zf - 0.08, zf);
+        B.box(M.wood, x - 0.04, x + 0.04, y0, y1, zf - 0.05, zf);
       }
-      fire(f.x, 1.12, f.z, 0.25);
-      lamp(f.x, 1.9, f.z + 0.6, 0xff8a3a, 6.0, 14, 0.3);
+    }
+    for (const x of [14, 18, 24, 28]) B.box(M.glassDark, x - 0.3, x + 0.3, 5.6, 8.4, zf - 0.03, zf + 0.02);
+    sign(["THE WAYFARER'S REST", "rooms · ale · hot food"], -21, 3.2, zf, 0, -1, 4.6, 1.0, "#3a2412", "#e8c878");
+    sign(["THE ARENA", "no gear is lost here"], 21, 3.4, zf, 0, -1, 4.2, 1.0, "#3a1210", "#f0c070");
+    // Pitched tiled roofs over the two wings (their ridges run east-west), seen from the street.
+    const roof = (x0: number, x1: number, eave: number, ridge: number) => {
+      const z0 = -WT - 0.6;
+      const z1 = L.GUILD.z1 + WT + 0.6;
+      const half = (z1 - z0) / 2;
+      const len = Math.hypot(half, ridge - eave) + 0.3;
+      const ang = Math.atan2(ridge - eave, half);
+      const y = (eave + ridge) / 2 + 0.12;
+      // Two tiled slopes meeting at the ridge (the tile rows run along the eaves)...
+      B.turned(M.roof, x1 - x0, 0.22, len, [(x0 + x1) / 2, y, z0 + half / 2], [-ang, 0, 0]);
+      B.turned(M.roof, x1 - x0, 0.22, len, [(x0 + x1) / 2, y, z1 - half / 2], [ang, 0, 0]);
+      B.box(M.wood, x0, x1, ridge + 0.05, ridge + 0.3, (z0 + z1) / 2 - 0.18, (z0 + z1) / 2 + 0.18);
+      // ...and stone gables at either end.
+      for (const gx of [x0 + 0.1, x1 - 0.5]) {
+        const g = gablePrism(eave, ridge, z1 - z0 - 0.4, 0.4);
+        g.rotateY(Math.PI / 2);
+        g.translate(gx, 0, z1 - 0.2);
+        B.geo(M.blocks, scaleUV(g, 1 / 3));
+      }
+    };
+    roof(L.GUILD.x0 - WT - 0.4, -10.3, L.TAVERN_TOP + 0.3, L.TAVERN_TOP + 4.2);
+    roof(10.3, L.GUILD.x1 + WT + 0.4, L.ARENA_TOP + 0.3, L.ARENA_TOP + 3.6);
+  }
+
+  // ---- The border wall ----------------------------------------------------------------------------
+  {
+    const top = L.BORDER_H;
+    const S0 = L.SITE;
+    // Merlons along the top of all three runs, and a coping under them.
+    for (let x = S0.x0 - 1.2; x < S0.x1 + 1.2; x += 1.7) B.box(M.castle, x, Math.min(x + 1.0, S0.x1 + 1.2), top, top + 0.9, S0.z0 - 1.2, S0.z0 - 0.5);
+    for (let z = S0.z0 - 1.2; z < -WT; z += 1.7) {
+      B.box(M.castle, S0.x0 - 1.2, S0.x0 - 0.5, top, top + 0.9, z, Math.min(z + 1.0, -WT));
+      B.box(M.castle, S0.x1 + 0.5, S0.x1 + 1.2, top, top + 0.9, z, Math.min(z + 1.0, -WT));
+    }
+    B.box(M.darkBlocks, S0.x0, S0.x1, top - 0.2, top, S0.z0 - 0.15, S0.z0);
+    B.box(M.darkBlocks, S0.x0 - 0.15, S0.x0, top - 0.2, top, S0.z0, -WT);
+    B.box(M.darkBlocks, S0.x1, S0.x1 + 0.15, top - 0.2, top, S0.z0, -WT);
+    // Torches along it, and a sealed gate in the north wall (the way out of town, shut).
+    for (const x of [-24, -8, 8, 24]) torch(x, 2.6, S0.z0, 0, 1);
+    for (const z of [-16, -7]) {
+      torch(S0.x0, 2.6, z, 1, 0);
+      torch(S0.x1, 2.6, z, -1, 0);
+    }
+    B.box(M.darkBlocks, -2.6, -1.9, 0, 4.4, S0.z0 - 0.2, S0.z0 + 0.25);
+    B.box(M.darkBlocks, 1.9, 2.6, 0, 4.4, S0.z0 - 0.2, S0.z0 + 0.25);
+    B.box(M.darkBlocks, -2.6, 2.6, 3.8, 4.5, S0.z0 - 0.2, S0.z0 + 0.25);
+    M3("rooms/large_castle_door", [0, 0, S0.z0 + 0.12], { scale: 1.05 });
+  }
+
+  // ---- Out on the street: the fountain, lamp posts, sundries ----------------------------------------
+  {
+    const F = L.FOUNTAIN;
+    const ring = new THREE.Mesh(own(scaleUV(new THREE.CylinderGeometry(F.r, F.r + 0.08, 0.75, 32, 1, true), 1)), M.darkBlocks);
+    ring.position.set(F.x, 0.375, F.z);
+    G.add(ring);
+    const lip = new THREE.Mesh(own(new THREE.TorusGeometry(F.r, 0.12, 8, 40)), M.darkBlocks);
+    lip.rotation.x = Math.PI / 2;
+    lip.position.set(F.x, 0.75, F.z);
+    G.add(lip);
+    const water = new THREE.Mesh(own(new THREE.CircleGeometry(F.r - 0.05, 32)), M.water);
+    water.rotation.x = -Math.PI / 2;
+    water.position.set(F.x, 0.6, F.z);
+    G.add(water);
+    const column = new THREE.Mesh(own(new THREE.CylinderGeometry(0.22, 0.32, 1.9, 12)), M.blocks);
+    column.position.set(F.x, 0.95, F.z);
+    G.add(column);
+    const bowl = new THREE.Mesh(own(new THREE.CylinderGeometry(0.75, 0.3, 0.3, 20)), M.darkBlocks);
+    bowl.position.set(F.x, 1.95, F.z);
+    G.add(bowl);
+    const top = new THREE.Mesh(own(new THREE.CircleGeometry(0.68, 20)), M.water);
+    top.rotation.x = -Math.PI / 2;
+    top.position.set(F.x, 2.08, F.z);
+    G.add(top);
+    lamp(F.x, 2.6, F.z, 0x8ab8ff, 1.6, 7, 0.02);
+    for (const f of L.FURNITURE.filter((q) => q.kind === "lamppost")) {
+      B.box(M.iron, f.x - 0.07, f.x + 0.07, 0, 3.4, f.z - 0.07, f.z + 0.07);
+      B.box(M.darkBlocks, f.x - 0.2, f.x + 0.2, 0, 0.35, f.z - 0.2, f.z + 0.2);
+      const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.3, 0.42, 0.3)), M.glassWarm);
+      l.position.set(f.x, 3.6, f.z);
+      G.add(l);
+      B.box(M.iron, f.x - 0.2, f.x + 0.2, 3.82, 3.88, f.z - 0.2, f.z + 0.2);
+      lamp(f.x, 3.55, f.z, 0xffc078, 5.0, 13, 0.08);
+    }
+    // Crates and barrels by the stalls, a cart's worth of goods.
+    M3("market/wine_barrel_01", [-25.5, 0, -1.6], { scale: 0.9 });
+    M3("market/wine_barrel_01", [-26.6, 0, -1.4], { scale: 0.85, yaw: 1 });
+    M3("market/wooden_crate_01", [25, 0, -1.7], { yaw: 0.3 });
+    M3("rooms/wooden_crate_02", [26.4, 0, -1.6], { yaw: -0.2 });
+    M3("market/wicker_basket_01", [-4.6, 0, -1.4]);
+    M3("market/wooden_bucket_01", [4.4, 0, -1.4]);
+  }
+
+  // ---- The great hall --------------------------------------------------------------------------------
+  {
+    // Piers with bases and capitals, ribs across the ceiling, torches on the piers' inner faces.
+    for (const p of L.PIERS) {
+      const h = L.PIER_HALF;
+      B.box(M.blocks, p.x - h, p.x + h, 0, L.HALL_TOP, p.z - h, p.z + h);
+      B.box(M.darkBlocks, p.x - h - 0.15, p.x + h + 0.15, 0, 0.6, p.z - h - 0.15, p.z + h + 0.15);
+      B.box(M.darkBlocks, p.x - h - 0.12, p.x + h + 0.12, 7.4, 7.8, p.z - h - 0.12, p.z + h + 0.12);
+      B.box(M.wood, H.x0, H.x1, L.HALL_TOP - 0.5, L.HALL_TOP, p.z - 0.25, p.z + 0.25);
+      const inward = p.x < 0 ? 1 : -1;
+      torch(p.x + inward * h, 2.6, p.z, inward, 0);
+    }
+    for (let x = H.x0 + 2.4; x < H.x1; x += 4.8) B.box(M.wood, x - 0.2, x + 0.2, L.HALL_TOP - 0.42, L.HALL_TOP, H.z0, H.z1);
+    // Banners down the side walls, between the piers.
+    for (const z of [10.8, 20]) {
+      banner(M.bannerBlue, H.x0, 4.5, 9.5, z, 1, 0, 1.4);
+      banner(M.bannerBlue, H.x1, 4.5, 9.5, z, -1, 0, 1.4);
+    }
+    banner(M.bannerRed, 0, 5.5, 10.5, H.z1, 0, -1, 2.0);
+    // Two great chandeliers.
+    chandelier(0, 7.6, 5.2, L.HALL_TOP, 9, 16);
+    chandelier(0, 7.6, 15.6, L.HALL_TOP, 9, 16);
+    // Over the arches into the wings: their names.
+    sign(["← THE WAYFARER'S REST"], H.x0 + 0.02, L.SIDE_ARCH.top + 0.7, (L.SIDE_ARCH.z0 + L.SIDE_ARCH.z1) / 2, 1, 0, 4.4, 0.8);
+    sign(["THE ARENA →"], H.x1 - 0.02, L.SIDE_ARCH.top + 0.7, (L.SIDE_ARCH.z0 + L.SIDE_ARCH.z1) / 2, -1, 0, 3.6, 0.8, "#3a1210", "#f0c070");
+    for (const x of [T.x1 - 0.02, A.x0 + 0.02]) {
+      // A stone frame round each arch on both faces.
+      for (const z of [L.SIDE_ARCH.z0, L.SIDE_ARCH.z1]) B.box(M.darkBlocks, x - 0.5, x + 0.5 + (x > 0 ? 0 : 0), 0, L.SIDE_ARCH.top, z - 0.22, z + 0.22);
+      B.box(M.darkBlocks, x - 0.5, x + 0.5, L.SIDE_ARCH.top, L.SIDE_ARCH.top + 0.45, L.SIDE_ARCH.z0 - 0.3, L.SIDE_ARCH.z1 + 0.3);
+    }
+    // The entrance's inner face: a frame and a sign for the way out.
+    B.box(M.darkBlocks, L.ENTRANCE.x0 - 0.5, L.ENTRANCE.x1 + 0.5, L.ENTRANCE.top, L.ENTRANCE.top + 0.5, 0, 0.25);
+    // The desk: a long counter with its returns, ledgers, a candle, a bell.
+    const desk = (x0: number, x1: number, z0: number, z1: number) => {
+      B.box(M.wood, x0 + 0.05, x1 - 0.05, 0, 1.0, z0 + 0.05, z1 - 0.05);
+      B.box(M.lightWood, x0 - 0.06, x1 + 0.06, 1.0, 1.1, z0 - 0.06, z1 + 0.06);
+      B.box(M.darkBlocks, x0, x1, 0, 0.12, z0, z1);
+      B.box(M.gold, x0 + 0.05, x1 - 0.05, 0.88, 0.92, z0 - 0.01, z0 + 0.01);
+    };
+    desk(L.DESK.x0, L.DESK.x1, L.DESK.z0, L.DESK.z1);
+    desk(L.DESK.x0, L.DESK.x0 + 0.6, L.DESK.z1, 12.0);
+    desk(L.DESK.x1 - 0.6, L.DESK.x1, L.DESK.z1, 12.0);
+    M3("rooms/wooden_bookshelf_worn", [-2.2, 0, 13.0], { yaw: Math.PI });
+    M3("rooms/wooden_bookshelf_worn", [2.2, 0, 13.0], { yaw: Math.PI });
+    M3("market/brass_vase_01", [-2.4, 1.1, 9.9], { scale: 0.6 });
+    M3("rooms/carved_wooden_plate", [1.6, 1.1, 9.9], { scale: 0.8 });
+    sign(["GUILD REPRESENTATIVE", "quests · bounties · rewards"], 0, 3.0, 13.4, 0, -1, 3.6, 0.9, "#1e1a2a", "#f2d27a");
+    lamp(0, 2.6, 9.0, 0xffd090, 3.2, 8);
+    // The quest board: a framed panel on two legs, notices pinned to it, a lantern over it.
+    {
+      const Q = L.QUEST_BOARD;
+      B.box(M.wood, Q.x - 1.0, Q.x - 0.88, 0, 2.4, Q.z - 0.1, Q.z + 0.1);
+      B.box(M.wood, Q.x + 0.88, Q.x + 1.0, 0, 2.4, Q.z - 0.1, Q.z + 0.1);
+      B.box(M.wood, Q.x - 1.0, Q.x + 1.0, 2.3, 2.45, Q.z - 0.14, Q.z + 0.14);
+      B.box(M.wood, Q.x - 0.88, Q.x + 0.88, 0.8, 2.3, Q.z - 0.04, Q.z + 0.04);
+      const notes = new THREE.Mesh(own(new THREE.PlaneGeometry(1.7, 1.45)), own(new THREE.MeshStandardMaterial({ map: own(noticesTexture()), roughness: 0.9 })));
+      notes.position.set(Q.x, 1.55, Q.z - 0.05);
+      notes.rotation.y = Math.PI;
+      G.add(notes);
     }
   }
-  // The teleporter: a stone dais and its step, a ring of runes, a column of light, four obelisks.
+
+  // ---- The teleporter: a stone dais and its step, a ring of runes, a column of light, four obelisks ----
   const runeTex = own(runeTexture());
   const runeMat = own(new THREE.MeshBasicMaterial({ color: 0xa889ff, map: runeTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
   const glowTex = own(
@@ -1100,11 +810,11 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   const crystals: THREE.Mesh[] = [];
   {
     const D = L.DAIS;
-    const step = new THREE.Mesh(own(new THREE.CylinderGeometry(D.r + D.step, D.r + D.step + 0.05, D.h / 2, 48)), M.darkStone);
+    const step = new THREE.Mesh(own(scaleUV(new THREE.CylinderGeometry(D.r + D.step, D.r + D.step + 0.05, D.h / 2, 48), 2)), M.darkBlocks);
     step.position.set(D.x, D.h / 4, D.z);
     step.receiveShadow = true;
     G.add(step);
-    const top = new THREE.Mesh(own(new THREE.CylinderGeometry(D.r, D.r + 0.04, D.h, 48)), M.stone);
+    const top = new THREE.Mesh(own(scaleUV(new THREE.CylinderGeometry(D.r, D.r + 0.04, D.h, 48), 2)), M.hallFloor);
     top.position.set(D.x, D.h / 2, D.z);
     top.receiveShadow = true;
     G.add(top);
@@ -1126,7 +836,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     const obGeo = own(new THREE.CylinderGeometry(0.22, 0.42, 3.2, 4));
     const stripGeo = own(new THREE.BoxGeometry(0.08, 2.2, 0.08));
     for (const f of L.FURNITURE.filter((q) => q.kind === "obelisk")) {
-      const o = new THREE.Mesh(obGeo, M.darkStone);
+      const o = new THREE.Mesh(obGeo, M.darkBlocks);
       o.position.set(f.x, 1.6, f.z);
       o.rotation.y = Math.PI / 4;
       o.castShadow = true;
@@ -1138,19 +848,241 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       s.rotation.y = toC;
       G.add(s);
     }
+    sign(["GATE OF THE DEEP"], 0, 6.2, H.z1, 0, -1, 4.4, 0.8, "#1a1230", "#c9a8ff");
+  }
+  for (const f of L.FURNITURE.filter((q) => q.kind === "brazier")) brazier(f.x, f.z);
+
+  // ---- The tavern ----------------------------------------------------------------------------------
+  const TOP = 0.877;
+  L.TABLES.forEach((t, i) => {
+    M3("rooms/dining_table", [t.x, 0, t.z]);
+    M3("rooms/painted_wooden_bench", [t.x, 0, t.z + 1.0], { yaw: Math.PI });
+    M3("rooms/painted_wooden_bench", [t.x, 0, t.z - 1.0]);
+    M3("rooms/carved_wooden_plate", [t.x - 0.55, TOP, t.z - 0.3]);
+    M3("rooms/carved_wooden_plate", [t.x + 0.45, TOP, t.z + 0.3]);
+    M3("market/brass_goblets", [t.x + 0.1 * (i % 3), TOP, t.z - 0.05], { scale: 0.6, yaw: i });
+    if (i % 2 === 0) M3("rooms/food_apple_01", [t.x - 0.5, TOP + 0.035, t.z - 0.3]);
+    if (i % 2 === 1) M3("market/wooden_bowl_01", [t.x + 0.45, TOP, t.z + 0.3], { scale: 0.8 });
+  });
+  {
+    // The bar: the counter, stools, the back shelves with barrels and goblets, a lantern.
+    const Bc = L.BAR;
+    B.box(M.wood, Bc.x0 + 0.05, Bc.x1 - 0.05, 0, 1.03, Bc.z0 + 0.05, Bc.z1 - 0.05);
+    B.box(M.lightWood, Bc.x0 - 0.08, Bc.x1 + 0.06, 1.03, 1.1, Bc.z0 - 0.06, Bc.z1 + 0.06);
+    B.box(M.darkBlocks, Bc.x0, Bc.x1, 0, 0.12, Bc.z0, Bc.z1);
+    for (const s of L.BAR_STOOLS) M3("market/wooden_stool_01", [s.x, 0, s.z], { yaw: s.z });
+    M3("market/brass_goblets", [-14.3, 1.1, 2.2], { scale: 0.7 });
+    M3("market/brass_goblets", [-14.3, 1.1, 5.0], { scale: 0.7, yaw: 1 });
+    M3("market/wooden_bowl_01", [-14.3, 1.1, 3.7], { scale: 0.7 });
+    M3("market/wine_barrel_01", [-10.85, 0, 1.4], { scale: 0.9 });
+    M3("market/wine_barrel_01", [-10.85, 0, 6.6], { scale: 0.9, yaw: 1 });
+    M3("market/painted_wooden_shelves", [-10.55, 0, 3.0], { yaw: -Math.PI / 2, scale: 1.2 });
+    M3("market/painted_wooden_shelves", [-10.55, 0, 4.6], { yaw: -Math.PI / 2, scale: 1.2 });
+    lamp(-13.2, 2.8, 3.9, 0xffbe78, 3.6, 9);
+    B.box(M.iron, -13.23, -13.17, 2.95, L.TAVERN_TOP, 3.87, 3.93);
+    const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.24, 0.34, 0.24)), M.glassWarm);
+    l.position.set(-13.2, 2.8, 3.9);
+    G.add(l);
+  }
+  // The hearth on the west wall: stone cheeks, a mantel, the fire, a chimney breast up to the ceiling.
+  {
+    const hz = 3.3;
+    const xw = T.x0;
+    B.box(M.blocks, xw, xw + 1.5, 0, 1.6, hz - 1.3, hz - 0.72);
+    B.box(M.blocks, xw, xw + 1.5, 0, 1.6, hz + 0.72, hz + 1.3);
+    B.box(M.wood, xw, xw + 1.62, 1.6, 1.78, hz - 1.45, hz + 1.45);
+    B.box(M.blocks, xw, xw + 1.2, 1.78, L.TAVERN_TOP, hz - 1.15, hz + 1.15);
+    B.box(M.soot, xw + 0.05, xw + 0.25, 0, 1.6, hz - 0.72, hz + 0.72);
+    B.box(M.soot, xw, xw + 1.5, 1.45, 1.6, hz - 0.72, hz + 0.72);
+    B.box(M.darkBlocks, xw + 1.5, xw + 2.1, 0, 0.08, hz - 1.3, hz + 1.3);
+    M3("rooms/stone_fire_pit", [xw + 0.78, 0, hz], { scale: 0.62 });
+    fire(xw + 0.78, 0.12, hz, 0.35);
+    lamp(xw + 1.6, 0.9, hz, 0xff8a3a, 6.5, 14, 0.3);
+    M3("market/brass_vase_01", [xw + 0.9, 1.78, hz - 1.0], { scale: 0.7 });
+    M3("market/brass_goblets", [xw + 0.9, 1.78, hz + 0.9], { scale: 0.7 });
+    M3("rooms/marble_bust_01", [xw + 0.9, 1.78, hz], { scale: 0.7, yaw: Math.PI / 2 });
+  }
+  chandelier(-23, 4.4, 4.4, L.TAVERN_TOP, 7, 13);
+  chandelier(-23, 4.4, 10.6, L.TAVERN_TOP, 7, 13);
+  // Lanterns under the gallery, and barrels at the back.
+  for (const [x, z] of [
+    [-27, 19.4],
+    [-21, 22.4],
+    [-14, 19.4],
+  ]) {
+    M3("rooms/wooden_lantern_01", [x, 2.25, z]);
+    B.box(M.iron, x - 0.02, x + 0.02, 2.75, L.SLAB_Y - 0.3, z - 0.02, z + 0.02);
+    flame(x, 2.42, z, 0.6);
+    lamp(x, 2.5, z, 0xffb870, 3.0, 8.5);
+  }
+  M3("market/wine_barrel_01", [-12.0, 0, 25.1], { scale: 0.9 });
+  M3("market/wine_barrel_01", [-13.1, 0, 25.0], { scale: 0.9, yaw: 1 });
+  M3("market/wine_barrel_01", [-12.5, 0.95, 25.05], { scale: 0.85, yaw: 2, pitch: Math.PI / 2 });
+  // The gallery: its fascia, posts, rails and balusters; the stair's rail.
+  {
+    const Y = L.UPPER_Y;
+    const gz = L.GALLERY_Z;
+    B.box(M.wood, L.STAIR.x1, T.x1, L.SLAB_Y - 0.25, Y + 0.05, gz - 0.12, gz + 0.02);
+    for (const x of L.GALLERY_POSTS) B.box(M.wood, x - 0.16, x + 0.16, 0, L.SLAB_Y, gz - 0.16, gz + 0.16);
+    B.box(M.wood, L.STAIR.x1, T.x1, Y + 0.95, Y + 1.04, gz - 0.06, gz + 0.06);
+    B.box(M.wood, L.STAIR.x1, T.x1, Y + 0.05, Y + 0.12, gz - 0.04, gz + 0.04);
+    for (let x = L.STAIR.x1 + 0.2; x < T.x1; x += 0.28) B.box(M.lightWood, x - 0.025, x + 0.025, Y + 0.12, Y + 0.95, gz - 0.025, gz + 0.025);
+    const S0 = L.STAIR;
+    const len = Math.hypot(S0.z1 - S0.z0 - 0.6, Y);
+    const ang = Math.atan2(Y, S0.z1 - S0.z0 - 0.6);
+    B.turned(M.wood, 0.08, 0.08, len, [S0.x1, 0.95 + Y / 2 + 0.05, (S0.z0 + 0.6 + S0.z1) / 2], [-ang, 0, 0]);
+    for (let i = 0; i < 9; i++) {
+      const z = S0.z0 + 0.8 + i * ((S0.z1 - S0.z0 - 0.9) / 8);
+      const y = (Y * (z - S0.z0)) / (S0.z1 - S0.z0);
+      B.box(M.wood, S0.x1 - 0.04, S0.x1 + 0.04, y, y + 0.95, z - 0.04, z + 0.04);
+    }
+  }
+
+  // ---- Upstairs: the rooms -----------------------------------------------------------------------
+  interface DoorView {
+    pivot: THREE.Group;
+    open: number;
+    target: number;
+    plaque: THREE.MeshStandardMaterial;
+    tex: THREE.CanvasTexture | null;
+  }
+  const doors: DoorView[] = [];
+  const chestLids: Array<Array<{ pivot: THREE.Object3D | null; open: number; target: number }>> = L.ROOMS.map(() => []);
+  const leafGeo = own(new THREE.BoxGeometry(1.08, 2.22, 0.07));
+  leafGeo.translate(0.54, 1.11, 0);
+  worldUV(leafGeo, 1.6);
+  const bandGeo = own(new THREE.BoxGeometry(0.8, 0.07, 0.09));
+  const ringGeo = own(new THREE.TorusGeometry(0.06, 0.011, 6, 16));
+  const plaqueGeo = own(new THREE.BoxGeometry(0.9, 0.34, 0.04));
+  L.ROOMS.forEach((r, ri) => {
+    const Y = L.UPPER_Y;
+    M3("rooms/GothicBed_01", [r.bed.x, Y, r.bed.z], { yaw: Math.PI });
+    const cx = (r.x0 + r.x1) / 2 + 0.2;
+    M3("rooms/GothicCommode_01", [cx, Y, T.z1 - 0.33], { yaw: Math.PI });
+    M3("rooms/wooden_lantern_01", [cx - 0.3, Y + 1.21, T.z1 - 0.35]);
+    flame(cx - 0.3, Y + 1.38, T.z1 - 0.35, 0.6);
+    lamp(cx - 0.3, Y + 1.6, T.z1 - 1.0, 0xffbc78, 2.8, 8);
+    B.box(M.rug, (r.x0 + r.x1) / 2 - 1.2, (r.x0 + r.x1) / 2 + 1.4, Y, Y + 0.02, 20.0, 23.4);
+    r.chests.forEach((c) => {
+      const slot = { pivot: null as THREE.Object3D | null, open: 0, target: 0 };
+      chestLids[ri].push(slot);
+      M3("rooms/treasure_chest", [c.x, Y, c.z], { yaw: -Math.PI / 2 }).then((o) => {
+        if (o) slot.pivot = hingeLid(o);
+      });
+    });
+    // The door: a plank leaf with iron bands, hung on the west post; a plaque over it.
+    const pivot = new THREE.Group();
+    pivot.position.set(r.door.x0 + 0.01, Y, L.ROOMS_Z + 0.1);
+    G.add(pivot);
+    const leaf = new THREE.Mesh(leafGeo, M.wood);
+    leaf.castShadow = true;
+    leaf.receiveShadow = true;
+    pivot.add(leaf);
+    for (const y of [0.45, 1.78]) {
+      const band = new THREE.Mesh(bandGeo, M.iron);
+      band.position.set(0.44, y, 0);
+      pivot.add(band);
+    }
+    for (const side of [-1, 1]) {
+      const ring = new THREE.Mesh(ringGeo, M.iron);
+      ring.position.set(0.92, 1.0, side * 0.05);
+      pivot.add(ring);
+    }
+    // The door's timber surround on both faces.
+    for (const [z0, z1] of [
+      [L.ROOMS_Z - 0.1, L.ROOMS_Z],
+      [L.ROOMS_Z + 0.2, L.ROOMS_Z + 0.3],
+    ]) {
+      B.box(M.wood, r.door.x0 - 0.14, r.door.x0, Y, Y + 2.38, z0, z1);
+      B.box(M.wood, r.door.x1, r.door.x1 + 0.14, Y, Y + 2.38, z0, z1);
+      B.box(M.wood, r.door.x0 - 0.14, r.door.x1 + 0.14, Y + 2.25, Y + 2.4, z0, z1);
+    }
+    const plaque = own(new THREE.MeshStandardMaterial({ roughness: 0.7 }));
+    const pm = new THREE.Mesh(plaqueGeo, [M.wood, M.wood, M.wood, M.wood, M.wood, plaque]);
+    pm.position.set((r.door.x0 + r.door.x1) / 2, Y + 2.8, L.ROOMS_Z - 0.04);
+    pm.rotation.y = Math.PI;
+    G.add(pm);
+    doors.push({ pivot, open: 0, target: 0, plaque, tex: null });
+    // A sconce on the gallery wall beside the door.
+    const sx = r.door.x1 + 0.6;
+    B.box(M.iron, sx - 0.04, sx + 0.04, Y + 1.7, Y + 1.78, L.ROOMS_Z - 0.25, L.ROOMS_Z);
+    const w = new THREE.Mesh(own(new THREE.CylinderGeometry(0.03, 0.035, 0.14, 8)), M.candle);
+    w.position.set(sx, Y + 1.85, L.ROOMS_Z - 0.22);
+    G.add(w);
+    flame(sx, Y + 1.92, L.ROOMS_Z - 0.22, 0.6);
+    lamp(sx, Y + 2.0, L.ROOMS_Z - 0.6, 0xffc080, 1.8, 7);
+  });
+  const setPlaque = (ri: number, rented: boolean) => {
+    const d = doors[ri];
+    d.tex?.dispose();
+    const r = L.ROOMS[ri];
+    d.tex = signTexture(rented ? [r.name, "Yours"] : [r.name, `To let · ${r.rent} gold`], rented ? "#2c2410" : "#3a2412", rented ? "#f2d27a" : "#e8c878", 256, 96);
+    d.plaque.map = d.tex;
+    d.plaque.needsUpdate = true;
+  };
+
+  // ---- The arena -------------------------------------------------------------------------------------
+  {
+    const R = L.RING;
+    // The fence: posts every metre and a half, two rails, heavier posts at the gate.
+    const posts: number[] = [];
+    for (let x = R.x0; x <= R.x1 + 0.01; x += (R.x1 - R.x0) / 10) posts.push(x);
+    for (const x of posts) {
+      for (const z of [R.z0, R.z1]) B.box(M.wood, x - 0.09, x + 0.09, 0, 1.3, z - 0.09, z + 0.09);
+    }
+    for (let z = R.z0; z <= R.z1 + 0.01; z += (R.z1 - R.z0) / 10) {
+      B.box(M.wood, R.x1 - 0.09, R.x1 + 0.09, 0, 1.3, z - 0.09, z + 0.09);
+      if (z < L.RING_GATE.z0 - 0.05 || z > L.RING_GATE.z1 + 0.05) B.box(M.wood, R.x0 - 0.09, R.x0 + 0.09, 0, 1.3, z - 0.09, z + 0.09);
+    }
+    for (const y of [0.55, 1.05]) {
+      for (const f of L.FENCE) B.box(M.lightWood, f.x0, f.x1, y - 0.05, y + 0.05, f.z0, f.z1);
+    }
+    for (const z of [L.RING_GATE.z0, L.RING_GATE.z1]) {
+      B.box(M.wood, R.x0 - 0.16, R.x0 + 0.16, 0, 2.4, z - 0.16, z + 0.16);
+      flame(R.x0, 2.42, z, 1.1);
+    }
+    B.box(M.wood, R.x0 - 0.12, R.x0 + 0.12, 2.25, 2.45, L.RING_GATE.z0 - 0.16, L.RING_GATE.z1 + 0.16);
+    sign(["FIGHTING GROUND"], R.x0 - 0.14, 2.75, (L.RING_GATE.z0 + L.RING_GATE.z1) / 2, -1, 0, 2.8, 0.5, "#3a1210", "#f0c070");
+    lamp(R.x0 - 0.6, 2.4, (L.RING_GATE.z0 + L.RING_GATE.z1) / 2, 0xff9a48, 3.4, 9, 0.25);
+    // Benches for those watching, racks of arms on the east wall, braziers at the ring's corners.
+    for (const b of L.ARENA_BENCHES) M3("rooms/painted_wooden_bench", [b.x, 0, b.z], { yaw: b.yaw, scale: 1.0 });
+    for (const f of L.FURNITURE.filter((q) => q.kind === "rack")) {
+      B.box(M.wood, f.x - 0.3, f.x + 0.05, 0, 1.9, f.z - 1.2, f.z - 1.08);
+      B.box(M.wood, f.x - 0.3, f.x + 0.05, 0, 1.9, f.z + 1.08, f.z + 1.2);
+      B.box(M.wood, f.x - 0.3, f.x + 0.05, 1.5, 1.6, f.z - 1.2, f.z + 1.2);
+      B.box(M.wood, f.x - 0.3, f.x + 0.05, 0.3, 0.4, f.z - 1.2, f.z + 1.2);
+      M3("market/antique_estoc", [f.x - 0.2, 0.35, f.z - 0.6], { roll: -0.2, yaw: Math.PI / 2 });
+      M3("market/ornate_war_hammer", [f.x - 0.2, 0.35, f.z], { roll: -0.15, yaw: Math.PI / 2 });
+      M3("market/wooden_handle_saber", [f.x - 0.2, 0.35, f.z + 0.6], { roll: -0.2, yaw: Math.PI / 2 });
+      M3("market/kite_shield", [f.x - 0.34, 0.9, f.z + 0.1], { yaw: -Math.PI / 2, scale: 0.9 });
+    }
+    // Banners of the two sides on the long walls, chandeliers over the ring, torches round the walls.
+    for (const x of [17, 22.25, 27.5]) {
+      banner(M.bannerRed, x, 4.6, 8.8, A.z0, 0, 1, 1.4);
+      banner(M.bannerBlue, x, 4.6, 8.8, A.z1, 0, -1, 1.4);
+    }
+    chandelier(19, 7.2, 13, L.ARENA_TOP, 8, 15);
+    chandelier(26, 7.2, 13, L.ARENA_TOP, 8, 15);
+    for (const z of [6, 13, 20]) torch(A.x1, 2.6, z, -1, 0);
+    for (let x = A.x0 + 2.6; x < A.x1; x += 4.4) B.box(M.wood, x - 0.2, x + 0.2, L.ARENA_TOP - 0.45, L.ARENA_TOP, A.z0, A.z1);
+  }
+  // A torch either side of each wing's arch (tavern side and arena side).
+  for (const z of [L.SIDE_ARCH.z0 - 0.7, L.SIDE_ARCH.z1 + 0.7]) {
+    torch(T.x1, 2.7, z, -1, 0);
+    torch(A.x0, 2.7, z, 1, 0);
   }
 
   // ---- Sky, ambient and the light pool -------------------------------------------------------------
   const skyTex = own(skyTexture());
   const sky = new THREE.Mesh(own(new THREE.SphereGeometry(190, 32, 16)), own(new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false })));
-  sky.position.set(0, -20, -20);
+  sky.position.set(0, -20, 0);
   sky.renderOrder = -10;
-  outside.add(sky);
+  group.add(sky);
   const hemi = new THREE.HemisphereLight(0x8a96c0, 0x2a2018, 0.4);
   group.add(hemi);
   const moon = new THREE.DirectionalLight(0x9aaad8, 0.35);
-  moon.position.set(30, 60, -10);
-  moon.target.position.set(0, 0, -20);
+  moon.position.set(30, 60, -40);
+  moon.target.position.set(0, 0, -10);
   group.add(moon, moon.target);
   const POOL = 6;
   interface Slot {
@@ -1174,13 +1106,10 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   }
   let lampCheck = 0;
 
-  Bin.build(inside, owned);
-  Bout.build(outside, owned);
+  B.build(group, owned);
   group.traverse((o) => {
     const m = o as THREE.Mesh;
-    if (m.isMesh && m.material !== M.flame && m.material !== beamMat && m.material !== runeMat && o !== sky) {
-      m.receiveShadow = true;
-    }
+    if (m.isMesh && m.material !== M.flame && m.material !== beamMat && m.material !== runeMat && o !== sky) m.receiveShadow = true;
   });
 
   // ---- Townsfolk -----------------------------------------------------------------------------------
@@ -1194,12 +1123,10 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     leg: number;
     wait: number;
     t: number;
-    tavern: boolean;
   }
   const npcs: Npc[] = L.NPCS.map((plan) => {
     const at = plan.kind === "sit" ? plan.seat! : plan.route![0];
-    const tavern = L.inTavern(at.x, at.z);
-    return { plan, p: null, x: at.x, z: at.z, yaw: plan.kind === "sit" ? plan.seat!.yaw : 0, prevYaw: 0, leg: 0, wait: 0, t: plan.seed, tavern };
+    return { plan, p: null, x: at.x, z: at.z, yaw: plan.kind === "sit" ? plan.seat!.yaw : (plan.route![0].face ?? 0), prevYaw: 0, leg: 0, wait: 0, t: plan.seed };
   });
   void (async () => {
     for (const n of npcs) {
@@ -1217,7 +1144,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
         p.group.rotation.order = "YXZ";
         p.group.position.set(n.x, 0, n.z);
         p.group.rotation.y = n.yaw;
-        (n.tavern ? inside : outside).add(p.group, p.fx);
+        group.add(p.group, p.fx);
         n.p = p;
       } catch (err) {
         console.error("townsfolk failed to load", err);
@@ -1266,7 +1193,6 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
         const ahead = pd > 0.01 ? (px * dx + pz * dz) / (pd * dist) : 0;
         const pace = n.plan.pace ?? 1.1;
         speed = pd < 1.05 && ahead > 0.3 && Math.abs(playerAt.y) < 0.6 ? 0 : pace;
-        // Ease into a walk and out of it.
         const step = Math.min(dist, speed * dt * Math.min(1, dist / 0.3 + 0.3));
         n.x += (dx / dist) * step;
         n.z += (dz / dist) * step;
@@ -1286,13 +1212,6 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   const rentedNow: boolean[] = L.ROOMS.map(() => false);
   L.ROOMS.forEach((_, i) => setPlaque(i, false));
   let active = true;
-  let zoneNow: "in" | "out" = "in";
-  const applyZone = () => {
-    inside.visible = zoneNow === "in";
-    outside.visible = zoneNow === "out";
-    lampCheck = 0;
-  };
-  applyZone();
 
   const dynamicSolids = () => {
     const out: L.Solid[] = [];
@@ -1301,6 +1220,10 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     });
     return out;
   };
+  const outdoorFog = new THREE.Color(0x10131c);
+  const indoorFog = new THREE.Color(0x0e0a08);
+  const outdoorHemi = new THREE.Color(0x8a96c0);
+  const indoorHemi = new THREE.Color(0x8a7058);
 
   return {
     group,
@@ -1326,18 +1249,10 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       const c = chestLids[room]?.[slot];
       if (c) c.target = open ? 1 : 0;
     },
-    npcSpots: () => npcs.filter((n) => n.p && n.p.group.visible).map((n) => ({ x: n.x, z: n.z })),
-    setZone(z) {
-      if (z === zoneNow) return;
-      zoneNow = z;
-      applyZone();
-      for (const sl of slots) {
-        sl.light.intensity = 0;
-        sl.lamp = null;
-        sl.leaving = false;
-      }
-    },
-    zone: () => zoneNow,
+    npcSpots: () => npcs.filter((n) => n.p).map((n) => ({ x: n.x, z: n.z })),
+    // One open place: there is nothing to swap.
+    setZone() {},
+    zone: () => "in",
     setShadows(on) {
       slots[0].light.castShadow = on;
     },
@@ -1354,15 +1269,9 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     update(dt, time, player) {
       if (!active) return;
       playerAt.copy(player);
-      const zone = zoneOf(player.x, player.z);
-      // Townsfolk: only the zone he is in lives (and only those near enough to matter animate).
-      for (const n of npcs) {
-        if (!n.p) continue;
-        const here = n.tavern === (zoneNow === "in");
-        n.p.group.visible = here;
-        if (here && Math.hypot(n.x - player.x, n.z - player.z) < 30) updateNpc(n, dt);
-      }
-      // Doors and chest lids.
+      const inside = L.indoors(player.x, player.z);
+      // Townsfolk near enough to matter animate.
+      for (const n of npcs) if (n.p && Math.hypot(n.x - player.x, n.z - player.z) < 34) updateNpc(n, dt);
       for (const d of doors) {
         d.open += (d.target - d.open) * (1 - Math.exp(-dt * 5));
         d.pivot.rotation.y = -1.5 * d.open;
@@ -1389,26 +1298,22 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
         c.position.set(L.DAIS.x + Math.sin(a) * 1.6, L.DAIS.h + 3.5 + 0.25 * Math.sin(time * 1.3 + i * 2), L.DAIS.z + Math.cos(a) * 1.6);
         c.rotation.y = time * 1.5 + i;
       });
-      // Ambient: night sky outside, firelight within.
-      const out = zone === "out" ? 1 : 0;
-      const hall = zone === "hall" ? 1 : 0;
+      // Ambient: the night sky on the street, firelight within.
       const kh = 1 - Math.exp(-dt * 3);
-      hemi.intensity += ((out ? 0.5 : hall ? 0.55 : 0.34) - hemi.intensity) * kh;
-      hemi.color.lerp(new THREE.Color(out ? 0x8a96c0 : hall ? 0x6a6a90 : 0x8a6a4a), kh);
-      moon.intensity += ((out ? 0.42 : 0) - moon.intensity) * kh;
+      hemi.intensity += ((inside ? 0.8 : 0.7) - hemi.intensity) * kh;
+      hemi.color.lerp(inside ? indoorHemi : outdoorHemi, kh);
+      moon.intensity += ((inside ? 0.05 : 0.6) - moon.intensity) * kh;
       if (scene.fog instanceof THREE.FogExp2) {
-        scene.fog.color.lerp(new THREE.Color(out ? 0x10131c : hall ? 0x0a0a10 : 0x0e0a08), kh);
-        scene.fog.density += ((out ? 0.011 : hall ? 0.012 : 0.006) - scene.fog.density) * kh;
+        scene.fog.color.lerp(inside ? indoorFog : outdoorFog, kh);
+        scene.fog.density += ((inside ? 0.007 : 0.01) - scene.fog.density) * kh;
       }
-      // The light pool: the nearest lamps where he is (other zones count for less).
+      // The light pool: the nearest lamps where he is (those on the other side of a wall count for less).
       lampCheck -= dt;
       if (lampCheck <= 0) {
         lampCheck = 0.15;
-        const score = (l: Lamp) => l.at.distanceTo(player) + (l.zone === zone ? 0 : 14);
-        // Only the lamps of the zone being drawn.
-        const ranked = lamps.filter((l) => (l.zone === "in") === (zoneNow === "in")).sort((a, b) => score(a) - score(b));
+        const score = (l: Lamp) => l.at.distanceTo(player) + (l.indoors === inside ? 0 : 10);
+        const ranked = lamps.slice().sort((a, b) => score(a) - score(b));
         const want = ranked.slice(0, slots.length);
-        // The nearest gets the shadow.
         const first = want[0];
         if (first && slots[0].lamp !== first) {
           if (!slots[0].lamp) {
@@ -1451,7 +1356,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     },
     drawMap(ctx, cw, ch, px, pz, py, time) {
       const upper = py > 2;
-      const span = 34; // metres across
+      const span = 40; // metres across
       const k = Math.min(cw, ch) / span;
       const X = (x: number) => cw / 2 + (x - px) * k;
       const Z = (z: number) => ch / 2 + (z - pz) * k;
@@ -1459,7 +1364,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       ctx.fillStyle = "rgba(180,192,200,0.36)";
       for (const r of L.REGIONS) {
         if (r.kind === "flat") {
-          if ((r.y > 2) !== upper) continue;
+          if (r.y > 2 !== upper) continue;
           ctx.fillRect(X(r.x0), Z(r.z0), (r.x1 - r.x0) * k, (r.z1 - r.z0) * k);
         } else if (r.kind === "rampZ") {
           ctx.fillStyle = "rgba(214,186,128,0.45)";
@@ -1468,25 +1373,30 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
         }
       }
       // Walls and big furniture at this storey.
-      ctx.fillStyle = "rgba(30,26,22,0.75)";
+      ctx.fillStyle = "rgba(30,26,22,0.8)";
       const lo = upper ? L.UPPER_Y : 0;
       for (const s of L.SOLIDS.concat(dynamicSolids())) {
         if (!s.walk || s.y1 <= lo + 0.3 || s.y0 >= lo + 1.7) continue;
         ctx.fillRect(X(s.x0), Z(s.z0), Math.max(1, (s.x1 - s.x0) * k), Math.max(1, (s.z1 - s.z0) * k));
       }
       if (!upper) {
-        // Stalls in their awning colours, the dais in violet.
-        for (const st of L.townStalls()) {
+        // The sand ring, the stalls in their awning colours, the dais in violet, the desk in gold.
+        const R = L.RING;
+        ctx.fillStyle = "rgba(226,196,140,0.35)";
+        ctx.fillRect(X(R.x0), Z(R.z0), (R.x1 - R.x0) * k, (R.z1 - R.z0) * k);
+        L.townStalls().forEach((st) => {
           const m = MERCHANTS[st.merchant];
-          const cx = st.x * 1.5 + st.nx * 0.9;
-          const cz = st.z * 1.5;
-          const sz = Math.max(5, k * 1.4);
+          const sz = Math.max(5, k * 1.6);
           ctx.fillStyle = css(m?.cloth ?? 0x888888);
           ctx.strokeStyle = "#e6c48a";
           ctx.lineWidth = 1;
+          const cx = st.x * 1.5;
+          const cz = st.z * 1.5 - 0.9;
           ctx.fillRect(X(cx) - sz / 2, Z(cz) - sz / 2, sz, sz);
           ctx.strokeRect(X(cx) - sz / 2, Z(cz) - sz / 2, sz, sz);
-        }
+        });
+        ctx.fillStyle = "#e8c060";
+        ctx.fillRect(X(L.DESK.x0), Z(L.DESK.z0), (L.DESK.x1 - L.DESK.x0) * k, Math.max(2, (L.DESK.z1 - L.DESK.z0) * k));
         const r = L.DAIS.r * k * (1 + 0.06 * Math.sin(time * 4));
         ctx.fillStyle = "rgba(160,110,255,0.35)";
         ctx.strokeStyle = "#c9a8ff";
@@ -1496,7 +1406,7 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
         ctx.fill();
         ctx.stroke();
         for (const n of npcs) {
-          if (!n.p || !n.p.group.visible) continue;
+          if (!n.p) continue;
           ctx.fillStyle = "#6ce88a";
           ctx.beginPath();
           ctx.arc(X(n.x), Z(n.z), Math.max(2, k * 0.3), 0, Math.PI * 2);
