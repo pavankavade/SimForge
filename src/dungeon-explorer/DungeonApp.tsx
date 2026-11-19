@@ -2549,7 +2549,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [itemPics, setItemPics] = useState<Record<string, string>>({});
   useEffect(() => {
     let on = true;
-    itemIcons()
+    itemIcons((sofar) => on && setItemPics(sofar))
       .then((pics) => on && setItemPics(pics))
       .catch(() => {});
     return () => {
@@ -2844,7 +2844,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const isPortrait = viewport.h > viewport.w;
   const isCompact = viewport.w < 760 || viewport.h < 520;
   const mobileMode = isTouchUI || isCompact;
-  const mapPixels = isPortrait ? 94 : mobileMode ? 112 : 156;
+  // A phone held sideways is short: a smaller minimap keeps clear of the touch buttons under it.
+  const mapPixels = isPortrait ? 94 : mobileMode ? (viewport.h < 400 ? 96 : 112) : 156;
   // Character screen: panel on the right and the paladin on the left; on narrow portrait screens
   // the panel takes the bottom half instead.
   const panel: PanelLayout =
@@ -3178,7 +3179,14 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         />
       ) : null}
 
-      {graphics.showFps || perfMode ? <FpsCounter perf={perfMode} /> : null}
+      {/* On phones the minimap is top right too: the details go beside it (sideways) or under it (upright). */}
+      {graphics.showFps || perfMode ? (
+        <FpsCounter
+          perf={perfMode}
+          perfRight={mobileMode && showMap && !isPortrait ? mapPixels + 24 : 0}
+          perfTop={mobileMode && showMap && isPortrait ? mapPixels + 44 : 0}
+        />
+      ) : null}
 
       {/* Top-left compact HUD */}
       <div
@@ -3512,50 +3520,6 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             }}
           >
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            {/* First or third person, a thumb away (also in the top-left panel). */}
-            <button
-              type="button"
-              aria-label={firstPerson ? "Third person view" : "First person view"}
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                setFirstPerson((v) => !v);
-              }}
-              style={{
-                width: 56,
-                height: 42,
-                borderRadius: 999,
-                border: "1.5px solid rgba(255,255,255,0.28)",
-                background: "rgba(12, 16, 22, 0.64)",
-                color: "#e8eef5",
-                fontWeight: 800,
-                fontSize: 12,
-                touchAction: "none",
-              }}
-            >
-              {firstPerson ? "3RD" : "1ST"}
-            </button>
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                setSprintLocked((v) => !v);
-              }}
-              style={{
-                width: 56,
-                height: 42,
-                borderRadius: 999,
-                border: sprintLocked ? "2px solid #7df39b" : "1.5px solid rgba(255,255,255,0.28)",
-                background: sprintLocked ? "rgba(108, 232, 138, 0.85)" : "rgba(12, 16, 22, 0.64)",
-                color: sprintLocked ? "#071a0d" : "#e8eef5",
-                fontWeight: 800,
-                fontSize: 12,
-                touchAction: "none",
-              }}
-            >
-              RUN
-            </button>
-            </div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <button
                 type="button"
                 onPointerDown={(e) => {
@@ -3615,6 +3579,50 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
                 SWING
               </button>
             </div>
+            {/* Bottom row: the camera and run toggles beside JUMP (kept low, clear of the minimap). */}
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            {/* First or third person, a thumb away (also in the top-left panel). */}
+            <button
+              type="button"
+              aria-label={firstPerson ? "Third person view" : "First person view"}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                setFirstPerson((v) => !v);
+              }}
+              style={{
+                width: 56,
+                height: 42,
+                borderRadius: 999,
+                border: "1.5px solid rgba(255,255,255,0.28)",
+                background: "rgba(12, 16, 22, 0.64)",
+                color: "#e8eef5",
+                fontWeight: 800,
+                fontSize: 12,
+                touchAction: "none",
+              }}
+            >
+              {firstPerson ? "3RD" : "1ST"}
+            </button>
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                setSprintLocked((v) => !v);
+              }}
+              style={{
+                width: 56,
+                height: 42,
+                borderRadius: 999,
+                border: sprintLocked ? "2px solid #7df39b" : "1.5px solid rgba(255,255,255,0.28)",
+                background: sprintLocked ? "rgba(108, 232, 138, 0.85)" : "rgba(12, 16, 22, 0.64)",
+                color: sprintLocked ? "#071a0d" : "#e8eef5",
+                fontWeight: 800,
+                fontSize: 12,
+                touchAction: "none",
+              }}
+            >
+              RUN
+            </button>
             <button
               type="button"
               onPointerDown={(e) => {
@@ -3637,6 +3645,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             >
               JUMP
             </button>
+            </div>
           </div>
         </>
       ) : null}

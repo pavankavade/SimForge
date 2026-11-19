@@ -201,8 +201,12 @@ function drawn(id: string): string | null {
 
 let made: Promise<Record<string, string>> | null = null;
 
-/** Icons for every non-kit item, made once (data URLs keyed by item id). */
-export function itemIcons(): Promise<Record<string, string>> {
+/**
+ * Icons for every non-kit item, made once (data URLs keyed by item id). `onProgress` gets what is
+ * ready so far as it comes: the drawn ones at once, then each model's as it renders, so a slow
+ * phone shows the belt's draught and bandage straight away instead of after every model loads.
+ */
+export function itemIcons(onProgress?: (sofar: Record<string, string>) => void): Promise<Record<string, string>> {
   if (made) return made;
   made = (async () => {
     const out: Record<string, string> = {};
@@ -210,6 +214,7 @@ export function itemIcons(): Promise<Record<string, string>> {
       const u = drawn(id);
       if (u) out[id] = u;
     }
+    onProgress?.({ ...out });
     const canvas = document.createElement("canvas");
     const size = 128;
     let renderer: THREE.WebGLRenderer | null = null;
@@ -243,6 +248,7 @@ export function itemIcons(): Promise<Record<string, string>> {
         renderer.render(scene, cam);
         out[id] = canvas.toDataURL("image/png");
         scene.remove(o);
+        onProgress?.({ ...out });
       } catch {
         // Its name stands in.
       }

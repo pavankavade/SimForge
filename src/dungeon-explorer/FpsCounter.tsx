@@ -21,7 +21,11 @@ const box: React.CSSProperties = {
   fontVariantNumeric: "tabular-nums",
 };
 
-export const FpsCounter: React.FC<{ perf?: boolean }> = ({ perf = false }) => {
+/**
+ * `perfRight` / `perfTop`: how far (px) to move the performance details left of, or down below,
+ * the counter, to keep them off the minimap on phones.
+ */
+export const FpsCounter: React.FC<{ perf?: boolean; perfRight?: number; perfTop?: number }> = ({ perf = false, perfRight = 0, perfTop = 0 }) => {
   const fpsRef = useRef<HTMLDivElement | null>(null);
   const perfRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -70,7 +74,8 @@ export const FpsCounter: React.FC<{ perf?: boolean }> = ({ perf = false }) => {
           ref={perfRef}
           style={{
             ...box,
-            top: `calc(max(4px, env(safe-area-inset-top)) + ${FPS_HEIGHT}px)`,
+            top: `calc(max(4px, env(safe-area-inset-top)) + ${FPS_HEIGHT + perfTop}px)`,
+            right: `calc(max(8px, env(safe-area-inset-right)) + ${perfRight}px)`,
             padding: "4px 6px",
             color: "#d8e4ee",
             fontWeight: 500,
