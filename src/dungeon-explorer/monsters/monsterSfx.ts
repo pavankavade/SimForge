@@ -17,6 +17,8 @@ export interface MonsterSfx {
   trapClick: () => void;
   spikes: () => void;
   thud: () => void;
+  /** A swinging blade sweeping past. */
+  swish: () => void;
   dispose: () => void;
 }
 
@@ -140,6 +142,11 @@ export function createMonsterSfx(volume = 0.45): MonsterSfx {
     thud() {
       hiss("lowpass", 700, 120, 1.2, 0.3, 0.003, 0.18);
       tone(110, 55, 0.18, 0.003, 0.16, "sine");
+    },
+    swish() {
+      // Air torn by a heavy blade: a band of noise sweeping up then down, and a faint ring.
+      hiss("bandpass", 500, 1800, 2.5, 0.16, 0.12, 0.18);
+      tone(1900, 1700, 0.015, 0.05, 0.3, "sine");
     },
     dispose() {
       void ctx?.close();

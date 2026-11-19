@@ -1285,11 +1285,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       const portalRand = () => (ps = (Math.imul(ps, 1664525) + 1013904223) >>> 0) / 4294967296;
       portalsRef.current?.dispose();
       portalsRef.current = createPortals(scene, dungeon, CELL_M, planPortals(dungeon, portalRand, { x: walker.x + dungeon.W / 2, z: walker.z + dungeon.H / 2 }));
-      // Five traps in the corridors (traps.ts), from the seed alone: the same ones every life.
+      // Five traps in the corridors (traps.ts), from the seed alone: the same ones every life (lava
+      // channels on molten floors, acid elsewhere).
       let ts = (Math.imul(seed ^ 0x2c1b3c6d, 2654435761) + 7) >>> 0;
       const trapRand = () => (ts = (Math.imul(ts, 1664525) + 1013904223) >>> 0) / 4294967296;
       trapsRef.current?.dispose();
-      trapsRef.current = createTraps(scene, dungeon, CELL_M, planTraps(dungeon, plan.pieces, { x: walker.x + dungeon.W / 2, z: walker.z + dungeon.H / 2 }, trapRand));
+      trapsRef.current = createTraps(scene, dungeon, CELL_M, planTraps(dungeon, plan.pieces, { x: walker.x + dungeon.W / 2, z: walker.z + dungeon.H / 2 }, trapRand), { lava: theme === "molten" });
 
       // The men need their bodies before the floor opens.
       if (!bodiesRef.current && bodiesPromiseRef.current) {
@@ -2285,7 +2286,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             const sz = Math.max(3, scale * 0.45);
             ctx.fillRect(ox + c.piece.x * scale - sz / 2, oy + c.piece.z * scale - sz / 2, sz, sz);
           });
-          // Traps: a spike plate as a red crossed square, a log as an orange bar across the corridor.
+          // Traps: a spike plate as a red crossed square; across the corridor, a log as an orange
+          // bar, a blade as a pale bar with its hub, a channel as a green (lava: orange) band.
+          const lavaFloor = theme === "molten";
           for (const t of trapsRef.current?.plans ?? []) {
             const cx = ox + t.gx * scale;
             const cz = oy + t.gz * scale;
@@ -2300,18 +2303,28 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
               ctx.moveTo(cx + h, cz - h);
               ctx.lineTo(cx - h, cz + h);
               ctx.stroke();
-            } else {
-              ctx.strokeStyle = "#ff9f2e";
-              ctx.lineWidth = Math.max(2, scale * 0.3);
+              continue;
+            }
+            // Half its length across the corridor and half its depth along it (minimap pixels).
+            const half = (t.span * scale) / 2;
+            const deep = t.kind === "channel" ? Math.max(1.5, (t.length === 2 ? 0.9 : 0.27) * scale) : 0;
+            const [hx, hz] = t.along === "x" ? [deep, half] : [half, deep];
+            if (t.kind === "channel") {
+              ctx.fillStyle = lavaFloor ? "rgba(255,110,30,0.8)" : "rgba(110,255,60,0.75)";
+              ctx.fillRect(cx - hx, cz - hz, hx * 2, hz * 2);
+              continue;
+            }
+            ctx.strokeStyle = t.kind === "blade" ? "#dfe6ee" : "#ff9f2e";
+            ctx.lineWidth = Math.max(2, scale * 0.3);
+            ctx.beginPath();
+            ctx.moveTo(cx - hx, cz - hz);
+            ctx.lineTo(cx + hx, cz + hz);
+            ctx.stroke();
+            if (t.kind === "blade") {
+              ctx.fillStyle = "#dfe6ee";
               ctx.beginPath();
-              if (t.along === "x") {
-                ctx.moveTo(cx, cz - scale * 0.5);
-                ctx.lineTo(cx, cz + scale * 0.5);
-              } else {
-                ctx.moveTo(cx - scale * 0.5, cz);
-                ctx.lineTo(cx + scale * 0.5, cz);
-              }
-              ctx.stroke();
+              ctx.arc(cx, cz, Math.max(2, scale * 0.3), 0, Math.PI * 2);
+              ctx.fill();
             }
           }
           // Open portals: a violet ring that pulses.
