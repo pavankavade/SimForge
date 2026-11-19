@@ -68,6 +68,7 @@ export class Hub {
       place: "town",
       zone: "in",
       party: null,
+      pose: null,
       chatAt: 0,
       chatBurst: 0,
       invites: new Map(),
@@ -102,8 +103,10 @@ export class Hub {
     }
     switch (m.t) {
       case "s":
-        // His pose: to everyone in the same place (the town, or his party's dive).
+        // His pose: to everyone in the same place (the town, or his party's dive), and kept for
+        // whoever arrives there later (a paused game sends nothing new).
         m.id = p.id;
+        p.pose = m;
         this.toPlace(p, m);
         return;
       case "g":
@@ -118,11 +121,14 @@ export class Hub {
         if (typeof m.name === "string" && NAME_RE.test(m.name.trim())) p.name = m.name.trim();
         this.broadcast({ t: "look", id: p.id, look: p.look, cls: p.cls, name: p.name }, p);
         return;
-      case "where":
+      case "where": {
+        const was = p.place;
         p.place = m.place === "run" ? "run" : "town";
         p.zone = m.zone === "out" ? "out" : "in";
         this.broadcast({ t: "where", id: p.id, place: p.place, zone: p.zone }, p);
+        if (was !== "town" && p.place === "town") this.sendPoses(p);
         return;
+      }
       case "chat":
         this.chat(p, m);
         return;
@@ -177,6 +183,14 @@ export class Hub {
       players: [...this.players.values()].filter((o) => o !== p).map((o) => this.summary(o)),
     });
     this.broadcast({ t: "join", p: this.summary(p) }, p);
+    this.sendPoses(p);
+  }
+
+  /** Where everyone else in town last stood, for a player who just came into it. */
+  sendPoses(p) {
+    for (const o of this.players.values()) {
+      if (o !== p && o.place === "town" && o.pose && o.pose.pl === "town") this.send(p, o.pose);
+    }
   }
 
   // ---- what everyone sees ----------------------------------------------------------------------

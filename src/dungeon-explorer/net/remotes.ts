@@ -1,6 +1,7 @@
 // The other players, in this browser: each gets the same paladin body as ours (built from the
 // face and armour he sends, net/mp.ts `Look`), walked through the poses he streams. Poses are
-// played a little behind real time (DELAY_MS) so there are always two to ease between. A name
+// played a little behind real time (DELAY_MS) so there are always two to ease between; one who
+// stops sending (his game paused) stands where he last was. A name
 // (and in a dive his health) floats over his head.
 //
 // Only those in the same place are drawn: in town everyone in the same zone (tavern or square),
@@ -10,8 +11,6 @@ import { ARMOR_SLOTS, createPaladin, type ArmorEquipment, type Paladin } from ".
 import { mp, type Look, type Pose } from "./mp";
 
 const DELAY_MS = 140;
-/** Poses older than this mean he stopped sending (left, or a dropped tab): he is hidden. */
-const STALE_MS = 6000;
 const PLATE_M = 28;
 
 interface Sample {
@@ -185,10 +184,12 @@ export function createRemotes(gl: THREE.WebGLRenderer, scene: THREE.Scene, layer
         dress(a, info.look);
         const last = a.buf[a.buf.length - 1];
         const s = sample(a, now);
+        // A player whose game is paused (his window hidden or covered) sends nothing: he stays where
+        // he last was for as long as the hub has him online in the same place.
         const here =
           !!s &&
           !!last &&
-          now - last.at < STALE_MS &&
+          info.place === ctx.place &&
           last.p.pl === ctx.place &&
           (ctx.place === "town" ? last.p.zn === ctx.zone : last.p.ru === ctx.runId) &&
           !(ctx.place === "run" && last.p.e);

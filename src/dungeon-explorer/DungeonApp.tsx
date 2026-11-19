@@ -3867,8 +3867,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {hud.pointerLocked
-            ? "1 Sword & shield · 2 Bow · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Esc Menu"
-            : "Click to capture the mouse · 1 Sword & shield · 2 Bow · 3 / 4 Belt · F Swing (hold to draw the bow) · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Esc Menu"}
+            ? "1 Sword & shield · 2 Bow · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"
+            : "Click to capture the mouse · 1 Sword & shield · 2 Bow · 3 / 4 Belt · F Swing (hold to draw the bow) · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"}
         </div>
       ) : null}
 
@@ -4159,14 +4159,30 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       ) : null}
       {screen === "play" || screen === "party" ? <InviteCards top={mobileMode ? 54 : 80} /> : null}
       {screen === "party" ? <PartyScreen onClose={resume} compact={mobileMode} inDungeon={place === "dungeon"} /> : null}
-      {isTouchUI && showGameHud && mpState.status !== "off" && !hud.dead ? (
-        <div style={{ position: "fixed", zIndex: 12, top: "max(10px, env(safe-area-inset-top))", left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
+      {/* Chat and the party finder, with who is online (top middle; under the run clock below). */}
+      {showGameHud && mpState.status !== "off" && !hud.dead && !hud.loading ? (
+        <div
+          style={{
+            position: "fixed",
+            zIndex: 12,
+            top: place === "dungeon" ? (mobileMode ? 58 : 76) : "max(10px, env(safe-area-inset-top))",
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
           <button type="button" style={{ ...btnStyle, padding: "4px 10px", fontSize: 11 }} onClick={() => setChatOpen(true)}>
-            CHAT
+            {isTouchUI ? "CHAT" : "CHAT (ENTER)"}
           </button>
           <button type="button" style={{ ...btnStyle, padding: "4px 10px", fontSize: 11 }} onClick={() => openScreen("party")}>
-            PARTY{mpState.party ? ` (${mpState.party.members.length})` : ""}
+            {isTouchUI ? "PARTY" : "PARTY (P)"}
+            {mpState.party ? ` · ${mpState.party.members.length}` : ""}
           </button>
+          <span style={{ fontSize: 11, color: mpState.status === "online" ? "#8fd0ff" : "#b9a982", textShadow: "0 1px 3px #000" }}>
+            {mpState.status === "online" ? `${mpState.players.size + 1} online` : mpState.status === "connecting" ? "connecting..." : "offline"}
+          </span>
         </div>
       ) : null}
 
