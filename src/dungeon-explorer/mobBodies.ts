@@ -44,6 +44,8 @@ interface SkeletonSlot {
   staffGlow: THREE.Sprite;
   /** The crystal left on the floor where it fell. */
   crystal: THREE.Mesh;
+  /** Animation time saved up while a far skeleton skips frames (the Low graphics setting). */
+  skipped: number;
 }
 
 interface SlimeSlot {
@@ -87,6 +89,10 @@ export interface MobBodies {
     view: { width: number; height: number },
     plates: Array<HTMLDivElement | null>
   ) => void;
+  /** How many of the nearest skeletons animate every frame; the rest every other frame. */
+  setNearSkeletons: (n: number) => void;
+  /** Show every pooled body for a moment and build its shaders now (at load, not on first sight). */
+  warm: (renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) => void;
   dispose: () => void;
 }
 
@@ -182,7 +188,7 @@ export async function createMobBodies(
     crystal.scale.setScalar(1.3);
     scene.add(crystal);
 
-    const slot: SkeletonSlot = { kind: "skeleton", p, bones, mob: null, prevYaw: 0, world: { targets: [target] }, dropped, bow, bowString: [s1, s2], nocked, staff, staffGlow, crystal };
+    const slot: SkeletonSlot = { kind: "skeleton", p, bones, mob: null, prevYaw: 0, world: { targets: [target] }, dropped, bow, bowString: [s1, s2], nocked, staff, staffGlow, crystal, skipped: 0 };
     const bounce = { bounce: () => p.animator.bounce() };
     slot.world = {
       targets: [target],
@@ -290,7 +296,8 @@ export async function createMobBodies(
     s.dropped.visible = false;
   };
 
-  const updateSkeleton = (s: SkeletonSlot, m: MobAgent, dt: number, time: number) => {
+  /** `animate`: false skips the rig this frame (a far skeleton on Low); it is placed all the same. */
+  const updateSkeleton = (s: SkeletonSlot, m: MobAgent, dt: number, time: number, animate = true) => {
     const g = s.p.group;
     // The fall: a stagger, then over backwards onto the floor (eased in, like gravity).
     const fall = m.dead ? Math.min(1, Math.max(0, m.deadT - 0.12) / 0.5) : 0;
@@ -315,7 +322,7 @@ export async function createMobBodies(
       s.crystal.rotation.set(1.35, m.yaw + 0.6, 0.2);
     }
     // A fallen skeleton stops animating once it lies still.
-    if (!m.dead || m.deadT < 0.9) {
+    if (animate && (!m.dead || m.deadT < 0.9)) {
       const sinF = Math.sin(m.yaw);
       const cosF = Math.cos(m.yaw);
       const turn = dt > 0 ? Math.atan2(Math.sin(m.yaw - s.prevYaw), Math.cos(m.yaw - s.prevYaw)) / dt : 0;
@@ -384,6 +391,9 @@ export async function createMobBodies(
     }
   };
 
+  let frameNo = 0;
+  let nearSkeletons = SKELETON_POOL;
+
   return {
     clear() {
       for (const s of slots) release(s);
@@ -414,6 +424,15 @@ export async function createMobBodies(
         bind(s, m);
       }
 
+      // The nearest skeletons animate every frame; on Low the rest take turns (every other frame,
+      // with the time they missed), which halves the rig and cloth work for the far ones.
+      frameNo++;
+      const far = new Set<Slot>();
+      if (nearSkeletons < SKELETON_POOL) {
+        const skel = slots.filter((o) => o.kind === "skeleton" && o.mob).sort((a, b) => dist(a.mob as MobAgent) - dist(b.mob as MobAgent));
+        for (let k = nearSkeletons; k < skel.length; k++) far.add(skel[k]);
+      }
+
       for (let i = 0; i < slots.length; i++) {
         const s = slots[i];
         const plate = plates[i];
@@ -423,7 +442,13 @@ export async function createMobBodies(
           continue;
         }
         if (s.kind === "slime") s.b.update(dt, m, time);
-        else updateSkeleton(s, m, dt, time);
+        else if (far.has(s) && (frameNo + i) % 2 === 1) {
+          s.skipped += dt;
+          updateSkeleton(s, m, 0, time, false);
+        } else {
+          updateSkeleton(s, m, dt + s.skipped, time);
+          s.skipped = 0;
+        }
 
         // Nameplate over the head once it is hostile or hurt, while alive and near.
         if (!plate) continue;
@@ -484,6 +509,21 @@ export async function createMobBodies(
         pm.mesh.scale.setScalar(q.r * (0.4 + 0.6 * grow));
         pm.mat.opacity = 0.6 * fade;
         pm.mat.emissiveIntensity = (0.4 + 0.2 * Math.sin(time * 5 + i)) * fade;
+      }
+    },
+
+    setNearSkeletons(n) {
+      nearSkeletons = Math.max(1, Math.min(SKELETON_POOL, n));
+    },
+
+    warm(renderer, scn, camera) {
+      const shown = slots.map((s) => (s.kind === "slime" ? s.b.group : s.p.group));
+      const was = shown.map((g) => g.visible);
+      for (const g of shown) g.visible = true;
+      try {
+        renderer.compile(scn, camera);
+      } finally {
+        shown.forEach((g, i) => (g.visible = was[i]));
       }
     },
 

@@ -2,7 +2,7 @@
 // the dungeon options and the graphics setting. The world keeps running behind it; only the
 // paladin stops listening.
 import React from "react";
-import { QUALITIES, QUALITY_LABEL, type Quality } from "./graphics";
+import { FRAME_CAPS, QUALITIES, QUALITY_LABEL, type FrameCap, type Quality } from "./graphics";
 
 export interface PauseMenuProps {
   dungeonName: string;
@@ -28,14 +28,55 @@ export interface PauseMenuProps {
   onQuality: (q: Quality) => void;
   showFps: boolean;
   onFps: () => void;
+  /** Frames per second at most, and the resolution dropping by itself while the game is slow. */
+  frameCap: FrameCap;
+  onFrameCap: (c: FrameCap) => void;
+  autoRes: boolean;
+  onAutoRes: () => void;
   backHref?: string;
 }
 
 const QUALITY_HINT: Record<Quality, string> = {
-  low: "For phones: lower resolution, no shadows, bloom or smoothing.",
-  medium: "Full resolution, no lamp shadows or smoothing.",
-  high: "Everything: lamp shadows, contact shadows, bloom, smoothing.",
+  low: "For phones: lower resolution, flat stone, two room lights, no shadows, bloom or smoothing.",
+  medium: "Full resolution, no lamp shadows or smoothing, four room lights.",
+  high: "Everything: lamp shadows, contact shadows, stone relief, bloom, smoothing.",
 };
+
+/** One row of choices, the chosen one lit. */
+function Choices<T extends string | number>(p: { label: string; options: readonly T[]; value: T; name: (v: T) => string; onPick: (v: T) => void }) {
+  return (
+    <div role="radiogroup" aria-label={p.label} style={{ display: "flex", gap: 6 }}>
+      {p.options.map((q) => {
+        const on = q === p.value;
+        return (
+          <button
+            type="button"
+            key={String(q)}
+            role="radio"
+            aria-checked={on}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              p.onPick(q);
+            }}
+            style={{
+              flex: 1,
+              padding: "8px 0",
+              borderRadius: 3,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              background: on ? "linear-gradient(180deg, rgba(255,216,77,0.2), rgba(255,216,77,0.08))" : "rgba(24,22,19,0.95)",
+              color: on ? GOLD : "#d8ccb0",
+              border: on ? "1px solid rgba(255,216,77,0.6)" : "1px solid rgba(214,186,128,0.2)",
+            }}
+          >
+            {p.name(q)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 const GOLD = "#ffd84d";
 
@@ -159,38 +200,15 @@ export const PauseMenu: React.FC<PauseMenuProps> = (p) => (
       </div>
 
       <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", margin: "16px 0 8px" }}>GRAPHICS</div>
-      <div role="radiogroup" aria-label="Graphics quality" style={{ display: "flex", gap: 6 }}>
-        {QUALITIES.map((q) => {
-          const on = q === p.quality;
-          return (
-            <button
-              type="button"
-              key={q}
-              role="radio"
-              aria-checked={on}
-              onClick={(e) => {
-                e.currentTarget.blur();
-                p.onQuality(q);
-              }}
-              style={{
-                flex: 1,
-                padding: "8px 0",
-                borderRadius: 3,
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-                background: on ? "linear-gradient(180deg, rgba(255,216,77,0.2), rgba(255,216,77,0.08))" : "rgba(24,22,19,0.95)",
-                color: on ? GOLD : "#d8ccb0",
-                border: on ? "1px solid rgba(255,216,77,0.6)" : "1px solid rgba(214,186,128,0.2)",
-              }}
-            >
-              {QUALITY_LABEL[q]}
-            </button>
-          );
-        })}
-      </div>
+      <Choices label="Graphics quality" options={QUALITIES} value={p.quality} name={(q) => QUALITY_LABEL[q]} onPick={p.onQuality} />
       <div style={{ fontSize: 11, color: "#8f8676", marginTop: 6, lineHeight: 1.4 }}>{QUALITY_HINT[p.quality]}</div>
-      <div style={{ marginTop: 8 }}>
+      <div style={{ fontSize: 11, color: "#8f8676", margin: "10px 0 6px" }}>Frame cap</div>
+      <Choices label="Frame cap" options={FRAME_CAPS} value={p.frameCap} name={(c) => `${c} FPS`} onPick={p.onFrameCap} />
+      <div style={{ fontSize: 11, color: "#8f8676", marginTop: 6, lineHeight: 1.4 }}>
+        A steady 30 can feel smoother on a phone than a frame rate that jumps around.
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+        <Small onClick={p.onAutoRes}>Auto resolution: {p.autoRes ? "on" : "off"}</Small>
         <Small onClick={p.onFps}>{p.showFps ? "Hide FPS" : "Show FPS"}</Small>
       </div>
 

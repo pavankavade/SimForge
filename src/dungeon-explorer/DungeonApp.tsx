@@ -19,7 +19,7 @@ import { loadTown, saveTown, withRented, withStash, type TownSave } from "./town
 import { createCloudSync, fetchCloud, loadProfile, saveProfile } from "./profile";
 import { createAccount, loadAccount, saveAccount, type Account } from "./account";
 import { AccountPrompt } from "./AccountPrompt";
-import { PRESETS, loadGraphics, saveGraphics, type Graphics, type QualityPreset } from "./graphics";
+import { PRESETS, frameStats, loadGraphics, maxDpr, saveGraphics, type FrameCap, type Graphics, type QualityPreset } from "./graphics";
 import { FPS_HEIGHT, FpsCounter } from "./FpsCounter";
 import { beginRun, endRun, loadTownSpot, markRunDead, runAtStart, saveTownSpot, updateRun, type RunSnapshot } from "./runSave";
 import { MERCHANTS, css } from "./merchants";
@@ -58,6 +58,7 @@ import { classById, type ClassId } from "./classes";
 import {
   createPaladin,
   createPaladinSfx,
+  setClothRate,
   type ArmorEquipment,
   type ArmorSlot,
   type CombatTarget,
@@ -328,8 +329,11 @@ interface DungeonSceneProps {
   escapeQueueRef: React.RefObject<boolean>;
   /** A floor is built and he stands on it: at the entrance (a new run), or where he was (`resumed`). */
   onFloorReady: (resumed: boolean) => void;
-  /** The graphics setting (graphics.ts). */
+  /** The graphics setting, frame cap and automatic resolution (graphics.ts), and `?perf`. */
   quality: QualityPreset;
+  frameCap: FrameCap;
+  autoRes: boolean;
+  perf: boolean;
   /** A run left open last time, to pick up on its floor (runSave.ts). */
   resume: RunSnapshot | null;
   /** In town or below; where he appears in town (the tavern at the start, the dais back from a dive). */
@@ -466,6 +470,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   regenQueueRef,
   onArrive,
   quality,
+  frameCap,
+  autoRes,
+  perf,
   resume,
 }) => {
   // The run to pick up again (runSave.ts): used by the first floor built, if it is that floor.
@@ -609,11 +616,52 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   }, [gl, scene, camera]);
 
   // The graphics setting (graphics.ts): what the renderer draws besides the scene.
+  // Each preset is one fixed object (graphics.ts PRESETS), so this runs only when the setting changes.
+  const qualityRef = useRef(quality);
+  qualityRef.current = quality;
   useEffect(() => {
-    const q = { shadows: quality.shadows, ao: quality.ao, bloom: quality.bloom, msaa: quality.msaa };
-    viewRef.current?.setQuality(q);
-    townRef.current?.setShadows(q.shadows);
-  }, [quality.shadows, quality.ao, quality.bloom, quality.msaa]);
+    viewRef.current?.setQuality(quality);
+    townRef.current?.setShadows(quality.shadows);
+    bodiesRef.current?.setNearSkeletons(quality.nearSkeletons);
+    setClothRate(quality.clothHz);
+  }, [quality]);
+
+  // The frame cap, automatic resolution and `?perf` (graphics.ts): read by the frame loop.
+  const frameCapRef = useRef(frameCap);
+  frameCapRef.current = frameCap;
+  const autoResRef = useRef(autoRes);
+  autoResRef.current = autoRes;
+  const perfRef = useRef(perf);
+  perfRef.current = perf;
+  const setDpr = useThree((s) => s.setDpr);
+  const lastFrameRef = useRef(0);
+  const paceRef = useRef({ prevTick: 0, budget: 0 });
+  /** Compile the scene's shaders (with the pooled monsters shown) as the frame will draw them. */
+  const warmShaders = useCallback(() => {
+    const tm = gl.toneMapping;
+    const te = gl.toneMappingExposure;
+    const cs = gl.outputColorSpace;
+    if (qualityRef.current.direct) {
+      gl.toneMapping = THREE.CustomToneMapping;
+      gl.outputColorSpace = THREE.SRGBColorSpace;
+    }
+    try {
+      if (bodiesRef.current) bodiesRef.current.warm(gl, scene, camera);
+      else gl.compile(scene, camera);
+    } catch (err) {
+      console.warn("shader warm-up failed", err);
+    } finally {
+      gl.toneMapping = tm;
+      gl.toneMappingExposure = te;
+      gl.outputColorSpace = cs;
+    }
+  }, [gl, scene, camera]);
+  // Automatic resolution: the scale on the preset's pixel ratio, and the frame-rate window it is judged on.
+  const resRef = useRef({ scale: 1, frames: 0, since: 0, low: 0, high: 0 });
+  useEffect(() => {
+    resRef.current.scale = 1;
+    setDpr(maxDpr(quality));
+  }, [quality, autoRes, setDpr]);
 
   // Where he is, kept every few seconds and when the page is hidden (runSave.ts): his spot in town,
   // or the run below (floor, clock, health, chests and remains, the dead).
@@ -809,7 +857,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     promise
       .then((b) => {
         if (disposed) b.dispose();
-        else bodiesRef.current = b;
+        else {
+          bodiesRef.current = b;
+          b.setNearSkeletons(qualityRef.current.nearSkeletons);
+        }
       })
       .catch((err: unknown) => console.error("mob bodies failed to load", err));
     return () => {
@@ -1300,6 +1351,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           }
         }
       }
+      // Build every shader the floor and the monsters need now, behind the loading screen, rather
+      // than with a stall the first time each comes into view.
+      onHudUpdate({ loading: "Preparing shaders..." });
+      await new Promise((r) => setTimeout(r, 10));
+      if (cancelled) return;
+      warmShaders();
       arriveRef.current();
       // Stand him up fresh (pose, cloth) after a respawn, a new floor or a resumed run.
       paladinRef.current?.reset();
@@ -1329,7 +1386,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef]);
+  }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef, warmShaders]);
 
   // What he drops on the ground lies in a sack at his feet (a container to search with E): pieces
   // dropped close together share one sack; an emptied sack is gone.
@@ -1445,12 +1502,30 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     }
   };
 
-  useFrame((_, rawDelta) => {
+  useFrame(() => {
     const view = viewRef.current;
     const world = worldRef.current;
     if (!view || !world) return;
 
-    const dt = Math.min(rawDelta, 0.05);
+    // The frame cap: a budget of real time, spent one frame interval at a time, so a 100 cap gives
+    // about 100 frames on a 120 Hz screen too (five drawn in six) and skipped ticks draw nothing.
+    const now = performance.now();
+    const pace = paceRef.current;
+    const tick = pace.prevTick ? now - pace.prevTick : 1000 / 60;
+    pace.prevTick = now;
+    const interval = 1000 / frameCapRef.current;
+    pace.budget = Math.min(pace.budget + tick, interval * 2);
+    if (pace.budget < interval - 0.5) return;
+    pace.budget = Math.max(0, pace.budget - interval);
+    const elapsed = lastFrameRef.current ? (now - lastFrameRef.current) / 1000 : 1 / 60;
+    lastFrameRef.current = now;
+    frameStats.frames++;
+    if (perfRef.current) {
+      gl.info.autoReset = false;
+      gl.info.reset();
+    }
+    // Real time down to 12 frames a second (below that the game slows rather than lurches).
+    const dt = Math.min(elapsed, 1 / 12);
     world.time += dt;
     const { walker, sim, space } = world;
     const fl = world.floor;
@@ -1621,15 +1696,19 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const serial = paladin ? paladin.animator.swingSerial : 0;
     const swingStarted = serial !== world.lastSerial;
     world.lastSerial = serial;
-    sim.step(dt, {
-      wx: px,
-      wy: py,
-      wz: pz,
-      swinging: paladin !== null && (paladin.animator.state === "windup" || paladin.animator.state === "strike"),
-      swingStarted,
-      dead: world.dead,
-    });
-    handleMobEvents(sim.events, px, pz);
+    // The monsters in two half steps on a slow frame (so a long step never carries one through a wall).
+    const simSteps = dt > 0.04 ? 2 : 1;
+    for (let k = 0; k < simSteps; k++) {
+      sim.step(dt / simSteps, {
+        wx: px,
+        wy: py,
+        wz: pz,
+        swinging: paladin !== null && (paladin.animator.state === "windup" || paladin.animator.state === "strike"),
+        swingStarted: swingStarted && k === 0,
+        dead: world.dead,
+      });
+      handleMobEvents(sim.events, px, pz);
+    }
     dropToGround(world.walker.yaw + Math.PI, px, world.playerFloor * CELL_M, pz);
     // A fallen monster leaves its crystal and what it carried, to search with E like a chest.
     for (const m of sim.mobs) {
@@ -2028,6 +2107,42 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     if (fl) view.updateLights(dt, walker.x, walker.z, fl.lamps, fl.dungeon);
     // The carried lantern rides half a metre above the helm so it lights the steel without burning it out.
     view.renderFrame(world.time, dt, lightX, lightY, lightZ, size.width, size.height);
+    // What this frame cost (graphics.ts frameStats: the FPS counter and `?perf`).
+    frameStats.cpuMs += (performance.now() - now - frameStats.cpuMs) * 0.1;
+    frameStats.dpr = gl.getPixelRatio();
+    if (perfRef.current) {
+      frameStats.calls = gl.info.render.calls;
+      frameStats.triangles = gl.info.render.triangles;
+      frameStats.programs = gl.info.programs?.length ?? 0;
+      if (frameStats.frames % 30 === 0) {
+        let lights = 0;
+        scene.traverseVisible((o) => {
+          if ((o as THREE.Light).isLight && !(o as THREE.HemisphereLight).isHemisphereLight) lights++;
+        });
+        frameStats.lights = lights;
+      }
+    }
+    // Automatic resolution: down a step after two slow seconds, back up after four smooth ones.
+    const res = resRef.current;
+    res.frames++;
+    if (!res.since) res.since = now;
+    if (now - res.since >= 1000) {
+      const fps = (res.frames * 1000) / (now - res.since);
+      res.frames = 0;
+      res.since = now;
+      const top = Math.min(frameCapRef.current, 60);
+      res.low = fps < 28 ? res.low + 1 : 0;
+      res.high = fps > top * 0.9 ? res.high + 1 : 0;
+      let next = res.scale;
+      if (!autoResRef.current) next = 1;
+      else if (res.low >= 2 && res.scale > 0.6) next = Math.max(0.6, res.scale * 0.85);
+      else if (res.high >= 4 && res.scale < 1) next = Math.min(1, res.scale * 1.12);
+      if (next !== res.scale) {
+        res.scale = next;
+        res.low = res.high = 0;
+        setDpr(maxDpr(qualityRef.current) * next);
+      }
+    }
     // The inventory's picture of him, drawn into its box over the frame.
     const pr = portraitRectRef.current;
     if (pr && portraitRef.current) {
@@ -2184,6 +2299,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [graphics, setGraphics] = useState<Graphics>(() => loadGraphics(detectInitialTouch()));
   useEffect(() => saveGraphics(graphics), [graphics]);
   const quality = PRESETS[graphics.quality];
+  // `?perf` on the URL: draw calls, triangles, lights and frame time under the FPS counter.
+  const perfMode = params.has("perf");
+  // The top-left panel starts folded (menu, bag, clock); a tap or I unfolds it.
+  const [hudOpen, setHudOpen] = useState(false);
   const [viewport, setViewport] = useState(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 1280,
     h: typeof window !== "undefined" ? window.innerHeight : 720,
@@ -2214,7 +2333,15 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [life, setLife] = useState(resumeRun?.life ?? 0);
   const platesRef = useRef<Array<HTMLDivElement | null>>([]);
   const [hurtKey, setHurtKey] = useState(0);
-  const handlePlayerHurt = useCallback(() => setHurtKey((k) => k + 1), []);
+  const handlePlayerHurt = useCallback(() => {
+    setHurtKey((k) => k + 1);
+    // A short buzz on phones that can (ignored elsewhere).
+    try {
+      navigator.vibrate?.(35);
+    } catch {
+      // No vibration here.
+    }
+  }, []);
   // The run is over (fallen or escaped): losing the mouse then does not open the menu.
   const runOverRef = useRef(false);
   useEffect(() => {
@@ -2519,6 +2646,40 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       }
     }
   }, [openScreen]);
+  // Switching apps (or tabs) pauses: the Esc menu opens, which also stops the run clock.
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden" && screenRef.current === "play") openScreen("menu");
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [openScreen]);
+  // The screen stays awake while he plays (phones dim and lock otherwise); asked again on return.
+  useEffect(() => {
+    if (screen !== "play") return;
+    type Sentinel = { release: () => Promise<void> };
+    const nav = navigator as Navigator & { wakeLock?: { request: (type: "screen") => Promise<Sentinel> } };
+    if (!nav.wakeLock) return;
+    let lock: Sentinel | null = null;
+    let on = true;
+    const ask = () => {
+      if (document.visibilityState !== "visible") return;
+      nav.wakeLock
+        ?.request("screen")
+        .then((l) => {
+          if (on) lock = l;
+          else void l.release();
+        })
+        .catch(() => {});
+    };
+    ask();
+    document.addEventListener("visibilitychange", ask);
+    return () => {
+      on = false;
+      document.removeEventListener("visibilitychange", ask);
+      void lock?.release().catch(() => {});
+    };
+  }, [screen]);
   // Down through the teleporter: a fresh floor every dive.
   const descend = useCallback(() => {
     setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999);
@@ -2668,6 +2829,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         });
       }
       if (e.code === "KeyV") setFirstPerson((v) => !v);
+      if (e.code === "KeyI") setHudOpen((v) => !v);
       if (e.code === "Digit1") toggleDraw(1);
       if (e.code === "Digit2") toggleDraw(2);
       if (e.code === "Digit3") applyBeltSlot(0);
@@ -2840,6 +3002,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           escapeQueueRef={escapeQueueRef}
           onFloorReady={handleFloorReady}
           quality={quality}
+          frameCap={graphics.frameCap}
+          autoRes={graphics.autoRes}
+          perf={perfMode}
           resume={resumeRun}
           place={place}
           arrival={arrival}
@@ -3002,11 +3167,15 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onQuality={(q) => setGraphics((g) => ({ ...g, quality: q }))}
           showFps={graphics.showFps}
           onFps={() => setGraphics((g) => ({ ...g, showFps: !g.showFps }))}
+          frameCap={graphics.frameCap}
+          onFrameCap={(c) => setGraphics((g) => ({ ...g, frameCap: c }))}
+          autoRes={graphics.autoRes}
+          onAutoRes={() => setGraphics((g) => ({ ...g, autoRes: !g.autoRes }))}
           backHref={backHref}
         />
       ) : null}
 
-      {graphics.showFps ? <FpsCounter /> : null}
+      {graphics.showFps || perfMode ? <FpsCounter perf={perfMode} /> : null}
 
       {/* Top-left compact HUD */}
       <div
@@ -3019,13 +3188,69 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           backdropFilter: "blur(6px)",
           border: "1px solid rgba(255,255,255,0.12)",
           borderRadius: 10,
-          padding: mobileMode ? "7px 10px" : "10px 14px",
+          padding: !hudOpen ? "4px 5px" : mobileMode ? "7px 10px" : "10px 14px",
           pointerEvents: "auto",
           maxWidth: mobileMode && showMap ? `calc(100vw - ${mapPixels + 44}px)` : mobileMode ? "calc(100vw - 24px)" : 360,
         }}
       >
-        <div style={{ fontWeight: 700, fontSize: mobileMode ? 13 : 15, color: "#ffd84d", lineHeight: 1.2 }}>
-          {hud.name}
+        {/* Folded (the default): menu, bag, the clock below (gold in town) and a tab to unfold. */}
+        {!hudOpen ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <button
+              type="button"
+              aria-label="Menu"
+              onClick={(e) => {
+                e.currentTarget.blur();
+                openScreen("menu");
+              }}
+              style={{ ...btnStyle, padding: "4px 9px" }}
+            >
+              ☰
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.currentTarget.blur();
+                openScreen("inventory");
+              }}
+              style={{ ...btnStyle, padding: "4px 9px", color: "#ffd84d" }}
+            >
+              Bag
+            </button>
+            <span style={{ fontSize: 12, fontWeight: 700, padding: "0 4px", color: place === "dungeon" && hud.runLeft <= 60 ? "#ff5a4a" : "#f2efe8" }}>
+              {place === "dungeon" ? clock(hud.runLeft) : <span style={{ color: "#ffd84d" }}>{inv.gold} gold</span>}
+            </span>
+            <button
+              type="button"
+              aria-label="Show details"
+              aria-expanded={false}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                setHudOpen(true);
+              }}
+              style={{ ...btnStyle, padding: "4px 8px" }}
+            >
+              {mobileMode ? "▾" : "▾ (I)"}
+            </button>
+          </div>
+        ) : (
+        <>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <div style={{ flex: 1, fontWeight: 700, fontSize: mobileMode ? 13 : 15, color: "#ffd84d", lineHeight: 1.2 }}>
+            {hud.name}
+          </div>
+          <button
+            type="button"
+            aria-label="Hide details"
+            aria-expanded={true}
+            onClick={(e) => {
+              e.currentTarget.blur();
+              setHudOpen(false);
+            }}
+            style={{ ...btnStyle, padding: "2px 8px" }}
+          >
+            {mobileMode ? "▴" : "▴ (I)"}
+          </button>
         </div>
         <div style={{ fontSize: mobileMode ? 11 : 12, color: "#c9d2db", marginTop: 2 }}>
           <b>{spec.name || className}</b> · {className} · {hud.roomLabel} · <b style={{ color: "#ffd84d" }}>{inv.gold}</b> gold
@@ -3084,6 +3309,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             </a>
           ) : null}
         </div>
+        </>
+        )}
       </div>
 
       {/* Dismissible Auto-Rotate / Landscape tip when holding phone upright */}
@@ -3281,6 +3508,29 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
               zIndex: 14,
             }}
           >
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            {/* First or third person, a thumb away (also in the top-left panel). */}
+            <button
+              type="button"
+              aria-label={firstPerson ? "Third person view" : "First person view"}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                setFirstPerson((v) => !v);
+              }}
+              style={{
+                width: 56,
+                height: 42,
+                borderRadius: 999,
+                border: "1.5px solid rgba(255,255,255,0.28)",
+                background: "rgba(12, 16, 22, 0.64)",
+                color: "#e8eef5",
+                fontWeight: 800,
+                fontSize: 12,
+                touchAction: "none",
+              }}
+            >
+              {firstPerson ? "3RD" : "1ST"}
+            </button>
             <button
               type="button"
               onPointerDown={(e) => {
@@ -3301,6 +3551,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             >
               RUN
             </button>
+            </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <button
                 type="button"
@@ -3542,7 +3793,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           style={{
             position: "fixed",
             left: "50%",
-            bottom: isTouchUI ? "calc(max(18px, env(safe-area-inset-bottom)) + 128px)" : 16,
+            // Held upright the thumb controls fill the bottom, so it sits above them; sideways it
+            // fits between the stick and the buttons, at the very bottom.
+            bottom: isTouchUI && isPortrait ? "calc(max(18px, env(safe-area-inset-bottom)) + 128px)" : "max(10px, env(safe-area-inset-bottom))",
             transform: "translateX(-50%)",
             zIndex: 11,
           }}
@@ -3672,7 +3925,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             position: "fixed",
             right: "max(10px, env(safe-area-inset-right))",
             // Below the FPS counter when it is shown.
-            top: mobileMode ? `calc(max(10px, env(safe-area-inset-top)) + ${graphics.showFps ? FPS_HEIGHT : 0}px)` : undefined,
+            top: mobileMode ? `calc(max(10px, env(safe-area-inset-top)) + ${graphics.showFps || perfMode ? FPS_HEIGHT : 0}px)` : undefined,
             bottom: mobileMode ? undefined : 14,
             background: "rgba(8, 10, 14, 0.78)",
             border: "1px solid rgba(255,255,255,0.14)",

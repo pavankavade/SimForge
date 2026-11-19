@@ -3,6 +3,12 @@
 import * as THREE from "three";
 import { B, type BoneName, type Rig } from "./rig";
 
+/** Simulation steps per second for every cloth (90; a game on a weak device may ask for fewer). */
+let clothHz = 90;
+export function setClothRate(hz: number): void {
+  clothHz = Math.max(20, Math.min(120, hz));
+}
+
 export interface ClothCollider {
   bone: BoneName;
   /** Offset in the bone's local frame. */
@@ -161,7 +167,7 @@ export class Cloth {
       this.spheres[i * 4 + 3] = c.r;
     }
 
-    const H = 1 / 90;
+    const H = 1 / clothHz;
     this.acc = Math.min(this.acc + dt, H * 4);
     const P = this.pos;
     const O = this.prev;

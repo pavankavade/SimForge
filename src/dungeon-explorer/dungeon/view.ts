@@ -12,6 +12,34 @@ const LIGHT_K = 4 * Math.PI;
 export const SEE_THROUGH = 1;
 const EARLY_Z = 5;
 
+// The Low graphics setting draws straight to the screen (no half-float target or composite pass):
+// three's custom tone mapping is the composite's curve (exposure, then the ACES fit), so the
+// picture keeps its brightness. Unused unless `renderer.toneMapping` is CustomToneMapping.
+THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
+  "vec3 CustomToneMapping( vec3 color ) { return color; }",
+  "vec3 CustomToneMapping( vec3 color ) { color *= toneMappingExposure; return saturate( ( color * ( 2.51 * color + 0.03 ) ) / ( color * ( 2.43 * color + 0.59 ) + 0.14 ) ); }"
+);
+/** What the graphics setting (graphics.ts) asks of the dungeon renderer. */
+export interface ViewQuality {
+  /** Lamp shadows (point-light cube maps). */
+  shadows: boolean;
+  /** Contact shadows (a half-resolution depth pass). */
+  ao: boolean;
+  bloom: boolean;
+  /** MSAA samples on the scene target. */
+  msaa: number;
+  /** Draw straight to the screen (no target, bloom, contact shadows or composite). */
+  direct: boolean;
+  /** The stone's parallax relief and self-shadow. */
+  relief: boolean;
+  /** Room fill lights kept on (the nearest); 0: all. */
+  roomLights: number;
+}
+
+/** Tone map and encode a custom shader's colour when drawing straight to the screen (no-ops otherwise). */
+const OUTPUT_CHUNKS = "\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n";
+const withOutput = (fs: string) => fs.replace(/\}\s*$/, `${OUTPUT_CHUNKS}}`);
+
 function bgFromTris(v: number[]) {
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(v), 3));
@@ -365,7 +393,7 @@ export function createDungeonView(
   /** The two lamp shadows on or off (off in town: a dark light's shadow still redraws the scene six times). */
   setShadows: (on: boolean) => void;
   /** The graphics setting: lamp shadows, contact shadows, bloom and MSAA samples (graphics.ts). */
-  setQuality: (q: { shadows: boolean; ao: boolean; bloom: boolean; msaa: number }) => void;
+  setQuality: (q: ViewQuality) => void;
   setMasonry: (data: { stone: ProceduralTextureData }) => void;
   setScans: (scans: { wall: ScanSet; floor: ScanSet; plaster: ScanSet }) => void;
   setLevel: (d: DungeonData, level: LevelData) => void;
@@ -401,7 +429,7 @@ export function createDungeonView(
   });
   // The graphics setting (graphics.ts): lamp shadows, contact shadows, bloom and MSAA can each be
   // turned off for weak GPUs. `shadowsWanted` is what the place asks for (off in town).
-  const quality = { shadows: true, ao: true, bloom: true, msaa: 2 };
+  const quality = { shadows: true, ao: true, bloom: true, msaa: 2, direct: false, relief: true, roomLights: 0 };
   let shadowsWanted = true;
   const applyShadows = () => {
     for (const s of shadowLights) s.light.castShadow = shadowsWanted && quality.shadows;
@@ -419,6 +447,8 @@ export function createDungeonView(
     uTop: { value: CEIL_TOP },
     uRevealT: { value: 1e6 },
     uRevealC: { value: new THREE.Vector2() },
+    /** 1: the stone's parallax relief and its self-shadow; 0 (Low): flat, far cheaper per pixel. */
+    uRelief: { value: 1 },
     tWall: { value: blank as THREE.Texture },
     tWallN: { value: blank as THREE.Texture },
     tStone: { value: blank as THREE.Texture },
@@ -470,10 +500,12 @@ export function createDungeonView(
       let fs = `${defs.join("\n")}
         varying vec3 vWP; varying vec3 vWN;
         uniform sampler2D uField, uFieldDir, tWall, tWallN, tWallR, tWallH, tStone, tStoneN, tFloor, tFloorN, tFloorR, tFloorH, tPlaster, tPlasterN, tPlasterR, tPlasterH;
+        uniform float uRelief;
         ${stone === "vault" ? "varying vec4 vBay; varying float vRise;" : ""}
         ${stone === "wall" ? "varying float vS; varying vec2 vTan;" : ""}
         ${stone === "paving" ? "varying vec2 vTone;" : ""}
         vec2 marchHeight(sampler2D map, vec2 uv, vec3 v, float depth) {
+          depth *= uRelief;
           if (depth < 0.0005) return uv;
           vec2 dx = dFdx(uv) * 1024.0;
           vec2 dy = dFdy(uv) * 1024.0;
@@ -658,7 +690,7 @@ export function createDungeonView(
           float flick = 0.985 + 0.02 * sin(uTime * 5.3 + vWP.x * 0.31 + vWP.z * 0.37) * sin(uTime * 3.1 + vWP.z * 0.23 - vWP.x * 0.19);
           vec3 fE = fcol * fall * flick * uFieldGain;
           #if defined(STONE) && (STONE == 1 || STONE == 2 || STONE == 3 || STONE == 6)
-          {
+          if (uRelief > 0.5) {
             vec2 lT = vec2(dot(Lw, sT), dot(Lw, sB));
             float rs = 1.0;
             for (int i = 1; i <= 3; i++) {
@@ -736,7 +768,7 @@ export function createDungeonView(
     },
     vertexShader: `attribute vec2 aE; attribute vec4 aM; varying vec2 vP, vE; varying vec4 vM;
       void main(){ vP = vec2(position.x, position.z); vE = aE; vM = aM; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: LIQUID_FRAG,
+    fragmentShader: withOutput(LIQUID_FRAG),
   });
 
   const matPart = new THREE.ShaderMaterial({
@@ -745,9 +777,9 @@ export function createDungeonView(
     blending: THREE.AdditiveBlending,
     uniforms: { uTime: U.uTime, uPx: { value: 500 }, uKind: { value: 0 }, uColor: { value: new THREE.Color(0xffffff) } },
     vertexShader: PART_VERT,
-    fragmentShader: `precision mediump float; uniform vec3 uColor; varying float vA;
+    fragmentShader: withOutput(`precision mediump float; uniform vec3 uColor; varying float vA;
       void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.12, d) * vA;
-      gl_FragColor = vec4(uColor * (1.0 + 0.8*smoothstep(0.3, 0.0, d)), a); }`,
+      gl_FragColor = vec4(uColor * (1.0 + 0.8*smoothstep(0.3, 0.0, d)), a); }`),
   });
 
   const matWax = patch(std({ roughness: 0.5, metalness: 0, color: 0xa9a598 }));
@@ -820,7 +852,7 @@ export function createDungeonView(
         vec3 col = uCol * body * 2.1 + uCore * core * body * 2.0;
         col = mix(col * 0.45 * vec3(0.5, 0.65, 1.0), col, smoothstep(0.02, 0.2, y)) * vTint;
         gl_FragColor = vec4(col, body);
-      }`,
+      }`.replace(/\}$/, `${OUTPUT_CHUNKS}}`),
   });
 
   const haloMaterial = new THREE.ShaderMaterial({
@@ -838,12 +870,12 @@ export function createDungeonView(
         mv.xy += position.xy * s * ${CELL_M.toFixed(3)};
         gl_Position = projectionMatrix * mv;
       }`,
-    fragmentShader: `varying vec2 vUvH; varying vec3 vCol;
+    fragmentShader: withOutput(`varying vec2 vUvH; varying vec3 vCol;
       void main(){
         float r = length(vUvH);
         float a = pow(max(0.0, 1.0 - r), 2.2);
         gl_FragColor = vec4(vCol * a, a);
-      }`,
+      }`),
   });
 
   const G = makeGeometry();
@@ -1223,6 +1255,8 @@ export function createDungeonView(
       scene.add(pl);
       roomLights.push(pl);
     }
+    // The cap from the first frame (no shader built for the uncapped count).
+    capRoomLights(lastEye.x, lastEye.z);
   }
 
   // Track non-instanced crypt meshes added by buildCrypt for cleanup on seed reset.
@@ -1247,7 +1281,25 @@ export function createDungeonView(
     return true;
   }
 
+  /**
+   * The graphics setting's cap on room fill lights: only the nearest few are on (every point light
+   * costs every pixel). Always exactly that many, so the shaders never rebuild as he walks.
+   */
+  function capRoomLights(ex: number, ez: number) {
+    const n = quality.roomLights;
+    if (n <= 0 || roomLights.length <= n) {
+      for (const l of roomLights) l.visible = true;
+      return;
+    }
+    const near = roomLights
+      .map((l) => ({ l, d: Math.hypot(l.position.x / CELL_M - ex, l.position.z / CELL_M - ez) }))
+      .sort((a, b) => a.d - b.d);
+    near.forEach((o, i) => (o.l.visible = i < n));
+  }
+  let lastEye = { x: 0, z: 0 };
+
   function updateLights(dt: number, ex: number, ez: number, lamps: CryptLamp[], d: DungeonData) {
+    lastEye = { x: ex, z: ez };
     lampCheck -= dt;
     if (lampCheck <= 0) {
       lampCheck = 0.12;
@@ -1270,6 +1322,7 @@ export function createDungeonView(
         const worst = shadowLights.filter((slot) => !slot.leaving).sort((a, b) => score(b.lamp!) - score(a.lamp!))[0];
         if (worst && worst.lamp && score(worst.lamp) > s + 2.5) worst.leaving = true;
       }
+      capRoomLights(ex, ez);
     }
     for (const slot of shadowLights) {
       let goal = 0;
@@ -1290,10 +1343,30 @@ export function createDungeonView(
   const _bg = new THREE.Color();
 
   function renderFrame(time: number, _dt: number, px: number, py: number, pz: number, w: number, h: number) {
-    setupRTs();
     U.uTime.value = time;
     carried.position.set(px, py + 1.85, pz);
     camera.layers.enable(SEE_THROUGH);
+
+    // Low: one pass straight to the screen, tone mapped and encoded by the materials themselves
+    // (no depth-only pass, half-float target, bloom or composite).
+    if (quality.direct) {
+      matPart.uniforms.uPx.value = (0.4 * Math.max(1, h)) / (2 * Math.tan((camera.fov * Math.PI) / 360));
+      const tm = renderer.toneMapping;
+      const te = renderer.toneMappingExposure;
+      const cs = renderer.outputColorSpace;
+      renderer.toneMapping = THREE.CustomToneMapping;
+      renderer.toneMappingExposure = POST.fin.uniforms.uExposure.value;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.setRenderTarget(null);
+      renderer.setClearColor(walkBg, 1);
+      renderer.clear();
+      renderer.render(scene, camera);
+      renderer.toneMapping = tm;
+      renderer.toneMappingExposure = te;
+      renderer.outputColorSpace = cs;
+      return;
+    }
+    setupRTs();
 
     // 1. Half-resolution depth buffer for contact shadows.
     if (POST.rtDepth && quality.ao) {
@@ -1391,11 +1464,13 @@ export function createDungeonView(
       applyShadows();
     },
     /** The graphics setting's share of the picture (graphics.ts). */
-    setQuality(q: { shadows: boolean; ao: boolean; bloom: boolean; msaa: number }) {
+    setQuality(q: ViewQuality) {
       Object.assign(quality, q);
       applyShadows();
       POST.fin.uniforms.uAO.value = q.ao ? 1 : 0;
       POST.fin.uniforms.uBloom.value = q.bloom ? 0.45 : 0;
+      U.uRelief.value = q.relief ? 1 : 0;
+      capRoomLights(lastEye.x, lastEye.z);
     },
     markSolid() {
       extraChildren = group.children.slice(baseCount);

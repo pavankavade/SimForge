@@ -22,6 +22,7 @@ export { DEFAULT_OUTFIT, type Outfit } from "./materials";
 export type { CombatTarget, CombatWorld } from "./combat";
 export { EYE_LOCAL, REST, type BoneName } from "./rig";
 export { FX_LAYER } from "./combat";
+export { setClothRate } from "./cloth";
 export { createPaladinSfx, type PaladinSfx } from "./sfx";
 export { AVERAGE_FACE, CHARACTERS, DEFAULT_CHARACTER, characterByName, type FaceSpec, type HairStyle, type HumanSpec, type RGB } from "./spec";
 
