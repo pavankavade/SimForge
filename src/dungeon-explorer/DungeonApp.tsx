@@ -2299,8 +2299,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [graphics, setGraphics] = useState<Graphics>(() => loadGraphics(detectInitialTouch()));
   useEffect(() => saveGraphics(graphics), [graphics]);
   const quality = PRESETS[graphics.quality];
-  // `?perf` on the URL: draw calls, triangles, lights and frame time under the FPS counter.
-  const perfMode = params.has("perf");
+  // Performance details (Esc menu, or `?perf` on the URL): draw calls, triangles, lights and frame
+  // time under the FPS counter.
+  const perfMode = graphics.showPerf || params.has("perf");
   // The top-left panel starts folded (menu, bag, clock); a tap or I unfolds it.
   const [hudOpen, setHudOpen] = useState(false);
   const [viewport, setViewport] = useState(() => ({
@@ -3171,6 +3172,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onFrameCap={(c) => setGraphics((g) => ({ ...g, frameCap: c }))}
           autoRes={graphics.autoRes}
           onAutoRes={() => setGraphics((g) => ({ ...g, autoRes: !g.autoRes }))}
+          showPerf={perfMode}
+          onPerf={() => setGraphics((g) => ({ ...g, showPerf: !perfMode }))}
           backHref={backHref}
         />
       ) : null}

@@ -33,6 +33,9 @@ export interface PauseMenuProps {
   onFrameCap: (c: FrameCap) => void;
   autoRes: boolean;
   onAutoRes: () => void;
+  /** Draw calls, triangles, lights and frame time under the FPS counter. */
+  showPerf: boolean;
+  onPerf: () => void;
   backHref?: string;
 }
 
@@ -210,6 +213,7 @@ export const PauseMenu: React.FC<PauseMenuProps> = (p) => (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
         <Small onClick={p.onAutoRes}>Auto resolution: {p.autoRes ? "on" : "off"}</Small>
         <Small onClick={p.onFps}>{p.showFps ? "Hide FPS" : "Show FPS"}</Small>
+        <Small onClick={p.onPerf}>Performance details: {p.showPerf ? "on" : "off"}</Small>
       </div>
 
       {p.backHref ? (

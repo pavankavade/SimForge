@@ -42,10 +42,12 @@ export interface Graphics {
   frameCap: FrameCap;
   /** Lower the resolution while the frame rate is low, raise it back when there is room. */
   autoRes: boolean;
+  /** Draw calls, triangles, lights and frame time under the FPS counter (also `?perf` on the URL). */
+  showPerf: boolean;
 }
 
 export function loadGraphics(touch: boolean): Graphics {
-  const fallback: Graphics = { quality: touch ? "low" : "high", showFps: true, frameCap: 100, autoRes: true };
+  const fallback: Graphics = { quality: touch ? "low" : "high", showFps: true, frameCap: 100, autoRes: true, showPerf: false };
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return fallback;
@@ -55,6 +57,7 @@ export function loadGraphics(touch: boolean): Graphics {
       showFps: typeof g.showFps === "boolean" ? g.showFps : fallback.showFps,
       frameCap: g.frameCap && FRAME_CAPS.indexOf(g.frameCap) !== -1 ? g.frameCap : fallback.frameCap,
       autoRes: typeof g.autoRes === "boolean" ? g.autoRes : fallback.autoRes,
+      showPerf: typeof g.showPerf === "boolean" ? g.showPerf : fallback.showPerf,
     };
   } catch {
     return fallback;
