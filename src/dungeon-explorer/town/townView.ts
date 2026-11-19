@@ -1,4 +1,6 @@
-// The town in 3D, built once from layout.ts: the Adventurers' Guild (the great hall with the
+// The town in 3D, built once from layout.ts: the Adventurers' Guild, a temple of marble columns
+// (a pedimented portico over the entrance, a stoa along the front, colonnades in the great hall
+// under a coffered ceiling). Inside: the great hall with the
 // guild representative's desk and the teleporter dais, the Wayfarer's Rest with its gallery and
 // rooms to rent, and the arena's sand ring), Guild Street in front of it with the merchants' stalls
 // and a fountain, and the castle wall round it all. The surfaces are the same family of scanned
@@ -381,10 +383,15 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   // Materials: the scans, and a few plain ones for iron, flame and glass.
   const blocks = scanned("medievalBlocks05", "medieval_blocks_05", ownTex);
   const wood = scanned("darkWoodenPlanks", "dark_wooden_planks", ownTex, { roughness: 0.9 });
+  const marble = scanned("marble01", "marble_01", ownTex, { tint: 0xfff8ee, roughness: 0.7 });
   const M = {
     blocks: own(blocks.mat),
+    marble: own(marble.mat),
+    marbleTrim: own(marble.variant({ tint: 0xf4ecdc, roughness: 0.6 })),
+    marbleShade: own(marble.variant({ tint: 0xb8ad98, roughness: 0.75 })),
+    marbleFloor: own(scanned("marbleTiles", "marble_tiles", ownTex, { roughness: 0.45 }).mat),
+    sandstone: own(scanned("sandstoneBlocks", "large_sandstone_blocks", ownTex, { tint: 0xe6dccb }).mat),
     darkBlocks: own(blocks.variant({ tint: 0x8c867e })),
-    castle: own(scanned("castleWall", "castle_wall_varriation", ownTex).mat),
     plaster: own(scanned("medievalWall01", "medieval_wall_01", ownTex, { tint: 0xfff2dc }).mat),
     hallFloor: own(scanned("stoneTiles02", "stone_tiles_02", ownTex, { roughness: 0.85 }).mat),
     boards: own(scanned("woodFloorWorn", "wood_floor_worn", ownTex, { roughness: 0.8 }).mat),
@@ -408,8 +415,12 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
   };
   const tiles = new Map<THREE.Material, number>([
     [M.blocks, 3],
+    [M.marble, 3.2],
+    [M.marbleTrim, 2.4],
+    [M.marbleShade, 2.4],
+    [M.marbleFloor, 3.4],
+    [M.sandstone, 3],
     [M.darkBlocks, 3],
-    [M.castle, 4],
     [M.plaster, 3.2],
     [M.hallFloor, 3],
     [M.boards, 2.6],
@@ -459,7 +470,10 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     m.position.set(x + nx * 0.06, y, z + nz * 0.06);
     m.rotation.y = Math.atan2(nx, nz);
     G.add(m);
-    B.box(M.wood, x - w / 2 - 0.08 + Math.min(0, nx) * 0.05, x + w / 2 + 0.08 + Math.max(0, nx) * 0.05, y - h / 2 - 0.08, y + h / 2 + 0.08, z - (nz ? 0.02 : w / 2 + 0.08), z + (nz ? 0.02 : w / 2 + 0.08));
+    // Its board: wide along the wall, thin out of it.
+    const along = w / 2 + 0.08;
+    if (nz) B.box(M.wood, x - along, x + along, y - h / 2 - 0.08, y + h / 2 + 0.08, z - 0.02, z + 0.02);
+    else B.box(M.wood, x - 0.02, x + 0.02, y - h / 2 - 0.08, y + h / 2 + 0.08, z - along, z + along);
   };
   /** A hanging banner (a cloth panel with a pole along its top), facing `nx, nz`. */
   const banner = (mat: THREE.Material, x: number, y0: number, y1: number, z: number, nx: number, nz: number, w = 1.3) => {
@@ -530,15 +544,16 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       B.box(M.wood, s.x0, s.x1, s.y1 - 0.06, s.y1, s.z0 - 0.02, s.z1 + 0.03);
       continue;
     }
-    const mat = s.part === "border" ? M.castle : s.part === "ceiling" || s.part === "slab" ? M.wood : s.part === "rooms" ? M.plaster : M.blocks;
+    const hallCeiling = s.part === "ceiling" && s.x0 > -11 && s.x1 < 11;
+    const mat = s.part === "border" ? M.marble : hallCeiling ? M.marbleTrim : s.part === "ceiling" || s.part === "slab" ? M.wood : s.part === "rooms" ? M.plaster : M.marble;
     B.box(mat, s.x0, s.x1, s.y0, s.y1, s.z0, s.z1);
   }
   const T = L.TAVERN;
   const H = L.HALL;
   const A = L.ARENA_WING;
   const WT = L.WT;
-  // The tavern's walls are plastered inside, over a wooden wainscot (the hall and the arena keep
-  // the bare stone, like the dungeon below).
+  // The tavern's walls are plastered inside, over a wooden wainscot (the hall and the arena show
+  // their marble).
   {
     const lin = 0.03;
     const plasterWall = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: number) => {
@@ -559,9 +574,9 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     // The wainscot: boards up to the dado rail, round the ground floor.
     const ws = 0.05;
     B.box(M.wood, T.x0 + 1.4, T.x1, 0, 1.1, 0, ws);
-    B.box(M.wood, T.x0, T.x0 + ws, L.STAIR.z1, T.z1, 0, 1.1);
-    B.box(M.wood, T.x1 - ws, T.x1, 0, L.SIDE_ARCH.z0, 0, 1.1);
-    B.box(M.wood, T.x1 - ws, T.x1, L.SIDE_ARCH.z1, T.z1, 0, 1.1);
+    B.box(M.wood, T.x0, T.x0 + ws, 0, 1.1, L.STAIR.z1, T.z1);
+    B.box(M.wood, T.x1 - ws, T.x1, 0, 1.1, 0, L.SIDE_ARCH.z0);
+    B.box(M.wood, T.x1 - ws, T.x1, 0, 1.1, L.SIDE_ARCH.z1, T.z1);
     B.box(M.wood, T.x0, T.x1, 0, 1.1, T.z1 - ws, T.z1);
     // Posts and beams in the plaster: a timber frame.
     for (const x of [-27.5, -21.5, -15.5]) {
@@ -574,63 +589,217 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
 
   // ---- Floors ----------------------------------------------------------------------------------
   B.box(M.cobbles, L.STREET.x0, L.STREET.x1, -0.12, 0, L.STREET.z0, L.STREET.z1);
-  B.box(M.darkBlocks, L.ENTRANCE.x0, L.ENTRANCE.x1, -0.12, 0, -WT, 0);
-  B.box(M.hallFloor, H.x0, H.x1, -0.12, 0, H.z0, H.z1);
-  B.box(M.darkBlocks, T.x1, H.x0, -0.12, 0, L.SIDE_ARCH.z0, L.SIDE_ARCH.z1);
-  B.box(M.darkBlocks, H.x1, A.x0, -0.12, 0, L.SIDE_ARCH.z0, L.SIDE_ARCH.z1);
+  B.box(M.marbleTrim, L.ENTRANCE.x0, L.ENTRANCE.x1, -0.12, 0, -WT, 0);
+  B.box(M.marbleFloor, H.x0, H.x1, -0.12, 0, H.z0, H.z1);
+  B.box(M.marbleTrim, T.x1, H.x0, -0.12, 0, L.SIDE_ARCH.z0, L.SIDE_ARCH.z1);
+  B.box(M.marbleTrim, H.x1, A.x0, -0.12, 0, L.SIDE_ARCH.z0, L.SIDE_ARCH.z1);
+  // The stylobate: one marble step up from the street under the stoa and the portico.
+  B.box(M.marbleFloor, L.STREET.x0, L.STREET.x1, -0.12, L.STYLOBATE, L.STOA.front - 0.3, -WT);
+  B.box(M.marbleFloor, L.PORTICO.x0, L.PORTICO.x1, -0.12, L.STYLOBATE, L.PORTICO.front - 0.5, L.STOA.front - 0.3);
   B.box(M.boards, T.x0, T.x1, -0.12, 0, T.z0, T.z1);
   B.box(M.boards, T.x0, T.x1, L.UPPER_Y - 0.03, L.UPPER_Y, L.GALLERY_Z, T.z1);
-  B.box(M.hallFloor, A.x0, A.x1, -0.12, 0, A.z0, A.z1);
+  B.box(M.marbleFloor, A.x0, A.x1, -0.12, 0, A.z0, A.z1);
   B.box(M.sand, L.RING.x0, L.RING.x1, 0, 0.012, L.RING.z0, L.RING.z1);
   // A red runner from the door to the desk, and from the desk to the dais.
   B.box(M.rug, -1.3, 1.3, 0, 0.015, 0.6, L.DESK.z0 - 0.4);
   B.box(M.rug, -1.3, 1.3, 0, 0.015, 12.6, L.DAIS.z - L.DAIS.r - L.DAIS.step - 0.3);
 
-  // ---- The street front ----------------------------------------------------------------------------
+  // ---- Columns ---------------------------------------------------------------------------------------
+  // A Doric order: a plinth and a torus at the foot, a fluted shaft with a slight swell (entasis),
+  // the echinus and the square abacus on top. One set of shapes per size, shared by every column.
+  const columnParts = new Map<string, { shaft: THREE.BufferGeometry; echinus: THREE.BufferGeometry; torus: THREE.BufferGeometry }>();
+  const partsFor = (r: number, h: number) => {
+    const key = `${r}|${h}`;
+    let parts = columnParts.get(key);
+    if (parts) return parts;
+    const shaftH = h - r * 0.9 - r * 0.85;
+    const g = new THREE.CylinderGeometry(r * 0.84, r, shaftH, 96, 18, true);
+    const pos = g.getAttribute("position") as THREE.BufferAttribute;
+    const uv = g.getAttribute("uv") as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      const a = Math.atan2(x, z);
+      const t = (y + shaftH / 2) / shaftH;
+      // Twenty flutes, sharp arrises between them; a swell a third of the way up.
+      const flute = 1 - 0.055 * Math.pow(0.5 + 0.5 * Math.cos(a * 20), 1.6);
+      const bulge = 1 + 0.025 * Math.sin(Math.PI * Math.min(1, t * 1.4));
+      pos.setX(i, x * flute * bulge);
+      pos.setZ(i, z * flute * bulge);
+      uv.setXY(i, (uv.getX(i) * Math.PI * 2 * r) / 2.6, (uv.getY(i) * shaftH) / 2.6);
+    }
+    g.computeVertexNormals();
+    parts = {
+      shaft: own(g),
+      echinus: own(scaleUV(new THREE.CylinderGeometry(r * 1.32, r * 0.86, r * 0.5, 48, 1), 0.4)),
+      torus: own(new THREE.TorusGeometry(r * 1.02, r * 0.13, 10, 48)),
+    };
+    columnParts.set(key, parts);
+    return parts;
+  };
+  const column = (c: L.Column) => {
+    const { r, h, y } = c;
+    const parts = partsFor(r, h);
+    // Plinth and torus, the shaft, the echinus and the abacus.
+    B.box(M.marbleTrim, c.x - r * 1.3, c.x + r * 1.3, y, y + r * 0.45, c.z - r * 1.3, c.z + r * 1.3);
+    const t = new THREE.Mesh(parts.torus, M.marbleTrim);
+    t.rotation.x = Math.PI / 2;
+    t.position.set(c.x, y + r * 0.58, c.z);
+    G.add(t);
+    const shaftH = h - r * 0.9 - r * 0.85;
+    const sh = new THREE.Mesh(parts.shaft, M.marble);
+    sh.position.set(c.x, y + r * 0.9 + shaftH / 2, c.z);
+    G.add(sh);
+    const ech = new THREE.Mesh(parts.echinus, M.marbleTrim);
+    ech.position.set(c.x, y + h - r * 0.85 + r * 0.25, c.z);
+    G.add(ech);
+    B.box(M.marbleTrim, c.x - r * 1.45, c.x + r * 1.45, y + h - r * 0.35, y + h, c.z - r * 1.45, c.z + r * 1.45);
+  };
+  for (const c of L.COLUMNS) column(c);
+
+  /**
+   * An entablature on columns along x, its face to the street (north): the architrave, the frieze
+   * with its triglyphs, the cornice over them. (y: its foot; zf: its face; zb: its back.)
+   */
+  const entablature = (x0: number, x1: number, zf: number, zb: number, y: number, scale = 1) => {
+    const a = 0.62 * scale;
+    const f = 0.62 * scale;
+    const c = 0.3 * scale;
+    B.box(M.marbleTrim, x0, x1, y, y + a, zf, zb);
+    B.box(M.marbleTrim, x0, x1, y + a - 0.08, y + a, zf - 0.06, zb);
+    B.box(M.marble, x0, x1, y + a, y + a + f, zf + 0.05, zb);
+    const step = 1.25 * scale;
+    for (let x = x0 + step / 2; x < x1 - 0.2; x += step) B.box(M.marbleShade, x - 0.2 * scale, x + 0.2 * scale, y + a, y + a + f, zf, zf + 0.06);
+    B.box(M.marbleTrim, x0 - 0.3, x1 + 0.3, y + a + f, y + a + f + c, zf - 0.32, zb);
+    B.box(M.marbleShade, x0 - 0.3, x1 + 0.3, y + a + f - 0.06, y + a + f, zf - 0.22, zb);
+    return y + a + f + c;
+  };
+  /** The same running along z (the hall's colonnades inside, the portico's flanks), face to `side`. */
+  const entablatureZ = (z0: number, z1: number, xc: number, half: number, y: number, side: number) => {
+    B.box(M.marbleTrim, xc - half, xc + half, y, y + 0.62, z0, z1);
+    B.box(M.marble, xc - half + 0.05, xc + half - 0.05, y + 0.62, y + 1.24, z0, z1);
+    for (let z = z0 + 0.62; z < z1 - 0.2; z += 1.25) B.box(M.marbleShade, xc + side * half - 0.03, xc + side * half + 0.03, y + 0.62, y + 1.24, z - 0.2, z + 0.2);
+    B.box(M.marbleTrim, xc - half - 0.3, xc + half + 0.3, y + 1.24, y + 1.54, z0 - 0.3, z1 + 0.3);
+    return y + 1.54;
+  };
+
+  // ---- The temple front: the portico with its pediment, the stoa along the wings ------------------
   {
     const zf = -WT;
-    // A dark stone plinth along the whole front, and string courses on the wings.
-    B.box(M.darkBlocks, L.GUILD.x0 - WT, L.GUILD.x1 + WT, 0, 0.7, zf - 0.14, zf);
-    B.box(M.darkBlocks, L.GUILD.x0 - WT, -10.3, L.SLAB_Y + 0.1, L.SLAB_Y + 0.35, zf - 0.12, zf);
-    B.box(M.darkBlocks, 10.3, L.GUILD.x1 + WT, 4.6, 4.85, zf - 0.12, zf);
-    // The entrance: pilasters, a lintel and keystone, the guild's name over it, lanterns.
+    const P = L.PORTICO;
+    const SB = L.STYLOBATE;
     const E = L.ENTRANCE;
-    B.box(M.darkBlocks, E.x0 - 0.8, E.x0, 0, E.top + 0.6, zf - 0.4, zf);
-    B.box(M.darkBlocks, E.x1, E.x1 + 0.8, 0, E.top + 0.6, zf - 0.4, zf);
-    B.box(M.darkBlocks, E.x0 - 0.95, E.x1 + 0.95, E.top, E.top + 0.75, zf - 0.5, zf);
-    B.box(M.gold, -0.3, 0.3, E.top + 0.05, E.top + 0.7, zf - 0.56, zf - 0.5);
-    for (const x of [E.x0, E.x1]) B.box(M.darkBlocks, x - 0.12, x + 0.12, 0, E.top, -WT, 0);
-    sign(["ADVENTURERS' GUILD"], 0, E.top + 1.75, zf, 0, -1, 8.4, 1.25, "#1e1a2a", "#f2d27a");
-    for (const x of [E.x0 - 1.4, E.x1 + 1.4]) {
-      B.box(M.iron, x - 0.04, x + 0.04, 3.6, 3.68, zf - 0.45, zf);
+    // The entrance: a marble surround and lintel, gilded bronze doors folded back, lanterns.
+    B.box(M.marbleTrim, E.x0 - 0.7, E.x0, 0, E.top + 0.5, zf - 0.3, zf);
+    B.box(M.marbleTrim, E.x1, E.x1 + 0.7, 0, E.top + 0.5, zf - 0.3, zf);
+    B.box(M.marbleTrim, E.x0 - 1.0, E.x1 + 1.0, E.top, E.top + 0.8, zf - 0.4, zf);
+    B.box(M.marbleShade, E.x0 - 1.1, E.x1 + 1.1, E.top + 0.8, E.top + 0.95, zf - 0.5, zf);
+    for (const x of [E.x0, E.x1]) B.box(M.marbleTrim, x - 0.12, x + 0.12, 0, E.top, -WT, 0);
+    for (const sgn of [-1, 1]) B.box(M.gold, sgn * (E.x1 + 0.02) - (sgn > 0 ? 0 : 1.2), sgn * (E.x1 + 0.02) + (sgn > 0 ? 1.2 : 0), 0.1, E.top - 0.2, zf + 0.62, zf + 0.7);
+    for (const x of [E.x0 - 1.5, E.x1 + 1.5]) {
+      B.box(M.gold, x - 0.04, x + 0.04, 4.1, 4.18, zf - 0.45, zf);
       const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.26, 0.38, 0.26)), M.glassWarm);
-      l.position.set(x, 3.4, zf - 0.42);
+      l.position.set(x, 3.9, zf - 0.42);
       G.add(l);
-      lamp(x, 3.3, zf - 1.1, 0xffbe78, 4.5, 11);
+      lamp(x, 3.8, zf - 1.4, 0xffc888, 4.5, 11);
     }
-    // Banners on the hall front, and the guild's crest colours on the wings.
-    for (const x of [-7, 7]) banner(M.bannerBlue, x, 3.4, 10.6, zf - 0.02, 0, -1, 1.5);
-    banner(M.bannerRed, -21, 4.0, 6.8, zf - 0.02, 0, -1, 1.2);
-    banner(M.bannerRed, 21, 5.2, 9.2, zf - 0.02, 0, -1, 1.2);
-    // Crenellations along the hall's top, a cornice on the wings.
-    for (let x = -10.1; x < 10.2; x += 1.6) B.box(M.blocks, x, Math.min(x + 0.9, 10.3), L.HALL_TOP + 0.4, L.HALL_TOP + 1.3, zf - 0.1, 0.3);
-    B.box(M.darkBlocks, -10.3, 10.3, L.HALL_TOP + 0.2, L.HALL_TOP + 0.4, zf - 0.25, L.GUILD.z1 + WT);
-    // Windows: the tavern's warm ones (both storeys), the arena's high slits.
-    for (const x of [-29, -24.5, -17, -13]) {
-      for (const [y0, y1] of [
-        [1.4, 2.9],
-        [4.4, 6.0],
+    // The portico: an entablature round its front and flanks, the pediment over the front with the
+    // guild's name on the architrave and a gilded crest in the tympanum, a tiled roof behind.
+    const capTop = SB + P.h;
+    const top = entablature(P.x0 - 0.2, P.x1 + 0.2, P.front, zf, capTop, 1.05);
+    for (const sx of [-1, 1]) entablatureZ(P.front + 0.3, zf, sx * 8.4, 0.62, capTop, sx);
+    const inscription = own(new THREE.MeshStandardMaterial({ map: own(signTexture(["ADVENTURERS' GUILD"], "#e7dcc6", "#5a4a30", 1024, 96)), roughness: 0.6 }));
+    const ins = new THREE.Mesh(own(new THREE.PlaneGeometry(9.6, 0.5)), inscription);
+    ins.position.set(0, capTop + 0.33, P.front - 0.01);
+    ins.rotation.y = Math.PI;
+    G.add(ins);
+    const span = P.x1 - P.x0 + 0.6;
+    const rise = P.apex - top;
+    {
+      const tymp = gablePrism(top, P.apex - 0.3, span - 0.9, 0.5);
+      tymp.translate(P.x0 - 0.3 + 0.45, 0, P.front + 0.2);
+      B.geo(M.marble, scaleUV(tymp, 1 / 3));
+      const back = gablePrism(top, P.apex, span, 0.4);
+      back.translate(P.x0 - 0.3, 0, zf - 0.4);
+      B.geo(M.marble, scaleUV(back, 1 / 3));
+      // Raking cornices up both slopes, and the roof's two slopes back to the hall's front.
+      const len = Math.hypot(span / 2, rise) + 0.5;
+      const ang = Math.atan2(rise, span / 2);
+      const midY = top + rise / 2 + 0.12;
+      B.turned(M.marbleTrim, len, 0.36, 1.0, [P.x0 - 0.3 + span / 4, midY, P.front - 0.1], [0, 0, ang]);
+      B.turned(M.marbleTrim, len, 0.36, 1.0, [P.x1 + 0.3 - span / 4, midY, P.front - 0.1], [0, 0, -ang]);
+      const depth = zf - P.front + 0.4;
+      B.turned(M.roof, len, 0.24, depth, [P.x0 - 0.3 + span / 4, midY + 0.16, (P.front + zf) / 2], [0, 0, ang]);
+      B.turned(M.roof, len, 0.24, depth, [P.x1 + 0.3 - span / 4, midY + 0.16, (P.front + zf) / 2], [0, 0, -ang]);
+      // A coffered ceiling under the portico.
+      for (let x = P.x0; x <= P.x1 + 0.01; x += (P.x1 - P.x0) / 6) B.box(M.marbleTrim, x - 0.15, x + 0.15, capTop - 0.02, capTop + 0.25, P.front, zf);
+      B.box(M.marbleShade, P.x0, P.x1, capTop + 0.25, capTop + 0.4, P.front, zf);
+      // The crest in the tympanum, and gilded acroteria at the apex and the corners.
+      const crest = new THREE.Mesh(own(new THREE.CylinderGeometry(0.85, 0.85, 0.12, 40)), M.gold);
+      crest.rotation.x = Math.PI / 2;
+      crest.position.set(0, top + rise * 0.42, P.front + 0.12);
+      G.add(crest);
+      const star = new THREE.Mesh(own(new THREE.OctahedronGeometry(0.42, 0)), M.gold);
+      star.position.set(0, top + rise * 0.42, P.front + 0.02);
+      star.scale.set(1, 1.3, 0.25);
+      G.add(star);
+      for (const [x, y] of [
+        [0, P.apex + 0.35],
+        [P.x0 - 0.2, top + 0.35],
+        [P.x1 + 0.2, top + 0.35],
       ]) {
-        B.box(M.glassWarm, x - 0.55, x + 0.55, y0, y1, zf - 0.03, zf + 0.02);
-        B.box(M.wood, x - 0.68, x + 0.68, y0 - 0.12, y0, zf - 0.12, zf);
-        B.box(M.wood, x - 0.68, x + 0.68, y1, y1 + 0.1, zf - 0.08, zf);
-        B.box(M.wood, x - 0.04, x + 0.04, y0, y1, zf - 0.05, zf);
+        const o = new THREE.Mesh(own(new THREE.ConeGeometry(0.28, 0.8, 4)), M.gold);
+        o.position.set(x, y, P.front - 0.05);
+        G.add(o);
       }
     }
-    for (const x of [14, 18, 24, 28]) B.box(M.glassDark, x - 0.3, x + 0.3, 5.6, 8.4, zf - 0.03, zf + 0.02);
-    sign(["THE WAYFARER'S REST", "rooms · ale · hot food"], -21, 3.2, zf, 0, -1, 4.6, 1.0, "#3a2412", "#e8c878");
-    sign(["THE ARENA", "no gear is lost here"], 21, 3.4, zf, 0, -1, 4.2, 1.0, "#3a1210", "#f0c070");
-    // Pitched tiled roofs over the two wings (their ridges run east-west), seen from the street.
+    // Braziers on tall tripods either side of the portico steps.
+    for (const x of [P.x0 + 0.2, P.x1 - 0.2]) {
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI * 2;
+        B.turned(M.gold, 0.05, 2.0, 0.05, [x + Math.sin(a) * 0.25, 1.0, P.front - 1.4 + Math.cos(a) * 0.25], [Math.cos(a) * 0.15, 0, -Math.sin(a) * 0.15]);
+      }
+      const bowl = new THREE.Mesh(own(new THREE.CylinderGeometry(0.5, 0.25, 0.35, 16, 1, true)), M.gold);
+      bowl.position.set(x, 2.1, P.front - 1.4);
+      G.add(bowl);
+      fire(x, 2.15, P.front - 1.4, 0.25);
+      lamp(x, 2.8, P.front - 1.4, 0xff9a48, 7.5, 15, 0.28);
+    }
+    // The stoa: an entablature along each wing's colonnade, a coffered porch ceiling, a cornice.
+    const S = L.STOA;
+    const stoaCap = SB + S.h;
+    for (const [x0, x1] of [
+      [L.GUILD.x0 - WT, -10 - 0.3],
+      [10 + 0.3, L.GUILD.x1 + WT],
+    ]) {
+      const st = entablature(x0, x1, S.front, zf, stoaCap, 0.8);
+      B.box(M.marbleShade, x0, x1, stoaCap - 0.02, stoaCap + 0.1, S.front + 0.4, zf);
+      for (let x = x0 + 1.85; x < x1; x += 3.7) B.box(M.marbleTrim, x - 0.12, x + 0.12, stoaCap - 0.25, stoaCap, S.front + 0.4, zf);
+      // Antefixes along the cornice, lanterns hung between the columns.
+      for (let x = x0 + 0.9; x < x1; x += 1.85) B.box(M.marbleTrim, x - 0.12, x + 0.12, st, st + 0.32, S.front - 0.34, S.front - 0.2);
+      for (let x = x0 + 3.7; x < x1 - 1; x += 7.4) {
+        B.box(M.gold, x - 0.015, x + 0.015, 4.8, stoaCap, -3.3, -3.27);
+        const l = new THREE.Mesh(own(new THREE.BoxGeometry(0.24, 0.34, 0.24)), M.glassWarm);
+        l.position.set(x, 4.6, -3.3);
+        G.add(l);
+        lamp(x, 4.5, -3.6, 0xffc078, 4.2, 10);
+      }
+    }
+    // Windows of the wings between the columns, their signs over the stalls, high windows above.
+    for (const x of [-29, -24.5, -17, -13]) {
+      B.box(M.glassWarm, x - 0.55, x + 0.55, 1.4, 2.9, zf - 0.03, zf + 0.02);
+      B.box(M.marbleTrim, x - 0.7, x + 0.7, 1.26, 1.4, zf - 0.14, zf);
+      B.box(M.marbleTrim, x - 0.7, x + 0.7, 2.9, 3.05, zf - 0.1, zf);
+    }
+    for (const x of [14, 18, 24, 28]) B.box(M.glassDark, x - 0.3, x + 0.3, 7.9, 9.4, zf - 0.03, zf + 0.02);
+    sign(["THE WAYFARER'S REST", "rooms · ale · hot food"], -21, 4.4, zf, 0, -1, 4.2, 0.95, "#3a2412", "#e8c878");
+    sign(["THE ARENA", "no gear is lost here"], 21, 4.4, zf, 0, -1, 4.0, 0.95, "#3a1210", "#f0c070");
+    banner(M.bannerRed, -10.9, 0.6, 5.0, -WT - 0.02, 0, -1, 0.9);
+    banner(M.bannerBlue, 10.9, 0.6, 5.0, -WT - 0.02, 0, -1, 0.9);
+    // A cornice along the top of the hall's front and back, low tiled roofs over the wings.
+    B.box(M.marbleTrim, -10.4, 10.4, L.HALL_TOP, L.HALL_TOP + 0.45, zf - 0.35, L.GUILD.z1 + WT + 0.3);
+    B.box(M.marbleTrim, 10.3, L.GUILD.x1 + WT + 0.3, L.ARENA_TOP, L.ARENA_TOP + 0.35, zf - 0.3, L.GUILD.z1 + WT + 0.3);
     const roof = (x0: number, x1: number, eave: number, ridge: number) => {
       const z0 = -WT - 0.6;
       const z1 = L.GUILD.z1 + WT + 0.6;
@@ -638,44 +807,51 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       const len = Math.hypot(half, ridge - eave) + 0.3;
       const ang = Math.atan2(ridge - eave, half);
       const y = (eave + ridge) / 2 + 0.12;
-      // Two tiled slopes meeting at the ridge (the tile rows run along the eaves)...
       B.turned(M.roof, x1 - x0, 0.22, len, [(x0 + x1) / 2, y, z0 + half / 2], [-ang, 0, 0]);
       B.turned(M.roof, x1 - x0, 0.22, len, [(x0 + x1) / 2, y, z1 - half / 2], [ang, 0, 0]);
-      B.box(M.wood, x0, x1, ridge + 0.05, ridge + 0.3, (z0 + z1) / 2 - 0.18, (z0 + z1) / 2 + 0.18);
-      // ...and stone gables at either end.
+      B.box(M.marbleTrim, x0, x1, ridge + 0.05, ridge + 0.28, (z0 + z1) / 2 - 0.18, (z0 + z1) / 2 + 0.18);
       for (const gx of [x0 + 0.1, x1 - 0.5]) {
         const g = gablePrism(eave, ridge, z1 - z0 - 0.4, 0.4);
         g.rotateY(Math.PI / 2);
         g.translate(gx, 0, z1 - 0.2);
-        B.geo(M.blocks, scaleUV(g, 1 / 3));
+        B.geo(M.marble, scaleUV(g, 1 / 3));
       }
     };
-    roof(L.GUILD.x0 - WT - 0.4, -10.3, L.TAVERN_TOP + 0.3, L.TAVERN_TOP + 4.2);
-    roof(10.3, L.GUILD.x1 + WT + 0.4, L.ARENA_TOP + 0.3, L.ARENA_TOP + 3.6);
+    roof(L.GUILD.x0 - WT - 0.4, -10.3, L.TAVERN_TOP + 0.3, L.TAVERN_TOP + 2.6);
+    roof(10.3, L.GUILD.x1 + WT + 0.4, L.ARENA_TOP + 0.35, L.ARENA_TOP + 2.4);
   }
 
   // ---- The border wall ----------------------------------------------------------------------------
   {
     const top = L.BORDER_H;
     const S0 = L.SITE;
-    // Merlons along the top of all three runs, and a coping under them.
-    for (let x = S0.x0 - 1.2; x < S0.x1 + 1.2; x += 1.7) B.box(M.castle, x, Math.min(x + 1.0, S0.x1 + 1.2), top, top + 0.9, S0.z0 - 1.2, S0.z0 - 0.5);
-    for (let z = S0.z0 - 1.2; z < -WT; z += 1.7) {
-      B.box(M.castle, S0.x0 - 1.2, S0.x0 - 0.5, top, top + 0.9, z, Math.min(z + 1.0, -WT));
-      B.box(M.castle, S0.x1 + 0.5, S0.x1 + 1.2, top, top + 0.9, z, Math.min(z + 1.0, -WT));
+    // A sandstone plinth, pilasters at intervals, a marble cornice along the top.
+    B.box(M.sandstone, S0.x0, S0.x1, 0, 0.7, S0.z0, S0.z0 + 0.18);
+    B.box(M.sandstone, S0.x0, S0.x0 + 0.18, 0, 0.7, S0.z0, -WT);
+    B.box(M.sandstone, S0.x1 - 0.18, S0.x1, 0, 0.7, S0.z0, -WT);
+    for (let x = S0.x0 + 3; x < S0.x1 - 1; x += 6) if (Math.abs(x) > 4) B.box(M.marbleTrim, x - 0.4, x + 0.4, 0, top, S0.z0, S0.z0 + 0.25);
+    for (let z = S0.z0 + 3; z < -8; z += 6) {
+      B.box(M.marbleTrim, S0.x0, S0.x0 + 0.25, 0, top, z - 0.4, z + 0.4);
+      B.box(M.marbleTrim, S0.x1 - 0.25, S0.x1, 0, top, z - 0.4, z + 0.4);
     }
-    B.box(M.darkBlocks, S0.x0, S0.x1, top - 0.2, top, S0.z0 - 0.15, S0.z0);
-    B.box(M.darkBlocks, S0.x0 - 0.15, S0.x0, top - 0.2, top, S0.z0, -WT);
-    B.box(M.darkBlocks, S0.x1, S0.x1 + 0.15, top - 0.2, top, S0.z0, -WT);
-    // Torches along it, and a sealed gate in the north wall (the way out of town, shut).
-    for (const x of [-24, -8, 8, 24]) torch(x, 2.6, S0.z0, 0, 1);
-    for (const z of [-16, -7]) {
-      torch(S0.x0, 2.6, z, 1, 0);
-      torch(S0.x1, 2.6, z, -1, 0);
+    B.box(M.marbleTrim, S0.x0 - 1.2, S0.x1 + 1.2, top, top + 0.4, S0.z0 - 1.3, S0.z0 + 0.3);
+    B.box(M.marbleTrim, S0.x0 - 1.3, S0.x0 + 0.3, top, top + 0.4, S0.z0, -WT);
+    B.box(M.marbleTrim, S0.x1 - 0.3, S0.x1 + 1.3, top, top + 0.4, S0.z0, -WT);
+    for (let x = S0.x0 - 1; x < S0.x1 + 1; x += 1.6) B.box(M.marble, x, x + 0.5, top + 0.4, top + 0.75, S0.z0 - 0.9, S0.z0 - 0.4);
+    // Torches between the pilasters.
+    for (const x of [-24, -12, 12, 24]) torch(x, 2.8, S0.z0, 0, 1);
+    for (const z of [-24, -15]) {
+      torch(S0.x0, 2.8, z, 1, 0);
+      torch(S0.x1, 2.8, z, -1, 0);
     }
-    B.box(M.darkBlocks, -2.6, -1.9, 0, 4.4, S0.z0 - 0.2, S0.z0 + 0.25);
-    B.box(M.darkBlocks, 1.9, 2.6, 0, 4.4, S0.z0 - 0.2, S0.z0 + 0.25);
-    B.box(M.darkBlocks, -2.6, 2.6, 3.8, 4.5, S0.z0 - 0.2, S0.z0 + 0.25);
+    // The town gate in the north wall (shut): two columns, an entablature, a small pediment.
+    for (const x of [-2.6, 2.6]) column({ x, z: S0.z0 + 0.7, r: 0.34, h: 4.4, y: 0 });
+    entablature(-3.4, 3.4, S0.z0 + 0.15, S0.z0 + 1.2, 4.4, 0.6);
+    {
+      const g = gablePrism(5.32, 6.6, 7.0, 0.5);
+      g.translate(-3.5, 0, S0.z0 + 0.3);
+      B.geo(M.marble, scaleUV(g, 1 / 3));
+    }
     M3("rooms/large_castle_door", [0, 0, S0.z0 + 0.12], { scale: 1.05 });
   }
 
@@ -714,27 +890,41 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
       lamp(f.x, 3.55, f.z, 0xffc078, 5.0, 13, 0.08);
     }
     // Crates and barrels by the stalls, a cart's worth of goods.
-    M3("market/wine_barrel_01", [-25.5, 0, -1.6], { scale: 0.9 });
-    M3("market/wine_barrel_01", [-26.6, 0, -1.4], { scale: 0.85, yaw: 1 });
-    M3("market/wooden_crate_01", [25, 0, -1.7], { yaw: 0.3 });
-    M3("rooms/wooden_crate_02", [26.4, 0, -1.6], { yaw: -0.2 });
-    M3("market/wicker_basket_01", [-4.6, 0, -1.4]);
-    M3("market/wooden_bucket_01", [4.4, 0, -1.4]);
+    const SB = L.STYLOBATE;
+    M3("market/wine_barrel_01", [-25.5, SB, -1.6], { scale: 0.9 });
+    M3("market/wine_barrel_01", [-26.6, SB, -1.4], { scale: 0.85, yaw: 1 });
+    M3("market/wooden_crate_01", [25, SB, -1.7], { yaw: 0.3 });
+    M3("rooms/wooden_crate_02", [26.4, SB, -1.6], { yaw: -0.2 });
+    // Statues on marble plinths, flanking the portico and down the street.
+    for (const st of L.STATUES) {
+      B.box(M.marbleTrim, st.x - 0.6, st.x + 0.6, 0, 1.1, st.z - 0.6, st.z + 0.6);
+      B.box(M.marbleShade, st.x - 0.68, st.x + 0.68, 0, 0.18, st.z - 0.68, st.z + 0.68);
+      B.box(M.marbleShade, st.x - 0.66, st.x + 0.66, 1.0, 1.12, st.z - 0.66, st.z + 0.66);
+      M3("rooms/gothic_statue", [st.x, 1.12, st.z], { yaw: st.yaw, scale: 1.1 });
+    }
   }
 
   // ---- The great hall --------------------------------------------------------------------------------
   {
-    // Piers with bases and capitals, ribs across the ceiling, torches on the piers' inner faces.
-    for (const p of L.PIERS) {
-      const h = L.PIER_HALF;
-      B.box(M.blocks, p.x - h, p.x + h, 0, L.HALL_TOP, p.z - h, p.z + h);
-      B.box(M.darkBlocks, p.x - h - 0.15, p.x + h + 0.15, 0, 0.6, p.z - h - 0.15, p.z + h + 0.15);
-      B.box(M.darkBlocks, p.x - h - 0.12, p.x + h + 0.12, 7.4, 7.8, p.z - h - 0.12, p.z + h + 0.12);
-      B.box(M.wood, H.x0, H.x1, L.HALL_TOP - 0.5, L.HALL_TOP, p.z - 0.25, p.z + 0.25);
-      const inward = p.x < 0 ? 1 : -1;
-      torch(p.x + inward * h, 2.6, p.z, inward, 0);
+    // The two colonnades carry an entablature each; torches on the columns' inner faces.
+    const hallCols = L.COLUMNS.filter((c) => c.y === 0 && Math.abs(c.x) < 9);
+    for (const c of hallCols) {
+      const inward = c.x < 0 ? 1 : -1;
+      torch(c.x + inward * c.r * 0.92, 2.8, c.z, inward, 0);
     }
-    for (let x = H.x0 + 2.4; x < H.x1; x += 4.8) B.box(M.wood, x - 0.2, x + 0.2, L.HALL_TOP - 0.42, L.HALL_TOP, H.z0, H.z1);
+    const colTop = hallCols[0]?.h ?? 8.4;
+    for (const sx of [-1, 1]) entablatureZ(H.z0 + 0.3, H.z1 - 0.3, sx * 7.2, 0.62, colTop, -sx);
+    // The ceiling: deep coffers in a grid of marble beams, a gilded boss in each.
+    const boss = own(new THREE.OctahedronGeometry(0.16, 0));
+    for (let z = H.z0 + 1.6; z < H.z1 - 0.5; z += 2.6) B.box(M.marbleTrim, H.x0, H.x1, L.HALL_TOP - 0.55, L.HALL_TOP, z - 0.16, z + 0.16);
+    for (let x = H.x0 + 1.6; x < H.x1; x += 2.6) B.box(M.marbleTrim, x - 0.16, x + 0.16, L.HALL_TOP - 0.55, L.HALL_TOP, H.z0, H.z1);
+    for (let z = H.z0 + 2.9; z < H.z1 - 1; z += 2.6) {
+      for (let x = H.x0 + 2.9; x < H.x1 - 1; x += 2.6) {
+        const b = new THREE.Mesh(boss, M.gold);
+        b.position.set(x, L.HALL_TOP - 0.08, z);
+        G.add(b);
+      }
+    }
     // Banners down the side walls, between the piers.
     for (const z of [10.8, 20]) {
       banner(M.bannerBlue, H.x0, 4.5, 9.5, z, 1, 0, 1.4);
@@ -749,11 +939,11 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     sign(["THE ARENA →"], H.x1 - 0.02, L.SIDE_ARCH.top + 0.7, (L.SIDE_ARCH.z0 + L.SIDE_ARCH.z1) / 2, -1, 0, 3.6, 0.8, "#3a1210", "#f0c070");
     for (const x of [T.x1 - 0.02, A.x0 + 0.02]) {
       // A stone frame round each arch on both faces.
-      for (const z of [L.SIDE_ARCH.z0, L.SIDE_ARCH.z1]) B.box(M.darkBlocks, x - 0.5, x + 0.5 + (x > 0 ? 0 : 0), 0, L.SIDE_ARCH.top, z - 0.22, z + 0.22);
-      B.box(M.darkBlocks, x - 0.5, x + 0.5, L.SIDE_ARCH.top, L.SIDE_ARCH.top + 0.45, L.SIDE_ARCH.z0 - 0.3, L.SIDE_ARCH.z1 + 0.3);
+      for (const z of [L.SIDE_ARCH.z0, L.SIDE_ARCH.z1]) B.box(M.marbleTrim, x - 0.5, x + 0.5, 0, L.SIDE_ARCH.top, z - 0.22, z + 0.22);
+      B.box(M.marbleTrim, x - 0.5, x + 0.5, L.SIDE_ARCH.top, L.SIDE_ARCH.top + 0.45, L.SIDE_ARCH.z0 - 0.3, L.SIDE_ARCH.z1 + 0.3);
     }
     // The entrance's inner face: a frame and a sign for the way out.
-    B.box(M.darkBlocks, L.ENTRANCE.x0 - 0.5, L.ENTRANCE.x1 + 0.5, L.ENTRANCE.top, L.ENTRANCE.top + 0.5, 0, 0.25);
+    B.box(M.marbleTrim, L.ENTRANCE.x0 - 0.5, L.ENTRANCE.x1 + 0.5, L.ENTRANCE.top, L.ENTRANCE.top + 0.5, 0, 0.25);
     // The desk: a long counter with its returns, ledgers, a candle, a bell.
     const desk = (x0: number, x1: number, z0: number, z1: number) => {
       B.box(M.wood, x0 + 0.05, x1 - 0.05, 0, 1.0, z0 + 0.05, z1 - 0.05);

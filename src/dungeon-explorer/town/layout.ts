@@ -8,8 +8,10 @@
 //   to a gallery and the three rooms to rent;
 // - the arena on the right (east): a sand ring behind a fence where players may fight each other
 //   (and lose nothing: a knockout only puts him back at the gate).
-// The merchants' stalls stand against the guild's front wall either side of the entrance. A
-// castle wall closes the street on its other three sides, so nobody walks off the edge.
+// It is built like a temple of the old south: a pedimented portico of tall columns over the
+// entrance, a long colonnade (the stoa) along the rest of the front with the merchants' stalls in
+// its shade, colonnades down the great hall under a coffered ceiling. A wall closes the street on
+// its other three sides, so nobody walks off the edge.
 //
 // Walking: the floor is a set of regions, each flat, a ramp (the stairs) or a disc (the dais). He
 // stands on the highest region under him within a step of his feet, and a move with no floor in
@@ -39,11 +41,11 @@ export const BORDER_H = 5.5;
 // ---- Footprints --------------------------------------------------------------------------------
 
 /** The whole plot inside the border wall. */
-export const SITE = { x0: -32, x1: 32, z0: -22, z1: 26 };
+export const SITE = { x0: -32, x1: 32, z0: -30, z1: 26 };
 /** The guild building (inner faces of its outer walls; the front wall stands at z -WT..0). */
 export const GUILD = { x0: -32, x1: 32, z0: 0, z1: 26 };
 /** Guild Street in front of it. */
-export const STREET = { x0: -32, x1: 32, z0: -22, z1: -WT };
+export const STREET = { x0: -32, x1: 32, z0: -30, z1: -WT };
 /** The three parts (inner faces; the partitions stand at x = ±10). */
 export const TAVERN = { x0: -32, x1: -10 - PT, z0: 0, z1: 26 };
 export const HALL = { x0: -10 + PT, x1: 10 - PT, z0: 0, z1: 26 };
@@ -80,7 +82,41 @@ export const RING_GATE = { z0: 11.5, z1: 14.5 };
 export const inArena = (x: number, z: number) => x > RING.x0 + 0.15 && x < RING.x1 - 0.15 && z > RING.z0 + 0.15 && z < RING.z1 - 0.15;
 
 /** The fountain in the middle of the street. */
-export const FOUNTAIN = { x: 0, z: -12, r: 2.1 };
+export const FOUNTAIN = { x: 0, z: -20, r: 2.1 };
+
+// ---- The temple front ----------------------------------------------------------------------------
+
+/** Stylobate height: the stoa and the portico stand on one low marble step above the street. */
+export const STYLOBATE = 0.15;
+/** The stoa: a colonnade along the wings' fronts (column line z, height to the top of the capitals). */
+export const STOA = { z: -5.4, back: -WT, front: -6.1, h: 5.9, top: TAVERN_TOP };
+/** The portico over the entrance: six columns across its front, two more down each side, a pediment. */
+export const PORTICO = { x0: -9.4, x1: 9.4, z: -10.6, front: -11.4, h: 9.4, top: 10.9, apex: 13.9 };
+
+export interface Column {
+  x: number;
+  z: number;
+  /** Radius at the foot, and the height from its foot to the top of its capital. */
+  r: number;
+  h: number;
+  y: number;
+}
+
+const STOA_XS = [11.6, 15.3, 19.0, 22.7, 26.4, 30.1];
+/** Every column: the stoa's, the portico's, and the great hall's two colonnades inside. */
+export const COLUMNS: Column[] = [
+  ...STOA_XS.reduce<Column[]>((a, x) => a.concat([{ x: -x, z: -5.4, r: 0.36, h: 5.9, y: STYLOBATE }, { x, z: -5.4, r: 0.36, h: 5.9, y: STYLOBATE }]), []),
+  ...[-8.4, -5.04, -1.68, 1.68, 5.04, 8.4].map((x) => ({ x, z: -10.6, r: 0.5, h: 9.4, y: STYLOBATE })),
+  ...[-7.2, -3.8].reduce<Column[]>((a, z) => a.concat([{ x: -8.4, z, r: 0.5, h: 9.4, y: STYLOBATE }, { x: 8.4, z, r: 0.5, h: 9.4, y: STYLOBATE }]), []),
+  ...[2.6, 6.2, 15.8, 19.4, 23.0].reduce<Column[]>((a, z) => a.concat([{ x: -7.2, z, r: 0.5, h: 8.4, y: 0 }, { x: 7.2, z, r: 0.5, h: 8.4, y: 0 }]), []),
+];
+/** Statues on plinths flanking the portico steps and down the street. */
+export const STATUES: Array<{ x: number; z: number; yaw: number }> = [
+  { x: -11.4, z: -10.2, yaw: Math.PI },
+  { x: 11.4, z: -10.2, yaw: Math.PI },
+  { x: -20, z: -17, yaw: Math.PI / 2 },
+  { x: 20, z: -17, yaw: -Math.PI / 2 },
+];
 
 // ---- Rooms to rent -----------------------------------------------------------------------------
 
@@ -138,7 +174,7 @@ export function townStalls(): StallPlan[] {
     nz: -1,
     tx: 1,
     tz: 0,
-    floor: 0,
+    floor: STYLOBATE / CELL_M,
   }));
 }
 
@@ -153,8 +189,10 @@ export type Region =
 const flat = (x0: number, x1: number, z0: number, z1: number, y = 0): Region => ({ kind: "flat", x0, x1, z0, z1, y });
 
 export const REGIONS: Region[] = [
-  // The street, and the entrance through the front wall.
+  // The street, the step up onto the stoa and the portico, and the entrance through the front wall.
   flat(STREET.x0, STREET.x1, STREET.z0, STREET.z1),
+  flat(STREET.x0, STREET.x1, STOA.front - 0.3, STREET.z1, STYLOBATE),
+  flat(PORTICO.x0, PORTICO.x1, PORTICO.front - 0.5, STOA.front - 0.3, STYLOBATE),
   flat(ENTRANCE.x0, ENTRANCE.x1, -WT, 0),
   // The great hall, the dais and its step, and the arches either side.
   flat(HALL.x0, HALL.x1, HALL.z0, HALL.z1),
@@ -279,9 +317,6 @@ export const STRUCTURE: Wall[] = [
   ),
 ];
 
-/** The hall's piers (centre x, z) and their half width. */
-export const PIERS: Array<{ x: number; z: number }> = [4.5, 17, 23].reduce<Array<{ x: number; z: number }>>((a, z) => a.concat([{ x: -7.4, z }, { x: 7.4, z }]), []);
-export const PIER_HALF = 0.7;
 
 /** The arena fence: rails round the ring, open at its gate (boxes; bodies bump them). */
 export const FENCE: Solid[] = [
@@ -302,7 +337,7 @@ export interface Furn {
     | "bed"
     | "chest"
     | "commode"
-    | "pier"
+    | "statue"
     | "brazier"
     | "obelisk"
     | "desk"
@@ -357,8 +392,7 @@ export const FURNITURE: Furn[] = [
       ]),
     []
   ),
-  // The hall: piers, the desk and the board, braziers by the dais, the obelisks round it.
-  ...PIERS.map((p): Furn => ({ kind: "pier", x: p.x, z: p.z, hx: PIER_HALF, hz: PIER_HALF, h: HALL_TOP })),
+  // The hall: the desk and the board, braziers by the dais, the obelisks round it.
   { kind: "desk", x: 0, z: (DESK.z0 + DESK.z1) / 2, hx: (DESK.x1 - DESK.x0) / 2, hz: (DESK.z1 - DESK.z0) / 2, h: 1.1 },
   { kind: "desk", x: DESK.x0 + 0.3, z: 11.1, hx: 0.3, hz: 0.9, h: 1.1 },
   { kind: "desk", x: DESK.x1 - 0.3, z: 11.1, hx: 0.3, hz: 0.9, h: 1.1 },
@@ -381,7 +415,8 @@ export const FURNITURE: Furn[] = [
   ].map(([x, z]): Furn => ({ kind: "brazier", x, z, hx: 0.45, hz: 0.45, h: 1.3 })),
   // The street: the fountain, and lamp posts down both sides.
   { kind: "fountain", x: FOUNTAIN.x, z: FOUNTAIN.z, hx: FOUNTAIN.r, hz: FOUNTAIN.r, h: 0.75 },
-  ...[-24, -12, 12, 24].reduce<Furn[]>((a, x) => a.concat([{ kind: "lamppost", x, z: -6.5, hx: 0.18, hz: 0.18, h: 3.6 }, { kind: "lamppost", x, z: -17.5, hx: 0.18, hz: 0.18, h: 3.6 }]), []),
+  ...[-26, -14, 14, 26].reduce<Furn[]>((a, x) => a.concat([{ kind: "lamppost", x, z: -9.5, hx: 0.18, hz: 0.18, h: 3.6 }, { kind: "lamppost", x, z: -25, hx: 0.18, hz: 0.18, h: 3.6 }]), []),
+  ...STATUES.map((st): Furn => ({ kind: "statue", x: st.x, z: st.z, hx: 0.6, hz: 0.6, h: 3.2, yaw: st.yaw })),
 ];
 
 /** Bar stools in front of the counter (bodies bump them a little). */
@@ -403,8 +438,19 @@ export const GALLERY_POSTS = [-27.2, -21.2, -15.2];
 /** The stalls against the front wall (their counters and awnings). */
 const stallSolids = (): Solid[] => STALL_XS.map((x) => S(x - 1.2, x + 1.2, -WT - 1.62, -WT, 0, 2.7));
 
+/** The columns as boxes (bodies go round them; the camera keeps out). */
+const columnSolids = (): Solid[] => COLUMNS.map((c) => S(c.x - c.r * 1.05, c.x + c.r * 1.05, c.z - c.r * 1.05, c.z + c.r * 1.05, 0, c.y + c.h));
+/** The roofs over the stoa and the portico (the camera keeps under them, or above). */
+const frontRoofs = (): Solid[] => [
+  S(GUILD.x0 - WT, -10 - PT, STOA.front - 0.4, -WT, STOA.h + STYLOBATE, STOA.top + 0.3, false),
+  S(10 + PT, GUILD.x1 + WT, STOA.front - 0.4, -WT, STOA.h + STYLOBATE, STOA.top + 0.3, false),
+  S(PORTICO.x0 - 0.5, PORTICO.x1 + 0.5, PORTICO.front - 0.4, -WT, PORTICO.h + STYLOBATE, PORTICO.apex, false),
+];
+
 export const SOLIDS: Solid[] = (STRUCTURE as Solid[]).concat(
   FENCE,
+  columnSolids(),
+  frontRoofs(),
   furnSolids(),
   stallSolids(),
   GALLERY_POSTS.map((x) => S(x - 0.16, x + 0.16, GALLERY_Z - 0.16, GALLERY_Z + 0.16, 0, SLAB_Y))
@@ -627,12 +673,12 @@ export const NPCS: NpcPlan[] = [
     kind: "walk",
     pace: 1.15,
     route: [
-      { x: -26, z: -10, wait: 3, arms: "cross" },
-      { x: -6, z: -5.0 },
-      { x: 6, z: -5.0 },
-      { x: 26, z: -10, wait: 4, arms: "hold", face: NORTH },
-      { x: 6, z: -19 },
-      { x: -6, z: -19 },
+      { x: -26, z: -14, wait: 3, arms: "cross" },
+      { x: -6, z: -14 },
+      { x: 6, z: -14 },
+      { x: 26, z: -14, wait: 4, arms: "hold", face: NORTH },
+      { x: 6, z: -26 },
+      { x: -6, z: -26 },
     ],
     dress: ["doublet", "cape"],
     seed: 67,
@@ -642,11 +688,13 @@ export const NPCS: NpcPlan[] = [
     kind: "walk",
     pace: 1.0,
     route: [
-      { x: 3.6, z: -15, wait: 6, arms: "hold", face: NORTH },
-      { x: 10, z: -9 },
-      { x: 14, z: -4.6, wait: 5, arms: "hold", face: 0 },
-      { x: -8, z: -4.6, wait: 5, arms: "hold", face: 0 },
-      { x: -10, z: -12 },
+      { x: 3.6, z: -23, wait: 6, arms: "hold", face: NORTH },
+      { x: 12.4, z: -12 },
+      { x: 14, z: -3.4, wait: 5, arms: "hold", face: 0 },
+      { x: 12.4, z: -12 },
+      { x: -12.4, z: -12 },
+      { x: -14, z: -3.4, wait: 5, arms: "hold", face: 0 },
+      { x: -12.4, z: -12 },
     ],
     dress: ["doublet", "waist"],
     seed: 71,

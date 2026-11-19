@@ -14,13 +14,17 @@ Dungeon Forge by Majid Manzarpour, MIT: the generator, room roles and post-proce
 
 The Adventurers' Guild in town (assets/materials/, from Patch's asset library):
 
+"Marble 01" by Rob Tuytel (Poly Haven, https://polyhaven.com/a/marble_01), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
+
+"Marble Tiles" by Charlotte Baglioni (Poly Haven, https://polyhaven.com/a/marble_tiles), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
+
+"Large Sandstone Blocks" by Rob Tuytel (Poly Haven, https://polyhaven.com/a/large_sandstone_blocks), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
+
 "Wood Floor Worn" by Dimitrios Savva (Poly Haven, https://polyhaven.com/a/wood_floor_worn), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
 
 "Cobblestone Pavement" by Charlotte Baglioni (Poly Haven, https://polyhaven.com/a/cobblestone_pavement), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
 
 "Stone Tiles 02" by Charlotte Baglioni (Poly Haven, https://polyhaven.com/a/stone_tiles_02), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
-
-"Castle Wall Variation" by Rob Tuytel (Poly Haven, https://polyhaven.com/a/castle_wall_varriation), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
 
 "Roof Tiles" by Stephan Seeliger (Poly Haven, https://polyhaven.com/a/roof_tiles), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected, credit added to each file.
 
