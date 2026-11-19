@@ -1,10 +1,12 @@
 // Who is playing: each browser gets a player id and a random adventurer's name the first time, and
 // everything he keeps (the bag and purse he brings out of the dungeon, the rooms he rents and their
 // chests) is saved under that id: in the browser always, and on the server (Cloudflare Pages
-// Functions + KV, web/functions/api/profile) when it is there. Only what he has in town is sent up,
-// so the server copy is what he extracted, never a half-finished run.
+// Functions + D1, web/functions/api/profile) when it is there and he has an account (account.ts:
+// the server only takes saves with his session token). Only what he has in town is sent up, so the
+// server copy is what he extracted, never a half-finished run.
 //
-// `?player=<id>` on the URL takes over an existing profile (the same player on another device).
+// `?player=<id>` on the URL takes over an existing profile (the same player on another device); the
+// server only syncs it for the account that owns him.
 import type { ClassId } from "./classes";
 import type { PlayerInv } from "./playerInv";
 import type { TownSave } from "./town/townSave";
@@ -96,10 +98,10 @@ export function loadProfile(): Profile {
 
 const api = (id: string) => `/api/profile/${encodeURIComponent(id)}`;
 
-/** The server's copy, or null (none yet, or no server: local play only). */
-export async function fetchCloud(id: string): Promise<CloudSave | null> {
+/** The server's copy, or null (none yet, or no server: local play only). `token`: his session. */
+export async function fetchCloud(id: string, token: string): Promise<CloudSave | null> {
   try {
-    const r = await fetch(api(id), { headers: { Accept: "application/json" } });
+    const r = await fetch(api(id), { headers: { Accept: "application/json", Authorization: `Bearer ${token}` } });
     if (!r.ok) return null;
     if (!(r.headers.get("content-type") ?? "").includes("application/json")) return null;
     const s = (await r.json()) as Partial<CloudSave>;
@@ -111,7 +113,7 @@ export async function fetchCloud(id: string): Promise<CloudSave | null> {
 }
 
 /** Sends the latest save up a moment after changes stop (and when the page is hidden). */
-export function createCloudSync(id: string) {
+export function createCloudSync(id: string, token: string) {
   let pending: CloudSave | null = null;
   let timer = 0;
   let offline = false;
@@ -120,10 +122,16 @@ export function createCloudSync(id: string) {
     const body = pending;
     pending = null;
     if (!body || offline) return;
-    fetch(api(id), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive })
+    fetch(api(id), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+      keepalive,
+    })
       .then((r) => {
-        // No server here (the local dev server, or storage not set up): stop trying.
-        if (r.status === 404 || r.status === 405 || r.status === 503) offline = true;
+        // No server here (the local dev server, or storage not set up), or the session is not
+        // accepted (401) or the player is another account's (403): stop trying.
+        if (r.status === 401 || r.status === 403 || r.status === 404 || r.status === 405 || r.status === 503) offline = true;
       })
       .catch(() => {});
   };

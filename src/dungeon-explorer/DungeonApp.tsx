@@ -17,6 +17,8 @@ import * as Town from "./town/layout";
 import { createTown, type Town as TownView } from "./town/townView";
 import { loadTown, saveTown, withRented, withStash, type TownSave } from "./town/townSave";
 import { createCloudSync, fetchCloud, loadProfile, saveProfile } from "./profile";
+import { createAccount, loadAccount, saveAccount, type Account } from "./account";
+import { AccountPrompt } from "./AccountPrompt";
 import { MERCHANTS, css } from "./merchants";
 import { MODULES, pieceProps, planFloor, type FloorPlan } from "./dungeon/rooms";
 import { buildDressing, type FloorDressing } from "./roomView";
@@ -2120,6 +2122,29 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const stickPointerRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
   // The player: a random adventurer's name and an id his saves are kept under (profile.ts).
   const profile = useMemo(loadProfile, []);
+  // His account: the username he picks on the first screen and its session token (account.ts).
+  const [account, setAccount] = useState<Account | null>(loadAccount);
+  // A name kept while there was no server is registered on the next start; if someone took it
+  // meanwhile, he is asked for another (`retakeName` keeps it in the box).
+  const [retakeName, setRetakeName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!account || account.token) return;
+    let on = true;
+    createAccount(account.username, profile.id).then((r) => {
+      if (!on) return;
+      if (r.ok) {
+        saveAccount(r.account);
+        setAccount(r.account);
+      } else if (r.reason === "taken") {
+        saveAccount(null);
+        setRetakeName(account.username);
+        setAccount(null);
+      }
+    });
+    return () => {
+      on = false;
+    };
+  }, [account, profile.id]);
   // The character: who he is and what he wears, remembered between visits (CharacterCustomizer.tsx);
   // the name is the player's.
   const [spec, setSpec] = useState<HumanSpec>(() => ({ ...initialSpec(), name: profile.name }));
@@ -2157,12 +2182,15 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   useEffect(() => saveTown(townSave), [townSave]);
   // The server's copy: fetched once at the start (the newer of it and this browser's wins), then
   // what he has in town is sent up whenever it changes (never mid-dive: only what he extracted).
-  const cloud = useMemo(() => createCloudSync(profile.id), [profile.id]);
-  useEffect(() => () => cloud.dispose(), [cloud]);
+  // Only with an account: the server takes saves with his session token (account.ts).
+  const token = account?.token ?? null;
+  const cloud = useMemo(() => (token ? createCloudSync(profile.id, token) : null), [profile.id, token]);
+  useEffect(() => () => cloud?.dispose(), [cloud]);
   const [cloudReady, setCloudReady] = useState(false);
   useEffect(() => {
+    if (!token) return;
     let on = true;
-    fetchCloud(profile.id).then((c) => {
+    fetchCloud(profile.id, token).then((c) => {
       if (!on) return;
       if (c && c.updated > profile.updated) {
         profile.updated = c.updated;
@@ -2178,10 +2206,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     return () => {
       on = false;
     };
-  }, [profile]);
+  }, [profile, token]);
   const syncedRef = useRef("");
   useEffect(() => {
-    if (!cloudReady || place !== "town") return;
+    if (!cloud || !cloudReady || place !== "town") return;
     const name = (spec.name || profile.name).slice(0, 40);
     const key = JSON.stringify([name, heroClass, inv, townSave]);
     if (key === syncedRef.current) return;
@@ -2685,7 +2713,24 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         />
       ) : null}
 
-      {screen === "class" && !hud.loading ? (
+      {screen === "class" && !hud.loading && !account ? (
+        <AccountPrompt
+          playerId={profile.id}
+          initial={retakeName ?? ""}
+          notice={retakeName ? `"${retakeName}" was taken while you were offline. Pick another name.` : undefined}
+          onDone={(a) => {
+            saveAccount(a);
+            setAccount(a);
+            setRetakeName(null);
+            // The username is his hero's name too.
+            profile.name = a.username;
+            saveProfile(profile);
+            setSpec((sp) => ({ ...sp, name: a.username }));
+          }}
+        />
+      ) : null}
+
+      {screen === "class" && !hud.loading && account ? (
         <ClassSelect
           name={spec.name || profile.name}
           current={heroClass}
