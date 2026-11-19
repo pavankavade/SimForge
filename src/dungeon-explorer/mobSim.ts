@@ -88,6 +88,12 @@ export interface MobAgent {
   lungeT: number;
   /** Acid slimes: seconds to the next puddle. */
   dripCd: number;
+  /** In a party: which player it is after (0 = this one, 1.. the others in `step`'s list). */
+  target: number;
+  /** Melee swings started so far (a party's mirror starts the swing when this goes up). */
+  swings: number;
+  /** In a mirrored floor (net/coop.ts): where the leader's game last put it, eased toward. */
+  net?: { cx: number; cz: number; yaw: number; seen: number };
 }
 
 export interface Projectile {
@@ -121,7 +127,7 @@ export interface AcidPuddle {
 
 /** Something that happened to the fighter (or near him) this step. */
 export type MobEvent =
-  | { type: "hit"; mob: MobAgent; damage: number; fromX: number; fromZ: number; blockable: boolean; how: "lunge" | "arrow" | "bolt" | "acid" }
+  | { type: "hit"; mob: MobAgent; damage: number; fromX: number; fromZ: number; blockable: boolean; how: "lunge" | "arrow" | "bolt" | "acid"; who: number }
   | { type: "loose"; mob: MobAgent; projectile: "arrow" | "bolt" }
   | { type: "impact"; projectile: Projectile; wall: boolean }
   | { type: "split"; mob: MobAgent }
@@ -363,6 +369,8 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
       hopU: rng(),
       lungeT: 0,
       dripCd: DRIP_S,
+      target: 0,
+      swings: 0,
     };
     mobs.push(m);
     return m;
@@ -436,7 +444,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
   };
 
   /** Move toward (tx, tz) cells at `speed` cells/s, steering around the others; returns metres moved. */
-  const moveToward = (m: MobAgent, i: number, tx: number, tz: number, speed: number, dt: number, pCx: number, pCz: number): number => {
+  const moveToward = (m: MobAgent, i: number, tx: number, tz: number, speed: number, dt: number): number => {
     let dx = tx - m.cx;
     let dz = tz - m.cz;
     const dist = Math.hypot(dx, dz) || 1;
@@ -460,9 +468,10 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
         sz += (oz / l) * push;
       }
     }
-    {
-      const ox = m.cx - pCx;
-      const oz = m.cz - pCz;
+    // Every fighter on the floor (cells, x then z: the whole party, see `step`).
+    for (let k = 0; k + 1 < bodies.length; k += 2) {
+      const ox = m.cx - bodies[k];
+      const oz = m.cz - bodies[k + 1];
       const q = ox * ox + oz * oz;
       const gap = Math.max(0.6, mine + 0.3);
       if (q < gap * gap && q > 1e-6) {
@@ -538,7 +547,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
     events.push({ type: "loose", mob: m, projectile: r.projectile });
   };
 
-  const stepProjectiles = (dt: number, pl: PlayerView) => {
+  const stepProjectiles = (dt: number, party: PlayerView[]) => {
     for (const p of projectiles) {
       if (p.dead) continue;
       p.life -= dt;
@@ -547,7 +556,9 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
         continue;
       }
       if (p.stuck) continue;
-      if (p.kind === "bolt" && !pl.dead) {
+      const caster = p.kind === "bolt" ? mobs.find((o) => o.id === p.from) : undefined;
+      const pl = party[caster ? caster.target : 0] ?? party[0];
+      if (p.kind === "bolt" && pl && !pl.dead) {
         // A bolt bends gently toward him.
         const tx = pl.wx - p.x;
         const ty = pl.wy + 1.15 - p.y;
@@ -580,22 +591,28 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
           }
           if (p.dead) break;
         }
-        // The fighter: a capsule from his feet to his crown.
-        if (!pl.dead && p.from !== 0) {
-          const hy = Math.max(pl.wy + 0.2, Math.min(pl.wy + 1.65, p.y));
-          if (Math.hypot(p.x - pl.wx, p.y - hy, p.z - pl.wz) < PLAYER_R) {
-            p.dead = true;
-            events.push({
-              type: "hit",
-              mob: mobs.find((o) => o.id === p.from) ?? mobs[0],
-              damage: p.damage,
-              fromX: p.x - p.vx,
-              fromZ: p.z - p.vz,
-              blockable: true,
-              how: p.kind,
-            });
-            break;
+        // The fighters: a capsule from the feet to the crown (their arrows pass their friends).
+        if (p.from !== 0) {
+          for (let w = 0; w < party.length; w++) {
+            const f = party[w];
+            if (f.dead) continue;
+            const hy = Math.max(f.wy + 0.2, Math.min(f.wy + 1.65, p.y));
+            if (Math.hypot(p.x - f.wx, p.y - hy, p.z - f.wz) < PLAYER_R) {
+              p.dead = true;
+              events.push({
+                type: "hit",
+                mob: mobs.find((o) => o.id === p.from) ?? mobs[0],
+                damage: p.damage,
+                fromX: p.x - p.vx,
+                fromZ: p.z - p.vz,
+                blockable: true,
+                how: p.kind,
+                who: w,
+              });
+              break;
+            }
           }
+          if (p.dead) break;
         }
         if (solid(p.x, p.y, p.z)) {
           events.push({ type: "impact", projectile: p, wall: true });
@@ -619,31 +636,52 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
     }
   };
 
-  let acidTick = 0;
-  const stepPuddles = (dt: number, pl: PlayerView) => {
+  /** Seconds before acid can burn each fighter again. */
+  const acidTick: number[] = [];
+  const stepPuddles = (dt: number, party: PlayerView[]) => {
     for (const p of puddles) p.t += dt;
     for (let i = puddles.length - 1; i >= 0; i--) if (puddles[i].t > puddles[i].life) puddles.splice(i, 1);
     // Standing in one burns (twice a second), boots or no boots.
-    acidTick -= dt;
-    if (pl.dead || acidTick > 0) return;
-    for (const p of puddles) {
-      const fresh = Math.min(1, (p.life - p.t) / 1.5);
-      if (fresh > 0.2 && Math.hypot(p.x - pl.wx, p.z - pl.wz) < p.r && Math.abs(p.y - pl.wy) < 0.6) {
-        acidTick = 0.5;
-        const owner = mobs.find((m) => m.kind.id === "acidSlime") ?? mobs[0];
-        events.push({ type: "hit", mob: owner, damage: PUDDLE_BURN * 0.5, fromX: p.x, fromZ: p.z, blockable: false, how: "acid" });
-        return;
+    for (let w = 0; w < party.length; w++) {
+      const pl = party[w];
+      acidTick[w] = (acidTick[w] ?? 0) - dt;
+      if (pl.dead || acidTick[w] > 0) continue;
+      for (const p of puddles) {
+        const fresh = Math.min(1, (p.life - p.t) / 1.5);
+        if (fresh > 0.2 && Math.hypot(p.x - pl.wx, p.z - pl.wz) < p.r && Math.abs(p.y - pl.wy) < 0.6) {
+          acidTick[w] = 0.5;
+          const owner = mobs.find((m) => m.kind.id === "acidSlime") ?? mobs[0];
+          events.push({ type: "hit", mob: owner, damage: PUDDLE_BURN * 0.5, fromX: p.x, fromZ: p.z, blockable: false, how: "acid", who: w });
+          break;
+        }
       }
     }
   };
 
-  const step = (dt: number, pl: PlayerView) => {
+  /** Cells under each fighter, and whether he stands in the market (the entrance: safe ground). */
+  const cellsOf = (pl: PlayerView) => {
+    const cx = pl.wx / CELL_M + d.W / 2;
+    const cz = pl.wz / CELL_M + d.H / 2;
+    const ix = Math.floor(cx);
+    const iz = Math.floor(cz);
+    return { cx, cz, market: ix >= 0 && iz >= 0 && ix < d.W && iz < d.H && d.roomId[iz * d.W + ix] === d.entrance };
+  };
+  /** The living fighters' cells, x then z (moveToward steers round all of them). */
+  const bodies: number[] = [];
+
+  /**
+   * One step. `me` is this player; `others` the rest of the party on this floor (a party's leader
+   * runs the floor for everyone, net/coop.ts). Each monster goes after the nearest living one and
+   * the "hit" events say whom they landed on (`who`: 0 is `me`, 1.. index `others` + 1).
+   */
+  const step = (dt: number, me: PlayerView, others: PlayerView[] = []) => {
     events.length = 0;
-    const pCx = pl.wx / CELL_M + d.W / 2;
-    const pCz = pl.wz / CELL_M + d.H / 2;
-    const pix = Math.floor(pCx);
-    const piz = Math.floor(pCz);
-    const inMarket = pix >= 0 && piz >= 0 && pix < d.W && piz < d.H && d.roomId[piz * d.W + pix] === d.entrance;
+    const party = others.length ? [me, ...others] : [me];
+    const cells = party.map(cellsOf);
+    bodies.length = 0;
+    party.forEach((f, w) => {
+      if (!f.dead) bodies.push(cells[w].cx, cells[w].cz);
+    });
 
     for (let i = 0; i < mobs.length; i++) {
       const m = mobs[i];
@@ -685,6 +723,24 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
         }
       }
 
+      // Whom it is after: the nearest of the living (it only turns to another a good step closer).
+      if (party.length > 1) {
+        const far = (w: number) => (party[w].dead ? Infinity : Math.hypot(party[w].wx - m.wx, party[w].wz - m.wz));
+        let best = m.target < party.length ? m.target : 0;
+        let bestD = far(best) - 1.5;
+        for (let w = 0; w < party.length; w++) {
+          const dw = far(w);
+          if (dw < bestD) {
+            best = w;
+            bestD = dw;
+          }
+        }
+        m.target = best;
+      } else m.target = 0;
+      const pl = party[m.target];
+      const pCx = cells[m.target].cx;
+      const pCz = cells[m.target].cz;
+      const inMarket = cells[m.target].market;
       const toX = pl.wx - m.wx;
       const toZ = pl.wz - m.wz;
       const distM = Math.hypot(toX, toZ);
@@ -717,7 +773,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
           const [tx, tz] = m.path.length > 1 ? m.path[0] : [pCx, pCz];
           if (m.path.length > 1 && Math.hypot(tx - m.cx, tz - m.cz) < 0.3) m.path.shift();
           const speed = ((m.blockT > 0 ? 0.35 : 1) * CHASE_MS * m.stats.speed * paceK * hopPace(m, dt, true)) / CELL_M;
-          moveToward(m, i, tx, tz, speed, dt, pCx, pCz);
+          moveToward(m, i, tx, tz, speed, dt);
           turnTo(m, distM < 4 ? facePlayer : Math.atan2(m.vx, m.vz) || m.yaw, 10, dt);
         };
         const r = m.kind.ranged;
@@ -739,7 +795,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
             // Too close: back away from him (along the open floor), still facing him.
             const ax = m.cx - (toX / (distM || 1)) * 2;
             const az = m.cz - (toZ / (distM || 1)) * 2;
-            const moved = moveToward(m, i, ax, az, (WALK_MS * 1.1 * m.stats.speed) / CELL_M, dt, pCx, pCz);
+            const moved = moveToward(m, i, ax, az, (WALK_MS * 1.1 * m.stats.speed) / CELL_M, dt);
             turnTo(m, facePlayer, 9, dt);
             // Cornered (or in reach): it looses anyway, quicker.
             if ((moved < 0.002 || distM < 1.6) && m.attackCd <= 0) m.aimT = r.windup * 0.7;
@@ -761,9 +817,9 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
           const fx = Math.sin(m.yaw);
           const fz = Math.cos(m.yaw);
           const pace = (m.lungeT > LUNGE_S * 0.35 ? 2.4 : 0.4) * m.scale ** 0.5;
-          moveToward(m, i, m.cx + fx, m.cz + fz, pace / CELL_M, dt, pCx, pCz);
+          moveToward(m, i, m.cx + fx, m.cz + fz, pace / CELL_M, dt);
           if (before > LUNGE_S * 0.45 && m.lungeT <= LUNGE_S * 0.45 && distM < m.kind.reach + m.radius + 0.45) {
-            events.push({ type: "hit", mob: m, damage: m.stats.damage, fromX: m.wx, fromZ: m.wz, blockable: true, how: "lunge" });
+            events.push({ type: "hit", mob: m, damage: m.stats.damage, fromX: m.wx, fromZ: m.wz, blockable: true, how: "lunge", who: m.target });
           }
           if (m.lungeT <= 0) m.lungeT = 0;
           place(m, dt);
@@ -778,7 +834,10 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
           if (m.attackCd <= 0 && m.blockT <= 0 && facing) {
             m.attackCd = m.stats.attackEvery * (0.85 + rng() * 0.3);
             if (m.family === "slime") m.lungeT = LUNGE_S;
-            else m.attack = true;
+            else {
+              m.attack = true;
+              m.swings++;
+            }
           }
           hopPace(m, dt, false);
         }
@@ -808,7 +867,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
       }
       const pace = hopPace(m, dt, true);
       const speed = (WALK_MS * m.stats.speed * pace) / CELL_M;
-      const moved = moveToward(m, i, tx, tz, speed, dt, pCx, pCz);
+      const moved = moveToward(m, i, tx, tz, speed, dt);
       if (moved > 0.0005) turnTo(m, Math.atan2(m.vx, m.vz), 6, dt);
       // Blocked: think again in a moment (a slime between hops is not blocked).
       if (pace > 0 && moved < speed * CELL_M * dt * 0.15) {
@@ -818,8 +877,8 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
       place(m, dt);
     }
 
-    stepProjectiles(dt, pl);
-    stepPuddles(dt, pl);
+    stepProjectiles(dt, party);
+    stepPuddles(dt, party);
   };
 
   /**
@@ -876,5 +935,62 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
     projectiles.push({ id: nextShot++, kind: "arrow", x, y, z, vx, vy, vz, damage, from: 0, life: 3, stuck: false, dead: false });
   };
 
-  return { mobs, projectiles, puddles, events, step, hit, shoot };
+  /**
+   * A party member's copy of the leader's floor (net/coop.ts writes the leader's snapshots into the
+   * monsters' `net` and the projectile and puddle lists): instead of `step`, everything eases toward
+   * where the leader's game last put it, and flies on between snapshots.
+   */
+  const mirror = (dt: number) => {
+    events.length = 0;
+    const k = 1 - Math.exp(-dt * 10);
+    for (const m of mobs) {
+      m.attack = false;
+      m.loosed = false;
+      m.flinch *= Math.exp(-dt * 6);
+      m.aimT = Math.max(0, m.aimT - dt);
+      m.lungeT = Math.max(0, m.lungeT - dt);
+      m.blockT -= dt;
+      m.stun = Math.max(0, m.stun - dt);
+      if (m.dead) {
+        m.deadT += dt;
+        m.vx = m.vz = 0;
+        if (m.net) {
+          m.cx = m.net.cx;
+          m.cz = m.net.cz;
+        }
+        place(m, dt);
+        continue;
+      }
+      const n = m.net;
+      if (!n) continue;
+      const far = Math.hypot(n.cx - m.cx, n.cz - m.cz) > 3;
+      const nx = far ? n.cx : m.cx + (n.cx - m.cx) * k;
+      const nz = far ? n.cz : m.cz + (n.cz - m.cz) * k;
+      m.vx = dt > 0 && !far ? ((nx - m.cx) * CELL_M) / dt : 0;
+      m.vz = dt > 0 && !far ? ((nz - m.cz) * CELL_M) / dt : 0;
+      m.cx = nx;
+      m.cz = nz;
+      turnTo(m, n.yaw, 12, dt);
+      if (m.family === "slime") m.hopU = (m.hopU + (dt / HOP_S) * (Math.hypot(m.vx, m.vz) > 0.2 ? 1 : 0.35) * Math.pow(m.scale, -0.35)) % 1;
+      place(m, dt);
+    }
+    for (const p of projectiles) {
+      if (p.dead || p.stuck) continue;
+      if (p.kind === "arrow") p.vy -= ARROW_G * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+    }
+    for (const q of puddles) q.t += dt;
+  };
+
+  /** A monster the leader's floor has and this copy lacks (a Bloated Slime's slimelets). */
+  const adopt = (id: number, kindId: MobKindId, cx: number, cz: number, room: number, elite: boolean): MobAgent => {
+    const m = spawn(kindId, cx, cz, room, elite);
+    m.id = id;
+    nextId = Math.max(nextId, id + 1);
+    return m;
+  };
+
+  return { mobs, projectiles, puddles, events, step, hit, shoot, mirror, adopt };
 }

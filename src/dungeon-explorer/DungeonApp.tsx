@@ -33,7 +33,11 @@ import { addItem, def, emptyGrid, removeItem, type ItemInst } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
 import { ShopScreen } from "./ShopScreen";
-import { createMobSimulation, type MobAgent, type MobEvent } from "./mobSim";
+import { createMobSimulation, type MobAgent, type MobEvent, type PlayerView } from "./mobSim";
+import { mp, useMp, type Pose, type RunView } from "./net/mp";
+import { createRemotes, type Remotes } from "./net/remotes";
+import { createCoop, type Coop } from "./net/coop";
+import { ChatBox, InviteCards, PartyScreen, SpectateBar } from "./Social";
 import { computeStats, type Stats } from "./stats";
 import { createPortrait, type Portrait, type ScreenRect } from "./portrait";
 import { createMonsterSfx, type MonsterSfx } from "./monsters/monsterSfx";
@@ -240,7 +244,7 @@ interface HudInfo {
 
 /** Something within reach: a stall, a door, a chest, a fallen man; in town a room, a stash, the teleporter. */
 interface Interact {
-  kind: "trade" | "door" | "chest" | "corpse" | "pile" | "portal" | "rent" | "roomdoor" | "stash" | "teleport" | "tavernDoor";
+  kind: "trade" | "door" | "chest" | "corpse" | "pile" | "portal" | "rent" | "roomdoor" | "stash" | "teleport" | "tavernDoor" | "player";
   /** Merchant index, door index or container id. */
   key: string;
   verb: string;
@@ -352,6 +356,11 @@ interface DungeonSceneProps {
   /** He has arrived somewhere (town or a new floor): weapons go back in their sheaths. */
   onArrive: () => void;
   stashOpenRef: React.RefObject<{ room: number; slot: number } | null>;
+  /** A party's dive (net/coop.ts; null when he plays alone), the teammate the camera follows once
+   * he is down (null: none), and where the other players' names are drawn. */
+  coopRef: React.RefObject<Coop | null>;
+  spectateRef: React.RefObject<string | null>;
+  remoteLayerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /** Over-the-shoulder camera: the pivot sits this far right of his head, at about ear height. */
@@ -475,6 +484,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   autoRes,
   perf,
   resume,
+  coopRef,
+  spectateRef,
+  remoteLayerRef,
 }) => {
   // The run to pick up again (runSave.ts): used by the first floor built, if it is that floor.
   const resumeRef = useRef(resume);
@@ -861,8 +873,17 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       attack: () => {
         attackQueueRef.current = true;
       },
+      // Multiplayer: the hub client, the party's dive, and the other players as drawn.
+      mp,
+      coop: () => coopRef.current,
+      remotes: () => remotesRef.current?.views() ?? [],
+      /** A wound of `damage` (acid: no armour or shield takes it). */
+      hurt: (damage: number) => {
+        const m = worldRef.current?.sim.mobs[0];
+        if (m) hurtPlayerRef.current(m, { damage, fromX: 0, fromZ: 0, blockable: false, how: "acid" });
+      },
     };
-  }, [attackQueueRef, containersRef, gl, scene, camera]);
+  }, [attackQueueRef, containersRef, gl, scene, camera, coopRef]);
 
   useEffect(() => {
     let disposed = false;
@@ -898,6 +919,20 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       bodiesRef.current = null;
     };
   }, [gl, scene, onHudUpdate]);
+
+  // The other players online (net/remotes.ts): bodies built from what they send, named overhead.
+  const remotesRef = useRef<Remotes | null>(null);
+  useEffect(() => {
+    const layer = remoteLayerRef.current ?? document.body;
+    const r = createRemotes(gl, scene, layer);
+    remotesRef.current = r;
+    return () => {
+      r.dispose();
+      remotesRef.current = null;
+    };
+  }, [gl, scene, remoteLayerRef]);
+  /** His pose as last sent to the hub, and where he last said he was. */
+  const poseRef = useRef({ t: 0, key: "", where: "" });
 
   // Armour changes swap visibility only.
   useEffect(() => {
@@ -938,6 +973,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   useEffect(() => {
     const dom = gl.domElement;
     const onKeyDown = (e: KeyboardEvent) => {
+      // Typing in the chat moves nobody.
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (!e.repeat) keysRef.current.add(e.code);
       if (!playingRef.current && !freeMoveRef.current) return;
       if (e.code === "Space" && !e.repeat) jumpQueueRef.current = true;
@@ -1280,6 +1317,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         return y < floorAt(dungeon, gx, gz) * CELL_M - 0.03;
       };
       const sim = createMobSimulation(dungeon, walker.x * CELL_M, walker.z * CELL_M, solidAt);
+      coopRef.current?.built(sim);
       // The way out: five portals at random places, opening from minute five (portals.ts).
       let ps = (Math.imul(seed ^ 0x51ed27, 2246822519) + Math.imul(life, 362437) + 99) >>> 0;
       const portalRand = () => (ps = (Math.imul(ps, 1664525) + 1013904223) >>> 0) / 4294967296;
@@ -1309,7 +1347,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           // The sword's cut at its rarity (fists without it), less the monster's armour (mobSim.hit).
           const dmg = (equipmentRef.current.sword ? weaponDamageRef.current : 6) * (0.9 + rand() * 0.2);
           const m = sim.mobs.find((o) => o.id === id);
-          const r = sim.hit(id, dirX, dirZ, dmg);
+          // In a party the authority's floor takes the blow (net/coop.ts); this copy only sounds it.
+          const co = coopRef.current;
+          let r: ReturnType<typeof sim.hit>;
+          if (co && !co.leads()) {
+            co.sendHit(id, dirX, dirZ, dmg);
+            r = !m || m.dead ? null : m.blockT > 0 && m.equipment.shield ? "blocked" : "hit";
+          } else r = sim.hit(id, dirX, dirZ, dmg);
           const ms = monsterSfxRef.current;
           if (r === "blocked") {
             sfxRef.current?.clang();
@@ -1355,7 +1399,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       // Coming back to a run left open (runSave.ts): the same floor, the clock where it is now, and
       // him, the chests, the remains and the dead as they were at the last save.
       worldRef.current = world;
-      const r = resumeRef.current;
+      // (A party's dive is never picked up again on its own.)
+      const r = coopRef.current ? null : resumeRef.current;
       resumeRef.current = null;
       const resumed = !!r && r.seed === seed && r.rooms === roomCount && r.theme === theme && r.life === life;
       if (r && resumed) {
@@ -1423,7 +1468,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef, warmShaders]);
+  }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef, warmShaders, coopRef]);
 
   // What he drops on the ground lies in a sack at his feet (a container to search with E): pieces
   // dropped close together share one sack; an emptied sack is gone.
@@ -1567,6 +1612,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const { walker, sim, space } = world;
     const fl = world.floor;
     const town = world.place === "town" ? townRef.current : null;
+    // A party's dive (net/coop.ts), and the teammate the camera follows once he is down.
+    const coop = fl ? coopRef.current : null;
+    const watching = world.dead && coop && spectateRef.current ? (remotesRef.current?.view(spectateRef.current) ?? null) : null;
     const persp = camera as THREE.PerspectiveCamera;
     const show = showRef.current;
     const sc = showcaseRef.current;
@@ -1622,8 +1670,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       }
     }
     // The run clock; at ten minutes the dungeon takes whoever is still inside.
-    if (fl && clockRunningRef.current && !world.dead && !world.escaped) {
-      world.runT += dt;
+    if (fl && (clockRunningRef.current || coop) && !world.dead && !world.escaped) {
+      // A party shares one clock (the hub's, from the moment the leader took them down) and it
+      // never stops for one of them in a menu.
+      if (coop) world.runT = Math.max(world.runT, Math.min(RUN_SECONDS, (mp.serverNow() - coop.run.startAt) / 1000));
+      else world.runT += dt;
       if (world.runT >= RUN_SECONDS) {
         world.runT = RUN_SECONDS;
         world.hp = 0;
@@ -1685,6 +1736,17 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         walker.z += ((dz / dd) * (gap - dd)) / CELL_M;
       }
     }
+    // So are the other players (a little, so nobody gets stuck in a doorway).
+    for (const o of remotesRef.current?.views() ?? []) {
+      if (o.dead || o.escaped || Math.abs(o.y - o.air - world.playerFloor * CELL_M) > 1) continue;
+      const dx = walker.x * CELL_M - o.x;
+      const dz = walker.z * CELL_M - o.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd < 0.62 && dd > 1e-4) {
+        walker.x += ((dx / dd) * (0.62 - dd) * 0.5) / CELL_M;
+        walker.z += ((dz / dd) * (0.62 - dd) * 0.5) / CELL_M;
+      }
+    }
     // So are the townsfolk.
     if (town) {
       for (const n of town.npcSpots()) {
@@ -1730,7 +1792,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     if (traps) {
       const hits = traps.update(
         dt,
-        world.time,
+        // A party sees the same blades and logs: their clock is the run's.
+        coop ? (mp.serverNow() - coop.run.startAt) / 1000 + 600 : world.time,
         { x: walker.x * CELL_M, z: walker.z * CELL_M, prevX: x0 * CELL_M, prevZ: z0 * CELL_M, air: world.playerJumpY, alive: !world.dead && !world.escaped },
         monsterSfxRef.current,
       );
@@ -1745,18 +1808,65 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const serial = paladin ? paladin.animator.swingSerial : 0;
     const swingStarted = serial !== world.lastSerial;
     world.lastSerial = serial;
-    // The monsters in two half steps on a slow frame (so a long step never carries one through a wall).
-    const simSteps = dt > 0.04 ? 2 : 1;
-    for (let k = 0; k < simSteps; k++) {
-      sim.step(dt / simSteps, {
-        wx: px,
-        wy: py,
-        wz: pz,
-        swinging: paladin !== null && (paladin.animator.state === "windup" || paladin.animator.state === "strike"),
-        swingStarted: swingStarted && k === 0,
-        dead: world.dead,
-      });
-      handleMobEvents(sim.events, px, pz);
+    const full = fl ? (sim as Sim) : null;
+    if (coop && full && !coop.leads()) {
+      // A teammate's copy of the floor: the authority's monsters, eased into place.
+      full.mirror(dt);
+      coop.follow(full);
+    } else {
+      // The party on this floor, as the monsters see them (the authority's game runs them for all).
+      const ids: string[] = [];
+      const others: PlayerView[] = [];
+      if (coop) {
+        for (const id of coop.mates()) {
+          const v = remotesRef.current?.view(id);
+          if (!v) continue;
+          ids.push(id);
+          others.push({ wx: v.x, wy: v.y, wz: v.z, swinging: v.swinging, swingStarted: v.swingStarted, dead: v.dead || v.escaped });
+        }
+      }
+      // The monsters in two half steps on a slow frame (so a long step never carries one through a wall).
+      const simSteps = dt > 0.04 ? 2 : 1;
+      for (let k = 0; k < simSteps; k++) {
+        sim.step(
+          dt / simSteps,
+          {
+            wx: px,
+            wy: py,
+            wz: pz,
+            swinging: paladin !== null && (paladin.animator.state === "windup" || paladin.animator.state === "strike"),
+            swingStarted: swingStarted && k === 0,
+            dead: world.dead || world.escaped,
+          },
+          others,
+        );
+        // Blows on the others are theirs to take (their shields and armour count in their games).
+        for (const e of sim.events) {
+          if (e.type === "hit" && e.who > 0) coop?.sendHurt(ids[e.who - 1], { mob: e.mob.id, dmg: e.damage, fx: e.fromX, fz: e.fromZ, bl: e.blockable, how: e.how });
+        }
+        handleMobEvents(coop ? sim.events.filter((e) => e.type !== "hit" || e.who === 0) : sim.events, px, pz);
+      }
+      if (coop && full) {
+        const ms = monsterSfxRef.current;
+        coop.lead(
+          dt,
+          full,
+          others.filter((o) => !o.dead).map((o) => ({ x: o.wx, z: o.wz })),
+          (m, r) => {
+            if (Math.hypot(m.wx - px, m.wz - pz) > 14) return;
+            if (r === "blocked") sfxRef.current?.clang();
+            else if (m.family === "slime") ms?.squelch(m.scale);
+            else ms?.boneHit();
+          },
+        );
+      }
+    }
+    // Blows the authority says landed on him (his shield and armour still count here).
+    if (coop) {
+      for (const h of coop.takeHurts()) {
+        const m = sim.mobs.find((o) => o.id === h.mob) ?? sim.mobs[0];
+        if (m) hurtPlayerRef.current(m, { damage: h.dmg, fromX: h.fx, fromZ: h.fz, blockable: h.bl, how: h.how });
+      }
     }
     dropToGround(world.walker.yaw + Math.PI, px, world.playerFloor * CELL_M, pz);
     // A fallen monster leaves its crystal and what it carried, to search with E like a chest.
@@ -1851,7 +1961,18 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           const sp = 24 + 26 * power;
           // Aimed a touch high so the drop brings it onto the mark.
           const lift = (0.5 * 3.2 * dist) / sp;
-          sim.shoot(hand.x + (dx / dist) * 0.35, hand.y + (dy / dist) * 0.35, hand.z + (dz / dist) * 0.35, (dx / dist) * sp, (dy / dist) * sp + lift, (dz / dist) * sp, bow.damage * (0.35 + 0.65 * power));
+          const shot = {
+            x: hand.x + (dx / dist) * 0.35,
+            y: hand.y + (dy / dist) * 0.35,
+            z: hand.z + (dz / dist) * 0.35,
+            vx: (dx / dist) * sp,
+            vy: (dy / dist) * sp + lift,
+            vz: (dz / dist) * sp,
+            dmg: bow.damage * (0.35 + 0.65 * power),
+          };
+          // In a party the arrow flies on the authority's floor (and comes back in its snapshots).
+          if (coop && !coop.leads()) coop.sendShot(shot);
+          else sim.shoot(shot.x, shot.y, shot.z, shot.vx, shot.vy, shot.vz, shot.dmg);
           monsterSfxRef.current?.twang();
           bow.onShot();
         }
@@ -1896,8 +2017,18 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
 
     // E: a door to work, a draught to drink.
     if (doorQueueRef.current >= 0) {
-      doorsRef.current?.toggle(doorQueueRef.current, { x: px, z: pz });
+      const di = doorQueueRef.current;
+      doorsRef.current?.toggle(di, { x: px, z: pz });
+      const dr = doorsRef.current?.doors[di];
+      if (dr && coop) coop.sendDoor({ i: di, open: dr.target > 0.5, x: px, z: pz });
       doorQueueRef.current = -1;
+    }
+    // A teammate worked a door.
+    if (coop && doorsRef.current) {
+      for (const d of coop.takeDoors()) {
+        const dr = doorsRef.current.doors[d.i];
+        if (dr && dr.target > 0.5 !== d.open) doorsRef.current.toggle(d.i, { x: d.x, z: d.z });
+      }
     }
     if (roomDoorQueueRef.current >= 0) {
       townRef.current?.toggleDoor(roomDoorQueueRef.current);
@@ -2026,6 +2157,17 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           });
         }
       }
+      // Another player in town: E asks him into the party (only its leader can).
+      if (town) {
+        const party = mp.state.party;
+        const mayInvite = !party || party.leader === mp.state.me;
+        for (const o of remotesRef.current?.views() ?? []) {
+          if (!mayInvite || (party && party.members.indexOf(o.id) >= 0)) continue;
+          const dist = Math.hypot(o.x - px, o.z - pz);
+          if (dist > 2.4 || look(o.x, o.z) < 0.4 || Math.abs(o.y - py) > 1) continue;
+          consider({ kind: "player", key: o.id, verb: "Invite", label: `${mp.nameOf(o.id)} to your party` }, dist);
+        }
+      }
       const portals = portalsRef.current;
       if (portals) {
         portals.centres.forEach((c, i) => {
@@ -2100,6 +2242,30 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       lightX = px + Math.sin(show.yaw + 0.5) * 1.5;
       lightZ = pz + Math.cos(show.yaw + 0.5) * 1.5;
       lightY = floorY - 0.15;
+    } else if (watching) {
+      // Down, in a party: the camera rides over a teammate's shoulder (the way he looks).
+      if (offsetOnRef.current) {
+        persp.clearViewOffset();
+        offsetOnRef.current = false;
+      }
+      const cam = resolveThirdPersonCam(
+        space,
+        watching.x,
+        watching.y - watching.air,
+        watching.z,
+        watching.yaw,
+        watching.pitch,
+        2.6 * distScale,
+        SHOULDER_OFFSET * 0.6,
+        SHOULDER_OFFSET * 0.6,
+        (x: number, y: number, z: number) => !!doorsRef.current?.solidAt(x, y, z),
+      );
+      persp.position.set(cam.cx, cam.cy, cam.cz);
+      persp.up.set(0, 1, 0);
+      persp.lookAt(cam.tx, cam.ty, cam.tz);
+      lightX = watching.x;
+      lightY = watching.y + 0.55;
+      lightZ = watching.z;
     } else if (firstPerson) {
       // True first person: the camera sits at the paladin's eyes, so the arms, sword and
       // shield in view are the same ones everyone else sees.
@@ -2149,11 +2315,58 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     }
     persp.updateMatrixWorld();
 
+    // The other players (their names over them need this frame's camera), then his own pose for them.
+    const placeNow = world.place === "town" ? "town" : "run";
+    const zoneNow = town ? town.zone() : "in";
+    remotesRef.current?.update(dt, { place: placeNow, zone: zoneNow, runId: coop?.run.id ?? "", camera: persp, view: size });
+    {
+      const pr = poseRef.current;
+      pr.t += dt;
+      const whereKey = `${placeNow}|${zoneNow}`;
+      if (whereKey !== pr.where && mp.state.status === "online") {
+        pr.where = whereKey;
+        mp.setWhere(placeNow, zoneNow);
+      }
+      if (mp.state.status !== "online") pr.where = "";
+      if (paladin && mp.state.status === "online") {
+        const r2 = (v: number) => Math.round(v * 100) / 100;
+        const pose: Pose = {
+          x: r2(px),
+          y: r2(py),
+          z: r2(pz),
+          f: r2(show.active ? show.facing : walker.yaw + Math.PI),
+          yw: r2(walker.yaw),
+          p: r2(walker.pitch),
+          a: r2(world.playerJumpY),
+          sw: paladin.animator.swingSerial,
+          b: blocking ? 1 : 0,
+          dr: drawRef.current > 0 ? 1 : 0,
+          dd: world.dead ? 1 : 0,
+          e: world.escaped ? 1 : 0,
+          hp: Math.round(world.hp),
+          mh: Math.round(world.maxHp),
+          pl: placeNow,
+          zn: zoneNow,
+          ru: coop?.run.id ?? "",
+        };
+        const key = JSON.stringify(pose);
+        // About twelve a second while he moves; standing still, now and then.
+        if (pr.t >= (key !== pr.key ? 0.08 : 2)) {
+          pr.t = 0;
+          pr.key = key;
+          mp.pose(pose);
+        }
+      }
+    }
+
     // The men: bodies lent to the nearest, animated from the simulation; nameplates over the hostile.
-    bodiesRef.current?.update(dt, world.time, sim, { x: px, y: py, z: pz }, persp, size, platesRef.current);
+    // (Once he is down in a party, around the teammate the camera follows.)
+    const eyeX = watching ? watching.x : px;
+    const eyeZ = watching ? watching.z : pz;
+    bodiesRef.current?.update(dt, world.time, sim, { x: eyeX, y: watching ? watching.y : py, z: eyeZ }, persp, size, platesRef.current);
 
     // Update nearest shadow lamps + render multi-pass crypt frame.
-    if (fl) view.updateLights(dt, walker.x, walker.z, fl.lamps, fl.dungeon);
+    if (fl) view.updateLights(dt, eyeX / CELL_M, eyeZ / CELL_M, fl.lamps, fl.dungeon);
     // The carried lantern rides half a metre above the helm so it lights the steel without burning it out.
     view.renderFrame(world.time, dt, lightX, lightY, lightZ, size.width, size.height);
     // What this frame cost (graphics.ts frameStats: the FPS counter and `?perf`).
@@ -2229,7 +2442,18 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
 
       const canvas = minimapCanvasRef.current;
       const mapCtx = canvas && town ? canvas.getContext("2d") : null;
-      if (canvas && mapCtx && town) town.drawMap(mapCtx, canvas.width, canvas.height, px, pz, world.playerFloor * CELL_M, world.time);
+      if (canvas && mapCtx && town) {
+        town.drawMap(mapCtx, canvas.width, canvas.height, px, pz, world.playerFloor * CELL_M, world.time);
+        // The other players on this storey (blue), at the town map's scale (34 m across).
+        const k = Math.min(canvas.width, canvas.height) / 34;
+        mapCtx.fillStyle = "#6fb8ff";
+        for (const o of remotesRef.current?.views() ?? []) {
+          if (Math.abs(o.y - o.air - world.playerFloor * CELL_M) > 1.5) continue;
+          mapCtx.beginPath();
+          mapCtx.arc(canvas.width / 2 + (o.x - px) * k, canvas.height / 2 + (o.z - pz) * k, Math.max(3, k * 0.4), 0, Math.PI * 2);
+          mapCtx.fill();
+        }
+      }
       const dungeon = fl?.dungeon;
       if (canvas && dungeon) {
         const ctx = canvas.getContext("2d");
@@ -2340,6 +2564,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             ctx.fill();
             ctx.stroke();
           });
+          // The party (blue dots, grey once down).
+          for (const o of remotesRef.current?.views() ?? []) {
+            ctx.fillStyle = o.dead ? "#59595c" : "#6fb8ff";
+            ctx.beginPath();
+            ctx.arc(ox + (o.x / CELL_M + dungeon.W / 2) * scale, oy + (o.z / CELL_M + dungeon.H / 2) * scale, Math.max(3, scale * 0.45), 0, Math.PI * 2);
+            ctx.fill();
+          }
           // Player Paladin (gold dot)
           ctx.fillStyle = "#ffd84d";
           ctx.beginPath();
@@ -2354,7 +2585,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   return null;
 };
 
-type Screen = "play" | "menu" | "inventory" | "character" | "shop" | "loot" | "class";
+type Screen = "play" | "menu" | "inventory" | "character" | "shop" | "loot" | "class" | "party";
 
 export interface DungeonAppProps {
   backHref?: string;
@@ -2503,6 +2734,17 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   }, [hud.pointerLocked]);
   // In town or below, where he comes up in town, and each arrival there (it places him again).
   const [place, setPlace] = useState<Place>(resumeRun ? "dungeon" : "town");
+  const placeRef = useRef(place);
+  placeRef.current = place;
+  // Multiplayer (net/mp.ts): the hub's store, a party's dive under way (net/coop.ts), whom he
+  // watches once he is down in it, where the others' names go, and the chat line.
+  const mpState = useMp();
+  const coopRef = useRef<Coop | null>(null);
+  const [coopRun, setCoopRun] = useState<string | null>(null);
+  const spectateRef = useRef<string | null>(null);
+  const [watchPick, setWatchPick] = useState(0);
+  const remoteLayerRef = useRef<HTMLDivElement | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
   // A floor is up: a fresh run starts with what he carries now (kept in case he leaves mid-run); a
   // resumed run keeps what he carried in then.
   const resumedRef = useRef(false);
@@ -2512,6 +2754,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     resumedRef.current = resumed;
     if (resumed) return;
     runStartRef.current = invRef.current;
+    // A party's dive: the others learn he is down (and it is not kept to pick up alone later).
+    if (coopRef.current) {
+      mp.runStatus("in");
+      return;
+    }
     const f = floorRef.current;
     beginRun({ seed: f.seed, rooms: f.roomCount, theme: f.theme, life: f.life, endsAt: Date.now() + RUN_SECONDS * 1000, runStart: invRef.current });
   }, []);
@@ -2771,8 +3018,78 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       void lock?.release().catch(() => {});
     };
   }, [screen]);
-  // Down through the teleporter: a fresh floor every dive.
+  // On the hub: he joins once past the class screen, and his looks follow him (a moment after a
+  // change, so dragging armour about sends one update).
+  const joinedRef = useRef(false);
+  useEffect(() => {
+    if (screen === "class") return;
+    const t = window.setTimeout(() => {
+      const look = { spec, eq: shownEquipment };
+      const name = spec.name || profile.name;
+      if (!joinedRef.current) {
+        joinedRef.current = true;
+        mp.connect({ name, cls: heroClass, token: account?.token ?? null, look, zone: "in" });
+      } else mp.setLook(look, heroClass, name);
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [screen, spec, shownEquipment, heroClass, account, profile.name]);
+  // The party leader stepped onto the teleporter: everyone of the party in town goes down with him,
+  // to the same floor (seed, rooms, theme and life are the run's).
+  useEffect(
+    () =>
+      mp.on("run", (m) => {
+        const run = m.run as RunView;
+        if (placeRef.current !== "town" || !run.status[mp.state.me ?? ""]) return;
+        coopRef.current?.dispose();
+        coopRef.current = createCoop(run);
+        setCoopRun(run.id);
+        setWatchPick(0);
+        setSeed(run.seed);
+        setRoomCount(run.rooms);
+        setTheme(VALID_THEMES.indexOf(run.theme as ThemeName) !== -1 ? (run.theme as ThemeName) : "verdant");
+        setLife(run.life);
+        setPlace("dungeon");
+        setFlashKey((k) => k + 1);
+        if (screenRef.current !== "play" && screenRef.current !== "class") resume();
+        const others = run.members.filter((id) => id !== mp.state.me).map((id) => mp.nameOf(id));
+        setToast(others.length ? `Into the dungeon with ${others.join(", ")}.` : "Into the dungeon.");
+      }),
+    [resume]
+  );
+  // How he stands in the party's dive: down (the others see it, and he can watch them), and out
+  // (through a portal, or back in town), which ends the party's link to this floor for him.
+  useEffect(() => {
+    if (coopRun && place === "dungeon" && hud.dead) mp.runStatus("dead");
+  }, [coopRun, place, hud.dead]);
+  useEffect(() => {
+    if (coopRun && hud.escaped) mp.runStatus("out");
+  }, [coopRun, hud.escaped]);
+  useEffect(() => {
+    if (place !== "town" || !coopRef.current) return;
+    mp.runStatus("out");
+    coopRef.current.dispose();
+    coopRef.current = null;
+    setCoopRun(null);
+  }, [place]);
+  // Down in a party's dive with a teammate still fighting: the camera follows one of them.
+  const runNow = coopRun ? (mpState.party?.run ?? coopRef.current?.run ?? null) : null;
+  const watchable = runNow && hud.dead ? runNow.members.filter((id) => id !== mpState.me && runNow.status[id] === "in") : [];
+  const watchId = watchable.length ? watchable[watchPick % watchable.length] : null;
+  spectateRef.current = watchId;
+
+  // Down through the teleporter: a fresh floor every dive. In a party only the leader can take it,
+  // and he takes everyone with him (the hub sends the run back to all of them, him included).
   const descend = useCallback(() => {
+    const party = mp.state.party;
+    if (party && party.members.length > 1 && mp.state.status === "online") {
+      if (party.leader !== mp.state.me) {
+        setToast(`${mp.nameOf(party.leader)} leads your party: the dive starts when they step onto the teleporter. (P to leave the party.)`);
+        return;
+      }
+      const f = floorRef.current;
+      mp.startRun((((f.seed * 1664525 + 1013904223) >>> 0) % 99998) + 1, f.roomCount, f.theme, f.life);
+      return;
+    }
     setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999);
     setPlace("dungeon");
     setFlashKey((k) => k + 1);
@@ -2788,6 +3105,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       } else if (it.kind === "door") doorQueueRef.current = Number(it.key);
       else if (it.kind === "portal") escapeQueueRef.current = true;
       else if (it.kind === "teleport") descend();
+      else if (it.kind === "player") mp.invite(it.key);
       else if (it.kind === "tavernDoor") {
         // The screen goes dark, he steps through while it is, and the other side fades in.
         setDoorFadeKey((k) => k + 1);
@@ -2879,6 +3197,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Typing in the chat (or any box) is not a shortcut.
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       // The class screen takes no shortcuts (Enter is its own).
       if (screenRef.current === "class") {
         if (e.code === "Tab") e.preventDefault();
@@ -2900,7 +3220,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         if (performance.now() - lockLostAtRef.current < 300) return;
         const cur = screenRef.current;
         if (cur === "play" || cur === "character") openScreen("menu");
-        else if (cur === "menu" || cur === "shop" || cur === "loot") resume();
+        else if (cur === "menu" || cur === "shop" || cur === "loot" || cur === "party") resume();
         else openScreen("play");
         return;
       }
@@ -2910,7 +3230,24 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         else if (screenRef.current === "play") interactNow(interactRef.current);
         return;
       }
+      // P opens and closes the party finder; Y and N answer an invite.
+      if (e.code === "KeyP" && (screenRef.current === "play" || screenRef.current === "party")) {
+        if (screenRef.current === "party") resume();
+        else openScreen("party");
+        return;
+      }
+      const invite = mp.state.invites[0];
+      if (invite && (e.code === "KeyY" || e.code === "KeyN")) {
+        mp.answer(invite.from, e.code === "KeyY");
+        return;
+      }
       if (screenRef.current !== "play") return;
+      // Enter: say something.
+      if (e.code === "Enter" && mp.state.status !== "off") {
+        e.preventDefault();
+        setChatOpen(true);
+        return;
+      }
       // H lifts the helm off, so the face under it shows in third person.
       if (e.code === "KeyH") {
         setInv((v) => {
@@ -2961,6 +3298,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   // Below, these leave the floor mid-run (abandoned); in town they only set up the next dive.
   const leaveFloor = (go: () => void) => {
     if (place === "dungeon" && !hud.escaped) abandonRun();
+    if (place === "dungeon" && coopRun) {
+      goToTown("gate");
+      return;
+    }
     go();
   };
   const nextTheme = () => {
@@ -3107,6 +3448,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           tavernDoorQueueRef={tavernDoorQueueRef}
           regenQueueRef={regenQueueRef}
           onArrive={handleArrive}
+          coopRef={coopRef}
+          spectateRef={spectateRef}
+          remoteLayerRef={remoteLayerRef}
         />
       </Canvas>
 
@@ -3779,7 +4123,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
                           ? "OPEN"
                           : hud.interact.kind === "teleport"
                             ? "DESCEND"
-                            : "LOOT"}
+                            : hud.interact.kind === "player"
+                              ? "INVITE"
+                              : "LOOT"}
             </button>
           ) : (
             <span style={{ display: "inline-block", minWidth: 22, padding: "2px 6px", textAlign: "center", border: "1px solid #e8dcc0", borderRadius: 3, fontSize: 12, fontWeight: 800, color: "#f3e6c4" }}>E</span>
@@ -3798,6 +4144,31 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid rgba(255,240,200,0.85)", boxShadow: "0 0 3px rgba(0,0,0,0.9)" }} />
         <div style={{ position: "absolute", left: "50%", top: "50%", width: 3, height: 3, marginLeft: -1.5, marginTop: -1.5, borderRadius: "50%", background: "#fff4d0", boxShadow: "0 0 2px #000" }} />
       </div>
+
+      {/* The other players' names (net/remotes.ts positions them every frame). */}
+      <div ref={remoteLayerRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9, display: showGameHud ? "block" : "none" }} />
+
+      {/* Multiplayer: the chat, an invite to answer, the party finder (P). */}
+      {screen === "play" || chatOpen ? (
+        <ChatBox
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+          compact={mobileMode}
+          bottom={isTouchUI ? "calc(max(18px, env(safe-area-inset-bottom)) + 190px)" : 150}
+        />
+      ) : null}
+      {screen === "play" || screen === "party" ? <InviteCards top={mobileMode ? 54 : 80} /> : null}
+      {screen === "party" ? <PartyScreen onClose={resume} compact={mobileMode} inDungeon={place === "dungeon"} /> : null}
+      {isTouchUI && showGameHud && mpState.status !== "off" && !hud.dead ? (
+        <div style={{ position: "fixed", zIndex: 12, top: "max(10px, env(safe-area-inset-top))", left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
+          <button type="button" style={{ ...btnStyle, padding: "4px 10px", fontSize: 11 }} onClick={() => setChatOpen(true)}>
+            CHAT
+          </button>
+          <button type="button" style={{ ...btnStyle, padding: "4px 10px", fontSize: 11 }} onClick={() => openScreen("party")}>
+            PARTY{mpState.party ? ` (${mpState.party.members.length})` : ""}
+          </button>
+        </div>
+      ) : null}
 
       {/* Nameplates over hostile or wounded monsters (positioned by the scene every frame). */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9, display: showGameHud ? "block" : "none" }}>
@@ -3922,8 +4293,21 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       ) : null}
       <style>{"@keyframes simforgeHurt { from { opacity: 1; } to { opacity: 0; } }"}</style>
 
-      {/* Fallen. */}
-      {hud.dead ? (
+      {/* Fallen: in a party with a teammate still fighting, the camera follows him; else the end. */}
+      {hud.dead && watchId ? (
+        <SpectateBar
+          name={mp.nameOf(watchId)}
+          count={watchable.length}
+          onNext={() => setWatchPick((n) => n + 1)}
+          onTown={() => {
+            setInv(runStartRef.current);
+            setLife((l) => l + 1);
+            goToTown("gate");
+          }}
+          compact={mobileMode}
+          lost={runGain.gold > 0 || runGain.items > 0 ? `Lost with you: ${haul(runGain)} found on this floor.` : "You had found nothing yet."}
+        />
+      ) : hud.dead ? (
         <div
           style={{
             position: "fixed",

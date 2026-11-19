@@ -1,0 +1,24 @@
+# The dungeon crawler's multiplayer hub: a Worker with one Durable Object (the lobby) that every
+# player's WebSocket joins. Separate from the Pages project (web/), which keeps its dashboard
+# bindings and has no wrangler.toml of its own.
+#
+# Deploy:  cd web/mp-worker && npx wrangler@4 deploy
+# Local:   npm run mp   (scripts/mp-server.mjs runs the same hub in Node)
+name = "simforge-game-mp"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "Lobby"
+
+# SQLite-backed, which the Workers Free plan allows.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Lobby"]
+
+# The accounts (web/migrations/0002_accounts.sql): read only, to show who is signed in.
+[[d1_databases]]
+binding = "DB"
+database_name = "simforge-game-db"
+database_id = "b0c7e9b1-f366-42ab-85ae-defc35c5cc18"

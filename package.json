@@ -36,6 +36,8 @@
     "game:vardhan": "node scripts/vardhan-game.mjs",
     "dev": "remotion studio",
     "explorer": "node scripts/dungeon-explorer.mjs",
+    "mp": "node scripts/mp-server.mjs",
+    "deploy:mp": "cd web/mp-worker && npx --yes wrangler@4 deploy",
     "web:dev": "npm --prefix web run dev",
     "build:web": "npm --prefix web ci && npm --prefix web run build",
     "build": "remotion bundle",
