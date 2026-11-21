@@ -1,4 +1,4 @@
-// The way out. A floor is a ten-minute run: from minute five, five escape portals open one by one
+// The way out. A floor is a ten-minute run: from minute two, five escape portals open one by one
 // at random places in the rooms (never in the market, never on top of him or each other). E at an
 // open portal takes him out with what he carries; when the time runs out the dungeon takes him.
 // `planPortals` is pure (seeded), `createPortals` draws them: a violet ring of light standing on
@@ -11,7 +11,7 @@ import { createAgentCollider } from "./dungeon/walker";
 
 /** The run's length, when the portals start to open and the last one opens by (seconds). */
 export const RUN_SECONDS = 600;
-export const PORTALS_FROM = 300;
+export const PORTALS_FROM = 120;
 const PORTALS_BY = 510;
 export const PORTAL_COUNT = 5;
 /** He can step through from this far (metres, from the portal's centre on the floor). */
@@ -51,7 +51,7 @@ export function planPortals(d: DungeonData, rand: () => number, start: { x: numb
     if (picked.some(([px, pz]) => Math.hypot(px - x, pz - z) < gap)) continue;
     picked.push([x, z]);
   }
-  // The first opens at minute five, the rest at random times after it.
+  // The first opens at minute two, the rest at random times after it.
   const times = picked.map((_, i) => (i === 0 ? PORTALS_FROM : PORTALS_FROM + 20 + rand() * (PORTALS_BY - PORTALS_FROM - 20)));
   times.sort((a, b) => a - b);
   return picked.map(([gx, gz], i) => ({ gx, gz, yaw: rand() * Math.PI, at: times[i] }));

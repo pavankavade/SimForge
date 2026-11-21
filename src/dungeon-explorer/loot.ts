@@ -21,6 +21,8 @@ export interface Container {
   /** Where it is (world metres) for reach checks. */
   x: number;
   z: number;
+  /** A sack's floor height (world metres), so a teammate's game sets it down at the same place. */
+  y?: number;
   grid: Grid;
   /** Searched at least once. */
   seen: boolean;

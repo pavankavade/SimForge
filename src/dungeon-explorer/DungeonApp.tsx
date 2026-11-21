@@ -361,6 +361,8 @@ interface DungeonSceneProps {
   /** A party's dive (net/coop.ts; null when he plays alone), the teammate the camera follows once
    * he is down (null: none), and where the other players' names are drawn. */
   coopRef: React.RefObject<Coop | null>;
+  /** A teammate's sack changed (the loot screen redraws if it shows it). */
+  onPileNews: React.Dispatch<React.SetStateAction<number>>;
   spectateRef: React.RefObject<string | null>;
   remoteLayerRef: React.RefObject<HTMLDivElement | null>;
   /** Something a quest may count (a monster fallen near him, an escape), and the arena's news. */
@@ -495,6 +497,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   perf,
   resume,
   coopRef,
+  onPileNews,
   spectateRef,
   remoteLayerRef,
   onQuestEvent,
@@ -1353,7 +1356,15 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       };
       const sim = createMobSimulation(dungeon, walker.x * CELL_M, walker.z * CELL_M, solidAt);
       coopRef.current?.built(sim);
-      // The way out: five portals at random places, opening from minute five (portals.ts).
+      // A teammate's sacks: dropped, added to or picked from, they lie here as they do there.
+      coopRef.current?.onPile((p) => {
+        const c = containers.get(p.id);
+        if (c) c.grid = p.grid;
+        else containers.set(p.id, { id: p.id, kind: "pile", name: "Dropped sack", x: p.x, z: p.z, y: p.y, grid: p.grid, seen: true });
+        pileYRef.current.set(p.id, p.y);
+        onPileNews((n) => n + 1);
+      });
+      // The way out: five portals at random places, opening from minute two (portals.ts).
       let ps = (Math.imul(seed ^ 0x51ed27, 2246822519) + Math.imul(life, 362437) + 99) >>> 0;
       const portalRand = () => (ps = (Math.imul(ps, 1664525) + 1013904223) >>> 0) / 4294967296;
       portalsRef.current?.dispose();
@@ -1503,7 +1514,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef, warmShaders, coopRef]);
+  }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef, warmShaders, coopRef, onPileNews]);
 
   // What he drops on the ground lies in a sack at his feet (a container to search with E): pieces
   // dropped close together share one sack; an emptied sack is gone.
@@ -1540,6 +1551,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const dropToGround = (facing: number, px: number, py: number, pz: number) => {
     const queue = groundQueueRef.current;
     const containers = containersRef.current;
+    const coop = coopRef.current;
+    const changed = new Set<Container>();
     while (queue.length) {
       const item = queue.shift() as ItemInst;
       const x = px + Math.sin(facing) * 0.7;
@@ -1550,14 +1563,21 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       });
       const into = pile as Container | null;
       const g = into ? addItem(into.grid, item) : null;
-      if (into && g) into.grid = g;
-      else {
-        const id = `pile-${++pileSerialRef.current}`;
+      if (into && g) {
+        into.grid = g;
+        changed.add(into);
+      } else {
+        // In a party the id carries his own, so two players' sacks never share one.
+        const id = `pile-${coop ? `${mp.state.me ?? ""}-` : ""}${++pileSerialRef.current}`;
         const grid = addItem(emptyGrid(8, 6), item) ?? emptyGrid(8, 6);
-        containers.set(id, { id, kind: "pile", name: "Dropped sack", x, z, grid, seen: true });
+        const box: Container = { id, kind: "pile", name: "Dropped sack", x, z, y: py, grid, seen: true };
+        containers.set(id, box);
         pileYRef.current.set(id, py);
+        changed.add(box);
       }
     }
+    // The others in his party see what he dropped.
+    if (coop) changed.forEach((c) => coop.sendPile({ id: c.id, x: c.x, y: c.y ?? pileYRef.current.get(c.id) ?? 0, z: c.z, grid: c.grid }));
     // The sacks on the ground: one per pile with something in it.
     const sack = sackRef.current;
     if (!sack) return;
@@ -3605,6 +3625,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           regenQueueRef={regenQueueRef}
           onArrive={handleArrive}
           coopRef={coopRef}
+          onPileNews={setLootVersion}
           spectateRef={spectateRef}
           remoteLayerRef={remoteLayerRef}
           onQuestEvent={handleQuestEvent}
@@ -3718,6 +3739,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
                 onContainer={(g) => {
                   box.grid = g;
                   setLootVersion((n) => n + 1);
+                  // A sack on the ground: his party sees what he took from it or put in it.
+                  if (box.kind === "pile") coopRef.current?.sendPile({ id: box.id, x: box.x, y: box.y ?? 0, z: box.z, grid: g });
                 }}
                 inv={inv}
                 onInv={setInv}

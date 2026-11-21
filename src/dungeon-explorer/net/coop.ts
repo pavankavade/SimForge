@@ -7,6 +7,7 @@
 //
 // When the authority leaves the floor (back up to town, out through a portal, or offline), the next
 // one in the party takes over the monsters from his copy, as they stand.
+import type { Grid } from "../items";
 import type { MobKindId } from "../monsters/kinds";
 import type { createMobSimulation, MobAgent } from "../mobSim";
 import { mp, type RunStatus, type RunView } from "./mp";
@@ -59,6 +60,15 @@ export interface DoorIn {
   z: number;
 }
 
+/** A sack on the ground as it now is (dropped, added to, or picked from): every game keeps the latest. */
+export interface PileIn {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  grid: Grid;
+}
+
 const SNAP_S = 0.1;
 /** A blow older than this when his game gets to it (it was paused) is dropped, not piled on. */
 const HURT_TTL_MS = 1500;
@@ -80,6 +90,8 @@ export function createCoop(run: RunView) {
   /** Blows on him, stamped when they came in (performance.now()). */
   const hurts: Array<HurtIn & { at: number }> = [];
   const doors: DoorIn[] = [];
+  /** Sacks the others dropped or picked from, and who wants to hear of them (the loot screen). */
+  let pileSink: ((p: PileIn) => void) | null = null;
   let snapT = 0;
   let snapN = 0;
 
@@ -129,6 +141,9 @@ export function createCoop(run: RunView) {
           return;
         case "door":
           doors.push(m as unknown as DoorIn);
+          return;
+        case "pile":
+          pileSink?.(m as unknown as PileIn);
           return;
       }
     }),
@@ -269,6 +284,14 @@ export function createCoop(run: RunView) {
       mp.game({ k: "door", ...d });
     },
     takeDoors: () => doors.splice(0),
+    /** A sack he dropped, filled or picked from: the others see it as it now is. */
+    sendPile(p: PileIn) {
+      mp.game({ k: "pile", ...p });
+    },
+    /** Where the others' sacks go (the floor's containers); applied the moment they arrive. */
+    onPile(fn: ((p: PileIn) => void) | null) {
+      pileSink = fn;
+    },
     dispose() {
       for (const off of offs) off();
     },
