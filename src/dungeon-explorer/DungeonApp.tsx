@@ -28,7 +28,7 @@ import { buildDressing, type FloorDressing } from "./roomView";
 import { createDoors, doorwayProps, type Doors } from "./doorView";
 import { rollChest, rollMobLoot, type Container } from "./loot";
 import { LootScreen } from "./LootScreen";
-import { BELT_SLOTS, arrowCount, equipFromBag, heldOf, loadInventory, normalizeInventory, saveInventory, spendArrow, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
+import { BELT_SLOTS, arrowCount, equipFromBag, heldOf, loadInventory, normalizeInventory, saveInventory, spendArrow, spendBelt, switchClass, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
 import { addItem, def, emptyGrid, removeItem, type ItemInst } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
@@ -2826,7 +2826,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   // The character: who he is and what he wears, remembered between visits (CharacterCustomizer.tsx);
   // the name is the player's.
   const [spec, setSpec] = useState<HumanSpec>(() => ({ ...initialSpec(), name: profile.name }));
-  // His class (only the fighter is playable for now), picked on the class screen the game opens on.
+  // His class (the fighter or the ranger for now), picked on the class screen the game opens on.
   const [heroClass, setHeroClass] = useState<ClassId>(() => (profile.cls && classById(profile.cls).available ? profile.cls : "fighter"));
   const className = classById(heroClass).name;
   // What he carries: gold, the pieces he wears and the bag (playerInv.ts); the body shows what is worn.
@@ -2834,6 +2834,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   // what he carried in, as a death would.
   const [inv, setInv] = useState<PlayerInv>(() => (startRun?.kind === "lost" ? startRun.runStart : loadInventory(initialEquipment())));
   useEffect(() => saveInventory(inv), [inv]);
+  // Each class keeps its own worn gear and belt (the bag and purse are shared): picking another
+  // class, or a save that comes back from the server as another, puts that class's kit on him.
+  useEffect(() => {
+    if (inv.cls !== heroClass) setInv((v) => switchClass(v, heroClass));
+  }, [inv.cls, heroClass]);
   // What he carried when this floor's run began: dying (or abandoning the floor) puts him back to
   // it, so only what he escapes with through a portal is kept.
   const invRef = useRef(inv);
@@ -3011,12 +3016,23 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   // The kit as the showcases and his inventory picture show it: the set in hand, or set 1.
   const equipment = useMemo(() => wornOf(inv, activeSet || 1), [inv, activeSet]);
   // His stats: the class's base attributes plus what he wears and the set in hand (gear is growth).
-  const stats = useMemo(() => computeStats(classById(heroClass).attributes, inv.equipped, activeSet || 1), [heroClass, inv.equipped, activeSet]);
+  const stats = useMemo(() => computeStats(classById(heroClass).attributes, inv.equipped, activeSet || 1, classById(heroClass).perks), [heroClass, inv.equipped, activeSet]);
   const statsNowRef = useRef(stats);
   statsNowRef.current = stats;
   const arrows = arrowCount(inv);
   const bowInHand = heldOf(inv, activeSet).bow;
-  const handleArrowShot = useCallback(() => setInv((v) => spendArrow(v) ?? v), []);
+  // A ranger keeps some arrows (classes.ts `arrowSave`, a third): every third shot costs nothing.
+  const arrowSaveRef = useRef({ share: 0, owed: 0 });
+  arrowSaveRef.current.share = classById(heroClass).perks?.arrowSave ?? 0;
+  const handleArrowShot = useCallback(() => {
+    const k = arrowSaveRef.current;
+    k.owed += k.share;
+    if (k.owed >= 0.999) {
+      k.owed -= 1;
+      return;
+    }
+    setInv((v) => spendArrow(v) ?? v);
+  }, []);
   const tavernDoorQueueRef = useRef<"in" | "out" | null>(null);
   const regenQueueRef = useRef<{ amount: number; seconds: number } | null>(null);
   // The merchant he is trading with (index into MERCHANTS), and the chest or man being searched.
@@ -3676,6 +3692,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             saveProfile(profile);
             resume();
           }}
+          onPreview={setHeroClass}
         />
       ) : null}
 

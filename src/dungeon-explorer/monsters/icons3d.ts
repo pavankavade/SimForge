@@ -78,6 +78,16 @@ export const PROC_ICONS: Record<string, () => THREE.Object3D> = {
     o.rotation.set(0, Math.PI / 2, 0.15);
     return o;
   },
+  hunting_bow: () => {
+    const o = new THREE.Group();
+    o.add(new THREE.Mesh(bowGeometry().limbs, new THREE.MeshStandardMaterial({ color: 0xb07a3c, roughness: 0.5 })));
+    const s = new THREE.Mesh(bowGeometry().string, new THREE.MeshStandardMaterial({ color: 0xe6dcc0, roughness: 0.9 }));
+    s.scale.set(1, BOW_TIP.y * 2, 1);
+    s.position.z = BOW_TIP.z;
+    o.add(s);
+    o.rotation.set(0, Math.PI / 2, -0.15);
+    return o;
+  },
   bone_staff: () => {
     const g = staffGeometry();
     const o = new THREE.Group();

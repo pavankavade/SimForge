@@ -3,6 +3,7 @@
 // time he starts in the basic kit (padding, sword, shield) with a little gold. An earlier save (a
 // purse of owned slots) is carried over.
 import { ARMOR_SLOTS, type ArmorEquipment, type ArmorSlot } from "../artifacts/characters/paladin";
+import { classAllows, classById, type ClassId } from "./classes";
 import { WEAPON_SLOTS, WEAR_SLOTS, addItem, def, emptyGrid, fitsAt, handOf, isWeaponSlot, newItem, placeItem, removeItem, sortGrid, type GearSlot, type Grid, type ItemInst, type WeaponSlot } from "./items";
 
 export const BAG_W = 12;
@@ -16,6 +17,13 @@ export interface PlayerInv {
   belt: Array<ItemInst | null>;
   /** The starting purse this save has been given (older saves are topped up to it once). */
   granted?: number;
+  /** The class wearing `equipped` and `belt` (older saves: the fighter). */
+  cls?: ClassId;
+  /**
+   * The other classes' worn gear and belts, kept while he plays another class (the bag and the
+   * purse are shared). A class with no entry here has never been played: it gets its starter kit.
+   */
+  wardrobe?: Partial<Record<ClassId, { equipped: PlayerInv["equipped"]; belt: Array<ItemInst | null> }>>;
 }
 
 export const BELT_SLOTS = 2;
@@ -23,19 +31,63 @@ export const BELT_SLOTS = 2;
 /** What can go on the belt: anything that heals when used. */
 export const beltable = (id: string) => !!def(id).heal;
 
-export const BASIC_KIT: ArmorSlot[] = ["doublet", "sword", "shield"];
-/** Where the basic kit goes: the doublet on him, sword and shield as weapon set 1. */
+/** Where the first market build's sword and shield go: weapon set 1. */
 const KIT_SLOT: Partial<Record<ArmorSlot, GearSlot>> = { sword: "main1", shield: "off1" };
 export const START_GOLD = 10000;
 const KEY = "simforge.explorer.inventory.v3";
 
-function fresh(): PlayerInv {
+/** A class's starter kit (classes.ts): what it wears and holds, its belt, and what it adds to the bag. */
+function starterOf(cls: ClassId, bag: Grid): { equipped: PlayerInv["equipped"]; belt: Array<ItemInst | null>; bag: Grid } {
+  const k = classById(cls).starter;
   const equipped: PlayerInv["equipped"] = {};
-  for (const s of BASIC_KIT) equipped[KIT_SLOT[s] ?? s] = newItem(s);
-  let bag = emptyGrid(BAG_W, BAG_H);
-  bag = addItem(bag, newItem("apple")) ?? bag;
-  bag = addItem(bag, newItem("bandage")) ?? bag;
-  return { gold: START_GOLD, equipped, bag, belt: [newItem("potion"), newItem("bandage")], granted: START_GOLD };
+  for (const s of k.wear) equipped[s] = newItem(s);
+  for (const s of WEAPON_SLOTS) {
+    const id = k[s];
+    if (id) equipped[s] = newItem(id);
+  }
+  const belt: Array<ItemInst | null> = [];
+  for (let i = 0; i < BELT_SLOTS; i++) belt.push(k.belt[i] ? newItem(k.belt[i]) : null);
+  for (const [id, n] of k.bag) {
+    const stack = def(id).stack;
+    // Arrows go in bundles; anything else one at a time. What doesn't fit is not given.
+    for (let left = n; left > 0; ) {
+      const q = stack && def(id).category === "ammo" ? Math.min(stack, left) : 1;
+      bag = addItem(bag, newItem(id, stack && def(id).category === "ammo" ? q : undefined)) ?? bag;
+      left -= q;
+    }
+  }
+  return { equipped, belt, bag };
+}
+
+function fresh(): PlayerInv {
+  const k = starterOf("fighter", emptyGrid(BAG_W, BAG_H));
+  return { gold: START_GOLD, ...k, granted: START_GOLD, cls: "fighter" };
+}
+
+/**
+ * He plays another class: this class's worn gear and belt go to the wardrobe, and that class's come
+ * out (its starter kit, the first time). The bag and the purse stay as they are.
+ */
+export function switchClass(inv: PlayerInv, cls: ClassId): PlayerInv {
+  const cur = inv.cls ?? "fighter";
+  if (cur === cls) return inv.cls ? inv : { ...inv, cls };
+  const wardrobe = { ...(inv.wardrobe ?? {}) };
+  wardrobe[cur] = { equipped: inv.equipped, belt: inv.belt };
+  const stored = wardrobe[cls];
+  delete wardrobe[cls];
+  if (stored) return { ...inv, cls, wardrobe, equipped: stored.equipped, belt: stored.belt };
+  const k = starterOf(cls, inv.bag);
+  return { ...inv, cls, wardrobe, equipped: k.equipped, belt: k.belt, bag: k.bag };
+}
+
+/** Why his class can't wear or hold this piece, or null when it can. */
+export function classRefuses(inv: PlayerInv, id: string): string | null {
+  const d = def(id);
+  if (!d.slot) return null;
+  const c = classById(inv.cls);
+  const hand = handOf(id);
+  if (classAllows(c, hand ? null : (d.slot as ArmorSlot), hand)) return null;
+  return `A ${c.name.toLowerCase()} can't ${hand ? "hold" : "wear"} the ${d.name.toLowerCase()}`;
 }
 
 /** An older save has no belt: the first draught and the first bandage (or food) in the bag go on it. */
@@ -60,7 +112,7 @@ export function loadInventory(wornBefore: ArmorEquipment): PlayerInv {
     if (raw) {
       const s = JSON.parse(raw) as PlayerInv;
       if (s && s.bag && Array.isArray(s.bag.items)) {
-        return withSets(withGrant(withBelt({ gold: Math.max(0, Math.floor(s.gold || 0)), equipped: s.equipped || {}, bag: { w: BAG_W, h: BAG_H, items: s.bag.items }, belt: s.belt, granted: s.granted })));
+        return withSets(withGrant(withBelt({ gold: Math.max(0, Math.floor(s.gold || 0)), equipped: s.equipped || {}, bag: { w: BAG_W, h: BAG_H, items: s.bag.items }, belt: s.belt, granted: s.granted, cls: s.cls, wardrobe: s.wardrobe })));
       }
     }
     // The purse of the first market build: the slots he owned, worn or in the bag.
@@ -126,7 +178,7 @@ function withSets(inv: PlayerInv): PlayerInv {
  */
 export function slotFor(inv: PlayerInv, id: string, target?: GearSlot): GearSlot | null {
   const d = def(id);
-  if (!d.slot) return null;
+  if (!d.slot || classRefuses(inv, id)) return null;
   const hand = handOf(id);
   if (!hand) return d.slot as GearSlot;
   const fits = (s: WeaponSlot) => (hand === "off" ? s.startsWith("off") : s.startsWith("main"));

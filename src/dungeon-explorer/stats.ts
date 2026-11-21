@@ -138,7 +138,8 @@ const gearOf = (equipped: Partial<Record<GearSlot, ItemInst>>, set: 1 | 2): Item
     .filter((x): x is ItemInst => !!x);
 
 /** His stats with weapon set `set` in hand (the sheet shows set 1 while nothing is drawn). */
-export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot, ItemInst>>, set: 1 | 2 = 1): Stats {
+/** `perks`: the class's passives (classes.ts), e.g. the ranger's extra bow damage. */
+export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot, ItemInst>>, set: 1 | 2 = 1, perks?: { bowDamage?: number }): Stats {
   const add = {} as Record<ModId, number>;
   for (const m of MOD_IDS) add[m] = 0;
   let armor = 0;
@@ -169,7 +170,7 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
     magicResist,
     magicalReduction: reductionOf(magicResist),
     swordDamage: (sword + add.weaponDamage) * (1 + physicalBonus),
-    bowDamage: bow ? (bow + add.weaponDamage) * (1 + physicalBonus) : 0,
+    bowDamage: bow ? (bow + add.weaponDamage) * (1 + physicalBonus) * (1 + (perks?.bowDamage ?? 0)) : 0,
     moveSpeed: MOVE(a.agi) + add.moveSpeed / 100,
     actionSpeed: ACTION(0.25 * a.agi + 0.75 * a.dex) + add.actionSpeed / 100,
     interactionSpeed: INTERACT(0.25 * a.dex + 0.75 * a.res),

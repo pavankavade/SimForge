@@ -46,7 +46,7 @@ export const MERCHANTS: Merchant[] = [
     shop: "The Tempered Edge",
     cloth: 0x2a3440,
     trim: 0xc8ccd2,
-    stock: ["sword", "shield", "recurve_bow", "arrows"],
+    stock: ["sword", "shield", "recurve_bow", "hunting_bow", "arrows"],
     greeting: "Steel that holds an edge. Oak that holds a line.",
     empty: "",
   },

@@ -137,6 +137,8 @@ const OTHER: ItemDef[] = [
   { id: "candle", name: "Black candle", note: "Tallow and soot, burnt to the knuckle", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "common", weight: 0.2, value: 7 },
   // The fighter's ranged kit: a recurve bow (the bow slot, key 2) and arrows, a stack to a cell pair.
   { id: "recurve_bow", name: "Recurve bow", note: "Ash and horn, the tips bent forward; a strong draw", kind: "Ranged", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 1.1, value: 160, damage: 34 },
+  // The ranger's bow (any class that may hold a bow can use it): a lighter, quicker yew stave.
+  { id: "hunting_bow", name: "Yew hunting bow", note: "A self bow of mountain yew, waxed string, a deer-horn grip", kind: "Ranged", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 0.8, value: 150, damage: 32 },
   { id: "arrows", name: "Arrows", note: "Bodkin heads, grey goose fletching. Thirty to a bundle.", kind: "Ammunition", category: "ammo", w: 1, h: 2, rarity: "common", weight: 0.03, value: 2, stack: ARROW_STACK },
   { id: "signet", name: "Signet ring", note: "A knight's seal; the house died with him", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "rare", weight: 0.02, value: 85 },
   { id: "slime_gel", name: "Slime gel", note: "Cold, clear, and it will not stop wobbling", kind: "Monster part", category: "material", w: 1, h: 1, rarity: "common", weight: 0.4, value: 6 },

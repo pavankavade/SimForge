@@ -1,6 +1,7 @@
 // Choosing a class when the game starts: the character stands in the tavern on the left (the 3D
-// view frames him), the classes are listed on the right (below on narrow portrait screens). Only the
-// fighter is playable for now; the rogue, wizard, ranger and cleric are shown as coming soon.
+// view frames him), the classes are listed on the right (below on narrow portrait screens). The
+// fighter and the ranger are playable (choosing one dresses him in that class's kit at once); the
+// rogue, wizard and cleric are shown as coming soon.
 import React, { useEffect, useState } from "react";
 import { CLASSES, classById, type ClassId } from "./classes";
 import type { PanelLayout } from "./CharacterCustomizer";
@@ -55,9 +56,11 @@ export interface ClassSelectProps {
   /** The character is still being built (the button waits). */
   busy: boolean;
   onPick: (id: ClassId) => void;
+  /** A playable class was chosen in the list (not yet played): the character shows its kit. */
+  onPreview?: (id: ClassId) => void;
 }
 
-export const ClassSelect: React.FC<ClassSelectProps> = ({ name, current, layout, touch, busy, onPick }) => {
+export const ClassSelect: React.FC<ClassSelectProps> = ({ name, current, layout, touch, busy, onPick, onPreview }) => {
   const [sel, setSel] = useState<ClassId>(classById(current).available ? current : "fighter");
   const c = classById(sel);
   const ready = c.available && !busy;
@@ -120,6 +123,7 @@ export const ClassSelect: React.FC<ClassSelectProps> = ({ name, current, layout,
                 onClick={(e) => {
                   e.currentTarget.blur();
                   setSel(k.id);
+                  if (k.available) onPreview?.(k.id);
                 }}
                 onDoubleClick={() => k.available && !busy && onPick(k.id)}
                 style={{

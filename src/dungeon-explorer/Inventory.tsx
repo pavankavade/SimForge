@@ -6,7 +6,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { RARITY, arrowsIn, def, fitsAt, handOf, isWeaponSlot, itemOf, placeItem, removeItem, type GearSlot, type ItemInst, type WeaponSlot } from "./items";
 import { DragGhost, GOLD, GridView, ItemIcon, ItemTooltip, PANEL_BG, PANEL_BORDER, btn, useItemDrag, type DragFrom, type DragState, type DropTarget, type Icons } from "./itemsUi";
 import { ATTRIBUTES, ATTRIBUTE_INFO, statLines, type Attributes, type Stats } from "./stats";
-import { BAG_H, BAG_W, BELT_SLOTS, allItems, beltable, equipFromBag, fromBelt, slotFor, sortBag, toBelt, unequipToBag, type PlayerInv } from "./playerInv";
+import { BAG_H, BAG_W, BELT_SLOTS, allItems, beltable, classRefuses, equipFromBag, fromBelt, slotFor, sortBag, toBelt, unequipToBag, type PlayerInv } from "./playerInv";
 
 export { ITEMS, RARITY } from "./items";
 
@@ -103,6 +103,8 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
       return;
     }
     if (d.slot) {
+      const no = classRefuses(inv, item.id);
+      if (no) return setToast(no);
       const next = equipFromBag(inv, item.uid);
       if (next) onInv(next);
       else setToast("No room in the bag for what you are wearing");
@@ -170,6 +172,9 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
       return onInv({ ...inv, equipped });
     }
     if (d.from.kind !== "grid") return;
+    // His class can't wear or hold it (a ranger and plate, or a shield).
+    const no = (t.kind === "slot" || t.kind === "body") && it.slot ? classRefuses(inv, d.item.id) : null;
+    if (no) return setToast(no);
     const target = t.kind === "slot" ? slotFor(inv, d.item.id, t.slot) : null;
     if (t.kind === "body" || (t.kind === "slot" && target === t.slot)) {
       if (!it.slot) return setToast(it.heal ? "Right-click it to use it" : `The ${it.name.toLowerCase()} isn't something to wear`);
