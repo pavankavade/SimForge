@@ -113,6 +113,11 @@ export interface Projectile {
   life: number;
   stuck: boolean;
   dead: boolean;
+  /** Stuck in a monster: which one, and where on it (its own frame: x right, z forward). */
+  stuckTo?: number;
+  ox?: number;
+  oy?: number;
+  oz?: number;
 }
 
 export interface AcidPuddle {
@@ -125,14 +130,37 @@ export interface AcidPuddle {
   life: number;
 }
 
+/**
+ * The ranger's snare: iron jaws on the floor (world metres). It arms a moment after it is set; the
+ * first monster to step in is bitten and held. It springs shut once and is gone a little later.
+ */
+export interface Snare {
+  x: number;
+  y: number;
+  z: number;
+  /** Seconds since it was set, and how long it waits for something to step in. */
+  t: number;
+  life: number;
+  /** The monster it caught (and seconds since), or null while it waits. */
+  caught: number | null;
+  caughtT: number;
+}
+export const SNARE_ARM_S = 0.6;
+export const SNARE_LIFE_S = 60;
+/** How long it holds what it catches (a boss tears free sooner), and the bite. */
+export const SNARE_HOLD_S = 3;
+export const SNARE_BITE = 18;
+const MAX_SNARES = 3;
+
 /** Something that happened to the fighter (or near him) this step. */
 export type MobEvent =
   | { type: "hit"; mob: MobAgent; damage: number; fromX: number; fromZ: number; blockable: boolean; how: "lunge" | "arrow" | "bolt" | "acid"; who: number }
   | { type: "loose"; mob: MobAgent; projectile: "arrow" | "bolt" }
   | { type: "impact"; projectile: Projectile; wall: boolean }
   | { type: "split"; mob: MobAgent }
-  | { type: "struck"; mob: MobAgent; result: "blocked" | "hit" | "killed" }
-  | { type: "hop"; mob: MobAgent };
+  | { type: "struck"; mob: MobAgent; result: "blocked" | "hit" | "killed"; head: boolean }
+  | { type: "hop"; mob: MobAgent }
+  | { type: "snared"; mob: MobAgent; snare: Snare };
 
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -275,7 +303,13 @@ const PUDDLE_S = 7;
 const PUDDLE_BURN = 7;
 const MAX_PUDDLES = 24;
 /** Arrows fall a little; the fighter is a capsule this wide. */
-const ARROW_G = 3.2;
+/** Arrows fall under (a game's) gravity and slow a little in the air; a headshot hurts half again. */
+const ARROW_G = 6.5;
+const ARROW_DRAG = 0.12;
+const HEAD_BONUS = 1.5;
+/** How long the fighter's arrows stay stuck in the stone (to be picked up again), and in a monster. */
+const STUCK_WALL_S = 60;
+const STUCK_MOB_S = 8;
 const PLAYER_R = 0.36;
 
 export interface PlayerView {
@@ -555,7 +589,22 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
         p.dead = true;
         continue;
       }
-      if (p.stuck) continue;
+      if (p.stuck) {
+        // Stuck in a monster: it rides along with him, and comes out when he falls.
+        if (p.stuckTo !== undefined) {
+          const m = mobs.find((o) => o.id === p.stuckTo);
+          if (!m || m.dead) {
+            p.dead = true;
+            continue;
+          }
+          const c = Math.cos(m.yaw);
+          const s = Math.sin(m.yaw);
+          p.x = m.wx + (p.ox ?? 0) * c + (p.oz ?? 0) * s;
+          p.z = m.wz - (p.ox ?? 0) * s + (p.oz ?? 0) * c;
+          p.y = m.wy + (p.oy ?? 1);
+        }
+        continue;
+      }
       const caster = p.kind === "bolt" ? mobs.find((o) => o.id === p.from) : undefined;
       const pl = party[caster ? caster.target : 0] ?? party[0];
       if (p.kind === "bolt" && pl && !pl.dead) {
@@ -569,7 +618,13 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
         p.vx += ((tx / tl) * sp - p.vx) * k;
         p.vy += ((ty / tl) * sp - p.vy) * k;
         p.vz += ((tz / tl) * sp - p.vz) * k;
-      } else if (p.kind === "arrow") p.vy -= ARROW_G * dt;
+      } else if (p.kind === "arrow") {
+        p.vy -= ARROW_G * dt;
+        const drag = Math.exp(-ARROW_DRAG * dt);
+        p.vx *= drag;
+        p.vy *= drag;
+        p.vz *= drag;
+      }
       // Sub-steps so a fast arrow does not jump through him or a wall.
       const n = Math.max(1, Math.ceil((Math.hypot(p.vx, p.vy, p.vz) * dt) / 0.2));
       for (let k = 0; k < n && !p.dead && !p.stuck; k++) {
@@ -582,10 +637,24 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
             if (m.dead) continue;
             const hy = Math.max(m.wy + 0.1, Math.min(m.wy + m.height, p.y));
             if (Math.hypot(p.x - m.wx, p.y - hy, p.z - m.wz) < m.radius + 0.06) {
-              p.dead = true;
               const sp = Math.hypot(p.vx, p.vz) || 1;
-              const result = hit(m.id, p.vx / sp, p.vz / sp, p.damage);
-              if (result) events.push({ type: "struck", mob: m, result });
+              // A skeleton's skull (the top eighth of it) takes half again.
+              const head = m.family === "skeleton" && p.y > m.wy + m.height * 0.86;
+              const result = hit(m.id, p.vx / sp, p.vz / sp, p.damage * (head ? HEAD_BONUS : 1));
+              if (result) events.push({ type: "struck", mob: m, result, head });
+              // It stays in him where it went in (a shield turns it aside).
+              if (result === "hit") {
+                const c = Math.cos(m.yaw);
+                const s = Math.sin(m.yaw);
+                const dx = p.x - m.wx;
+                const dz = p.z - m.wz;
+                p.stuck = true;
+                p.stuckTo = m.id;
+                p.ox = dx * c - dz * s;
+                p.oz = dx * s + dz * c;
+                p.oy = p.y - m.wy;
+                p.life = STUCK_MOB_S;
+              } else p.dead = true;
               break;
             }
           }
@@ -623,16 +692,60 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
             p.y -= (p.vy / sp) * 0.12;
             p.z -= (p.vz / sp) * 0.12;
             p.stuck = true;
-            p.life = 9;
+            p.life = p.from === 0 ? STUCK_WALL_S : 9;
           } else p.dead = true;
         }
       }
     }
     // Forget the spent ones now and then.
-    if (projectiles.length > 40) {
+    if (projectiles.length > 60) {
       const live = projectiles.filter((p) => !p.dead);
       projectiles.length = 0;
       projectiles.push(...live);
+    }
+  };
+
+  const snares: Snare[] = [];
+  /** The ranger sets a snare at his feet (the oldest goes when there are too many). */
+  const setSnare = (x: number, y: number, z: number) => {
+    snares.push({ x, y, z, t: 0, life: SNARE_LIFE_S, caught: null, caughtT: 0 });
+    if (snares.length > MAX_SNARES) snares.shift();
+  };
+  /** Snares age; an armed one bites the first monster on it and holds it. `live`: only the
+   *  authority's floor springs them (a party member's copy just shows them). */
+  const stepSnares = (dt: number, live: boolean) => {
+    for (const q of snares) {
+      q.t += dt;
+      if (q.caught !== null) q.caughtT += dt;
+    }
+    for (let i = snares.length - 1; i >= 0; i--) {
+      const q = snares[i];
+      if ((q.caught === null && q.t > q.life) || q.caughtT > SNARE_HOLD_S + 1.5) snares.splice(i, 1);
+    }
+    if (!live) return;
+    for (const q of snares) {
+      if (q.t < SNARE_ARM_S) continue;
+      if (q.caught !== null) {
+        // Held: it stays put until the jaws let go (or it dies).
+        const m = mobs.find((o) => o.id === q.caught);
+        if (m && !m.dead && q.caughtT < (m.kind.boss ? 1.2 : SNARE_HOLD_S)) {
+          m.stun = Math.max(m.stun, 0.1);
+          m.kx = m.kz = 0;
+        }
+        continue;
+      }
+      const m = mobs.find((o) => !o.dead && Math.abs(o.wy - q.y) < 1 && Math.hypot(o.wx - q.x, o.wz - q.z) < 0.35 + o.radius * 0.6);
+      if (!m) continue;
+      q.caught = m.id;
+      q.caughtT = 0;
+      m.blockT = 0;
+      const result = hit(m.id, 0, 0, SNARE_BITE);
+      if (result) events.push({ type: "struck", mob: m, result, head: false });
+      events.push({ type: "snared", mob: m, snare: q });
+      if (!m.dead) {
+        m.stun = m.kind.boss ? 1.2 : SNARE_HOLD_S;
+        m.kx = m.kz = 0;
+      }
     }
   };
 
@@ -879,6 +992,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
 
     stepProjectiles(dt, party);
     stepPuddles(dt, party);
+    stepSnares(dt, true);
   };
 
   /**
@@ -932,7 +1046,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
 
   /** The fighter looses an arrow from (x, y, z) with velocity (vx, vy, vz), metres and m/s. */
   const shoot = (x: number, y: number, z: number, vx: number, vy: number, vz: number, damage: number) => {
-    projectiles.push({ id: nextShot++, kind: "arrow", x, y, z, vx, vy, vz, damage, from: 0, life: 3, stuck: false, dead: false });
+    projectiles.push({ id: nextShot++, kind: "arrow", x, y, z, vx, vy, vz, damage, from: 0, life: 4, stuck: false, dead: false });
   };
 
   /**
@@ -982,6 +1096,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
       p.z += p.vz * dt;
     }
     for (const q of puddles) q.t += dt;
+    stepSnares(dt, false);
   };
 
   /** A monster the leader's floor has and this copy lacks (a Bloated Slime's slimelets). */
@@ -992,5 +1107,5 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
     return m;
   };
 
-  return { mobs, projectiles, puddles, events, step, hit, shoot, mirror, adopt };
+  return { mobs, projectiles, puddles, snares, events, step, hit, shoot, setSnare, mirror, adopt };
 }

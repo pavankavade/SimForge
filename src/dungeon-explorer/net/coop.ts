@@ -87,6 +87,8 @@ export function createCoop(run: RunView) {
   const snaps: MobSnap[] = [];
   const hits: HitIn[] = [];
   const shots: ShotIn[] = [];
+  /** Snares a teammate set, for the authority's floor. */
+  const snares: Array<{ x: number; y: number; z: number }> = [];
   /** Blows on him, stamped when they came in (performance.now()). */
   const hurts: Array<HurtIn & { at: number }> = [];
   const doors: DoorIn[] = [];
@@ -135,6 +137,9 @@ export function createCoop(run: RunView) {
           return;
         case "shot":
           shots.push(m as unknown as ShotIn);
+          return;
+        case "snare":
+          snares.push({ x: Number(m.x) || 0, y: Number(m.y) || 0, z: Number(m.z) || 0 });
           return;
         case "hurt":
           hurts.push({ ...(m as unknown as HurtIn), at: performance.now() });
@@ -251,6 +256,7 @@ export function createCoop(run: RunView) {
         if (m && r) onStruck(m, r);
       }
       for (const s of shots.splice(0)) sim.shoot(s.x, s.y, s.z, s.vx, s.vy, s.vz, s.dmg);
+      for (const q of snares.splice(0)) sim.setSnare(q.x, q.y, q.z);
       snaps.length = 0;
       snapT += dt;
       if (snapT < SNAP_S || !mates.length) return;
@@ -262,6 +268,7 @@ export function createCoop(run: RunView) {
     follow(sim: Sim) {
       hits.length = 0;
       shots.length = 0;
+      snares.length = 0;
       for (const s of snaps.splice(0)) apply(sim, s);
     },
     /** His blow or arrow, for the authority to strike. */
@@ -270,6 +277,10 @@ export function createCoop(run: RunView) {
     },
     sendShot(s: ShotIn) {
       mp.game({ k: "shot", to: authority, ...s });
+    },
+    /** A snare he set (the authority's floor springs it). */
+    sendSnare(q: { x: number; y: number; z: number }) {
+      mp.game({ k: "snare", to: authority, ...q });
     },
     /** A monster's blow on a teammate (the authority tells him). */
     sendHurt(to: string, h: HurtIn) {

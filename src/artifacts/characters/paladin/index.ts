@@ -51,6 +51,16 @@ export type ArmorSlot = (typeof ARMOR_SLOTS)[number];
 export type ArmorEquipment = Record<ArmorSlot, boolean>;
 
 /**
+ * What a worn piece is made of: the plate it was built as, or hardened leather on the same shape
+ * (the ranger's jerkin, bracers, gloves and boots). On the cape and tabard, leather means a plain
+ * forest-green cloak instead of the order's colours.
+ */
+export type Finish = "plate" | "leather";
+export type Finishes = Partial<Record<ArmorSlot, Finish>>;
+/** A key for "what he wears": the pieces on and what each is made of. */
+export const wearKey = (e: ArmorEquipment, f?: Finishes): string => ARMOR_SLOTS.map((s) => (e[s] ? (f?.[s] === "leather" ? 2 : 1) : 0)).join("");
+
+/**
  * Workwear, separate from the armour (the game's inventory only knows the armour): a miner's
  * coveralls with reflective tape, rubber boots, a hard hat, its cap lamp, and sunglasses.
  */
@@ -120,6 +130,11 @@ export interface Paladin {
   shield: THREE.Group;
   equipment: ArmorEquipment;
   setEquipped: (slot: ArmorSlot, equipped: boolean) => void;
+  /** What each piece is made of (plate unless set). */
+  finish: Finishes;
+  setFinish: (slot: ArmorSlot, finish: Finish) => void;
+  /** Put on exactly this: every piece on or off, each in its finish (plate where none is given). */
+  wear: (equipment: ArmorEquipment, finish?: Finishes) => void;
   workwear: Workwear;
   setWorn: (slot: WorkSlot, worn: boolean) => void;
   setAllArmor: (equipped: boolean) => void;
@@ -294,6 +309,39 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
   head.add(beam);
 
   const equipment: ArmorEquipment = { ...DEFAULT_EQUIPMENT };
+  // Leather on the plate shapes: the steel becomes tanned hide, the gilt trim dark hide; the cape
+  // and tabard a plain forest-green wool.
+  const finish: Finishes = {};
+  // (The leather texture is reddish under a tint, so the hide is a plain colour on its grain.)
+  const hide = materials.skinned.leather.clone();
+  hide.map = null;
+  hide.color.setHex(0x5c3f27);
+  hide.roughness = 0.78;
+  const hideDark = hide.clone();
+  hideDark.color.setHex(0x2e2016);
+  const forest = materials.cape.clone();
+  forest.map = null;
+  forest.color.setHex(0x3c5232);
+  const steelFit = materials.human.steelFit;
+  const leatherOf = (m: THREE.Material): THREE.Material =>
+    m === materials.skinned.steel || m === materials.skinned.mail || m === steelFit
+      ? hide
+      : m === materials.skinned.gold || m === materials.skinned.dark
+        ? hideDark
+        : m === materials.cape || m === materials.tabard
+          ? forest
+          : m;
+  const finishObjects = (slot: ArmorSlot): THREE.Object3D[] =>
+    slot === "cape" ? [cape.mesh] : slot === "tabard" ? [tabard.mesh] : slot === "sword" || slot === "shield" ? [] : model.meshes[slot] ?? [];
+  const applyFinish = (slot: ArmorSlot) => {
+    const leather = finish[slot] === "leather";
+    for (const o of finishObjects(slot)) {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.material || Array.isArray(mesh.material)) continue;
+      const plate = (mesh.userData.plateMat as THREE.Material | undefined) ?? (mesh.userData.plateMat = mesh.material);
+      mesh.material = leather ? leatherOf(plate) : plate;
+    }
+  };
   const workwear: Workwear = { ...NO_WORKWEAR };
   let firstPersonMode = false;
 
@@ -415,6 +463,23 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
       equipment[slot] = on;
       syncEquipment();
     },
+    finish,
+    setFinish(slot: ArmorSlot, f: Finish) {
+      if ((finish[slot] ?? "plate") === f) return;
+      finish[slot] = f;
+      applyFinish(slot);
+    },
+    wear(eq: ArmorEquipment, f?: Finishes) {
+      for (const s of ARMOR_SLOTS) {
+        equipment[s] = eq[s];
+        const want = f?.[s] ?? "plate";
+        if ((finish[s] ?? "plate") !== want) {
+          finish[s] = want;
+          applyFinish(s);
+        }
+      }
+      syncEquipment();
+    },
     workwear,
     setWorn(slot: WorkSlot, on: boolean) {
       workwear[slot] = on;
@@ -460,6 +525,9 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
       rig.skeleton.dispose();
       bodyRig.dispose();
       materials.dispose();
+      hide.dispose();
+      hideDark.dispose();
+      forest.dispose();
     },
   };
 }

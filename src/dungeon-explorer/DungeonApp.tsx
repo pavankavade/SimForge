@@ -28,7 +28,8 @@ import { buildDressing, type FloorDressing } from "./roomView";
 import { createDoors, doorwayProps, type Doors } from "./doorView";
 import { rollChest, rollMobLoot, type Container } from "./loot";
 import { LootScreen } from "./LootScreen";
-import { BELT_SLOTS, arrowCount, equipFromBag, heldOf, loadInventory, normalizeInventory, saveInventory, spendArrow, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
+import { renderGearIcons } from "./gearIcons";
+import { BELT_SLOTS, addArrows, arrowCount, equipFromBag, finishIn, grantClassKit, heldOf, loadBow, shootLoaded, loadInventory, normalizeInventory, saveInventory, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
 import { addItem, def, emptyGrid, newItem, removeItem, type Grid, type ItemInst } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
@@ -41,9 +42,11 @@ import { ChatBox, InviteCards, JoinRunCard, PartyScreen, SpectateBar } from "./S
 import { QuestScreen } from "./QuestScreen";
 import { abandon as abandonQuest, accept as acceptQuest, loadQuests, record as recordQuest, saveQuests, turnIn as turnInQuest, type QuestEvent, type QuestState } from "./quests";
 import { computeStats, type Stats } from "./stats";
+import { loadLoadout, saveLoadout, skillById, type Loadout, type SkillId } from "./skills";
 import { createPortrait, type Portrait, type ScreenRect } from "./portrait";
 import { createMonsterSfx, type MonsterSfx } from "./monsters/monsterSfx";
-import { BOW_TIP, arrowGeometry, bowGeometry } from "./monsters/props";
+import { arrowGeometry, bowGeometry } from "./monsters/props";
+import { BOW_WOOD, bowLimbs, bowSpec, type BowShape } from "./bows";
 import { POOL_SIZE, createMobBodies, type MobBodies } from "./mobBodies";
 import { HealthBar } from "./HealthBar";
 import { PORTAL_COUNT, PORTAL_REACH, PORTALS_FROM, RUN_SECONDS, createPortals, planPortals, type Portals } from "./portals";
@@ -71,6 +74,7 @@ import {
   createPaladin,
   createPaladinSfx,
   setClothRate,
+  wearKey,
   type ArmorEquipment,
   type ArmorSlot,
   type CombatTarget,
@@ -139,6 +143,15 @@ async function enterLandscapeMode(): Promise<void> {
   }
 }
 
+/** How long Quick Shot speeds the draw (seconds). */
+const QUICK_SHOT_S = 6;
+/** The class skill's state for the HUD: cooldown left of `total`, and seconds it still runs. */
+interface SkillHud {
+  cd: number;
+  total: number;
+  active: number;
+}
+
 /** Where the paladin is: in town (tavern, market, gate hall) or down in a dungeon floor. */
 export type Place = "town" | "dungeon";
 
@@ -154,9 +167,9 @@ interface Walker {
 }
 
 type Sim = ReturnType<typeof createMobSimulation>;
-type SimLike = Pick<Sim, "mobs" | "projectiles" | "puddles" | "events" | "step" | "hit" | "shoot">;
+type SimLike = Pick<Sim, "mobs" | "projectiles" | "puddles" | "snares" | "events" | "step" | "hit" | "shoot" | "setSnare">;
 /** Town has no monsters to fight. */
-const NO_SIM: SimLike = { mobs: [], projectiles: [], puddles: [], events: [], step: () => {}, hit: () => null, shoot: () => {} };
+const NO_SIM: SimLike = { mobs: [], projectiles: [], puddles: [], snares: [], events: [], step: () => {}, hit: () => null, shoot: () => {}, setSnare: () => {} };
 
 /**
  * Where the camera may go (world metres): open air with `top` metres under the lid and `bottom`
@@ -283,12 +296,26 @@ interface DungeonSceneProps {
   stats: Stats;
   /** The recurve bow is in hand (key 2): hold attack to draw, let go to loose. */
   bowInHand: boolean;
-  /** A full draw's arrow (the bow's rarity counts). */
+  /** The bow in hand (bows.ts), what a full draw's arrow does (its rarity and his power count),
+   * the arrows loaded in it and those in the bag. */
+  bowId: string | null;
   bowDamage: number;
-  /** Arrows in the bag. */
+  loaded: number;
   arrows: number;
-  /** An arrow left the string (take one from the bag). */
+  /** A loaded arrow left the string; the bow was loaded (R); he picked arrows up off the floor;
+   * a reload began (its seconds); a word for the player (out of arrows). */
   onArrowShot: () => void;
+  onReload: () => void;
+  onArrowsPicked: (n: number) => void;
+  onReloadStart: (seconds: number) => void;
+  onBowHint: (text: string) => void;
+  /** His class skill (skills.ts; G uses it), the ask from the touch button, and its cooldown and
+   * running seconds for the HUD (sent when the whole seconds change). */
+  skill: SkillId | null;
+  skillAskRef: React.MutableRefObject<boolean>;
+  /** The touch Reload button (R on a keyboard). */
+  reloadTouchRef: React.MutableRefObject<boolean>;
+  onSkillState: (s: SkillHud) => void;
   /** The aiming mark in the middle of the screen (shown with the bow in hand; tightens on the draw). */
   crosshairRef: React.RefObject<HTMLDivElement | null>;
   /** The inventory or character screen is open: the paladin stands still and turns to a showcase camera. */
@@ -308,7 +335,7 @@ interface DungeonSceneProps {
   onCharacterBusy: (busy: boolean) => void;
   /** Render the inventory icons (once) and hand them back. */
   iconsWanted: boolean;
-  onIcons: (icons: Partial<Record<ArmorSlot, string>>) => void;
+  onIcons: (icons: Record<string, string>) => void;
   onHudUpdate: (patch: Partial<HudInfo>) => void;
   /** Bumped by Respawn: the floor is rebuilt and the paladin stands up again. */
   life: number;
@@ -452,9 +479,19 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   weaponDamage,
   stats,
   bowInHand,
+  bowId,
   bowDamage,
+  loaded,
   arrows,
   onArrowShot,
+  onReload,
+  onArrowsPicked,
+  onReloadStart,
+  onBowHint,
+  skill,
+  skillAskRef,
+  reloadTouchRef,
+  onSkillState,
   crosshairRef,
   customizing,
   playing,
@@ -549,15 +586,35 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   weaponDamageRef.current = weaponDamage;
   const statsRef = useRef(stats);
   statsRef.current = stats;
-  const bowRef = useRef({ inHand: bowInHand, damage: bowDamage, arrows, onShot: onArrowShot });
-  bowRef.current = { inHand: bowInHand, damage: bowDamage, arrows, onShot: onArrowShot };
+  const skillIdRef = useRef(skill);
+  skillIdRef.current = skill;
+  /** The skill's cooldown and how long it still runs (seconds), and the last state sent up. */
+  const skillRef = useRef({ cd: 0, total: 0, active: 0, sent: "" });
+  const bowNow = {
+    inHand: bowInHand,
+    spec: bowSpec(bowId ?? undefined),
+    damage: bowDamage,
+    loaded,
+    arrows,
+    onShot: onArrowShot,
+    onReload,
+    onPickup: onArrowsPicked,
+    onReloadStart,
+    onHint: onBowHint,
+  };
+  const bowRef = useRef(bowNow);
+  bowRef.current = bowNow;
+  /** R asked for a reload; the reload under way (seconds left, and its length). */
+  const reloadAskRef = useRef(false);
+  const reloadRef = useRef({ t: 0, total: 0 });
+  const heldBeforeRef = useRef(false);
   /** How long the bowstring has been drawn (s); 0 when it is not. */
   const drawRef = useRef(0);
   // The recurve bow in his left hand, its string (two segments, to his right hand on the draw) and
   // the nocked arrow, placed each frame.
-  const bowViewRef = useRef<{ bow: THREE.Mesh; s1: THREE.Mesh; s2: THREE.Mesh; nocked: THREE.Mesh } | null>(null);
+  const bowViewRef = useRef<{ bow: THREE.Mesh; s1: THREE.Mesh; s2: THREE.Mesh; nocked: THREE.Mesh; shape: BowShape } | null>(null);
   useEffect(() => {
-    const wood = new THREE.MeshStandardMaterial({ color: 0x6b4426, roughness: 0.55, metalness: 0 });
+    const wood = new THREE.MeshStandardMaterial({ color: BOW_WOOD.recurve, roughness: 0.55, metalness: 0 });
     const gut = new THREE.MeshStandardMaterial({ color: 0xd8cfb8, roughness: 0.9 });
     const shaft = new THREE.MeshStandardMaterial({ color: 0x9a7f5a, roughness: 0.75 });
     const g = bowGeometry();
@@ -572,7 +629,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     }
     bow.rotation.order = "YXZ";
     scene.add(bow, s1, s2, nocked);
-    bowViewRef.current = { bow, s1, s2, nocked };
+    bowViewRef.current = { bow, s1, s2, nocked, shape: "recurve" };
     return () => {
       scene.remove(bow, s1, s2, nocked);
       wood.dispose();
@@ -761,7 +818,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           shownSerialRef.current = serial;
           p.materials.setEnvIntensity(0.45);
           const eq = equipmentRef.current;
-          for (const slot of Object.keys(eq) as ArmorSlot[]) p.setEquipped(slot, eq[slot]);
+          p.wear(eq, finishIn(eq));
           const old = paladinRef.current;
           if (old) {
             p.group.position.copy(old.group.position);
@@ -976,7 +1033,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   useEffect(() => {
     const p = paladinRef.current;
     if (!p) return;
-    for (const slot of Object.keys(equipment) as ArmorSlot[]) if (p.equipment[slot] !== equipment[slot]) p.setEquipped(slot, equipment[slot]);
+    if (wearKey(p.equipment, p.finish) !== wearKey(equipment, finishIn(equipment))) p.wear(equipment, finishIn(equipment));
   }, [equipment]);
 
   useEffect(() => {
@@ -1016,6 +1073,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (!e.repeat) keysRef.current.add(e.code);
       if (!playingRef.current && !freeMoveRef.current) return;
       if (e.code === "Space" && !e.repeat) jumpQueueRef.current = true;
+      if (e.code === "KeyR" && !e.repeat && playingRef.current) reloadAskRef.current = true;
+      if (e.code === "KeyG" && !e.repeat && playingRef.current) skillAskRef.current = true;
       if (!playingRef.current) return;
       if (e.code === "KeyF" && !e.repeat) {
         attackQueueRef.current = true;
@@ -1150,7 +1209,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       window.removeEventListener("pointermove", onPointerMove);
       dom.removeEventListener("wheel", onWheel);
     };
-  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, attackHeldRef, jumpQueueRef, showcaseRef]);
+  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, attackHeldRef, jumpQueueRef, showcaseRef, skillAskRef]);
 
   // In town: the dungeon put away, the town shown, and he stands in the tavern or on the dais.
   const placedVisitRef = useRef(-1);
@@ -1632,6 +1691,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       } else if (e.type === "hop") {
         if (near(e.mob.wx, e.mob.wz, 9)) ms?.plop(e.mob.scale);
       } else if (e.type === "split") ms?.squelch(2.2);
+      else if (e.type === "snared") {
+        if (near(e.snare.x, e.snare.z, 18)) sfxRef.current?.clang();
+      }
       else if (e.type === "struck") {
         // His arrow found a monster: a shield takes it, bone cracks, jelly squelches.
         if (e.result === "blocked") sfxRef.current?.clang();
@@ -1769,7 +1831,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const speed =
       (blocking ? BLOCK_CELLS : sprinting && drawRef.current <= 0 ? RUN_CELLS : WALK_CELLS) *
       (swinging ? 0.72 : 1) *
-      (drawRef.current > 0 ? 0.55 : 1) *
+      (drawRef.current > 0 ? 0.55 : reloadRef.current.t > 0 ? 0.75 : 1) *
       (1 + statsRef.current.moveSpeed);
 
     // A jump needs his feet on the ground, a moment since the last landing, and no shield up or swing under way.
@@ -2060,7 +2122,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           // Nothing drawn: off-duty arms in third person (first person keeps the bare fists up in view).
           // The bow hangs in the left hand until it is drawn.
           relaxed: world.dead || (!fp && !show.active && !equipmentRef.current.sword && !equipmentRef.current.shield && drawRef.current <= 0),
-          arms: !world.dead && !show.active && drawRef.current > 0 ? "bow" : undefined,
+          arms: !world.dead && !show.active && drawRef.current > 0 ? "bow" : !world.dead && reloadRef.current.t > 0 ? "hold" : undefined,
           gripL: bowRef.current.inHand && !show.active ? "sword" : undefined,
         },
         world.playerFloor * CELL_M,
@@ -2070,15 +2132,87 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     attackQueueRef.current = false;
     prevYawRef.current = walker.yaw;
 
-    // The bow: hold to draw (slower on his feet, the view narrowing), let go to loose. A longer draw
-    // flies faster and hits harder; the arrow goes where the middle of the screen points.
+    // The class skill (skills.ts, G or the touch button): Quick Shot speeds the draw for a while,
+    // a snare goes down at his feet, Second Wind heals over a few seconds. Down here only.
+    {
+      const sk = skillRef.current;
+      const asked = skillAskRef.current;
+      skillAskRef.current = false;
+      const sd = skillById(skillIdRef.current);
+      sk.cd = Math.max(0, sk.cd - dt);
+      sk.active = Math.max(0, sk.active - dt);
+      if (asked && sd) {
+        if (world.place !== "dungeon" || world.dead || world.escaped) bowRef.current.onHint("Skills are for the dungeon.");
+        else if (sk.cd > 0) bowRef.current.onHint(`${sd.name} is ready again in ${Math.ceil(sk.cd)} s.`);
+        else {
+          sk.total = sd.cooldown * (1 - statsRef.current.cooldownReduction);
+          sk.cd = sk.total;
+          if (sd.id === "quick_shot") {
+            sk.active = QUICK_SHOT_S;
+            monsterSfxRef.current?.thock();
+          } else if (sd.id === "snare") {
+            const at = { x: walker.x * CELL_M, y: world.playerFloor * CELL_M, z: walker.z * CELL_M };
+            // In a party the leader's floor springs it; this copy shows it.
+            if (coop && !coop.leads()) coop.sendSnare(at);
+            sim.setSnare(at.x, at.y, at.z);
+            sfxRef.current?.clang();
+          } else if (sd.id === "second_wind") {
+            regenQueueRef.current = { amount: world.maxHp / 3, seconds: 8 };
+            sk.active = 8;
+          }
+        }
+      }
+      const sent = `${Math.ceil(sk.cd)}|${Math.ceil(sk.active)}`;
+      if (sent !== sk.sent) {
+        sk.sent = sent;
+        onSkillState({ cd: sk.cd, total: sk.total, active: sk.active });
+      }
+    }
+
+    // The bow: hold to draw (slower on his feet, the view narrowing), let go to loose. Each bow draws
+    // at its own pace and holds a few arrows loaded (R reloads it from the bag); a fuller draw flies
+    // faster and hits harder, and the arrow drops on its way (aim high for a long shot). The arrow
+    // leaves toward where the middle of the screen points.
     {
       const bow = bowRef.current;
-      const ready = bow.inHand && world.place === "dungeon" && fighting && !world.dead && !show.active && paladin !== null;
-      if (ready && attackHeldRef.current && bow.arrows > 0) drawRef.current = Math.min(1.5, drawRef.current + dt * (1 + statsRef.current.actionSpeed));
+      const spec = bow.spec;
+      const ready = bow.inHand && !!spec && world.place === "dungeon" && fighting && !world.dead && !show.active && paladin !== null;
+      const rl = reloadRef.current;
+      if (reloadTouchRef.current) {
+        reloadTouchRef.current = false;
+        reloadAskRef.current = true;
+      }
+      // R: load the bow (not while drawing; not when it is full or the bag has no arrows).
+      if (reloadAskRef.current) {
+        reloadAskRef.current = false;
+        if (ready && spec && rl.t <= 0 && drawRef.current <= 0) {
+          if (bow.loaded >= spec.capacity) bow.onHint("The bow is fully loaded.");
+          else if (bow.arrows <= 0) bow.onHint("No arrows in your bag to load.");
+          else {
+            rl.total = spec.reload / (1 + Math.max(-0.5, statsRef.current.actionSpeed) + statsRef.current.reloadSpeed);
+            rl.t = rl.total;
+            bow.onReloadStart(rl.total);
+            monsterSfxRef.current?.thock();
+          }
+        }
+      }
+      if (rl.t > 0) {
+        rl.t -= dt;
+        if (!ready) rl.t = 0;
+        else if (rl.t <= 0) {
+          rl.t = 0;
+          bow.onReload();
+        }
+      }
+      const canDraw = ready && rl.t <= 0 && bow.loaded > 0;
+      const pressed = attackHeldRef.current && !heldBeforeRef.current;
+      heldBeforeRef.current = attackHeldRef.current;
+      if (ready && pressed && bow.loaded <= 0 && rl.t <= 0) bow.onHint(bow.arrows > 0 ? "Out of loaded arrows: press R to reload." : "No arrows left.");
+      const quick = skillIdRef.current === "quick_shot" && skillRef.current.active > 0 ? 3 : 1;
+      if (canDraw && attackHeldRef.current) drawRef.current = Math.min(3, drawRef.current + dt * (1 + statsRef.current.actionSpeed + statsRef.current.drawSpeed) * quick);
       else if (drawRef.current > 0) {
-        if (ready && !attackHeldRef.current && drawRef.current >= 0.16 && bow.arrows > 0 && paladin) {
-          const power = Math.max(0.2, Math.min(1, (drawRef.current - 0.1) / 0.7));
+        if (canDraw && spec && !attackHeldRef.current && drawRef.current >= 0.12 && paladin) {
+          const power = Math.max(0.15, Math.min(1, drawRef.current / spec.drawTime));
           // Where the eye looks: march along the view until a wall or a monster.
           const e = persp.matrixWorld.elements;
           const fx = -e[8];
@@ -2088,7 +2222,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           let tx = persp.position.x;
           let ty = persp.position.y;
           let tz = persp.position.z;
-          for (let k = 0; k < 240; k++) {
+          for (let k = 0; k < 320; k++) {
             tx += (fx / fl) * 0.25;
             ty += (fy / fl) * 0.25;
             tz += (fz / fl) * 0.25;
@@ -2100,15 +2234,14 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           const dy = ty - hand.y;
           const dz = tz - hand.z;
           const dist = Math.hypot(dx, dy, dz) || 1;
-          const sp = 24 + 26 * power;
-          // Aimed a touch high so the drop brings it onto the mark.
-          const lift = (0.5 * 3.2 * dist) / sp;
+          // A snatched shot leaves slowly; a full draw at the bow's own speed. No lift: it drops.
+          const sp = spec.speed * (0.45 + 0.55 * power);
           const shot = {
             x: hand.x + (dx / dist) * 0.35,
             y: hand.y + (dy / dist) * 0.35,
             z: hand.z + (dz / dist) * 0.35,
             vx: (dx / dist) * sp,
-            vy: (dy / dist) * sp + lift,
+            vy: (dy / dist) * sp,
             vz: (dz / dist) * sp,
             dmg: bow.damage * (0.35 + 0.65 * power),
           };
@@ -2120,12 +2253,29 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         }
         drawRef.current = 0;
       }
+      // His arrows stuck in the stone come back into the bag as he walks over them.
+      if (world.place === "dungeon" && !world.dead) {
+        let picked = 0;
+        for (const p of sim.projectiles) {
+          if (p.dead || p.from !== 0 || !p.stuck || p.stuckTo !== undefined) continue;
+          if (Math.hypot(p.x - px, p.z - pz) < 0.9 && Math.abs(p.y - (world.playerFloor * CELL_M + 0.8)) < 1.7) {
+            p.dead = true;
+            picked++;
+          }
+        }
+        if (picked) bow.onPickup(picked);
+      }
       const vis = bowViewRef.current;
       if (vis) {
-        const show3d = bow.inHand && paladin !== null && !world.escaped && !show.active;
+        const show3d = bow.inHand && !!spec && paladin !== null && !world.escaped && !show.active;
         vis.bow.visible = vis.s1.visible = vis.s2.visible = show3d;
         vis.nocked.visible = show3d && drawRef.current > 0;
-        if (show3d && paladin) {
+        if (show3d && paladin && spec) {
+          if (vis.shape !== spec.shape) {
+            vis.shape = spec.shape;
+            vis.bow.geometry = bowLimbs(spec.shape);
+            (vis.bow.material as THREE.MeshStandardMaterial).color.setHex(BOW_WOOD[spec.shape]);
+          }
           paladin.group.updateMatrixWorld(true);
           // In the closed left fist; the string comes back to the right hand's grip.
           const hl = paladin.rig.bone("handL").localToWorld(bowAim.copy(paladin.bodyRig.grip.L));
@@ -2133,14 +2283,17 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           vis.bow.position.copy(hl);
           vis.bow.rotation.set(0, paladin.group.rotation.y + Math.PI, drawRef.current > 0 ? 0.08 : 0.2);
           vis.bow.updateMatrixWorld(true);
-          const top = bowTop.set(0, BOW_TIP.y, BOW_TIP.z).applyMatrix4(vis.bow.matrixWorld);
-          const bot = bowBot.set(0, -BOW_TIP.y, BOW_TIP.z).applyMatrix4(vis.bow.matrixWorld);
-          const mid = drawRef.current > 0 ? hr : bowMid.copy(top).lerp(bot, 0.5);
+          const top = bowTop.set(0, spec.tipY, spec.tipZ).applyMatrix4(vis.bow.matrixWorld);
+          const bot = bowBot.set(0, -spec.tipY, spec.tipZ).applyMatrix4(vis.bow.matrixWorld);
+          // The string comes back with the draw (a short way on a snatched shot).
+          const k = Math.min(1, drawRef.current / spec.drawTime);
+          const rest = bowMid.copy(top).lerp(bot, 0.5);
+          const mid = drawRef.current > 0 ? rest.lerp(hr, 0.35 + 0.65 * k) : rest;
           stretch(vis.s1, top, mid);
           stretch(vis.s2, mid, bot);
           if (drawRef.current > 0) {
-            bowDir.copy(hl).sub(hr).normalize();
-            vis.nocked.position.copy(hr).addScaledVector(bowDir, 0.36);
+            bowDir.copy(hl).sub(mid).normalize();
+            vis.nocked.position.copy(mid).addScaledVector(bowDir, 0.36);
             vis.nocked.quaternion.setFromUnitVectors(Z_AXIS, bowDir);
           }
         }
@@ -2150,9 +2303,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         const on = bow.inHand && world.place === "dungeon" && !show.active && !world.dead;
         ch.style.display = on ? "block" : "none";
         if (on) {
-          const k = Math.min(1, drawRef.current / 0.8);
+          const k = spec ? Math.min(1, drawRef.current / spec.drawTime) : 0;
           ch.style.transform = `translate(-50%, -50%) scale(${1.6 - 0.9 * k})`;
-          ch.style.opacity = bow.arrows > 0 ? String(0.55 + 0.45 * k) : "0.3";
+          ch.style.opacity = bow.loaded > 0 && rl.t <= 0 ? String(0.55 + 0.45 * k) : "0.3";
         }
       }
     }
@@ -2537,7 +2690,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     // Inventory icons: rendered off screen after the frame, once (they need the paladin built).
     if (iconsWanted && !iconsDoneRef.current && paladin) {
       iconsDoneRef.current = true;
-      onIcons(paladin.renderIcons(gl, 112));
+      onIcons(renderGearIcons(paladin, gl));
     }
 
     // Where he is, kept every two seconds of real time (runSave.ts; game time is capped per frame,
@@ -3016,12 +3169,47 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   // The kit as the showcases and his inventory picture show it: the set in hand, or set 1.
   const equipment = useMemo(() => wornOf(inv, activeSet || 1), [inv, activeSet]);
   // His stats: the class's base attributes plus what he wears and the set in hand (gear is growth).
-  const stats = useMemo(() => computeStats(classById(heroClass).attributes, inv.equipped, activeSet || 1), [heroClass, inv.equipped, activeSet]);
+  // His perks and skill for this class (skills.ts), picked in the lobby's Class tab.
+  const [loadoutRev, setLoadoutRev] = useState(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const loadout = useMemo(() => loadLoadout(heroClass), [heroClass, loadoutRev]);
+  const pickLoadout = useCallback(
+    (l: Loadout) => {
+      saveLoadout(heroClass, l);
+      setLoadoutRev((r) => r + 1);
+    },
+    [heroClass]
+  );
+  const skillAskRef = useRef(false);
+  const reloadTouchRef = useRef(false);
+  const [skillHud, setSkillHud] = useState<SkillHud>({ cd: 0, total: 0, active: 0 });
+  const skillDef = skillById(loadout.skill);
+  const stats = useMemo(() => computeStats(classById(heroClass).attributes, inv.equipped, activeSet || 1, loadout.perks), [heroClass, inv.equipped, activeSet, loadout.perks]);
   const statsNowRef = useRef(stats);
   statsNowRef.current = stats;
   const arrows = arrowCount(inv);
-  const bowInHand = heldOf(inv, activeSet).bow;
-  const handleArrowShot = useCallback(() => setInv((v) => spendArrow(v) ?? v), []);
+  const held = heldOf(inv, activeSet);
+  const bowInHand = held.bow;
+  const heldBow = held.bow ? held.main : null;
+  const heldSpec = bowSpec(heldBow?.id);
+  const activeSetRef = useRef(activeSet);
+  activeSetRef.current = activeSet;
+  const heldSpecRef = useRef(heldSpec);
+  heldSpecRef.current = heldSpec;
+  // The bow: a loaded arrow leaves it; R loads it from the bag; arrows picked up go to the bag.
+  const handleArrowShot = useCallback(() => setInv((v) => shootLoaded(v, activeSetRef.current)), []);
+  const handleReload = useCallback(() => {
+    const spec = heldSpecRef.current;
+    if (spec) setInv((v) => loadBow(v, activeSetRef.current, spec.capacity));
+    setReloading(null);
+  }, []);
+  const handleArrowsPicked = useCallback((n: number) => {
+    setInv((v) => addArrows(v, n));
+    setToast(n === 1 ? "Picked up an arrow" : `Picked up ${n} arrows`);
+  }, []);
+  const [reloading, setReloading] = useState<{ key: number; seconds: number } | null>(null);
+  const handleReloadStart = useCallback((seconds: number) => setReloading({ key: performance.now(), seconds }), []);
+  const handleBowHint = useCallback((text: string) => setToast(text), []);
   const tavernDoorQueueRef = useRef<"in" | "out" | null>(null);
   const regenQueueRef = useRef<{ amount: number; seconds: number } | null>(null);
   // The merchant he is trading with (index into MERCHANTS), and the chest or man being searched.
@@ -3104,7 +3292,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   }, [hud.escaped]);
   const [characterBusy, setCharacterBusy] = useState(true);
   const [customTab, setCustomTab] = useState<CustomizerTab>("face");
-  const [icons, setIcons] = useState<Partial<Record<ArmorSlot, string>>>({});
+  const [icons, setIcons] = useState<Record<string, string>>({});
   // Icons are wanted from the start: the hotbar shows the sword, the shield and the belt.
   const iconsWanted = true;
   const allIcons = useMemo(() => ({ ...itemPics, ...icons }), [itemPics, icons]);
@@ -3750,9 +3938,19 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           weaponDamage={stats.swordDamage}
           stats={stats}
           bowInHand={bowInHand}
+          bowId={heldBow?.id ?? null}
           bowDamage={stats.bowDamage}
+          loaded={heldBow?.loaded ?? 0}
           arrows={arrows}
           onArrowShot={handleArrowShot}
+          onReload={handleReload}
+          onArrowsPicked={handleArrowsPicked}
+          onReloadStart={handleReloadStart}
+          onBowHint={handleBowHint}
+          skill={loadout.skill}
+          skillAskRef={skillAskRef}
+          reloadTouchRef={reloadTouchRef}
+          onSkillState={setSkillHud}
           crosshairRef={crosshairRef}
           customizing={showcasing}
           playing={screen === "play"}
@@ -3849,7 +4047,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
               onFullscreen={isTouchUI ? () => void enterLandscapeMode() : undefined}
             />
           )}
-          {lobbyTab === "class" ? <ClassPage cls={heroClass} stats={stats} base={classById(heroClass).attributes} compact={mobileMode} onChange={() => openScreen("class")} /> : null}
+          {lobbyTab === "class" ? <ClassPage cls={heroClass} stats={stats} base={classById(heroClass).attributes} compact={mobileMode} onChange={() => openScreen("class")} loadout={loadout} onLoadout={pickLoadout} /> : null}
           {lobbyTab === "stash" && !lobbySub ? (
             <StashScreen
               top={TAB_BAR}
@@ -3956,6 +4154,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           busy={characterBusy}
           onPick={(id) => {
             setHeroClass(id);
+            // A class played for the first time brings its own kit (the ranger's bow and arrows).
+            setInv((v) => grantClassKit(v, id));
             profile.cls = id;
             saveProfile(profile);
             // From the class screen to the lobby's table (or straight back to the game, if he was in it).
@@ -4358,8 +4558,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {hud.pointerLocked
-            ? "1 Sword & shield · 2 Bow · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"
-            : "Click to capture the mouse · 1 Sword & shield · 2 Bow · 3 / 4 Belt · F Swing (hold to draw the bow) · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"}
+            ? "1 / 2 Weapon sets · R Reload bow · G Skill · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"
+            : "Click to capture the mouse · 1 / 2 Weapon sets · R Reload bow · G Skill · 3 / 4 Belt · F Swing (hold to draw the bow) · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"}
         </div>
       ) : null}
 
@@ -4445,6 +4645,43 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             }}
           >
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              {/* The bow's reload and the class skill, beside the fighting buttons. */}
+              {place === "dungeon" && bowInHand && heldSpec ? (
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    reloadTouchRef.current = true;
+                  }}
+                  style={{ width: 52, height: 52, borderRadius: "50%", border: "2px solid rgba(255,216,77,0.6)", background: "rgba(30,24,10,0.76)", color: "#ffe08a", fontWeight: 900, fontSize: 10, touchAction: "none" }}
+                >
+                  RELOAD
+                </button>
+              ) : null}
+              {place === "dungeon" && skillDef ? (
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    skillAskRef.current = true;
+                  }}
+                  style={{
+                    width: 58,
+                    height: 58,
+                    borderRadius: "50%",
+                    border: `2px solid ${skillHud.active > 0 ? "#7df39b" : skillHud.cd > 0 ? "rgba(255,255,255,0.2)" : "rgba(125,243,155,0.7)"}`,
+                    background: "rgba(10,26,16,0.78)",
+                    color: skillHud.cd > 0 && skillHud.active <= 0 ? "#7d8a80" : "#bff5cc",
+                    fontWeight: 900,
+                    fontSize: 9,
+                    lineHeight: 1.15,
+                    padding: 2,
+                    touchAction: "none",
+                  }}
+                >
+                  {skillHud.cd > 0 && skillHud.active <= 0 ? `${Math.ceil(skillHud.cd)}s` : skillDef.name.toUpperCase()}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onPointerDown={(e) => {
@@ -4638,6 +4875,52 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
               </span>
             )
           ) : null}
+        </div>
+      ) : null}
+
+      {/* The bow's ammunition: arrows loaded in it / it holds, and in the bag; the reload's bar. */}
+      {showGameHud && bowInHand && heldSpec && place === "dungeon" && screen === "play" && !hud.dead ? (
+        <div style={{ position: "fixed", left: "50%", top: "calc(50% + 34px)", transform: "translateX(-50%)", zIndex: 9, pointerEvents: "none", textAlign: "center", fontFamily: "system-ui, sans-serif", textShadow: "0 1px 3px #000" }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: (heldBow?.loaded ?? 0) > 0 ? "#f3e6c4" : "#ff8a7a", fontVariantNumeric: "tabular-nums" }}>
+            {heldBow?.loaded ?? 0} / {heldSpec.capacity}
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#a69c88" }}> · {arrows} in bag</span>
+          </div>
+          {reloading ? (
+            <div style={{ width: 90, height: 4, margin: "3px auto 0", background: "rgba(0,0,0,0.6)", border: "1px solid rgba(214,186,128,0.4)" }}>
+              <div key={reloading.key} style={{ height: "100%", background: "#ffd84d", animation: `reloadbar ${reloading.seconds}s linear forwards` }} />
+            </div>
+          ) : (heldBow?.loaded ?? 0) === 0 ? (
+            <div style={{ fontSize: 11, color: "#ffd84d" }}>{arrows > 0 ? "R to reload" : "No arrows"}</div>
+          ) : null}
+          <style>{"@keyframes reloadbar { from { width: 0% } to { width: 100% } }"}</style>
+        </div>
+      ) : null}
+
+      {/* The class skill (G): its name, then its cooldown; green while it runs. */}
+      {showGameHud && !isTouchUI && skillDef && place === "dungeon" && screen === "play" && !hud.dead ? (
+        <div
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: 132,
+            transform: "translateX(-50%)",
+            zIndex: 9,
+            pointerEvents: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "5px 12px",
+            background: "rgba(8,10,8,0.7)",
+            border: `1px solid ${skillHud.active > 0 ? "#7df39b" : "rgba(214,186,128,0.35)"}`,
+            borderRadius: 3,
+            fontFamily: "system-ui, sans-serif",
+            fontSize: 12,
+            color: skillHud.cd > 0 && skillHud.active <= 0 ? "#8a8272" : "#e8f3e4",
+          }}
+        >
+          <span style={{ display: "inline-block", minWidth: 20, padding: "1px 5px", textAlign: "center", border: "1px solid currentColor", borderRadius: 3, fontWeight: 800 }}>G</span>
+          {skillDef.name}
+          {skillHud.active > 0 ? <b style={{ color: "#7df39b" }}>{Math.ceil(skillHud.active)}s</b> : skillHud.cd > 0 ? <b>{Math.ceil(skillHud.cd)}s</b> : null}
         </div>
       ) : null}
 

@@ -9,7 +9,7 @@ import * as THREE from "three";
 import { ARMOR_SLOTS, createPaladin, type CombatWorld, type Paladin } from "../artifacts/characters/paladin";
 import { randomSpec } from "./CharacterCustomizer";
 import { SEE_THROUGH } from "./dungeon/view";
-import type { AcidPuddle, MobAgent, Projectile } from "./mobSim";
+import { SNARE_ARM_S, type AcidPuddle, type MobAgent, type Projectile, type Snare } from "./mobSim";
 import { rarityColor } from "./monsters/kinds";
 import { BOW_TIP, arrowGeometry, bowGeometry, crystalGeometry, crystalMaterial, glowTexture, staffGeometry } from "./monsters/props";
 import { attachBones, type SkeletonBones } from "./monsters/skeletonBody";
@@ -24,7 +24,7 @@ const BIND_M = 20;
 const RELEASE_M = 26;
 /** Nameplates show this close. */
 const PLATE_M = 16;
-const ARROWS = 16;
+const ARROWS = 40;
 const BOLTS = 8;
 const PUDDLES = 24;
 
@@ -75,6 +75,8 @@ export interface MobWorld {
   mobs: MobAgent[];
   projectiles: Projectile[];
   puddles: AcidPuddle[];
+  /** The ranger's snares (none on a floor without one). */
+  snares?: Snare[];
 }
 
 export interface MobBodies {
@@ -255,6 +257,34 @@ export async function createMobBodies(
     mesh.renderOrder = 1;
     scene.add(mesh);
     puddles.push({ mesh, mat });
+  }
+
+  // Snares: an iron ring with a crown of teeth on a chain stake; the teeth stand flat while it is
+  // set and snap upright when it bites.
+  const snareIron = new THREE.MeshStandardMaterial({ color: 0x4a4744, roughness: 0.55, metalness: 0.8 });
+  const snareRing = new THREE.TorusGeometry(0.2, 0.018, 6, 24).rotateX(-Math.PI / 2);
+  const snareTooth = new THREE.ConeGeometry(0.022, 0.09, 4).translate(0, 0.045, 0);
+  const snarePlate = new THREE.CylinderGeometry(0.06, 0.06, 0.012, 10);
+  const SNARES = 3;
+  const TEETH = 12;
+  const snareViews: Array<{ group: THREE.Group; teeth: THREE.Mesh[] }> = [];
+  for (let i = 0; i < SNARES; i++) {
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(snareRing, snareIron), new THREE.Mesh(snarePlate, snareIron));
+    const teeth: THREE.Mesh[] = [];
+    for (let k = 0; k < TEETH; k++) {
+      const a = (k / TEETH) * Math.PI * 2;
+      const pivot = new THREE.Group();
+      pivot.position.set(Math.cos(a) * 0.2, 0, Math.sin(a) * 0.2);
+      pivot.rotation.y = -a;
+      const tooth = new THREE.Mesh(snareTooth, snareIron);
+      pivot.add(tooth);
+      group.add(pivot);
+      teeth.push(tooth);
+    }
+    group.visible = false;
+    scene.add(group);
+    snareViews.push({ group, teeth });
   }
 
   const release = (s: Slot) => {
@@ -510,6 +540,23 @@ export async function createMobBodies(
         pm.mat.opacity = 0.6 * fade;
         pm.mat.emissiveIntensity = (0.4 + 0.2 * Math.sin(time * 5 + i)) * fade;
       }
+
+      // Snares: teeth lie flat (pointing in) while set, and stand up shut once it has bitten.
+      const sn = sim.snares ?? [];
+      for (let i = 0; i < snareViews.length; i++) {
+        const q = sn[i];
+        const v = snareViews[i];
+        if (!q) {
+          v.group.visible = false;
+          continue;
+        }
+        v.group.visible = true;
+        v.group.position.set(q.x, q.y + 0.02, q.z);
+        const shut = q.caught !== null ? Math.min(1, q.caughtT / 0.08) : 0;
+        // A faint settle as it arms.
+        const arm = Math.min(1, q.t / SNARE_ARM_S);
+        for (const t of v.teeth) t.rotation.z = (Math.PI / 2) * (1 - shut) * (0.85 + 0.15 * arm);
+      }
     },
 
     setNearSkeletons(n) {
@@ -550,6 +597,11 @@ export async function createMobBodies(
         q.mat.dispose();
       }
       for (const m of [bowMat, stringMat, arrowMat, staffMat, staffHeadMat, boltMat]) m.dispose();
+      for (const v of snareViews) scene.remove(v.group);
+      snareIron.dispose();
+      snareRing.dispose();
+      snareTooth.dispose();
+      snarePlate.dispose();
       unitCyl.dispose();
       boltCore.dispose();
       puddleGeo.dispose();

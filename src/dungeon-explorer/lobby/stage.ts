@@ -4,7 +4,9 @@
 // not built while he is in the lobby. On the class screen it draws only him, standing, into the
 // frame left of the class panel; on the stash tab it also draws him into the inventory's box.
 import * as THREE from "three";
-import { ARMOR_SLOTS, createPaladin, type ArmorEquipment, type ArmorSlot, type HumanSpec, type Paladin } from "../../artifacts/characters/paladin";
+import { createPaladin, type ArmorEquipment, type HumanSpec, type Paladin } from "../../artifacts/characters/paladin";
+import { renderGearIcons } from "../gearIcons";
+import { finishIn } from "../playerInv";
 import { makeMasonry, makeWood } from "../../engine/textures";
 import { createPortrait, type Portrait, type ScreenRect } from "../portrait";
 import { placeModel } from "../props3d";
@@ -37,7 +39,7 @@ export interface LobbyStage {
 
 export interface StageOptions {
   onBusy?: (busy: boolean) => void;
-  onIcons?: (icons: Partial<Record<ArmorSlot, string>>) => void;
+  onIcons?: (icons: Record<string, string>) => void;
 }
 
 /** Table and chairs (metres): the table at the origin, his chair on the far side (-z). */
@@ -213,7 +215,7 @@ export function createLobbyStage(canvas: HTMLCanvasElement, opts: StageOptions =
   let heroSerial = 0;
   let iconsDone = false;
   const wear = (p: Paladin, kit: ArmorEquipment) => {
-    for (const s of ARMOR_SLOTS) p.setEquipped(s, kit[s]);
+    p.wear(kit, finishIn(kit));
   };
   const seat = (p: Paladin, i: number) => {
     const s = SEATS[i];
@@ -332,7 +334,7 @@ export function createLobbyStage(canvas: HTMLCanvasElement, opts: StageOptions =
           scene.add(p.group, p.fx);
           if (!iconsDone && opts.onIcons) {
             iconsDone = true;
-            opts.onIcons(p.renderIcons(gl, 112));
+            opts.onIcons(renderGearIcons(p, gl));
             if (heroKit) wear(p, heroKit);
           }
           opts.onBusy?.(false);

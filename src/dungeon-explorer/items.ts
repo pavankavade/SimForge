@@ -7,7 +7,7 @@
 // RARITY (AGENTS.md §15): one ladder for the whole game, common to artifact. Every item def has a
 // base rarity; a weapon instance rolls its own (`ItemInst.rarity`), which scales its damage, block
 // and price (`itemOf`). Monsters carry a rarity too, and drop a mana crystal of it.
-import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
+import { ARMOR_SLOTS, type ArmorSlot, type Finish } from "../artifacts/characters/paladin";
 import type { ModId } from "./stats";
 
 /** The rarity ladder, lowest first. */
@@ -83,6 +83,8 @@ export interface ItemDef {
   healOver?: number;
   /** How many fit in one cell (coins). */
   stack?: number;
+  /** Armour made of something other than plate on the same shape (the ranger's leathers). */
+  finish?: Finish;
 }
 
 const ARMOR: Array<Omit<ItemDef, "id" | "category" | "value" | "slot"> & { slot: ArmorSlot }> = [
@@ -136,6 +138,8 @@ const OTHER: ItemDef[] = [
   { id: "spell_page", name: "Scorched spell page", note: "Half a cantrip in a hand nobody reads now", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "rare", weight: 0.05, value: 46 },
   { id: "candle", name: "Black candle", note: "Tallow and soot, burnt to the knuckle", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "common", weight: 0.2, value: 7 },
   // The fighter's ranged kit: a recurve bow (the bow slot, key 2) and arrows, a stack to a cell pair.
+  { id: "short_bow", name: "Short bow", note: "Ash, quick in the hand; ten arrows to a load", kind: "Bow", category: "weapon", slot: "bow", w: 1, h: 3, rarity: "common", weight: 0.7, value: 110, damage: 26 },
+  { id: "long_bow", name: "Longbow", note: "A yew stave as tall as a man; slow to draw, it punches through mail. Five to a load", kind: "Bow", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 1.4, value: 240, damage: 46 },
   { id: "recurve_bow", name: "Recurve bow", note: "Ash and horn, the tips bent forward; a strong draw", kind: "Ranged", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 1.1, value: 160, damage: 34 },
   { id: "arrows", name: "Arrows", note: "Bodkin heads, grey goose fletching. Thirty to a bundle.", kind: "Ammunition", category: "ammo", w: 1, h: 2, rarity: "common", weight: 0.03, value: 2, stack: ARROW_STACK },
   { id: "signet", name: "Signet ring", note: "A knight's seal; the house died with him", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "rare", weight: 0.02, value: 85 },
@@ -174,10 +178,26 @@ for (const r of RARITIES) {
   });
 }
 
+/**
+ * Leathers: hardened hide on the plate shapes (lighter, less armour), and a plain green cloak. The
+ * ranger starts in them; anyone can wear them. They sit in the same slots as the plate.
+ */
+const LEATHERS: Array<Omit<ItemDef, "category" | "value" | "slot" | "finish"> & { slot: ArmorSlot }> = [
+  { id: "leather_jerkin", slot: "cuirass", name: "Leather jerkin", note: "Boiled hide, moulded and laced; it turns a knife, not a mace", kind: "Chest", w: 2, h: 3, rarity: "common", armor: 30, weight: 3.2 },
+  { id: "leather_bracers", slot: "arms", name: "Leather bracers", note: "Hide over the forearms, a guard for the bowstring", kind: "Arms", w: 2, h: 2, rarity: "common", armor: 10, weight: 0.9 },
+  { id: "leather_gloves", slot: "gauntlets", name: "Archer's gloves", note: "Thin at the fingers for the string, thick at the back", kind: "Hands", w: 2, h: 2, rarity: "common", armor: 7, weight: 0.3 },
+  { id: "leather_leggings", slot: "greaves", name: "Hide shin guards", note: "Stiff hide strapped over the shins", kind: "Shins", w: 2, h: 2, rarity: "common", armor: 9, weight: 0.8 },
+  { id: "leather_boots", slot: "sabatons", name: "Soft boots", note: "Turned leather; quiet on stone", kind: "Feet", w: 2, h: 2, rarity: "common", armor: 6, weight: 0.6 },
+  { id: "ranger_cloak", slot: "cape", name: "Ranger's cloak", note: "Green wool that goes grey in the dark", kind: "Back", w: 2, h: 3, rarity: "common", armor: 4, weight: 1.1 },
+];
+
 export const ITEM_DEFS: Record<string, ItemDef> = {};
 for (const a of ARMOR) {
   ITEM_DEFS[a.slot] = { ...a, id: a.slot, category: a.slot === "sword" || a.slot === "shield" ? "weapon" : "armor", value: priceFor(a) };
 }
+for (const a of LEATHERS) ITEM_DEFS[a.id] = { ...a, category: "armor", value: priceFor(a), finish: "leather" };
+/** The leathers' ids, and the plate piece each one stands in for (icons are drawn from that shape). */
+export const LEATHER_IDS: Array<[string, ArmorSlot]> = LEATHERS.map((a) => [a.id, a.slot]);
 for (const o of OTHER) ITEM_DEFS[o.id] = o;
 
 /** The paladin's kit, one def per armour slot (the stats the game reads). */
@@ -195,6 +215,8 @@ export interface ItemInst {
   qty?: number;
   /** A weapon's or armour piece's own rarity (it rolled one), instead of its def's. */
   rarity?: Rarity;
+  /** A bow: the arrows loaded in it now (shots before a reload with R; bows.ts gives how many it holds). */
+  loaded?: number;
   /** Stat modifiers it rolled with its rarity (stats.ts): [modifier, amount]. */
   mods?: Array<[ModId, number]>;
 }
@@ -279,10 +301,19 @@ export function addItem(g: Grid, item: ItemInst): Grid | null {
       left -= take;
       return { ...p, item: { ...p.item, qty: (p.item.qty ?? 1) + take } };
     });
-    const topped = { ...g, items };
-    if (left <= 0) return topped;
-    const p = firstFit(topped, item.id);
-    return p ? { ...topped, items: topped.items.concat([{ item: { ...item, qty: left }, x: p.x, y: p.y }]) } : null;
+    // The rest in new stacks of at most `stack` each (the first keeps the item's uid).
+    let out: Grid = { ...g, items };
+    let first = true;
+    while (left > 0) {
+      const n = Math.min(left, d.stack);
+      const p = firstFit(out, item.id);
+      if (!p) return null;
+      const it = first ? { ...item, qty: n } : newItem(item.id, n);
+      out = { ...out, items: out.items.concat([{ item: it, x: p.x, y: p.y }]) };
+      left -= n;
+      first = false;
+    }
+    return out;
   }
   const p = firstFit(g, item.id);
   return p ? { ...g, items: g.items.concat([{ item, x: p.x, y: p.y }]) } : null;

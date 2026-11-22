@@ -822,3 +822,27 @@ only through gear.**
   - A new modifier goes in `MOD_INFO` (label, range, weapon/armour) and is summed in `computeStats`.
 - **Show it.** The inventory sheet shows the attributes (gear-raised ones in green) and every derived
   line (`statLines`). The class screen shows each class's base attributes.
+- **Bows** (`bows.ts`) all share these rules:
+  - Each bow has its own capacity (arrows loaded), draw time, arrow speed and reload time. Its damage
+    lives on the item.
+  - Loaded arrows live on the bow instance (`ItemInst.loaded`). R (or the touch Reload button)
+    reloads from the bag's arrow stacks (30 to a stack).
+  - Arrows fly without aim lift: they fall (`ARROW_G`) and slow (`ARROW_DRAG`).
+  - A skeleton headshot does ×1.5 damage.
+  - Arrows stick in monsters and stay in the stone, where the fighter can walk over them to pick
+    them up again.
+  - A new bow is a def with `slot: "bow"` plus a `BOWS` entry.
+- **Perks and skills** (`skills.ts`), Dark and Darker style:
+  - Each class has perks (always on; two are picked) and skills (one is picked, used with G or the
+    touch button, in the dungeon only). They are picked in the lobby's Class tab and kept per class.
+  - Perks only change numbers inside `computeStats` (its `perks` argument). Never apply a perk at
+    the call site.
+  - Skills run in the game loop (`DungeonScene`, the class skill block). The snare lives in the
+    monster sim (`setSnare`, `snares`); in a party the leader's floor springs it (`coop.sendSnare`).
+  - A new perk: an entry in `PERKS` plus its effect in `computeStats`. A new skill: an entry in
+    `SKILLS` plus its branch in the skill block.
+- **Leathers.** Armour can be plate or leather on the same shape (`ItemDef.finish`). The rig swaps
+  the plate's steel and gilt for hide (`Paladin.setFinish` / `wear`), and the cape and tabard for a
+  plain green cloak. What each worn piece is made of rides on the worn set (`wornOf` sets `finish`,
+  `finishIn` reads it), so the table, the portrait and other players see it. Icons come from
+  `gearIcons.ts`.

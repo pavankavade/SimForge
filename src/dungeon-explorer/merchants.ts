@@ -1,9 +1,9 @@
 // The merchants of the market street and what they deal in. The armourer and the weaponsmith sell
-// the fighter's own kit (a new piece each time), the alchemist draughts, bandages and food for the
-// belt; the arcanist and the woodsmith have nothing yet. For now every one of them buys whatever he
+// the fighter's own kit (a new piece each time) and the ranger's leathers, the woodsmith bows and
+// arrows, the alchemist draughts, bandages and food for the belt; the arcanist has nothing yet. For now every one of them buys whatever he
 // brings up from the dungeon.
 import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
-import { def, itemOf, type ItemInst } from "./items";
+import { LEATHER_IDS, def, itemOf, type ItemInst } from "./items";
 
 export type MerchantId = "armourer" | "weaponsmith" | "alchemist" | "mage" | "woodsmith";
 
@@ -35,7 +35,7 @@ export const MERCHANTS: Merchant[] = [
     shop: "Holt's Plate & Mail",
     cloth: 0x6b1f1a,
     trim: 0xd9b25a,
-    stock: ARMOUR,
+    stock: (ARMOUR as string[]).concat(LEATHER_IDS.map(([id]) => id)),
     greeting: "Plate, mail and padding, all fitted to a man your size.",
     empty: "",
   },
@@ -46,7 +46,7 @@ export const MERCHANTS: Merchant[] = [
     shop: "The Tempered Edge",
     cloth: 0x2a3440,
     trim: 0xc8ccd2,
-    stock: ["sword", "shield", "recurve_bow", "arrows"],
+    stock: ["sword", "shield", "short_bow", "recurve_bow", "long_bow", "arrows"],
     greeting: "Steel that holds an edge. Oak that holds a line.",
     empty: "",
   },
@@ -79,7 +79,7 @@ export const MERCHANTS: Merchant[] = [
     shop: "Fell's Bows & Hafts",
     cloth: 0x7a5426,
     trim: 0xe6c48a,
-    stock: [],
+    stock: ["short_bow", "recurve_bow", "long_bow", "arrows"],
     greeting: "Ash for hafts, yew for bows.",
     empty: "Still seasoning the timber. Nothing ready to sell yet.",
   },

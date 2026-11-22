@@ -4,12 +4,13 @@
 // the way into the Guild Tavern, bottom right the user list and a class change. Everything here is
 // what he could walk up to and do in town, for a quick game.
 import React, { useEffect, useRef } from "react";
-import type { ArmorEquipment, ArmorSlot, HumanSpec } from "../../artifacts/characters/paladin";
+import type { ArmorEquipment, HumanSpec } from "../../artifacts/characters/paladin";
 import { classById, type ClassId } from "../classes";
 import { MERCHANTS, css } from "../merchants";
 import { mp, useMp } from "../net/mp";
 import { trade, useTrade } from "../net/trade";
 import type { ScreenRect } from "../portrait";
+import { PERK_SLOTS, perksOf, skillsOf, type Loadout, type PerkId } from "../skills";
 import { ATTRIBUTES, ATTRIBUTE_INFO, statLines, type Attributes, type Stats } from "../stats";
 import { createLobbyStage, type Guest, type LobbyStage, type StageMode } from "./stage";
 
@@ -57,7 +58,7 @@ export interface LobbyViewProps {
   portraitView: { spin: number; zoom: number };
   anchorsRef: React.MutableRefObject<Array<HTMLElement | null>>;
   onBusy: (busy: boolean) => void;
-  onIcons: (icons: Partial<Record<ArmorSlot, string>>) => void;
+  onIcons: (icons: Record<string, string>) => void;
 }
 
 /** The canvas and its stage (built once while the lobby is up). */
@@ -386,9 +387,51 @@ const Page: React.FC<{ compact: boolean; children: React.ReactNode; width?: numb
 const H: React.FC<{ children: React.ReactNode }> = ({ children }) => <div style={{ fontFamily: serif, fontSize: 22, color: "#f3e6c4", letterSpacing: "0.05em", marginBottom: 10 }}>{children}</div>;
 const Sub: React.FC<{ children: React.ReactNode }> = ({ children }) => <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#b9a982", margin: "14px 0 6px" }}>{children}</div>;
 
-/** Class: what he plays, its base attributes and what his gear makes of them. */
-export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes; compact: boolean; onChange: () => void }> = ({ cls, stats, base, compact, onChange }) => {
+/** A perk or skill card: click to pick it (or drop it). */
+const Pick: React.FC<{ name: string; note: string; on: boolean; extra?: string; onClick: () => void }> = ({ name, note, on, extra, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    style={{
+      textAlign: "left",
+      padding: "9px 11px",
+      background: on ? "rgba(242,210,122,0.13)" : "rgba(0,0,0,0.35)",
+      border: `1px solid ${on ? GOLDC : "rgba(214,186,128,0.18)"}`,
+      borderRadius: 3,
+      color: on ? "#fff3d2" : "#cdbf9f",
+      cursor: "pointer",
+    }}
+  >
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontFamily: serif, fontSize: 15 }}>
+      <span>
+        {on ? "◆ " : "◇ "}
+        {name}
+      </span>
+      {extra ? <span style={{ fontFamily: "system-ui, sans-serif", fontSize: 11, color: "#8a7f6c" }}>{extra}</span> : null}
+    </div>
+    <div style={{ fontSize: 12, color: on ? "#d8ccb0" : "#8a7f6c", marginTop: 3, lineHeight: 1.4 }}>{note}</div>
+  </button>
+);
+
+/** Class: what he plays, his perks and skill, its base attributes and what his gear makes of them. */
+export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes; compact: boolean; onChange: () => void; loadout: Loadout; onLoadout: (l: Loadout) => void }> = ({
+  cls,
+  stats,
+  base,
+  compact,
+  onChange,
+  loadout,
+  onLoadout,
+}) => {
   const c = classById(cls);
+  const perks = perksOf(cls);
+  const skills = skillsOf(cls);
+  // Two perks: a third pick drops the oldest.
+  const togglePerk = (id: PerkId) => {
+    const have = loadout.perks.indexOf(id) >= 0;
+    const next = have ? loadout.perks.filter((p) => p !== id) : loadout.perks.concat([id]).slice(-PERK_SLOTS);
+    onLoadout({ ...loadout, perks: next });
+  };
   return (
     <Page compact={compact}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
@@ -403,6 +446,28 @@ export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes;
         </button>
       </div>
       <div style={{ fontSize: 13, lineHeight: 1.55, color: "#d8ccb0", marginTop: 10 }}>{c.blurb}</div>
+      {perks.length ? (
+        <>
+          <Sub>
+            PERKS · {loadout.perks.length} / {PERK_SLOTS} · always on
+          </Sub>
+          <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 1fr", gap: 8 }}>
+            {perks.map((p) => (
+              <Pick key={p.id} name={p.name} note={p.note} on={loadout.perks.indexOf(p.id) >= 0} onClick={() => togglePerk(p.id)} />
+            ))}
+          </div>
+        </>
+      ) : null}
+      {skills.length ? (
+        <>
+          <Sub>SKILL · G (the green button on a phone) · in the dungeon</Sub>
+          <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 1fr", gap: 8 }}>
+            {skills.map((k) => (
+              <Pick key={k.id} name={k.name} note={k.note} extra={`${k.cooldown}s cooldown`} on={loadout.skill === k.id} onClick={() => onLoadout({ ...loadout, skill: k.id })} />
+            ))}
+          </div>
+        </>
+      ) : null}
       <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 1fr", gap: 18 }}>
         <div>
           <Sub>ATTRIBUTES (CLASS BASE + GEAR)</Sub>

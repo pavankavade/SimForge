@@ -128,6 +128,9 @@ export interface Stats {
   cooldownReduction: number;
   /** Spell memory (spells cost their tier). */
   memoryCapacity: number;
+  /** Fractions from perks: how much faster the bow draws and reloads (on top of action speed). */
+  drawSpeed: number;
+  reloadSpeed: number;
 }
 
 /** Everything that counts: the armour he wears and the weapon set `set` (only weapons in hand count). */
@@ -137,8 +140,12 @@ const gearOf = (equipped: Partial<Record<GearSlot, ItemInst>>, set: 1 | 2): Item
     .map((s) => equipped[s])
     .filter((x): x is ItemInst => !!x);
 
-/** His stats with weapon set `set` in hand (the sheet shows set 1 while nothing is drawn). */
-export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot, ItemInst>>, set: 1 | 2 = 1): Stats {
+/**
+ * His stats with weapon set `set` in hand (the sheet shows set 1 while nothing is drawn), with the
+ * class perks he picked (skills.ts) on top.
+ */
+export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot, ItemInst>>, set: 1 | 2 = 1, perks: string[] = []): Stats {
+  const has = (p: string) => perks.indexOf(p) >= 0;
   const add = {} as Record<ModId, number>;
   for (const m of MOD_IDS) add[m] = 0;
   let armor = 0;
@@ -151,15 +158,22 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
   for (const k of ATTRIBUTES) a[k] = base[k] + add[k];
   const physicalPower = a.str + add.physicalPower;
   const magicalPower = a.wil + add.magicalPower;
-  const armorRating = armor + add.armorRating;
+  const armorRating = armor + add.armorRating + (has("defense_expert") ? 15 : 0);
   const magicResist = MAGIC_RESIST(a.wil) + add.magicResist;
   const main = equipped[set === 1 ? "main1" : "main2"];
   const sword = main && handOf(main.id) === "main" ? itemOf(main).damage ?? 30 : 6;
   const bow = main && handOf(main.id) === "both" ? itemOf(main).damage ?? 30 : 0;
   const physicalBonus = PHYS_BONUS(physicalPower);
+  // Light Step counts while nothing of plate is worn (leathers and cloth are fine).
+  const plate = (WEAR_SLOTS as GearSlot[]).some((s) => {
+    const it = equipped[s];
+    const d = it ? itemOf(it) : null;
+    return !!d && (d.armor ?? 0) >= 14 && d.finish !== "leather" && s !== "doublet" && s !== "cape" && s !== "tabard";
+  });
+  const moveExtra = (has("swift") ? 0.04 : 0) + (has("light_step") && !plate ? 0.06 : 0);
   return {
     attributes: a,
-    maxHealth: Math.round(HEALTH(0.25 * a.str + 0.75 * a.vig) + add.maxHealth),
+    maxHealth: Math.round(HEALTH(0.25 * a.str + 0.75 * a.vig) + add.maxHealth + (has("robust") ? 10 : 0)),
     physicalPower,
     physicalBonus,
     magicalPower,
@@ -168,14 +182,16 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
     physicalReduction: reductionOf(armorRating),
     magicResist,
     magicalReduction: reductionOf(magicResist),
-    swordDamage: (sword + add.weaponDamage) * (1 + physicalBonus),
-    bowDamage: bow ? (bow + add.weaponDamage) * (1 + physicalBonus) : 0,
-    moveSpeed: MOVE(a.agi) + add.moveSpeed / 100,
+    swordDamage: (sword + add.weaponDamage) * (1 + physicalBonus) * (has("weapon_mastery") ? 1.1 : 1),
+    bowDamage: bow ? (bow + add.weaponDamage) * (1 + physicalBonus) * (has("ranged_mastery") ? 1.12 : 1) : 0,
+    moveSpeed: MOVE(a.agi) + add.moveSpeed / 100 + moveExtra,
     actionSpeed: ACTION(0.25 * a.agi + 0.75 * a.dex) + add.actionSpeed / 100,
     interactionSpeed: INTERACT(0.25 * a.dex + 0.75 * a.res),
     castingSpeed: CAST(a.kno),
     cooldownReduction: Math.min(0.65, COOLDOWN(a.res)),
     memoryCapacity: Math.round(MEMORY(a.kno)),
+    drawSpeed: has("steady_aim") ? 0.25 : 0,
+    reloadSpeed: has("nimble_fingers") ? 0.35 : 0,
   };
 }
 

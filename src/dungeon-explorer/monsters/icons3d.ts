@@ -3,8 +3,22 @@
 // acid gland and the rings. icons.ts renders each on its small off-screen renderer.
 import * as THREE from "three";
 import { crystalId, RARITIES } from "../items";
-import { BOW_TIP, arrowGeometry, bowGeometry, crystalGeometry, crystalMaterial, staffGeometry } from "./props";
+import { BOWS, BOW_WOOD, bowLimbs } from "../bows";
+import { arrowGeometry, bowGeometry, crystalGeometry, crystalMaterial, staffGeometry } from "./props";
 import { boneGeometry, skullObject } from "./skeletonBody";
+
+/** A bow from the side, strung (the same limbs he carries). */
+function bowIcon(id: string): THREE.Object3D {
+  const spec = BOWS[id];
+  const o = new THREE.Group();
+  o.add(new THREE.Mesh(bowLimbs(spec.shape), new THREE.MeshStandardMaterial({ color: BOW_WOOD[spec.shape], roughness: 0.55 })));
+  const s = new THREE.Mesh(bowGeometry().string, new THREE.MeshStandardMaterial({ color: 0xd8cfb8, roughness: 0.9 }));
+  s.scale.set(1.6, spec.tipY * 2, 1.6);
+  s.position.z = spec.tipZ;
+  o.add(s);
+  o.rotation.set(0, Math.PI / 2, 0.15);
+  return o;
+}
 
 const boneMat = () => new THREE.MeshStandardMaterial({ color: 0xd6c8a6, roughness: 0.75 });
 
@@ -68,16 +82,9 @@ export const PROC_ICONS: Record<string, () => THREE.Object3D> = {
     m.rotation.set(0, Math.PI / 2, 0.15);
     return m;
   },
-  recurve_bow: () => {
-    const o = new THREE.Group();
-    o.add(new THREE.Mesh(bowGeometry().limbs, new THREE.MeshStandardMaterial({ color: 0x6b4426, roughness: 0.55 })));
-    const s = new THREE.Mesh(bowGeometry().string, new THREE.MeshStandardMaterial({ color: 0xd8cfb8, roughness: 0.9 }));
-    s.scale.set(1, BOW_TIP.y * 2, 1);
-    s.position.z = BOW_TIP.z;
-    o.add(s);
-    o.rotation.set(0, Math.PI / 2, 0.15);
-    return o;
-  },
+  recurve_bow: () => bowIcon("recurve_bow"),
+  short_bow: () => bowIcon("short_bow"),
+  long_bow: () => bowIcon("long_bow"),
   bone_staff: () => {
     const g = staffGeometry();
     const o = new THREE.Group();

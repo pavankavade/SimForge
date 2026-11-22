@@ -2,7 +2,7 @@
 // Pure helpers return a new inventory, so React state stays simple. Saved between visits; the first
 // time he starts in the basic kit (padding, sword, shield) with a little gold. An earlier save (a
 // purse of owned slots) is carried over.
-import { ARMOR_SLOTS, type ArmorEquipment, type ArmorSlot } from "../artifacts/characters/paladin";
+import { ARMOR_SLOTS, type ArmorEquipment, type ArmorSlot, type Finishes } from "../artifacts/characters/paladin";
 import { WEAPON_SLOTS, WEAR_SLOTS, addItem, def, emptyGrid, fitsAt, handOf, isWeaponSlot, newItem, placeItem, removeItem, sortGrid, type GearSlot, type Grid, type ItemInst, type WeaponSlot } from "./items";
 
 export const BAG_W = 12;
@@ -14,6 +14,8 @@ export interface PlayerInv {
   bag: Grid;
   /** The two belt slots (keys 3 and 4): a draught, a bandage, food, ready to use. */
   belt: Array<ItemInst | null>;
+  /** Classes whose starting kit this save has been given (the ranger's bow and arrows). */
+  kits?: string[];
   /** The starting purse this save has been given (older saves are topped up to it once). */
   granted?: number;
 }
@@ -60,7 +62,7 @@ export function loadInventory(wornBefore: ArmorEquipment): PlayerInv {
     if (raw) {
       const s = JSON.parse(raw) as PlayerInv;
       if (s && s.bag && Array.isArray(s.bag.items)) {
-        return withSets(withGrant(withBelt({ gold: Math.max(0, Math.floor(s.gold || 0)), equipped: s.equipped || {}, bag: { w: BAG_W, h: BAG_H, items: s.bag.items }, belt: s.belt, granted: s.granted })));
+        return withSets(withGrant(withBelt({ gold: Math.max(0, Math.floor(s.gold || 0)), equipped: s.equipped || {}, bag: { w: BAG_W, h: BAG_H, items: s.bag.items }, belt: s.belt, granted: s.granted, kits: s.kits })));
       }
     }
     // The purse of the first market build: the slots he owned, worn or in the bag.
@@ -90,13 +92,31 @@ export function saveInventory(inv: PlayerInv): void {
 }
 
 /** What the body shows: the armour he wears, and in his hands what weapon set `set` holds (0: none). */
+/**
+ * What he wears with weapon set `set` in hand. What each piece is made of rides along as `finish`
+ * (finishIn reads it back), so the table, the portrait and other players see leather as leather.
+ */
 export function wornOf(inv: PlayerInv, set: 0 | 1 | 2 = 1): ArmorEquipment {
-  const e = {} as ArmorEquipment;
+  const e = {} as ArmorEquipment & { finish?: Finishes };
   for (const s of ARMOR_SLOTS) e[s] = !!inv.equipped[s];
   const h = heldOf(inv, set);
   e.sword = h.sword;
   e.shield = h.shield;
+  e.finish = finishOf(inv);
   return e;
+}
+
+/** The finish carried on a worn set (wornOf), if any; plate otherwise. */
+export const finishIn = (e: ArmorEquipment): Finishes | undefined => (e as ArmorEquipment & { finish?: Finishes }).finish;
+
+/** What each worn piece is made of (leather where a leather item sits in the slot). */
+export function finishOf(inv: PlayerInv): Finishes {
+  const f: Finishes = {};
+  for (const s of ARMOR_SLOTS) {
+    const it = inv.equipped[s];
+    if (it && def(it.id).finish === "leather") f[s] = "leather";
+  }
+  return f;
 }
 
 /** What weapon set `set` puts in his hands. */
@@ -264,4 +284,87 @@ export function spendBelt(inv: PlayerInv, i: number): { inv: PlayerInv; used: It
   if (next) bag = removeItem(bag, next.item.uid);
   belt[i] = next ? next.item : null;
   return { inv: { ...inv, bag, belt }, used: it };
+}
+
+/** The bow in weapon set `set`'s main hand, if that is a bow. */
+const bowSlot = (set: 0 | 1 | 2): "main1" | "main2" | null => (set === 1 ? "main1" : set === 2 ? "main2" : null);
+
+/** Take up to `n` arrows out of the bag (smallest stacks first); how many came out. */
+function takeArrows(inv: PlayerInv, n: number): { inv: PlayerInv; taken: number } {
+  let left = n;
+  const stacks = inv.bag.items.filter((p) => p.item.id === "arrows").sort((a, b) => (a.item.qty ?? 1) - (b.item.qty ?? 1));
+  const qty = new Map<string, number>();
+  for (const p of stacks) {
+    if (left <= 0) break;
+    const have = p.item.qty ?? 1;
+    const take = Math.min(have, left);
+    left -= take;
+    qty.set(p.item.uid, have - take);
+  }
+  const items = inv.bag.items
+    .filter((p) => qty.get(p.item.uid) !== 0)
+    .map((p) => (qty.has(p.item.uid) ? { ...p, item: { ...p.item, qty: qty.get(p.item.uid) } } : p));
+  return { inv: { ...inv, bag: { ...inv.bag, items } }, taken: n - left };
+}
+
+/** Load the bow in set `set` from the bag: up to `capacity` arrows in it. */
+export function loadBow(inv: PlayerInv, set: 0 | 1 | 2, capacity: number): PlayerInv {
+  const s = bowSlot(set);
+  const bow = s ? inv.equipped[s] : undefined;
+  if (!s || !bow) return inv;
+  const want = Math.max(0, capacity - (bow.loaded ?? 0));
+  const r = takeArrows(inv, want);
+  return { ...r.inv, equipped: { ...r.inv.equipped, [s]: { ...bow, loaded: (bow.loaded ?? 0) + r.taken } } };
+}
+
+/** One loaded arrow leaves the bow in set `set`. */
+export function shootLoaded(inv: PlayerInv, set: 0 | 1 | 2): PlayerInv {
+  const s = bowSlot(set);
+  const bow = s ? inv.equipped[s] : undefined;
+  if (!s || !bow || !bow.loaded) return inv;
+  return { ...inv, equipped: { ...inv.equipped, [s]: { ...bow, loaded: bow.loaded - 1 } } };
+}
+
+/** Arrows picked up off the floor go back into the bag (topping up stacks). */
+export function addArrows(inv: PlayerInv, n: number): PlayerInv {
+  if (n <= 0) return inv;
+  const bag = addItem(inv.bag, newItem("arrows", n));
+  return bag ? { ...inv, bag } : inv;
+}
+
+const RANGER_LEATHERS = ["leather_jerkin", "leather_bracers", "leather_gloves", "leather_leggings", "leather_boots", "ranger_cloak"];
+
+/**
+ * A class's own starting kit, given once the first time it is played (the fighter's is the fresh
+ * inventory). The ranger's short bow goes in weapon set 1 (loaded), what was there moves to set 2
+ * if that is free (or the bag), sixty arrows go in the bag, and his leathers go on (or in the bag,
+ * where plate is worn).
+ */
+
+export function grantClassKit(inv: PlayerInv, cls: string): PlayerInv {
+  if (cls !== "ranger" || (inv.kits ?? []).indexOf(cls) >= 0) return inv;
+  let next: PlayerInv = { ...inv, kits: (inv.kits ?? []).concat([cls]) };
+  const eq = { ...next.equipped };
+  let bag = next.bag;
+  const m1 = eq.main1;
+  const o1 = eq.off1;
+  if (m1 || o1) {
+    if (!eq.main2 && !eq.off2) {
+      if (m1) eq.main2 = m1;
+      if (o1) eq.off2 = o1;
+    } else {
+      for (const it of [m1, o1]) if (it) bag = addItem(bag, it) ?? bag;
+    }
+    delete eq.main1;
+    delete eq.off1;
+  }
+  eq.main1 = { ...newItem("short_bow"), loaded: 10 };
+  // His leathers: on where the slot is free, in the bag where plate is already worn.
+  for (const id of RANGER_LEATHERS) {
+    const slot = def(id).slot as ArmorSlot;
+    if (!eq[slot]) eq[slot] = newItem(id);
+    else bag = addItem(bag, newItem(id)) ?? bag;
+  }
+  next = { ...next, equipped: eq, bag };
+  return addArrows(next, 60);
 }
