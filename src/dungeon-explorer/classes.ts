@@ -1,5 +1,5 @@
-// The classes a player can pick at the start. Only the fighter is playable now (the realistic
-// human in plate with sword and shield); the others are planned and shown as coming soon. Each has
+// The classes a player can pick at the start: the fighter, the ranger and the cleric are playable
+// (all the realistic human, dressed and armed for the class); the others are shown as coming soon. Each has
 // base attributes summing to 105 (an average of 15; stats.ts): gear adds the rest.
 import type { Attributes } from "./stats";
 
@@ -89,13 +89,15 @@ export const CLASSES: HeroClass[] = [
     attributes: { str: 13, vig: 14, agi: 12, dex: 12, wil: 23, kno: 19, res: 12 },
     name: "Cleric",
     tagline: "Mace in one hand, faith in the other",
-    blurb: "Mends wounds with prayer and breaks bones with a mace. Keeps a party standing longer than anyone.",
-    kit: ["Flanged mace", "Holy symbol", "Mail shirt"],
+    blurb: "Mends wounds with prayer and breaks bones with a mace. Memorises holy spells (Knowledge sets how many), casts them from charges, and sits down to pray them back. Hard on the undead.",
+    kit: ["Flanged mace and heater shield (set 1)", "Mail hauberk over an arming doublet", "The order's tabard", "Two healing draughts", "Spells: Lesser Heal, Bless, Protection, Holy Light, Sanctuary"],
     traits: [
+      ["Health", "~99"],
       ["Armour", "Mail"],
-      ["Weapons", "Mace and prayers"],
+      ["Weapons", "Mace and shield"],
+      ["Strength", "Healing, wards, holy light"],
     ],
-    available: false,
+    available: true,
     color: "#f0e3a8",
   },
 ];

@@ -4,6 +4,7 @@
 import * as THREE from "three";
 import { crystalId, RARITIES } from "../items";
 import { BOWS, BOW_WOOD, bowLimbs } from "../bows";
+import { buildMace } from "../mace";
 import { arrowGeometry, bowGeometry, crystalGeometry, crystalMaterial, staffGeometry } from "./props";
 import { boneGeometry, skullObject } from "./skeletonBody";
 
@@ -83,6 +84,14 @@ export const PROC_ICONS: Record<string, () => THREE.Object3D> = {
     return m;
   },
   recurve_bow: () => bowIcon("recurve_bow"),
+  flanged_mace: () => {
+    const steel = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, metalness: 0.85, roughness: 0.32 });
+    const m = buildMace(steel, new THREE.MeshStandardMaterial({ color: 0x94693f, roughness: 0.65 }), new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.8 }));
+    m.rotation.x = -Math.PI / 2;
+    const o = new THREE.Group();
+    o.add(m);
+    return o;
+  },
   short_bow: () => bowIcon("short_bow"),
   long_bow: () => bowIcon("long_bow"),
   bone_staff: () => {

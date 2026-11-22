@@ -3,8 +3,8 @@
 // inventory's character box on top of the live game. The game keeps playing under the inventory,
 // so the player can walk about with it open; this copy only stands, breathes and turns.
 import * as THREE from "three";
-import { createPaladin, wearKey, type ArmorEquipment, type HumanSpec, type Paladin } from "../artifacts/characters/paladin";
-import { finishIn } from "./playerInv";
+import { createPaladin, type ArmorEquipment, type HumanSpec, type Paladin } from "../artifacts/characters/paladin";
+import { dressGear, gearKey } from "./mace";
 
 /** A box on the page (CSS pixels from the top left of the window). */
 export interface ScreenRect {
@@ -85,10 +85,10 @@ export function createPortrait(gl: THREE.WebGLRenderer): Portrait {
 
     render(rect, kit, dt, spin, zoom) {
       if (!body || rect.width < 8 || rect.height < 8) return;
-      const key2 = wearKey(kit, finishIn(kit));
+      const key2 = gearKey(kit);
       if (key2 !== worn) {
         worn = key2;
-        body.wear(kit, finishIn(kit));
+        dressGear(body, kit);
       }
       // Standing at ease, breathing (with his weapons in a loose guard, or hands at his sides).
       body.update(

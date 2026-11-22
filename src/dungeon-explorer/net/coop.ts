@@ -61,6 +61,15 @@ export interface DoorIn {
 }
 
 /** A sack on the ground as it now is (dropped, added to, or picked from): every game keeps the latest. */
+/** A spell another player cast, where its light goes (only drawn; its effect is his game's). */
+export interface SpellFxIn {
+  spell: string;
+  x: number;
+  y: number;
+  z: number;
+  from: string;
+}
+
 export interface PileIn {
   id: string;
   x: number;
@@ -92,6 +101,9 @@ export function createCoop(run: RunView) {
   /** Blows on him, stamped when they came in (performance.now()). */
   const hurts: Array<HurtIn & { at: number }> = [];
   const doors: DoorIn[] = [];
+  /** Healing a teammate's spell sent him, and spell lights the others cast (for show). */
+  const heals: Array<{ amount: number; at: number }> = [];
+  const spellFx: SpellFxIn[] = [];
   /** Sacks the others dropped or picked from, and who wants to hear of them (the loot screen). */
   let pileSink: ((p: PileIn) => void) | null = null;
   let snapT = 0;
@@ -143,6 +155,13 @@ export function createCoop(run: RunView) {
           return;
         case "hurt":
           hurts.push({ ...(m as unknown as HurtIn), at: performance.now() });
+          return;
+        case "heal":
+          heals.push({ amount: Math.max(0, Math.min(200, Number(m.amount) || 0)), at: performance.now() });
+          return;
+        case "spellfx":
+          if (from !== me()) spellFx.push({ spell: String(m.spell), x: Number(m.x) || 0, y: Number(m.y) || 0, z: Number(m.z) || 0, from });
+          if (spellFx.length > 16) spellFx.shift();
           return;
         case "door":
           doors.push(m as unknown as DoorIn);
@@ -291,6 +310,20 @@ export function createCoop(run: RunView) {
       const now = performance.now();
       return hurts.splice(0).filter((h) => now - h.at < HURT_TTL_MS);
     },
+    /** Healing for a teammate (his spell): his game adds it to his health. */
+    sendHeal(to: string, amount: number) {
+      mp.game({ k: "heal", to, amount: Math.round(amount * 10) / 10 });
+    },
+    /** Healing sent to him; any that waited out a paused game is let go, like blows. */
+    takeHeals: (): number => {
+      const now = performance.now();
+      return heals.splice(0).reduce((n, h) => n + (now - h.at < HURT_TTL_MS * 2 ? h.amount : 0), 0);
+    },
+    /** A spell's light for the others to see. */
+    sendSpellFx(spell: string, at: { x: number; y: number; z: number }) {
+      mp.game({ k: "spellfx", spell, x: r2(at.x) / 100, y: r2(at.y) / 100, z: r2(at.z) / 100 });
+    },
+    takeSpellFx: (): SpellFxIn[] => spellFx.splice(0),
     sendDoor(d: DoorIn) {
       mp.game({ k: "door", ...d });
     },

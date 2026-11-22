@@ -29,7 +29,8 @@ import { createDoors, doorwayProps, type Doors } from "./doorView";
 import { rollChest, rollMobLoot, type Container } from "./loot";
 import { LootScreen } from "./LootScreen";
 import { renderGearIcons } from "./gearIcons";
-import { BELT_SLOTS, addArrows, arrowCount, equipFromBag, finishIn, grantClassKit, heldOf, loadBow, shootLoaded, loadInventory, normalizeInventory, saveInventory, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
+import { dressGear, gearKey, paladinGearKey } from "./mace";
+import { BELT_SLOTS, addArrows, arrowCount, equipFromBag, grantClassKit, heldOf, loadBow, shootLoaded, loadInventory, normalizeInventory, saveInventory, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
 import { addItem, def, emptyGrid, newItem, removeItem, type Grid, type ItemInst } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
@@ -43,6 +44,9 @@ import { QuestScreen } from "./QuestScreen";
 import { abandon as abandonQuest, accept as acceptQuest, loadQuests, record as recordQuest, saveQuests, turnIn as turnInQuest, type QuestEvent, type QuestState } from "./quests";
 import { computeStats, type Stats } from "./stats";
 import { loadLoadout, saveLoadout, skillById, type Loadout, type SkillId } from "./skills";
+import { createHolyFx, type HolyFx } from "./holyFx";
+import { SpellBar, SpellButtons, type SpellHud } from "./spellHud";
+import { SPELL, SPELL_KEYS, fitSpells, spellById, type SpellId } from "./spells";
 import { createPortrait, type Portrait, type ScreenRect } from "./portrait";
 import { createMonsterSfx, type MonsterSfx } from "./monsters/monsterSfx";
 import { arrowGeometry, bowGeometry } from "./monsters/props";
@@ -74,7 +78,6 @@ import {
   createPaladin,
   createPaladinSfx,
   setClothRate,
-  wearKey,
   type ArmorEquipment,
   type ArmorSlot,
   type CombatTarget,
@@ -89,6 +92,9 @@ const WALK_CELLS = 1.5;
 const RUN_CELLS = 2.7;
 const BLOCK_CELLS = 0.95;
 
+// Scratch vectors for the spells' lights (his casting hand, his ward).
+const spellHand = new THREE.Vector3();
+const spellWard = new THREE.Vector3();
 // Scratch vectors for the bow in his hand.
 const bowAim = new THREE.Vector3();
 const bowNock = new THREE.Vector3();
@@ -145,12 +151,19 @@ async function enterLandscapeMode(): Promise<void> {
 
 /** How long Quick Shot speeds the draw (seconds). */
 const QUICK_SHOT_S = 6;
+/** Smite: how long it waits for a blow, and the holy fire it adds (before magical power). */
+const SMITE_S = 10;
+const SMITE_DAMAGE = 25;
+/** How high his hips sit when he sits down to pray (metres; the floor is his seat). */
+const PRAY_SEAT_Y = 0.22;
 /** The class skill's state for the HUD: cooldown left of `total`, and seconds it still runs. */
 interface SkillHud {
   cd: number;
   total: number;
   active: number;
 }
+
+const NO_SPELLS: SpellHud = { charges: {}, casting: null, castU: 0, resting: false, ward: 0, bless: 0, sanctuary: 0 };
 
 /** Where the paladin is: in town (tavern, market, gate hall) or down in a dungeon floor. */
 export type Place = "town" | "dungeon";
@@ -316,6 +329,12 @@ interface DungeonSceneProps {
   /** The touch Reload button (R on a keyboard). */
   reloadTouchRef: React.MutableRefObject<boolean>;
   onSkillState: (s: SkillHud) => void;
+  /** His memorised spells (spells.ts, already fitted to his memory), the cast asked for (the
+   * spell's index; 5–9 or the touch buttons), sitting down to pray (X), and the HUD's state. */
+  spells: SpellId[];
+  spellAskRef: React.MutableRefObject<number>;
+  restAskRef: React.MutableRefObject<boolean>;
+  onSpellState: (s: SpellHud) => void;
   /** The aiming mark in the middle of the screen (shown with the bow in hand; tightens on the draw). */
   crosshairRef: React.RefObject<HTMLDivElement | null>;
   /** The inventory or character screen is open: the paladin stands still and turns to a showcase camera. */
@@ -492,6 +511,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   skillAskRef,
   reloadTouchRef,
   onSkillState,
+  spells,
+  spellAskRef,
+  restAskRef,
+  onSpellState,
   crosshairRef,
   customizing,
   playing,
@@ -590,6 +613,27 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   skillIdRef.current = skill;
   /** The skill's cooldown and how long it still runs (seconds), and the last state sent up. */
   const skillRef = useRef({ cd: 0, total: 0, active: 0, sent: "" });
+  const spellsRef = useRef(spells);
+  spellsRef.current = spells;
+  /** Spell charges (by spell), the cast under way, resting, and what his spells left on him. */
+  const spellRef = useRef({
+    charges: {} as Record<string, number>,
+    cast: null as null | { id: SpellId; t: number; total: number },
+    rest: { on: false, t: 0, next: 0 },
+    ward: { amt: 0, t: 0 },
+    bless: 0,
+    sanct: null as null | { t: number; x: number; y: number; z: number; tick: number },
+    sent: "",
+  });
+  const holyFxRef = useRef<HolyFx | null>(null);
+  useEffect(() => {
+    const fx = createHolyFx(scene);
+    holyFxRef.current = fx;
+    return () => {
+      fx.dispose();
+      holyFxRef.current = null;
+    };
+  }, [scene]);
   const bowNow = {
     inHand: bowInHand,
     spec: bowSpec(bowId ?? undefined),
@@ -818,7 +862,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           shownSerialRef.current = serial;
           p.materials.setEnvIntensity(0.45);
           const eq = equipmentRef.current;
-          p.wear(eq, finishIn(eq));
+          dressGear(p, eq);
           const old = paladinRef.current;
           if (old) {
             p.group.position.copy(old.group.position);
@@ -888,7 +932,16 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     // everything else is softened by armour.
     const st = statsRef.current;
     const armour = hit.how === "acid" ? 0 : hit.how === "bolt" ? st.magicalReduction : st.physicalReduction;
-    const dmg = hit.damage * (hit.how === "acid" ? 1 : 0.9 + w.rand() * 0.2) * (1 - armour);
+    let dmg = hit.damage * (hit.how === "acid" ? 1 : 0.9 + w.rand() * 0.2) * (1 - armour);
+    // Protection's ward of light takes what it can; a blow also ends a rest.
+    const sp = spellRef.current;
+    sp.rest.on = false;
+    if (sp.ward.amt > 0) {
+      const took = Math.min(sp.ward.amt, dmg);
+      sp.ward.amt -= took;
+      dmg -= took;
+      if (took > 0) holyFxRef.current?.burst("smite", px, w.playerFloor * CELL_M + 1.1, pz);
+    }
     w.hp = Math.max(0, w.hp - dmg);
     if (hit.how === "acid") monsterSfxRef.current?.sizzle();
     else if (hit.how === "bolt") monsterSfxRef.current?.burst();
@@ -933,6 +986,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     (window as unknown as { __dungeon?: unknown }).__dungeon = {
       world: () => worldRef.current,
       paladin: () => paladinRef.current,
+      spells: () => spellRef.current,
+      holyFx: () => holyFxRef.current,
       market: () => marketRef.current,
       plan: () => planRef.current,
       doors: () => doorsRef.current,
@@ -1033,7 +1088,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   useEffect(() => {
     const p = paladinRef.current;
     if (!p) return;
-    if (wearKey(p.equipment, p.finish) !== wearKey(equipment, finishIn(equipment))) p.wear(equipment, finishIn(equipment));
+    if (paladinGearKey(p) !== gearKey(equipment)) dressGear(p, equipment);
   }, [equipment]);
 
   useEffect(() => {
@@ -1075,6 +1130,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (e.code === "Space" && !e.repeat) jumpQueueRef.current = true;
       if (e.code === "KeyR" && !e.repeat && playingRef.current) reloadAskRef.current = true;
       if (e.code === "KeyG" && !e.repeat && playingRef.current) skillAskRef.current = true;
+      // Spells on 5–9 (in the order he memorised them), X to sit and pray.
+      if (!e.repeat && playingRef.current && e.code.startsWith("Digit") && SPELL_KEYS.indexOf(e.code.slice(5)) >= 0) spellAskRef.current = SPELL_KEYS.indexOf(e.code.slice(5));
+      if (e.code === "KeyX" && !e.repeat && playingRef.current) restAskRef.current = true;
       if (!playingRef.current) return;
       if (e.code === "KeyF" && !e.repeat) {
         attackQueueRef.current = true;
@@ -1209,7 +1267,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       window.removeEventListener("pointermove", onPointerMove);
       dom.removeEventListener("wheel", onWheel);
     };
-  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, attackHeldRef, jumpQueueRef, showcaseRef, skillAskRef]);
+  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, attackHeldRef, jumpQueueRef, showcaseRef, skillAskRef, spellAskRef, restAskRef]);
 
   // In town: the dungeon put away, the town shown, and he stands in the tavern or on the dais.
   const placedVisitRef = useRef(-1);
@@ -1455,8 +1513,19 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         solid: solidAt,
         onHit: (id, dirX, dirZ) => {
           // The sword's cut at its rarity (fists without it), less the monster's armour (mobSim.hit).
-          const dmg = (equipmentRef.current.sword ? weaponDamageRef.current : 6) * (0.9 + rand() * 0.2);
           const m = sim.mobs.find((o) => o.id === id);
+          // Bless hits harder; the undead take more from Undead Slaying, and a readied Smite adds holy fire.
+          const undead = m?.family === "skeleton";
+          const st = statsRef.current;
+          let dmg = (equipmentRef.current.sword ? weaponDamageRef.current : 6) * (0.9 + rand() * 0.2) * (spellRef.current.bless > 0 ? 1 + SPELL.blessDamage : 1);
+          const sk = skillRef.current;
+          if (skillIdRef.current === "smite" && sk.active > 0 && m && !m.dead) {
+            sk.active = 0;
+            dmg += SMITE_DAMAGE * (1 + st.magicalBonus) * (undead ? SPELL.undeadTimes : 1);
+            holyFxRef.current?.burst("smite", m.wx, m.wy + 1, m.wz);
+            sfxRef.current?.clang();
+          }
+          if (undead) dmg *= 1 + st.undeadBonus;
           // In a party the authority's floor takes the blow (net/coop.ts); this copy only sounds it.
           const co = coopRef.current;
           let r: ReturnType<typeof sim.hit>;
@@ -1832,7 +1901,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       (blocking ? BLOCK_CELLS : sprinting && drawRef.current <= 0 ? RUN_CELLS : WALK_CELLS) *
       (swinging ? 0.72 : 1) *
       (drawRef.current > 0 ? 0.55 : reloadRef.current.t > 0 ? 0.75 : 1) *
-      (1 + statsRef.current.moveSpeed);
+      (spellRef.current.cast ? 0.5 : 1) *
+      (1 + statsRef.current.moveSpeed + (spellRef.current.bless > 0 ? SPELL.blessMove : 0));
 
     // A jump needs his feet on the ground, a moment since the last landing, and no shield up or swing under way.
     world.jumpRest = Math.max(0, world.jumpRest - dt);
@@ -2122,7 +2192,19 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           // Nothing drawn: off-duty arms in third person (first person keeps the bare fists up in view).
           // The bow hangs in the left hand until it is drawn.
           relaxed: world.dead || (!fp && !show.active && !equipmentRef.current.sword && !equipmentRef.current.shield && drawRef.current <= 0),
-          arms: !world.dead && !show.active && drawRef.current > 0 ? "bow" : !world.dead && reloadRef.current.t > 0 ? "hold" : undefined,
+          arms:
+            !world.dead && !show.active && spellRef.current.cast
+              ? "cast"
+              : !world.dead && !show.active && spellRef.current.rest.on
+                ? "knees"
+                : !world.dead && !show.active && drawRef.current > 0
+                  ? "bow"
+                  : !world.dead && reloadRef.current.t > 0
+                    ? "hold"
+                    : undefined,
+          // Praying for his spells: down on the floor.
+          stance: !world.dead && !show.active && spellRef.current.rest.on ? "sit" : undefined,
+          seatY: PRAY_SEAT_Y,
           gripL: bowRef.current.inHand && !show.active ? "sword" : undefined,
         },
         world.playerFloor * CELL_M,
@@ -2159,6 +2241,16 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           } else if (sd.id === "second_wind") {
             regenQueueRef.current = { amount: world.maxHp / 3, seconds: 8 };
             sk.active = 8;
+          } else if (sd.id === "smite") {
+            // Waits for his next blow (combat.onHit spends it).
+            sk.active = SMITE_S;
+            holyFxRef.current?.burst("bless", px, world.playerFloor * CELL_M, pz);
+            monsterSfxRef.current?.burst();
+          } else if (sd.id === "prayer") {
+            const sp = spellRef.current;
+            for (const id of spellsRef.current) sp.charges[id] = Math.min(spellById(id)?.charges ?? 0, (sp.charges[id] ?? 0) + 1);
+            holyFxRef.current?.burst("heal", px, world.playerFloor * CELL_M, pz);
+            bowRef.current.onHint("Your prayer is heard: a charge back on every spell.");
           }
         }
       }
@@ -2166,6 +2258,194 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (sent !== sk.sent) {
         sk.sent = sent;
         onSkillState({ cd: sk.cd, total: sk.total, active: sk.active });
+      }
+    }
+
+    // Spells (spells.ts; casters only): 5–9 cast the memorised ones from their charges, slowly and
+    // on foot at half pace; X sits him down to pray the charges back (and a little health). Up in
+    // town every charge is full again. Down here only.
+    {
+      const sp = spellRef.current;
+      const list = spellsRef.current;
+      const st = statsRef.current;
+      const fx = holyFxRef.current;
+      const ask = spellAskRef.current;
+      spellAskRef.current = -1;
+      const restAsk = restAskRef.current;
+      restAskRef.current = false;
+      const full = (id: SpellId) => spellById(id)?.charges ?? 0;
+      const floorY = world.playerFloor * CELL_M;
+      const heal = (amount: number, radius: number) => {
+        const amt = amount * (1 + st.healBonus);
+        healQueueRef.current += amt;
+        // Teammates near enough get it too (their own games add it).
+        if (coop) {
+          for (const o of remotesRef.current?.views() ?? []) {
+            if (o.dead || o.escaped || Math.abs(o.y - o.air - floorY) > 1.2 || Math.hypot(o.x - px, o.z - pz) > radius) continue;
+            coop.sendHeal(o.id, amt);
+            fx?.burst("heal", o.x, o.y - o.air, o.z);
+          }
+        }
+      };
+      if (world.place !== "dungeon" || world.dead || world.escaped) {
+        for (const id of list) sp.charges[id] = full(id);
+        sp.cast = null;
+        sp.rest.on = false;
+        if (world.place !== "dungeon") {
+          sp.ward.amt = 0;
+          sp.bless = 0;
+          sp.sanct = null;
+        }
+        if (ask >= 0 && ask < list.length && !world.dead) bowRef.current.onHint("Spells are for the dungeon.");
+      } else if (list.length) {
+        for (const id of list) if (sp.charges[id] === undefined) sp.charges[id] = full(id);
+        sp.bless = Math.max(0, sp.bless - dt);
+        sp.ward.t = Math.max(0, sp.ward.t - dt);
+        if (sp.ward.t <= 0) sp.ward.amt = 0;
+        // X: sit down to pray (or get up). Moving, jumping, a swing, the shield or a blow gets him up.
+        if (restAsk) {
+          if (sp.rest.on) sp.rest.on = false;
+          else if (sp.cast || !grounded || swinging || drawRef.current > 0) bowRef.current.onHint("Stand still to sit and pray.");
+          else {
+            sp.rest = { on: true, t: 0, next: SPELL.restFirst };
+            bowRef.current.onHint("You sit down and pray: your spells come back one charge at a time. Move to get up.");
+          }
+        }
+        if (sp.rest.on && (forward !== 0 || strafe !== 0 || attackQueueRef.current || world.playerJumpVy > 0 || blocking)) sp.rest.on = false;
+        if (sp.rest.on) {
+          sp.rest.t += dt;
+          if (world.hp < world.maxHp) {
+            world.hp = Math.min(world.maxHp, world.hp + SPELL.restHps * dt);
+            if (Math.floor(world.hp) !== Math.floor(world.hp - SPELL.restHps * dt)) onHudUpdate({ hp: Math.round(world.hp) });
+          }
+          if (sp.rest.t >= sp.rest.next) {
+            sp.rest.next += SPELL.restEach / (1 + Math.max(-0.5, st.castingSpeed));
+            // One charge to the emptiest spell (by share), in key order on a tie.
+            let best: SpellId | null = null;
+            let share = 1;
+            for (const id of list) {
+              const k = (sp.charges[id] ?? 0) / Math.max(1, full(id));
+              if (k < share) {
+                share = k;
+                best = id;
+              }
+            }
+            if (best) {
+              sp.charges[best] = Math.min(full(best), (sp.charges[best] ?? 0) + 1);
+              fx?.burst("bless", px, floorY, pz);
+            }
+          }
+        }
+        // A cast asked for.
+        if (ask >= 0) {
+          const id = list[ask];
+          const s = id ? spellById(id) : null;
+          if (!s || !id) {
+            // No spell on that key.
+          } else if (sp.cast) bowRef.current.onHint("You are already casting.");
+          else if ((sp.charges[id] ?? 0) <= 0) bowRef.current.onHint(`${s.name} has no charges left. Sit and pray (X) to get them back.`);
+          else if (drawRef.current > 0 || swinging || blocking || !fighting) bowRef.current.onHint("Lower your guard to cast.");
+          else {
+            sp.rest.on = false;
+            sp.cast = { id, t: 0, total: s.cast / (1 + Math.max(-0.5, st.castingSpeed)) };
+            monsterSfxRef.current?.burst();
+          }
+        }
+        if (sp.cast) {
+          sp.cast.t += dt;
+          if (sp.cast.t >= sp.cast.total) {
+            const id = sp.cast.id;
+            sp.cast = null;
+            sp.charges[id] = Math.max(0, (sp.charges[id] ?? 0) - 1);
+            const sinF = Math.sin(walker.yaw + Math.PI);
+            const cosF = Math.cos(walker.yaw + Math.PI);
+            if (id === "lesser_heal") {
+              heal(SPELL.healAmount * (1 + st.magicalBonus), SPELL.healRadiusM);
+              fx?.burst("heal", px, floorY, pz);
+            } else if (id === "bless") {
+              sp.bless = SPELL.blessS;
+              fx?.burst("bless", px, floorY, pz);
+            } else if (id === "protection") {
+              sp.ward = { amt: SPELL.wardAmount, t: SPELL.wardS };
+              fx?.burst("bless", px, floorY, pz);
+            } else if (id === "holy_light") {
+              // A burst ahead of him at chest height: everything in it is struck (the undead twice over).
+              const cx = px + sinF * SPELL.lightReachM;
+              const cz = pz + cosF * SPELL.lightReachM;
+              const ms = monsterSfxRef.current;
+              for (const m of sim.mobs) {
+                if (m.dead || Math.abs(m.wy - floorY) > 1.5) continue;
+                const d = Math.hypot(m.wx - cx, m.wz - cz);
+                if (d > SPELL.lightRadiusM + m.radius * 0.5) continue;
+                const undead = m.family === "skeleton";
+                const dmg = SPELL.lightDamage * (1 + st.magicalBonus) * (undead ? SPELL.undeadTimes * (1 + st.undeadBonus) : 1);
+                const far = Math.hypot(m.wx - px, m.wz - pz) || 1;
+                let r: ReturnType<typeof sim.hit> = "hit";
+                if (coop && !coop.leads()) coop.sendHit(m.id, (m.wx - px) / far, (m.wz - pz) / far, dmg);
+                else r = sim.hit(m.id, (m.wx - px) / far, (m.wz - pz) / far, dmg);
+                if (m.family === "slime") ms?.squelch(m.scale);
+                else ms?.boneHit();
+                if (r === "killed" && undead) ms?.collapse();
+              }
+              fx?.burst("light", cx, floorY + 1.1, cz);
+              ms?.burst();
+              coop?.sendSpellFx("light", { x: cx, y: floorY + 1.1, z: cz });
+            } else if (id === "sanctuary") {
+              sp.sanct = { t: SPELL.sanctuaryS, x: px, y: floorY, z: pz, tick: 0 };
+              coop?.sendSpellFx("sanctuary", { x: px, y: floorY, z: pz });
+            }
+            if (id === "lesser_heal" || id === "bless" || id === "protection") coop?.sendSpellFx("heal", { x: px, y: floorY, z: pz });
+          }
+        }
+        // Holy ground: every second, health to all standing in it.
+        if (sp.sanct) {
+          const h = sp.sanct;
+          h.t -= dt;
+          h.tick += dt;
+          if (h.tick >= 1) {
+            h.tick -= 1;
+            const inside = Math.hypot(px - h.x, pz - h.z) <= SPELL.sanctuaryRadiusM && Math.abs(floorY - h.y) < 1;
+            if (inside) healQueueRef.current += SPELL.sanctuaryHps * (1 + st.healBonus);
+            if (coop) {
+              for (const o of remotesRef.current?.views() ?? []) {
+                if (o.dead || o.escaped || Math.abs(o.y - o.air - h.y) > 1.2 || Math.hypot(o.x - h.x, o.z - h.z) > SPELL.sanctuaryRadiusM) continue;
+                coop.sendHeal(o.id, SPELL.sanctuaryHps * (1 + st.healBonus));
+              }
+            }
+          }
+          if (h.t <= 0) sp.sanct = null;
+        }
+      }
+      // Healing his teammates' spells sent him, and their spells' light.
+      if (coop) {
+        const got = coop.takeHeals();
+        if (got > 0 && !world.dead) {
+          healQueueRef.current += got;
+          fx?.burst("heal", px, floorY, pz);
+        }
+        for (const f of coop.takeSpellFx()) {
+          if (f.spell === "light") fx?.burst("light", f.x, f.y, f.z);
+          else if (f.spell === "heal") fx?.burst("bless", f.x, f.y, f.z);
+          else if (f.spell === "sanctuary") fx?.burst("heal", f.x, f.y, f.z);
+        }
+      }
+      // What it looks like: the glow in his hand as he casts, the ward about him, holy ground.
+      if (fx) {
+        const hand = paladin && sp.cast ? paladin.rig.bone("handR").getWorldPosition(spellHand) : null;
+        const s = sp.cast ? spellById(sp.cast.id) : null;
+        fx.update(
+          dt,
+          hand && s && sp.cast ? { at: hand, u: Math.min(1, sp.cast.t / sp.cast.total), color: s.color } : null,
+          sp.ward.amt > 0 ? spellWard.set(px, py + 0.95, pz) : null,
+          Math.min(1, sp.ward.amt / SPELL.wardAmount),
+          sp.sanct ? { x: sp.sanct.x, y: sp.sanct.y, z: sp.sanct.z, r: SPELL.sanctuaryRadiusM, left: sp.sanct.t } : null
+        );
+      }
+      const castU = sp.cast ? Math.min(1, sp.cast.t / sp.cast.total) : 0;
+      const sent = `${list.map((id) => sp.charges[id] ?? 0).join(",")}|${sp.cast?.id ?? ""}|${Math.round(castU * 12)}|${sp.rest.on}|${Math.ceil(sp.ward.amt)}|${Math.ceil(sp.bless)}|${Math.ceil(sp.sanct?.t ?? 0)}`;
+      if (sent !== sp.sent) {
+        sp.sent = sent;
+        onSpellState({ charges: { ...sp.charges }, casting: sp.cast?.id ?? null, castU, resting: sp.rest.on, ward: sp.ward.amt, bless: sp.bless, sanctuary: sp.sanct?.t ?? 0 });
       }
     }
 
@@ -2243,7 +2523,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             vx: (dx / dist) * sp,
             vy: (dy / dist) * sp,
             vz: (dz / dist) * sp,
-            dmg: bow.damage * (0.35 + 0.65 * power),
+            dmg: bow.damage * (0.35 + 0.65 * power) * (spellRef.current.bless > 0 ? 1 + SPELL.blessDamage : 1),
           };
           // In a party the arrow flies on the authority's floor (and comes back in its snapshots).
           if (coop && !coop.leads()) coop.sendShot(shot);
@@ -3185,6 +3465,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [skillHud, setSkillHud] = useState<SkillHud>({ cd: 0, total: 0, active: 0 });
   const skillDef = skillById(loadout.skill);
   const stats = useMemo(() => computeStats(classById(heroClass).attributes, inv.equipped, activeSet || 1, loadout.perks), [heroClass, inv.equipped, activeSet, loadout.perks]);
+  // His spells as far as his memory holds them (gear can raise or lower it).
+  const spells = useMemo(() => fitSpells(loadout.spells, stats.memoryCapacity), [loadout.spells, stats.memoryCapacity]);
+  const spellAskRef = useRef(-1);
+  const restAskRef = useRef(false);
+  const [spellHud, setSpellHud] = useState<SpellHud>(NO_SPELLS);
   const statsNowRef = useRef(stats);
   statsNowRef.current = stats;
   const arrows = arrowCount(inv);
@@ -3951,6 +4236,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           skillAskRef={skillAskRef}
           reloadTouchRef={reloadTouchRef}
           onSkillState={setSkillHud}
+          spells={spells}
+          spellAskRef={spellAskRef}
+          restAskRef={restAskRef}
+          onSpellState={setSpellHud}
           crosshairRef={crosshairRef}
           customizing={showcasing}
           playing={screen === "play"}
@@ -4558,8 +4847,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {hud.pointerLocked
-            ? "1 / 2 Weapon sets · R Reload bow · G Skill · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"
-            : "Click to capture the mouse · 1 / 2 Weapon sets · R Reload bow · G Skill · 3 / 4 Belt · F Swing (hold to draw the bow) · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"}
+            ? (spells.length ? "5–9 Spells · X Pray · " : "") + "1 / 2 Weapon sets · R Reload bow · G Skill · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"
+            : "Click to capture the mouse · " + (spells.length ? "5–9 Spells · X Pray · " : "") + "1 / 2 Weapon sets · R Reload bow · G Skill · 3 / 4 Belt · F Swing (hold to draw the bow) · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"}
         </div>
       ) : null}
 
@@ -4896,6 +5185,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         </div>
       ) : null}
 
+      {/* The caster's spells (5–9) and praying (X). */}
+      {showGameHud && !isTouchUI && spells.length && place === "dungeon" && screen === "play" && !hud.dead ? <SpellBar spells={spells} hud={spellHud} /> : null}
+
       {/* The class skill (G): its name, then its cooldown; green while it runs. */}
       {showGameHud && !isTouchUI && skillDef && place === "dungeon" && screen === "play" && !hud.dead ? (
         <div
@@ -5002,6 +5294,22 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           </div>
         ))}
       </div>
+
+      {/* Phone: the caster's spells (tap to cast) and PRAY, in a row over the belt. */}
+      {showGameHud && isTouchUI && !hud.loading && !hud.dead && place === "dungeon" && spells.length ? (
+        <div style={{ position: "fixed", zIndex: 11, left: "max(18px, env(safe-area-inset-left))", bottom: "calc(max(18px, env(safe-area-inset-bottom)) + 178px)", touchAction: "none" }}>
+          <SpellButtons
+            spells={spells}
+            hud={spellHud}
+            onCast={(i) => {
+              spellAskRef.current = i;
+            }}
+            onPray={() => {
+              restAskRef.current = true;
+            }}
+          />
+        </div>
+      ) : null}
 
       {/* The hotbar: 1 sword, 2 shield (lit when in hand), 3 and 4 the belt (with how many are left). */}
       {showGameHud && !hud.loading && !hud.dead ? (

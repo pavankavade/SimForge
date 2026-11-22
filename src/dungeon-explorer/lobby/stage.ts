@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import { createPaladin, type ArmorEquipment, type HumanSpec, type Paladin } from "../../artifacts/characters/paladin";
 import { renderGearIcons } from "../gearIcons";
-import { finishIn } from "../playerInv";
+import { dressGear } from "../mace";
 import { makeMasonry, makeWood } from "../../engine/textures";
 import { createPortrait, type Portrait, type ScreenRect } from "../portrait";
 import { placeModel } from "../props3d";
@@ -215,7 +215,7 @@ export function createLobbyStage(canvas: HTMLCanvasElement, opts: StageOptions =
   let heroSerial = 0;
   let iconsDone = false;
   const wear = (p: Paladin, kit: ArmorEquipment) => {
-    p.wear(kit, finishIn(kit));
+    dressGear(p, kit);
   };
   const seat = (p: Paladin, i: number) => {
     const s = SEATS[i];

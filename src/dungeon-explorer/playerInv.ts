@@ -103,6 +103,8 @@ export function wornOf(inv: PlayerInv, set: 0 | 1 | 2 = 1): ArmorEquipment {
   e.sword = h.sword;
   e.shield = h.shield;
   e.finish = finishOf(inv);
+  // A mace in hand is drawn on the sword's grip (mace.ts).
+  if (h.sword && h.main && def(h.main.id).blunt) (e as ArmorEquipment & { mainHand?: "mace" }).mainHand = "mace";
   return e;
 }
 
@@ -332,6 +334,8 @@ export function addArrows(inv: PlayerInv, n: number): PlayerInv {
   return bag ? { ...inv, bag } : inv;
 }
 
+/** The cleric's wear: mail over the quilted doublet, and the order's tabard. */
+const CLERIC_WEAR = ["mail", "doublet", "tabard"];
 const RANGER_LEATHERS = ["leather_jerkin", "leather_bracers", "leather_gloves", "leather_leggings", "leather_boots", "ranger_cloak"];
 
 /**
@@ -342,7 +346,9 @@ const RANGER_LEATHERS = ["leather_jerkin", "leather_bracers", "leather_gloves", 
  */
 
 export function grantClassKit(inv: PlayerInv, cls: string): PlayerInv {
-  if (cls !== "ranger" || (inv.kits ?? []).indexOf(cls) >= 0) return inv;
+  if ((inv.kits ?? []).indexOf(cls) >= 0) return inv;
+  if (cls === "cleric") return clericKit(inv);
+  if (cls !== "ranger") return inv;
   let next: PlayerInv = { ...inv, kits: (inv.kits ?? []).concat([cls]) };
   const eq = { ...next.equipped };
   let bag = next.bag;
@@ -367,4 +373,30 @@ export function grantClassKit(inv: PlayerInv, cls: string): PlayerInv {
   }
   next = { ...next, equipped: eq, bag };
   return addArrows(next, 60);
+}
+
+/** The cleric's kit: the flanged mace in set 1 (the shield stays beside it), mail and a few draughts. */
+function clericKit(inv: PlayerInv): PlayerInv {
+  const eq = { ...inv.equipped };
+  let bag = inv.bag;
+  const m1 = eq.main1;
+  if (m1) {
+    if (!eq.main2 && !eq.off2) eq.main2 = m1;
+    else bag = addItem(bag, m1) ?? bag;
+  }
+  eq.main1 = newItem("flanged_mace");
+  // A shield: the one already in set 2 if there is one, else a new one.
+  if (!eq.off1) {
+    if (eq.off2 && handOf(eq.off2.id) === "off" && !eq.main2) {
+      eq.off1 = eq.off2;
+      delete eq.off2;
+    } else eq.off1 = newItem("shield");
+  }
+  for (const id of CLERIC_WEAR) {
+    const slot = def(id).slot as ArmorSlot;
+    if (!eq[slot]) eq[slot] = newItem(id);
+    else bag = addItem(bag, newItem(id)) ?? bag;
+  }
+  for (let i = 0; i < 2; i++) bag = addItem(bag, newItem("potion")) ?? bag;
+  return { ...inv, kits: (inv.kits ?? []).concat(["cleric"]), equipped: eq, bag };
 }

@@ -846,3 +846,19 @@ only through gear.**
   plain green cloak. What each worn piece is made of rides on the worn set (`wornOf` sets `finish`,
   `finishIn` reads it), so the table, the portrait and other players see it. Icons come from
   `gearIcons.ts`.
+- **Spells** (`spells.ts`; the cleric now, the wizard later):
+  - A caster memorises spells up to `memoryCapacity` (Knowledge); each costs its tier. They are
+    picked in the Class tab (kept in the loadout's `spells`, trimmed with `fitSpells` where used).
+  - Each spell has charges. Keys 5–9 cast them in pick order (touch: the spell buttons over the
+    belt); a cast takes `cast / (1 + castingSpeed)` seconds at half walking pace. Charges come back
+    only by praying: X sits him down, one charge returns every `restEach` seconds. In town every
+    charge is full again.
+  - The numbers live in `SPELL` beside the words that describe them; the casting, praying and
+    effects run in the spell block of `DungeonScene`. Heals reach teammates by `coop.sendHeal`, and
+    the light the others see by `coop.sendSpellFx` (generic `g` messages: no hub redeploy).
+  - The look is `holyFx.ts` (additive glows and one point light that never leaves the scene).
+  - A new spell: an entry in `SPELLS`, its number in `SPELL`, a branch where the cast lands.
+- **The mace.** A blunt main-hand weapon (`ItemDef.blunt`, `flanged_mace`) is built in code
+  (`mace.ts`) on the sword's group with the blade hidden, so it keeps the sword's swing and hit
+  sweep. The worn set carries `mainHand: "mace"`; put sets on with `dressGear` and compare them with
+  `gearKey`, never `p.wear` / `wearKey` alone, or the mace is lost.

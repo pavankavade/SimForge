@@ -11,6 +11,7 @@ import { mp, useMp } from "../net/mp";
 import { trade, useTrade } from "../net/trade";
 import type { ScreenRect } from "../portrait";
 import { PERK_SLOTS, perksOf, skillsOf, type Loadout, type PerkId } from "../skills";
+import { SPELL_KEYS, fitSpells, memoryUsed, spellsOf, type SpellId } from "../spells";
 import { ATTRIBUTES, ATTRIBUTE_INFO, statLines, type Attributes, type Stats } from "../stats";
 import { createLobbyStage, type Guest, type LobbyStage, type StageMode } from "./stage";
 
@@ -426,6 +427,16 @@ export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes;
   const c = classById(cls);
   const perks = perksOf(cls);
   const skills = skillsOf(cls);
+  const spells = spellsOf(cls);
+  const memory = stats.memoryCapacity;
+  const known = fitSpells(loadout.spells, memory);
+  const used = memoryUsed(known);
+  // Spells: as many as his memory holds (each costs its tier); a pick that does not fit is refused.
+  const toggleSpell = (id: SpellId, tier: number) => {
+    const have = known.indexOf(id) >= 0;
+    if (!have && used + tier > memory) return;
+    onLoadout({ ...loadout, spells: have ? known.filter((x) => x !== id) : known.concat([id]) });
+  };
   // Two perks: a third pick drops the oldest.
   const togglePerk = (id: PerkId) => {
     const have = loadout.perks.indexOf(id) >= 0;
@@ -465,6 +476,30 @@ export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes;
             {skills.map((k) => (
               <Pick key={k.id} name={k.name} note={k.note} extra={`${k.cooldown}s cooldown`} on={loadout.skill === k.id} onClick={() => onLoadout({ ...loadout, skill: k.id })} />
             ))}
+          </div>
+        </>
+      ) : null}
+      {spells.length ? (
+        <>
+          <Sub>
+            SPELLS · MEMORY {used} / {memory} · keys {SPELL_KEYS[0]}–{SPELL_KEYS[SPELL_KEYS.length - 1]} (the spell buttons on a phone) · X to sit and pray the charges back
+          </Sub>
+          <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 1fr", gap: 8 }}>
+            {spells.map((sp) => {
+              const at = known.indexOf(sp.id);
+              const fits = at >= 0 || used + sp.tier <= memory;
+              return (
+                <div key={sp.id} style={{ opacity: fits ? 1 : 0.5, display: "grid" }}>
+                  <Pick
+                    name={at >= 0 ? `${sp.name}  [${SPELL_KEYS[at]}]` : sp.name}
+                    note={fits ? sp.note : `${sp.note} Not enough memory: drop another spell first.`}
+                    extra={`tier ${sp.tier} · ${sp.charges} charge${sp.charges === 1 ? "" : "s"}`}
+                    on={at >= 0}
+                    onClick={() => toggleSpell(sp.id, sp.tier)}
+                  />
+                </div>
+              );
+            })}
           </div>
         </>
       ) : null}

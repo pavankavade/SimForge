@@ -2,6 +2,7 @@
 // a few skills (used with G; he picks one). They are chosen in the lobby's Class tab and kept per
 // class. Perks only change numbers in computeStats (stats.ts); skills are run by the game.
 import type { ClassId } from "./classes";
+import { spellsOf, type SpellId } from "./spells";
 
 export type PerkId =
   | "weapon_mastery"
@@ -11,8 +12,12 @@ export type PerkId =
   | "ranged_mastery"
   | "nimble_fingers"
   | "steady_aim"
-  | "light_step";
-export type SkillId = "second_wind" | "quick_shot" | "snare";
+  | "light_step"
+  | "advanced_healer"
+  | "undead_slaying"
+  | "blunt_mastery"
+  | "protection_evil";
+export type SkillId = "second_wind" | "quick_shot" | "snare" | "smite" | "prayer";
 
 export interface Perk {
   id: PerkId;
@@ -42,6 +47,12 @@ const PERKS: Partial<Record<ClassId, Perk[]>> = {
     { id: "steady_aim", name: "Steady Aim", note: "Draw the bow 25% faster." },
     { id: "light_step", name: "Light Step", note: "+6% move speed while you wear no plate or mail." },
   ],
+  cleric: [
+    { id: "advanced_healer", name: "Advanced Healer", note: "Healing spells heal 25% more." },
+    { id: "undead_slaying", name: "Undead Slaying", note: "+20% damage from your blows and spells against the undead." },
+    { id: "blunt_mastery", name: "Blunt Weapon Mastery", note: "+10% damage with the mace." },
+    { id: "protection_evil", name: "Protection from Evil", note: "+25 magic resistance." },
+  ],
 };
 
 const SKILLS: Partial<Record<ClassId, Skill[]>> = {
@@ -49,6 +60,10 @@ const SKILLS: Partial<Record<ClassId, Skill[]>> = {
   ranger: [
     { id: "quick_shot", name: "Quick Shot", note: "For six seconds the bow draws three times as fast.", cooldown: 30 },
     { id: "snare", name: "Snare Trap", note: "Set iron jaws at your feet. The first monster to step in is bitten and held for three seconds.", cooldown: 20 },
+  ],
+  cleric: [
+    { id: "smite", name: "Smite", note: "Your next weapon blow in ten seconds strikes with holy fire: 25 more magic damage, twice that to the undead.", cooldown: 18 },
+    { id: "prayer", name: "Prayer", note: "A quick word with the gods: one charge back on every spell you know.", cooldown: 75 },
   ],
 };
 
@@ -64,10 +79,16 @@ export const skillById = (id: SkillId | null | undefined): Skill | null => {
 export interface Loadout {
   perks: PerkId[];
   skill: SkillId | null;
+  /** Memorised spells (casters; spells.ts), in key order. Trimmed to his memory where it is used. */
+  spells: SpellId[];
 }
 
 /** A class's first two perks and first skill, until he picks. */
-export const defaultLoadout = (cls: ClassId): Loadout => ({ perks: perksOf(cls).slice(0, PERK_SLOTS).map((p) => p.id), skill: skillsOf(cls)[0]?.id ?? null });
+export const defaultLoadout = (cls: ClassId): Loadout => ({
+  perks: perksOf(cls).slice(0, PERK_SLOTS).map((p) => p.id),
+  skill: skillsOf(cls)[0]?.id ?? null,
+  spells: spellsOf(cls).map((s) => s.id),
+});
 
 const KEY = "simforge.explorer.loadout.v1";
 
@@ -79,7 +100,9 @@ export function loadLoadout(cls: ClassId): Loadout {
     if (l && Array.isArray(l.perks)) {
       const perks = perksOf(cls).map((p) => p.id);
       const skills = skillsOf(cls).map((s) => s.id);
+      const spells = spellsOf(cls).map((s) => s.id);
       return {
+        spells: Array.isArray(l.spells) ? l.spells.filter((p) => spells.indexOf(p) >= 0) : spells,
         perks: l.perks.filter((p) => perks.indexOf(p) >= 0).slice(0, PERK_SLOTS),
         skill: l.skill && skills.indexOf(l.skill) >= 0 ? l.skill : skills[0] ?? null,
       };

@@ -85,6 +85,8 @@ export interface ItemDef {
   stack?: number;
   /** Armour made of something other than plate on the same shape (the ranger's leathers). */
   finish?: Finish;
+  /** A blunt main-hand weapon (the cleric's mace): drawn as a mace, and Blunt Weapon Mastery counts. */
+  blunt?: boolean;
 }
 
 const ARMOR: Array<Omit<ItemDef, "id" | "category" | "value" | "slot"> & { slot: ArmorSlot }> = [
@@ -138,6 +140,7 @@ const OTHER: ItemDef[] = [
   { id: "spell_page", name: "Scorched spell page", note: "Half a cantrip in a hand nobody reads now", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "rare", weight: 0.05, value: 46 },
   { id: "candle", name: "Black candle", note: "Tallow and soot, burnt to the knuckle", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "common", weight: 0.2, value: 7 },
   // The fighter's ranged kit: a recurve bow (the bow slot, key 2) and arrows, a stack to a cell pair.
+  { id: "flanged_mace", name: "Flanged mace", note: "Seven steel flanges on an ash haft; it breaks bone through mail", kind: "Main hand", category: "weapon", slot: "sword", w: 1, h: 3, rarity: "common", weight: 1.5, value: 150, damage: 36, blunt: true },
   { id: "short_bow", name: "Short bow", note: "Ash, quick in the hand; ten arrows to a load", kind: "Bow", category: "weapon", slot: "bow", w: 1, h: 3, rarity: "common", weight: 0.7, value: 110, damage: 26 },
   { id: "long_bow", name: "Longbow", note: "A yew stave as tall as a man; slow to draw, it punches through mail. Five to a load", kind: "Bow", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 1.4, value: 240, damage: 46 },
   { id: "recurve_bow", name: "Recurve bow", note: "Ash and horn, the tips bent forward; a strong draw", kind: "Ranged", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 1.1, value: 160, damage: 34 },

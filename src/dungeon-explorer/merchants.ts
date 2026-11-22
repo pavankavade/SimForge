@@ -1,7 +1,7 @@
 // The merchants of the market street and what they deal in. The armourer and the weaponsmith sell
-// the fighter's own kit (a new piece each time) and the ranger's leathers, the woodsmith bows and
-// arrows, the alchemist draughts, bandages and food for the belt; the arcanist has nothing yet. For now every one of them buys whatever he
-// brings up from the dungeon.
+// the fighter's own kit, the cleric's mace and the ranger's leathers (a new piece each time), the
+// woodsmith bows and arrows, the alchemist draughts, bandages and food for the belt; the arcanist has
+// nothing yet. For now every one of them buys whatever he brings up from the dungeon.
 import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
 import { LEATHER_IDS, def, itemOf, type ItemInst } from "./items";
 
@@ -46,7 +46,7 @@ export const MERCHANTS: Merchant[] = [
     shop: "The Tempered Edge",
     cloth: 0x2a3440,
     trim: 0xc8ccd2,
-    stock: ["sword", "shield", "short_bow", "recurve_bow", "long_bow", "arrows"],
+    stock: ["sword", "flanged_mace", "shield", "short_bow", "recurve_bow", "long_bow", "arrows"],
     greeting: "Steel that holds an edge. Oak that holds a line.",
     empty: "",
   },

@@ -7,8 +7,8 @@
 // Only those in the same place are drawn: in town everyone in the same zone (tavern or square),
 // below only the party in this run.
 import * as THREE from "three";
-import { createPaladin, wearKey, type ArmorEquipment, type Paladin } from "../../artifacts/characters/paladin";
-import { finishIn } from "../playerInv";
+import { createPaladin, type Paladin } from "../../artifacts/characters/paladin";
+import { dressGear, gearKey, paladinGearKey } from "../mace";
 import { mp, type Look, type Pose } from "./mp";
 
 const DELAY_MS = 140;
@@ -68,7 +68,6 @@ export interface RemoteContext {
 }
 
 const lerpAngle = (a: number, b: number, t: number) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
-const eqKey = (e: ArmorEquipment) => wearKey(e, finishIn(e));
 
 export function createRemotes(gl: THREE.WebGLRenderer, scene: THREE.Scene, layer: HTMLElement) {
   const avatars = new Map<string, Avatar>();
@@ -126,7 +125,7 @@ export function createRemotes(gl: THREE.WebGLRenderer, scene: THREE.Scene, layer
           p.group.visible = false;
           scene.add(p.group, p.fx);
           const now = mp.state.players.get(a.id)?.look;
-          if (now) p.wear(now.eq, finishIn(now.eq));
+          if (now) dressGear(p, now.eq);
         })
         .catch((err: unknown) => {
           a.building = "";
@@ -134,7 +133,7 @@ export function createRemotes(gl: THREE.WebGLRenderer, scene: THREE.Scene, layer
         });
     }
     const p = a.pal;
-    if (p && a.specKey === key && wearKey(p.equipment, p.finish) !== eqKey(look.eq)) p.wear(look.eq, finishIn(look.eq));
+    if (p && a.specKey === key && paladinGearKey(p) !== gearKey(look.eq)) dressGear(p, look.eq);
   };
 
   const offPose = mp.on("s", (m) => {

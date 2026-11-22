@@ -131,6 +131,9 @@ export interface Stats {
   /** Fractions from perks: how much faster the bow draws and reloads (on top of action speed). */
   drawSpeed: number;
   reloadSpeed: number;
+  /** Fractions from perks: extra healing from spells, extra damage of every kind on the undead. */
+  healBonus: number;
+  undeadBonus: number;
 }
 
 /** Everything that counts: the armour he wears and the weapon set `set` (only weapons in hand count). */
@@ -159,10 +162,11 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
   const physicalPower = a.str + add.physicalPower;
   const magicalPower = a.wil + add.magicalPower;
   const armorRating = armor + add.armorRating + (has("defense_expert") ? 15 : 0);
-  const magicResist = MAGIC_RESIST(a.wil) + add.magicResist;
+  const magicResist = MAGIC_RESIST(a.wil) + add.magicResist + (has("protection_evil") ? 25 : 0);
   const main = equipped[set === 1 ? "main1" : "main2"];
   const sword = main && handOf(main.id) === "main" ? itemOf(main).damage ?? 30 : 6;
   const bow = main && handOf(main.id) === "both" ? itemOf(main).damage ?? 30 : 0;
+  const blunt = !!main && def(main.id).blunt === true && has("blunt_mastery");
   const physicalBonus = PHYS_BONUS(physicalPower);
   // Light Step counts while nothing of plate is worn (leathers and cloth are fine).
   const plate = (WEAR_SLOTS as GearSlot[]).some((s) => {
@@ -182,7 +186,7 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
     physicalReduction: reductionOf(armorRating),
     magicResist,
     magicalReduction: reductionOf(magicResist),
-    swordDamage: (sword + add.weaponDamage) * (1 + physicalBonus) * (has("weapon_mastery") ? 1.1 : 1),
+    swordDamage: (sword + add.weaponDamage) * (1 + physicalBonus) * (has("weapon_mastery") ? 1.1 : 1) * (blunt ? 1.1 : 1),
     bowDamage: bow ? (bow + add.weaponDamage) * (1 + physicalBonus) * (has("ranged_mastery") ? 1.12 : 1) : 0,
     moveSpeed: MOVE(a.agi) + add.moveSpeed / 100 + moveExtra,
     actionSpeed: ACTION(0.25 * a.agi + 0.75 * a.dex) + add.actionSpeed / 100,
@@ -192,6 +196,8 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
     memoryCapacity: Math.round(MEMORY(a.kno)),
     drawSpeed: has("steady_aim") ? 0.25 : 0,
     reloadSpeed: has("nimble_fingers") ? 0.35 : 0,
+    healBonus: has("advanced_healer") ? 0.25 : 0,
+    undeadBonus: has("undead_slaying") ? 0.2 : 0,
   };
 }
 
