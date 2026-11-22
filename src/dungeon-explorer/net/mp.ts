@@ -18,6 +18,8 @@ export interface Look {
   eq: ArmorEquipment;
 }
 
+export type Zone = "in" | "out" | "lobby";
+
 export interface NetPlayer {
   id: string;
   name: string;
@@ -26,8 +28,8 @@ export interface NetPlayer {
   cls: string;
   look: Look | null;
   place: "town" | "run";
-  /** In town: in the tavern ("in") or out on the square ("out"). */
-  zone: "in" | "out";
+  /** In town: in the tavern ("in"), out on the square ("out") or at the lobby's table ("lobby"). */
+  zone: Zone;
   party: string | null;
   leader: boolean;
   size: number;
@@ -117,7 +119,7 @@ export interface Hello {
   cls: string;
   token: string | null;
   look: Look | null;
-  zone: "in" | "out";
+  zone: Zone;
   /** His character's id: a reload (or a dropped line) finds his party again. */
   key: string;
   /** Where his game is, and the party's dive it is in (a dropped line mid-dive carries on). */
@@ -287,7 +289,7 @@ class Mp {
           q.name = String(m.name ?? q.name);
         } else {
           q.place = m.place === "run" ? "run" : "town";
-          q.zone = m.zone === "out" ? "out" : "in";
+          q.zone = m.zone === "out" ? "out" : m.zone === "lobby" ? "lobby" : "in";
         }
         st.players = new Map(st.players).set(p.id, q);
         this.changed();
@@ -347,7 +349,7 @@ class Mp {
     if (this.hello) this.hello = { ...this.hello, look, cls, name };
     this.send({ t: "look", look, cls, name });
   }
-  setWhere(place: "town" | "run", zone: "in" | "out") {
+  setWhere(place: "town" | "run", zone: Zone) {
     if (this.hello) this.hello = { ...this.hello, zone, place };
     this.send({ t: "where", place, zone });
   }

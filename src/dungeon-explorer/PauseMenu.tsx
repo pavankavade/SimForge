@@ -13,6 +13,8 @@ export interface PauseMenuProps {
   onNewSeed: () => void;
   /** Below: give up the run and go back up to town (what was found on this floor is lost). */
   onTown?: () => void;
+  /** Back to the lobby (from a dive this asks first: the run is forfeit). */
+  onLobby?: () => void;
   /** He is in town: the dungeon options set up the next dive. */
   inTown?: boolean;
   onTheme: () => void;
@@ -174,6 +176,7 @@ export const PauseMenu: React.FC<PauseMenuProps> = (p) => (
       </Big>
       <Big onClick={p.onCharacter}>Character</Big>
       {p.onTown ? <Big onClick={p.onTown}>Return to town</Big> : null}
+      {p.onLobby ? <Big onClick={p.onLobby}>Back to lobby</Big> : null}
 
       <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", margin: "14px 0 8px" }}>DUNGEON</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>

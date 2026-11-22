@@ -10,7 +10,8 @@
 //                                            key: his character, so a reload finds his party again;
 //                                            place/run: where his game is now)
 //   look   { look?, cls?, name? }            his looks changed (armour on or off, a new face)
-//   where  { place: "town" | "run", zone? }  he went somewhere (zone: tavern "in" or square "out")
+//   where  { place: "town" | "run", zone? }  he went somewhere (zone: tavern "in", square "out", or
+//                                            "lobby": at the lobby's table, not walking about town)
 //   s      { ...pose }                       his pose (relayed as is to everyone in the same place)
 //   chat   { text, ch: "all" | "party" }
 //   invite { to } / accept { from } / decline { from } / leave / kick { id }
@@ -20,6 +21,8 @@
 //   away   { on }                            his window is hidden (his game is paused)
 //   g      { to?, ... }                      game traffic inside a dive (monsters, hits, doors)
 //   pvp    { to, dmg, dx, dz, ko? }          a blow in the town's arena (ko: word back to the winner)
+//   trade  { to, op, ... }                   a trade between two players out of the dungeon
+//                                            (net/trade.ts), passed to `to` as is with `from`, `name`
 //   ping   { }
 // From the hub: welcome, join, gone, look, where, s, chat, invite, party, run, runstate, g, sys,
 // err, pong. Every message from a player carries his id as `id` (or `from`).
@@ -30,6 +33,9 @@ const GRACE_MS = 120_000;
 const INVITE_MS = 60_000;
 const CHAT_MAX = 200;
 const NAME_RE = /^[\p{L}\p{N} '._-]{1,24}$/u;
+
+/** Where in town: the tavern ("in"), the square ("out") or the lobby's table ("lobby"). */
+const zoneOf = (z) => (z === "out" ? "out" : z === "lobby" ? "lobby" : "in");
 
 /** A short random id (players, parties and runs). */
 function rid(n = 8) {
@@ -155,7 +161,7 @@ export class Hub {
       case "where": {
         const was = p.place;
         p.place = m.place === "run" ? "run" : "town";
-        p.zone = m.zone === "out" ? "out" : "in";
+        p.zone = zoneOf(m.zone);
         this.broadcast({ t: "where", id: p.id, place: p.place, zone: p.zone }, p);
         if (was !== "town" && p.place === "town") this.sendPoses(p);
         return;
@@ -193,6 +199,19 @@ export class Hub {
       case "away":
         this.runAway(p, !!m.on);
         return;
+      case "trade": {
+        // Trades only pass between two players in town (or the lobby), never into a dive.
+        const o = this.players.get(m.to);
+        if (!o || o === p || typeof m.op !== "string") return;
+        if (p.place !== "town" || o.place !== "town") {
+          if (m.op === "ask") this.send(p, { t: "err", text: `${o.name} is in the dungeon. Trade when you are both in town.` });
+          return;
+        }
+        const out = { ...m, t: "trade", from: p.id, name: p.name };
+        delete out.to;
+        this.send(o, out);
+        return;
+      }
       case "pvp": {
         // A blow in the arena (or word of a knockout back to the winner): only between two in town.
         const o = this.players.get(m.to);
@@ -238,7 +257,7 @@ export class Hub {
     p.name = NAME_RE.test(name) ? name : `Wanderer ${p.id.slice(0, 3)}`;
     p.cls = clean(m.cls, 16) || "fighter";
     p.look = m.look && typeof m.look === "object" ? m.look : null;
-    p.zone = m.zone === "out" ? "out" : "in";
+    p.zone = zoneOf(m.zone);
     p.place = m.place === "run" ? "run" : "town";
     p.user = user;
     p.ready = true;

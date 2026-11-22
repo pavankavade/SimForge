@@ -29,7 +29,7 @@ import { createDoors, doorwayProps, type Doors } from "./doorView";
 import { rollChest, rollMobLoot, type Container } from "./loot";
 import { LootScreen } from "./LootScreen";
 import { BELT_SLOTS, arrowCount, equipFromBag, heldOf, loadInventory, normalizeInventory, saveInventory, spendArrow, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
-import { addItem, def, emptyGrid, removeItem, type ItemInst } from "./items";
+import { addItem, def, emptyGrid, newItem, removeItem, type Grid, type ItemInst } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
 import { ShopScreen } from "./ShopScreen";
@@ -61,6 +61,10 @@ import { InventoryScreen, type FrameRect } from "./Inventory";
 import { ItemIcon } from "./itemsUi";
 import { PauseMenu } from "./PauseMenu";
 import { ClassSelect } from "./ClassSelect";
+import { ClassPage, LobbyChrome, LobbyView, MerchantsPage, StashPicker, TradePage, type LobbyTab } from "./lobby/Lobby";
+import type { Guest } from "./lobby/stage";
+import { TradeAsks, TradeWindow } from "./TradeScreen";
+import { trade, useTrade } from "./net/trade";
 import { classById, type ClassId } from "./classes";
 import {
   createPaladin,
@@ -2703,7 +2707,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   return null;
 };
 
-type Screen = "play" | "menu" | "inventory" | "character" | "shop" | "loot" | "class" | "party" | "quests";
+type Screen = "play" | "menu" | "inventory" | "character" | "shop" | "loot" | "class" | "party" | "quests" | "lobby" | "trade";
 
 export interface DungeonAppProps {
   backHref?: string;
@@ -3044,6 +3048,19 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [screen, setScreen] = useState<Screen>(() => (resumeRun && account ? "menu" : "class"));
   const screenRef = useRef<Screen>(screen);
   screenRef.current = screen;
+  // The lobby (lobby/): where he is between dives, without the town or the dungeon built. The game
+  // opens on it (after the class screen), and he can come back to it from anywhere in the game.
+  const [inLobby, setInLobby] = useState(() => !(resumeRun && account));
+  const inLobbyRef = useRef(inLobby);
+  inLobbyRef.current = inLobby;
+  const [lobbyTab, setLobbyTab] = useState<LobbyTab>("play");
+  // A screen opened from a lobby tab: a merchant, a stash chest, his gear, or the user list.
+  type LobbySub = { kind: "shop"; i: number } | { kind: "chest"; room: number; chest: number } | { kind: "gear" } | { kind: "users" } | null;
+  const [lobbySub, setLobbySub] = useState<LobbySub>(null);
+  const lobbyAnchorsRef = useRef<Array<HTMLElement | null>>([]);
+  const [lobbyPortrait, setLobbyPortrait] = useState<FrameRect | null>(null);
+  // Leaving the lobby from the dungeon gives up the run: asked first.
+  const [lobbyAsk, setLobbyAsk] = useState(false);
   stashOpenRef.current = screen === "loot" && stashAt ? stashAt : null;
   const customizing = screen === "character";
   // The inventory no longer takes the view: it is an overlay with its own picture of him.
@@ -3174,7 +3191,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       const name = spec.name || profile.name;
       if (!joinedRef.current) {
         joinedRef.current = true;
-        mp.connect({ name, cls: heroClass, token: account?.token ?? null, look, zone: "in", key: profile.id, place: placeRef.current === "dungeon" ? "run" : "town", run: null });
+        mp.connect({ name, cls: heroClass, token: account?.token ?? null, look, zone: inLobbyRef.current ? "lobby" : "in", key: profile.id, place: placeRef.current === "dungeon" ? "run" : "town", run: null });
       } else mp.setLook(look, heroClass, name);
     }, 400);
     return () => window.clearTimeout(t);
@@ -3263,6 +3280,111 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     setPlace("dungeon");
     setFlashKey((k) => k + 1);
   }, []);
+  /** Rent room `ri` upstairs (at its door in town, or from the lobby's stash tab). */
+  const rentRoom = useCallback((ri: number) => {
+    const room = Town.ROOMS[ri];
+    if (invRef.current.gold < room.rent) {
+      setToast(`Not enough gold: ${room.name} is ${room.rent} gold.`);
+      return;
+    }
+    setInv((v) => ({ ...v, gold: v.gold - room.rent }));
+    setTownSave((t) => withRented(t, ri));
+    setToast(`${room.name} is yours. Its three chests keep what you leave in them between dives.`);
+  }, []);
+
+  // ---- The lobby, and the way in and out of it ------------------------------------------------------
+  const hudRef = useRef(hud);
+  hudRef.current = hud;
+  /** Out of the lobby into the game (the town or the dungeon is built now). */
+  const leaveLobby = useCallback(
+    (loading: string) => {
+      setLobbySub(null);
+      setLobbyAsk(false);
+      setHud((h) => ({ ...h, loading, dead: false, escaped: false, interact: null }));
+      setInLobby(false);
+      openScreen("play");
+    },
+    [openScreen]
+  );
+  /** Into the Guild Tavern, on his feet. */
+  const enterTavern = useCallback(() => {
+    goToTown("tavern");
+    leaveLobby("Opening the tavern doors...");
+  }, [goToTown, leaveLobby]);
+  // A dive started from the lobby (his own, or his party leader's): the game takes over.
+  useEffect(() => {
+    if (place === "dungeon" && inLobby) leaveLobby("Going down...");
+  }, [place, inLobby, leaveLobby]);
+  /**
+   * Back to the lobby from anywhere. From a dive this gives it up the way falling does: what he
+   * found on this floor is lost (he keeps what he carried in).
+   */
+  const goLobby = useCallback(() => {
+    setLobbyAsk(false);
+    if (placeRef.current === "dungeon") {
+      const h = hudRef.current;
+      if (!h.escaped) setInv(runStartRef.current);
+      if (h.dead) setLife((l) => l + 1);
+      // Up to town without the teleport's flash: the lobby is not a place he walks into.
+      setArrival("tavern");
+      setTownVisit((v) => v + 1);
+      setPlace("town");
+    }
+    if (trade.state.session) trade.cancel();
+    setChatOpen(false);
+    setLobbyTab("play");
+    setLobbySub(null);
+    setInLobby(true);
+    openScreen("lobby");
+  }, [openScreen]);
+  /** The Lobby buttons: mid-dive he is asked first. */
+  const askLobby = useCallback(() => {
+    const h = hudRef.current;
+    if (placeRef.current === "dungeon" && !h.dead && !h.escaped) {
+      if (screenRef.current === "play") openScreen("menu");
+      setLobbyAsk(true);
+    } else goLobby();
+  }, [goLobby, openScreen]);
+  // Others see him at the lobby's table, not standing about the tavern.
+  useEffect(() => {
+    if (inLobby && mpState.status === "online") mp.setWhere("town", "lobby");
+  }, [inLobby, mpState.status]);
+  // Trading (net/trade.ts): what he holds, room in his bag, and the swap itself.
+  const tradeState = useTrade();
+  useEffect(() => {
+    const without = (bag: Grid, give: ItemInst[]) => give.reduce((b, it) => removeItem(b, it.uid), bag);
+    trade.setBank({
+      canTrade: () => placeRef.current !== "dungeon",
+      has: (give, gold) => {
+        const v = invRef.current;
+        return gold <= v.gold && give.every((it) => v.bag.items.some((q) => q.item.uid === it.uid));
+      },
+      canTake: (give, get) => {
+        let b: Grid | null = without(invRef.current.bag, give);
+        for (const it of get) if (b && def(it.id).category !== "coins") b = addItem(b, it);
+        return !!b;
+      },
+      apply: (give, gold, get, getGold) =>
+        setInv((v) => {
+          let bag = without(v.bag, give);
+          let g = v.gold - gold + getGold;
+          for (const it of get) {
+            if (def(it.id).category === "coins") g += it.qty ?? 1;
+            // A fresh id here: his own items never share one with what came in.
+            else bag = addItem(bag, { ...it, uid: newItem(it.id).uid }) ?? bag;
+          }
+          return { ...v, bag, gold: Math.max(0, g) };
+        }),
+      notice: (t) => setToast(t),
+    });
+    return () => trade.setBank(null);
+  }, []);
+  // A trade in the game takes the screen (he stops, the mouse is let go) until it closes.
+  useEffect(() => {
+    if (tradeState.session && screenRef.current === "play") openScreen("trade");
+    else if (!tradeState.session && screenRef.current === "trade") resume();
+  }, [tradeState.session, openScreen, resume]);
+
   // E (or the touch button): trade at a stall, open or close a door, search a chest or a fallen man;
   // in town rent a room, work its door, open a stash chest, or step onto the teleporter.
   const interactNow = useCallback(
@@ -3285,17 +3407,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         }, 230);
       }
       else if (it.kind === "roomdoor") roomDoorQueueRef.current = Number(it.key);
-      else if (it.kind === "rent") {
-        const ri = Number(it.key);
-        const room = Town.ROOMS[ri];
-        if (invRef.current.gold < room.rent) {
-          setToast(`Not enough gold: ${room.name} is ${room.rent} gold.`);
-          return;
-        }
-        setInv((v) => ({ ...v, gold: v.gold - room.rent }));
-        setTownSave((t) => withRented(t, ri));
-        setToast(`${room.name} is yours. Its three chests keep what you leave in them between dives.`);
-      } else if (it.kind === "stash") {
+      else if (it.kind === "rent") rentRoom(Number(it.key)); else if (it.kind === "stash") {
         const [room, slot] = it.key.split(":").map(Number);
         setStashAt({ room, slot });
         setLootId(null);
@@ -3309,7 +3421,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         openScreen("loot");
       }
     },
-    [openScreen, descend]
+    [openScreen, descend, rentRoom]
   );
   const handleShowcaseView = useCallback((v: ShowcaseView) => {
     showcaseRef.current.zoom = SHOW_ZOOM[v];
@@ -3369,9 +3481,18 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     const onKey = (e: KeyboardEvent) => {
       // Typing in the chat (or any box) is not a shortcut.
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      // The class screen takes no shortcuts (Enter is its own).
-      if (screenRef.current === "class") {
+      // The class screen and the lobby take no game shortcuts (Enter is the class screen's own).
+      if (screenRef.current === "class" || screenRef.current === "lobby" || inLobbyRef.current) {
         if (e.code === "Tab") e.preventDefault();
+        // At the lobby's table Y and N still answer a party invite.
+        const ask = mp.state.invites[0];
+        if (ask && screenRef.current === "lobby" && !e.repeat && (e.code === "KeyY" || e.code === "KeyN")) mp.answer(ask.from, e.code === "KeyY");
+        return;
+      }
+      // The trade window: Esc closes it (calls the trade off); nothing else reaches the game.
+      if (screenRef.current === "trade") {
+        if (e.code === "Tab") e.preventDefault();
+        if (e.code === "Escape" && !e.repeat) trade.cancel();
         return;
       }
       // Tab opens and closes the inventory (and never moves keyboard focus).
@@ -3417,6 +3538,13 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         return;
       }
       if (screenRef.current !== "play") return;
+      // T at another player: ask him to trade.
+      if (e.code === "KeyT") {
+        const it = interactRef.current;
+        if (it?.kind === "player") trade.ask(it.key);
+        else setToast(placeRef.current === "dungeon" ? "No trading in the dungeon." : "Walk up to another player and press T to trade.");
+        return;
+      }
       // Enter: say something.
       if (e.code === "Enter" && mp.state.status !== "off") {
         e.preventDefault();
@@ -3519,6 +3647,52 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const runElapsed = RUN_SECONDS - hud.runLeft;
   const portalsIn = Math.max(0, PORTALS_FROM - runElapsed);
 
+  // The guild's quests, at the representative's desk or on the lobby's tab.
+  const questActions = {
+    onAccept: (id: string) => setQuests((q) => acceptQuest(q, id)),
+    onAbandon: (id: string) => setQuests((q) => abandonQuest(q, id)),
+    onTurnIn: (id: string) => {
+      const r = turnInQuest(quests, id);
+      if (!r.reward) return;
+      setQuests(r.state);
+      setInv((v) => ({ ...v, gold: v.gold + r.reward }));
+      setToast(`The guild pays you ${r.reward} gold.`);
+    },
+  };
+  // The lobby's table: his party in the other chairs (as they look in the game), and what Start does.
+  const tableKit = useMemo(() => wornOf(inv, 0), [inv]);
+  const lobbyGuests = useMemo<Array<Guest | null>>(() => {
+    const out: Array<Guest | null> = [null, null, null];
+    const party = mpState.party;
+    if (!party) return out;
+    let i = 0;
+    for (const id of party.members) {
+      if (id === mpState.me || i >= 3) continue;
+      const pl = mpState.players.get(id);
+      out[i++] = pl?.look ? { id, spec: pl.look.spec, eq: pl.look.eq } : null;
+    }
+    return out;
+  }, [mpState.party, mpState.players, mpState.me]);
+  const lobbySeated = (() => {
+    const out: Array<string | null> = [null, null, null];
+    const party = mpState.party;
+    if (!party) return out;
+    let i = 0;
+    for (const id of party.members) if (id !== mpState.me && i < 3) out[i++] = mp.nameOf(id);
+    return out;
+  })();
+  const lobbyParty = mpState.status === "online" && mpState.party && mpState.party.members.length > 1 ? mpState.party : null;
+  const lobbyStartNote = !lobbyParty
+    ? null
+    : lobbyParty.run
+      ? mp.canJoinRun()
+        ? null
+        : "Your party is in the dungeon. Wait for them to come back up."
+      : lobbyParty.leader !== mpState.me
+        ? `${mp.nameOf(lobbyParty.leader)} leads your party: the dive starts when they take the party down.`
+        : null;
+  const gearCompact = isPortrait || viewport.w < 760;
+
   const updateStick = (clientX: number, clientY: number) => {
     const s = stickPointerRef.current;
     if (!s) return;
@@ -3555,6 +3729,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         touchAction: "none",
       }}
     >
+      {inLobby ? null : (
       <Canvas
         flat
         linear
@@ -3632,6 +3807,116 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onArenaEvent={handleArenaEvent}
         />
       </Canvas>
+      )}
+
+      {inLobby ? (
+        <LobbyView
+          spec={spec}
+          kit={tableKit}
+          fullKit={equipment}
+          mode={screen === "class" ? "class" : "table"}
+          classFrame={panelFrame}
+          guests={lobbyGuests}
+          portraitRect={lobbySub?.kind === "gear" && !gearCompact ? lobbyPortrait : null}
+          portraitView={portraitViewRef.current}
+          anchorsRef={lobbyAnchorsRef}
+          onBusy={handleCharacterBusy}
+          onIcons={setIcons}
+        />
+      ) : null}
+      {inLobby && screen === "lobby" ? (
+        <>
+          {lobbySub && lobbySub.kind !== "users" ? null : (
+            <LobbyChrome
+              tab={lobbyTab}
+              onTab={(t) => {
+                setLobbyTab(t);
+                setLobbySub(null);
+              }}
+              name={spec.name || profile.name}
+              gold={inv.gold}
+              compact={mobileMode}
+              touch={isTouchUI}
+              anchorsRef={lobbyAnchorsRef}
+              seated={lobbySeated}
+              onStart={descend}
+              onTavern={enterTavern}
+              startNote={lobbyStartNote}
+              themeLabel={THEMES[theme].label}
+              onUsers={() => setLobbySub({ kind: "users" })}
+              onClassChange={() => openScreen("class")}
+            />
+          )}
+          {lobbyTab === "class" ? <ClassPage cls={heroClass} stats={stats} base={classById(heroClass).attributes} compact={mobileMode} onChange={() => openScreen("class")} /> : null}
+          {lobbyTab === "stash" && !lobbySub ? (
+            <StashPicker town={townSave} gold={inv.gold} compact={mobileMode} onOpen={(room, chest) => setLobbySub({ kind: "chest", room, chest })} onRent={rentRoom} onGear={() => setLobbySub({ kind: "gear" })} />
+          ) : null}
+          {lobbySub?.kind === "chest" ? (
+            <LootScreen
+              title={`${Town.ROOMS[lobbySub.room].name} · Chest ${lobbySub.chest + 1}`}
+              subtitle="Your stash · kept between dives"
+              container={townSave.stash[lobbySub.room][lobbySub.chest]}
+              onContainer={(g) => setTownSave((t) => withStash(t, lobbySub.room, lobbySub.chest, g))}
+              inv={inv}
+              onInv={setInv}
+              icons={allIcons}
+              viewport={viewport}
+              compact={gearCompact}
+              touch={isTouchUI}
+              onClose={() => setLobbySub(null)}
+            />
+          ) : null}
+          {lobbySub?.kind === "gear" ? (
+            <InventoryScreen
+              name={spec.name}
+              heroClass={className}
+              stats={stats}
+              base={classById(heroClass).attributes}
+              inv={inv}
+              onInv={setInv}
+              onUse={(item) => setInv((v) => ({ ...v, bag: removeItem(v.bag, item.uid) }))}
+              icons={allIcons}
+              viewport={viewport}
+              compact={gearCompact}
+              touch={isTouchUI}
+              onModelRect={setLobbyPortrait}
+              onTurn={(dx) => {
+                portraitViewRef.current.spin += dx * 0.012;
+              }}
+              onZoom={(dy) => {
+                const v = portraitViewRef.current;
+                v.zoom = Math.max(0.35, Math.min(1.1, v.zoom * Math.exp(dy * 0.0012)));
+              }}
+              onGround={() => setToast("Nothing to drop it on here. Sell it to a merchant or keep it in your stash.")}
+              onClose={() => setLobbySub(null)}
+            />
+          ) : null}
+          {lobbyTab === "merchants" && !lobbySub ? <MerchantsPage compact={mobileMode} onOpen={(i) => setLobbySub({ kind: "shop", i })} /> : null}
+          {lobbySub?.kind === "shop" ? <ShopScreen merchant={MERCHANTS[lobbySub.i]} inv={inv} onInv={setInv} icons={allIcons} compact={shopCompact} touch={isTouchUI} onClose={() => setLobbySub(null)} /> : null}
+          {lobbyTab === "quests" ? <QuestScreen quests={quests} compact={mobileMode} onClose={() => setLobbyTab("play")} {...questActions} /> : null}
+          {lobbyTab === "trade" ? <TradePage compact={mobileMode} /> : null}
+          {lobbySub?.kind === "users" ? <PartyScreen onClose={() => setLobbySub(null)} compact={mobileMode} inDungeon={false} /> : null}
+        </>
+      ) : null}
+      {lobbyAsk ? (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "rgba(14,12,10,0.96)", border: "1px solid rgba(214,186,128,0.4)", borderRadius: 4, padding: 22, width: "min(92vw, 440px)", color: "#e8dcc0", textAlign: "center" }}>
+            <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 22, color: "#f3e6c4", marginBottom: 10 }}>Back to the lobby?</div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: "#d8c9a8" }}>
+              Leaving now forfeits this dive, the same as falling in it: everything you found on this floor is lost.
+              {runGain.gold > 0 || runGain.items > 0 ? <div style={{ color: "#f0b0a0", marginTop: 6 }}>You would lose {haul(runGain)}.</div> : null}
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 18 }}>
+              <button type="button" onClick={goLobby} style={{ background: "#6b1f1a", color: "#fff", border: "1px solid #b3201a", borderRadius: 3, padding: "9px 18px", fontWeight: 700, cursor: "pointer" }}>
+                Forfeit and leave
+              </button>
+              <button type="button" onClick={() => setLobbyAsk(false)} style={{ background: "rgba(30,27,23,0.95)", color: "#eee3c8", border: "1px solid rgba(214,186,128,0.4)", borderRadius: 3, padding: "9px 18px", fontWeight: 700, cursor: "pointer" }}>
+                Stay
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {customizing ? (
         <CharacterCustomizer
@@ -3646,7 +3931,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         />
       ) : null}
 
-      {screen === "class" && !hud.loading && !account ? (
+      {screen === "class" && (inLobby || !hud.loading) && !account ? (
         <AccountPrompt
           playerId={profile.id}
           initial={retakeName ?? ""}
@@ -3663,7 +3948,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         />
       ) : null}
 
-      {screen === "class" && !hud.loading && account ? (
+      {screen === "class" && (inLobby || !hud.loading) && account ? (
         <ClassSelect
           name={spec.name || profile.name}
           current={heroClass}
@@ -3674,7 +3959,12 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             setHeroClass(id);
             profile.cls = id;
             saveProfile(profile);
-            resume();
+            // From the class screen to the lobby's table (or straight back to the game, if he was in it).
+            if (inLobbyRef.current) {
+              setLobbyTab("play");
+              setLobbySub(null);
+              openScreen("lobby");
+            } else resume();
           }}
         />
       ) : null}
@@ -3761,6 +4051,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onResume={resume}
           onInventory={() => openScreen("inventory")}
           onCharacter={() => openScreen("character")}
+          onLobby={askLobby}
           onNewSeed={() => leaveFloor(nextSeed)}
           inTown={place === "town"}
           onTown={
@@ -3795,7 +4086,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       ) : null}
 
       {/* On phones the minimap is top right too: the details go beside it (sideways) or under it (upright). */}
-      {graphics.showFps || perfMode ? (
+      {(graphics.showFps || perfMode) && !inLobby ? (
         <FpsCounter
           perf={perfMode}
           perfRight={mobileMode && showMap && !isPortrait ? mapPixels + 24 : 0}
@@ -3842,6 +4133,16 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
               style={{ ...btnStyle, padding: "4px 9px", color: "#ffd84d" }}
             >
               Bag
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.currentTarget.blur();
+                askLobby();
+              }}
+              style={{ ...btnStyle, padding: "4px 9px" }}
+            >
+              Lobby
             </button>
             <span style={{ fontSize: 12, fontWeight: 700, padding: "0 4px", color: place === "dungeon" && hud.runLeft <= 60 ? "#ff5a4a" : "#f2efe8" }}>
               {place === "dungeon" ? clock(hud.runLeft) : <span style={{ color: "#ffd84d" }}>{inv.gold} gold</span>}
@@ -3911,6 +4212,16 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             style={{ ...btnStyle, color: "#ffd84d" }}
           >
             {mobileMode ? "Inventory" : "Inventory (Tab)"}
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              askLobby();
+            }}
+            style={btnStyle}
+          >
+            Lobby
           </button>
           <button type="button" onClick={() => setFirstPerson((v) => !v)} style={btnStyle}>
             {firstPerson ? (mobileMode ? "3rd P" : "3rd Person (V)") : mobileMode ? "1st P" : "1st Person (V)"}
@@ -4316,6 +4627,18 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           <span style={{ fontSize: 13, color: "#e8dcc0" }}>
             {hud.interact.verb} <b style={{ color: "#f3e6c4", fontFamily: "Georgia, 'Times New Roman', serif" }}>{hud.interact.label}</b>
           </span>
+          {hud.interact.kind === "player" ? (
+            isTouchUI ? (
+              <button type="button" onClick={() => hud.interact && trade.ask(hud.interact.key)} style={{ ...btnStyle, fontWeight: 800, padding: "6px 12px", fontSize: 12 }}>
+                TRADE
+              </button>
+            ) : (
+              <span style={{ fontSize: 13, color: "#e8dcc0" }}>
+                <span style={{ display: "inline-block", minWidth: 22, padding: "2px 6px", textAlign: "center", border: "1px solid #e8dcc0", borderRadius: 3, fontSize: 12, fontWeight: 800, color: "#f3e6c4", marginRight: 6 }}>T</span>
+                Trade
+              </span>
+            )
+          ) : null}
         </div>
       ) : null}
 
@@ -4340,25 +4663,12 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           bottom={isTouchUI ? "calc(max(18px, env(safe-area-inset-bottom)) + 190px)" : 150}
         />
       ) : null}
-      {screen === "play" || screen === "party" ? <InviteCards top={mobileMode ? 54 : 80} /> : null}
-      {(screen === "play" || screen === "party") && place === "town" && !coopRun ? <JoinRunCard top={mobileMode ? 54 : 80} /> : null}
+      {screen === "play" || screen === "party" || inLobby ? <InviteCards top={inLobby ? 60 : mobileMode ? 54 : 80} /> : null}
+      {(screen === "play" || screen === "party" || inLobby) && place === "town" && !coopRun ? <JoinRunCard top={inLobby ? 60 : mobileMode ? 54 : 80} /> : null}
+      <TradeAsks top={inLobby ? 60 : mobileMode ? 54 : 80} />
+      {tradeState.session ? <TradeWindow inv={inv} icons={allIcons} compact={mobileMode} /> : null}
       {screen === "party" ? <PartyScreen onClose={resume} compact={mobileMode} inDungeon={place === "dungeon"} /> : null}
-      {screen === "quests" ? (
-        <QuestScreen
-          quests={quests}
-          compact={mobileMode}
-          onClose={resume}
-          onAccept={(id) => setQuests((q) => acceptQuest(q, id))}
-          onAbandon={(id) => setQuests((q) => abandonQuest(q, id))}
-          onTurnIn={(id) => {
-            const r = turnInQuest(quests, id);
-            if (!r.reward) return;
-            setQuests(r.state);
-            setInv((v) => ({ ...v, gold: v.gold + r.reward }));
-            setToast(`The guild pays you ${r.reward} gold.`);
-          }}
-        />
-      ) : null}
+      {screen === "quests" ? <QuestScreen quests={quests} compact={mobileMode} onClose={resume} {...questActions} /> : null}
       {/* Knocked out in the arena: a moment on the sand, then back at the gate (nothing is lost). */}
       {knockedBy && place === "town" ? (
         <div style={{ position: "fixed", top: "38%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 19, textAlign: "center", pointerEvents: "none" }}>
@@ -4580,6 +4890,16 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           >
             RETURN TO TOWN
           </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              goLobby();
+            }}
+            style={{ background: "none", color: "#cdbf9f", border: "none", fontSize: 13, letterSpacing: "0.1em", cursor: "pointer", textDecoration: "underline" }}
+          >
+            BACK TO THE LOBBY
+          </button>
         </div>
       ) : null}
 
@@ -4608,7 +4928,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             left: "50%",
             top: mobileMode ? "28%" : "22%",
             transform: "translateX(-50%)",
-            zIndex: 17,
+            zIndex: inLobby ? 45 : 17,
             maxWidth: "min(560px, calc(100vw - 32px))",
             padding: "10px 18px",
             background: "rgba(10, 9, 8, 0.86)",
@@ -4670,7 +4990,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       ) : null}
 
       {/* Loading overlay */}
-      {hud.loading ? (
+      {hud.loading && !inLobby ? (
         <div
           style={{
             position: "fixed",

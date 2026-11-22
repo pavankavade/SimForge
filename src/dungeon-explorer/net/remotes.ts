@@ -190,6 +190,7 @@ export function createRemotes(gl: THREE.WebGLRenderer, scene: THREE.Scene, layer
           !!s &&
           !!last &&
           info.place === ctx.place &&
+          info.zone !== "lobby" &&
           last.p.pl === ctx.place &&
           (ctx.place === "town" ? last.p.zn === ctx.zone : last.p.ru === ctx.runId) &&
           !(ctx.place === "run" && last.p.e);

@@ -32,7 +32,7 @@ const FADE_MS = 12_000;
 
 function where(p: NetPlayer): string {
   if (p.place === "run") return "In the dungeon";
-  return p.zone === "out" ? "On the square" : "In the tavern";
+  return p.zone === "out" ? "On the square" : p.zone === "lobby" ? "In the lobby" : "In the tavern";
 }
 
 const className = (cls: string): string => classById(cls as ClassId).name;
