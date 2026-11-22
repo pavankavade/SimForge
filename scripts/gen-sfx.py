@@ -13,7 +13,8 @@ Two steps:
 
   2. PICK the takes you like (any python with numpy + soundfile):
        python scripts/gen-sfx.py dart-trap --pick dart_hit=2 boom=1
-     Copies each take to public/<episodes|whatif|...>/<slug>/sfx_ai/<name>.wav and records
+     Copies each take to public/<episodes|whatif|...>/<slug>/sfx_ai/<name>.wav (the explorer
+     game's, public/dungeon-explorer/<slug>/sfx_ai/<name>.mp3, via ffmpeg) and records
      it in scripts/sfx-prompts/<slug>.picks.json. The episode audio script lays
      sfx_ai/ over its procedural sfx/, so re-running it keeps your picks.
      `--unpick name` goes back to the procedural sound.
@@ -28,6 +29,7 @@ import html
 import json
 import math
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -148,8 +150,9 @@ def write_index(slug, prompts, out, takes):
 
 
 def ep_dir(slug):
-    """The episode's public folder: public/episodes/<slug>, or a what-if/shelter/bio one."""
-    for sub in ("episodes", "whatif", "shelter", "bio"):
+    """The episode's public folder: public/episodes/<slug>, or a what-if/shelter/bio one, or the
+    explorer game's (public/dungeon-explorer/<slug>, e.g. explorer-spells)."""
+    for sub in ("episodes", "whatif", "shelter", "bio", "dungeon-explorer"):
         d = ROOT / "public" / sub / slug
         if d.exists():
             return d
@@ -166,18 +169,25 @@ def pick(slug, items, unpick):
     ai_dir = ep_dir(slug) / "sfx_ai"
     sfx_dir = ep_dir(slug) / "sfx"
     ai_dir.mkdir(parents=True, exist_ok=True)
+    game = ep_dir(slug).parent.name == "dungeon-explorer"
     for item in items:
         name, take = item.split("=")
         src = ROOT / "out" / "sfx-gen" / slug / f"{name}_{take}.wav"
         if not src.exists():
             sys.exit(f"No take {src}")
-        shutil.copyfile(src, ai_dir / f"{name}.wav")
-        shutil.copyfile(src, sfx_dir / f"{name}.wav")
+        if game:
+            # The explorer game streams mp3 (smaller, plays everywhere); no procedural folder.
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(src), "-ac", "1", "-b:a", "96k", str(ai_dir / f"{name}.mp3")], check=True)
+        else:
+            shutil.copyfile(src, ai_dir / f"{name}.wav")
+            if sfx_dir.exists():
+                shutil.copyfile(src, sfx_dir / f"{name}.wav")
         picks[name] = {"take": int(take), "batch_seed": seed_for(name, 0), "model": MODEL}
         print(f"  {name} <- take {take}")
     for name in unpick:
         picks.pop(name, None)
         (ai_dir / f"{name}.wav").unlink(missing_ok=True)
+        (ai_dir / f"{name}.mp3").unlink(missing_ok=True)
         print(f"  {name} -> procedural (re-run the episode audio script's sfx step to restore it)")
     path.write_text(json.dumps(picks, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 

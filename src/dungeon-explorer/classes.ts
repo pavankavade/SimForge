@@ -1,4 +1,4 @@
-// The classes a player can pick at the start: the fighter, the ranger and the cleric are playable
+// The classes a player can pick at the start: the fighter, the ranger, the cleric and the wizard are playable
 // (all the realistic human, dressed and armed for the class); the others are shown as coming soon. Each has
 // base attributes summing to 105 (an average of 15; stats.ts): gear adds the rest.
 import type { Attributes } from "./stats";
@@ -59,13 +59,15 @@ export const CLASSES: HeroClass[] = [
     attributes: { str: 6, vig: 8, agi: 15, dex: 17, wil: 20, kno: 25, res: 14 },
     name: "Wizard",
     tagline: "Fire, frost and forbidden words",
-    blurb: "Casts from a distance with a staff and a book of spells. Fragile up close, devastating if the line holds.",
-    kit: ["Oak staff", "Spellbook", "Robes"],
+    blurb: "Fights from a distance with bolts, ice, lightning and fire. Knowledge gives him the most memory of anyone, so he carries the most spells; he meditates to get their charges back. Fragile up close.",
+    kit: ["Oak staff (set 1; adds magical power)", "Scholar's robe, star-stitched surcoat and night mantle", "Soft boots", "Two healing draughts", "Spells: Zap, Magic Missile, Ice Bolt, Fireball, Haste"],
     traits: [
+      ["Health", "~82"],
       ["Armour", "Cloth"],
       ["Weapons", "Staff and spells"],
+      ["Strength", "Damage from range"],
     ],
-    available: false,
+    available: true,
     color: "#8fa8ff",
   },
   {

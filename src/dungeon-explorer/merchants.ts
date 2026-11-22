@@ -1,9 +1,9 @@
 // The merchants of the market street and what they deal in. The armourer and the weaponsmith sell
 // the fighter's own kit, the cleric's mace and the ranger's leathers (a new piece each time), the
-// woodsmith bows and arrows, the alchemist draughts, bandages and food for the belt; the arcanist has
-// nothing yet. For now every one of them buys whatever he brings up from the dungeon.
+// woodsmith bows and arrows, the alchemist draughts, bandages and food for the belt, the arcanist the
+// wizard's staff and cloth. For now every one of them buys whatever he brings up from the dungeon.
 import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
-import { LEATHER_IDS, def, itemOf, type ItemInst } from "./items";
+import { CLOTH_IDS, LEATHER_IDS, def, itemOf, type ItemInst } from "./items";
 
 export type MerchantId = "armourer" | "weaponsmith" | "alchemist" | "mage" | "woodsmith";
 
@@ -68,8 +68,8 @@ export const MERCHANTS: Merchant[] = [
     shop: "Wards & Wonders",
     cloth: 0x3a2a66,
     trim: 0x9ad0ff,
-    stock: [],
-    greeting: "Ah. A customer who can't feel the ley lines. How quaint.",
+    stock: ["oak_staff"].concat(CLOTH_IDS.map(([id]) => id)),
+    greeting: "Ah. A customer who can feel the ley lines. Staves, robes, and nothing that explodes on the shelf.",
     empty: "Nothing I could sell you would survive the trip down. Not yet.",
   },
   {

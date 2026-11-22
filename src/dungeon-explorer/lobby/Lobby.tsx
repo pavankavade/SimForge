@@ -482,7 +482,7 @@ export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes;
       {spells.length ? (
         <>
           <Sub>
-            SPELLS · MEMORY {used} / {memory} · keys {SPELL_KEYS[0]}–{SPELL_KEYS[SPELL_KEYS.length - 1]} (the spell buttons on a phone) · X to sit and pray the charges back
+            SPELLS · MEMORY {used} / {memory} · keys {SPELL_KEYS[0]}–{SPELL_KEYS[SPELL_KEYS.length - 1]} (the spell buttons on a phone) · X to sit and {cls === "wizard" ? "meditate" : "pray"} the charges back
           </Sub>
           <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 1fr", gap: 8 }}>
             {spells.map((sp) => {

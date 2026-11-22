@@ -846,19 +846,33 @@ only through gear.**
   plain green cloak. What each worn piece is made of rides on the worn set (`wornOf` sets `finish`,
   `finishIn` reads it), so the table, the portrait and other players see it. Icons come from
   `gearIcons.ts`.
-- **Spells** (`spells.ts`; the cleric now, the wizard later):
+- **Cloth** (the wizard's robe, surcoat and mantle, `CLOTH_IDS`) is the third finish: the doublet,
+  tabard and cape shapes dyed a scholar's blue. It rides on the worn set like leather.
+- **Spells** (`spells.ts`; the cleric and the wizard):
   - A caster memorises spells up to `memoryCapacity` (Knowledge); each costs its tier. They are
     picked in the Class tab (kept in the loadout's `spells`, trimmed with `fitSpells` where used).
   - Each spell has charges. Keys 5–9 cast them in pick order (touch: the spell buttons over the
     belt); a cast takes `cast / (1 + castingSpeed)` seconds at half walking pace. Charges come back
-    only by praying: X sits him down, one charge returns every `restEach` seconds. In town every
-    charge is full again.
-  - The numbers live in `SPELL` beside the words that describe them; the casting, praying and
+    only by resting: X sits him down (the cleric prays, the wizard meditates: `meditates`), one
+    charge returns every `restEach` seconds. In town every charge is full again.
+  - A spell with `bolt` (the wizard's) flies from the staff's crystal to where he aims (the
+    crosshair), bending onto a monster within ~12° on the floor plan, and stops at the first wall or
+    monster. Zap strikes the nearest monster in a cone ahead. Ice freezes (`stun`) only on the floor
+    that runs the monsters.
+  - The numbers live in `SPELL` beside the words that describe them; the casting, resting and
     effects run in the spell block of `DungeonScene`. Heals reach teammates by `coop.sendHeal`, and
     the light the others see by `coop.sendSpellFx` (generic `g` messages: no hub redeploy).
-  - The look is `holyFx.ts` (additive glows and one point light that never leaves the scene).
-  - A new spell: an entry in `SPELLS`, its number in `SPELL`, a branch where the cast lands.
-- **The mace.** A blunt main-hand weapon (`ItemDef.blunt`, `flanged_mace`) is built in code
-  (`mace.ts`) on the sword's group with the blade hidden, so it keeps the sword's swing and hit
-  sweep. The worn set carries `mainHand: "mace"`; put sets on with `dressGear` and compare them with
-  `gearKey`, never `p.wear` / `wearKey` alone, or the mace is lost.
+  - The look is `holyFx.ts` (additive glows, bolts, lightning, a rim-lit ward, and one point light
+    that never leaves the scene).
+  - **Sound is AI-generated, never synthesised.** Every spell sound is a take from the Stable Audio
+    model (§9 "AI SFX"): prompts in `scripts/sfx-prompts/explorer-spells.json`, picked with
+    `python scripts/gen-sfx.py explorer-spells --pick name=take`, which writes
+    `public/dungeon-explorer/explorer-spells/sfx_ai/<name>.mp3`. `spellSfx.ts` plays them. A new
+    sound: a prompt, generate, pick, a name in `SpellSound`. Don't add WebAudio-made spell sounds.
+  - A new spell: an entry in `SPELLS`, its number in `SPELL`, a branch where the cast lands, its
+    sound in `CAST_SOUND`.
+- **Mace and staff.** A main-hand weapon with `ItemDef.held` (`flanged_mace`, `oak_staff`) is built
+  in code (`mace.ts`) on the sword's group with the blade hidden, so it keeps the sword's swing and
+  hit sweep. `ItemDef.magic` (the staff) adds magical power while in hand. The worn set carries
+  `mainHand: "mace" | "staff"`; put sets on with `dressGear` and compare them with `gearKey`, never
+  `p.wear` / `wearKey` alone, or the weapon is lost.

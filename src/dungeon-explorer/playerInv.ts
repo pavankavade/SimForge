@@ -103,20 +103,22 @@ export function wornOf(inv: PlayerInv, set: 0 | 1 | 2 = 1): ArmorEquipment {
   e.sword = h.sword;
   e.shield = h.shield;
   e.finish = finishOf(inv);
-  // A mace in hand is drawn on the sword's grip (mace.ts).
-  if (h.sword && h.main && def(h.main.id).blunt) (e as ArmorEquipment & { mainHand?: "mace" }).mainHand = "mace";
+  // A mace or a staff in hand is drawn on the sword's grip (mace.ts).
+  const held = h.sword && h.main ? def(h.main.id).held : undefined;
+  if (held) (e as ArmorEquipment & { mainHand?: "mace" | "staff" }).mainHand = held;
   return e;
 }
 
 /** The finish carried on a worn set (wornOf), if any; plate otherwise. */
 export const finishIn = (e: ArmorEquipment): Finishes | undefined => (e as ArmorEquipment & { finish?: Finishes }).finish;
 
-/** What each worn piece is made of (leather where a leather item sits in the slot). */
+/** What each worn piece is made of (leather or cloth where such an item sits in the slot). */
 export function finishOf(inv: PlayerInv): Finishes {
   const f: Finishes = {};
   for (const s of ARMOR_SLOTS) {
     const it = inv.equipped[s];
-    if (it && def(it.id).finish === "leather") f[s] = "leather";
+    const fin = it ? def(it.id).finish : undefined;
+    if (fin) f[s] = fin;
   }
   return f;
 }
@@ -348,6 +350,7 @@ const RANGER_LEATHERS = ["leather_jerkin", "leather_bracers", "leather_gloves", 
 export function grantClassKit(inv: PlayerInv, cls: string): PlayerInv {
   if ((inv.kits ?? []).indexOf(cls) >= 0) return inv;
   if (cls === "cleric") return clericKit(inv);
+  if (cls === "wizard") return wizardKit(inv);
   if (cls !== "ranger") return inv;
   let next: PlayerInv = { ...inv, kits: (inv.kits ?? []).concat([cls]) };
   const eq = { ...next.equipped };
@@ -399,4 +402,35 @@ function clericKit(inv: PlayerInv): PlayerInv {
   }
   for (let i = 0; i < 2; i++) bag = addItem(bag, newItem("potion")) ?? bag;
   return { ...inv, kits: (inv.kits ?? []).concat(["cleric"]), equipped: eq, bag };
+}
+
+/** The wizard's cloth (on where the slot is free, else in the bag) and boots. */
+const WIZARD_WEAR = ["wizard_robe", "wizard_surcoat", "wizard_mantle", "leather_boots"];
+
+/**
+ * The wizard's kit: the oak staff in set 1 (what was there, shield too, moves to set 2 if it is free,
+ * else to the bag), his cloth and two draughts.
+ */
+function wizardKit(inv: PlayerInv): PlayerInv {
+  const eq = { ...inv.equipped };
+  let bag = inv.bag;
+  const m1 = eq.main1;
+  const o1 = eq.off1;
+  if (m1 || o1) {
+    if (!eq.main2 && !eq.off2) {
+      if (m1) eq.main2 = m1;
+      if (o1) eq.off2 = o1;
+    } else {
+      for (const it of [m1, o1]) if (it) bag = addItem(bag, it) ?? bag;
+    }
+    delete eq.off1;
+  }
+  eq.main1 = newItem("oak_staff");
+  for (const id of WIZARD_WEAR) {
+    const slot = def(id).slot as ArmorSlot;
+    if (!eq[slot]) eq[slot] = newItem(id);
+    else bag = addItem(bag, newItem(id)) ?? bag;
+  }
+  for (let i = 0; i < 2; i++) bag = addItem(bag, newItem("potion")) ?? bag;
+  return { ...inv, kits: (inv.kits ?? []).concat(["wizard"]), equipped: eq, bag };
 }

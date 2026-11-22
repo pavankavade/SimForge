@@ -85,8 +85,12 @@ export interface ItemDef {
   stack?: number;
   /** Armour made of something other than plate on the same shape (the ranger's leathers). */
   finish?: Finish;
-  /** A blunt main-hand weapon (the cleric's mace): drawn as a mace, and Blunt Weapon Mastery counts. */
+  /** A blunt main-hand weapon (the cleric's mace): Blunt Weapon Mastery counts. */
   blunt?: boolean;
+  /** A main-hand weapon drawn as something other than the sword (mace.ts). */
+  held?: "mace" | "staff";
+  /** Magical power it adds while in hand (the wizard's staff). */
+  magic?: number;
 }
 
 const ARMOR: Array<Omit<ItemDef, "id" | "category" | "value" | "slot"> & { slot: ArmorSlot }> = [
@@ -140,7 +144,8 @@ const OTHER: ItemDef[] = [
   { id: "spell_page", name: "Scorched spell page", note: "Half a cantrip in a hand nobody reads now", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "rare", weight: 0.05, value: 46 },
   { id: "candle", name: "Black candle", note: "Tallow and soot, burnt to the knuckle", kind: "Valuable", category: "valuable", w: 1, h: 1, rarity: "common", weight: 0.2, value: 7 },
   // The fighter's ranged kit: a recurve bow (the bow slot, key 2) and arrows, a stack to a cell pair.
-  { id: "flanged_mace", name: "Flanged mace", note: "Seven steel flanges on an ash haft; it breaks bone through mail", kind: "Main hand", category: "weapon", slot: "sword", w: 1, h: 3, rarity: "common", weight: 1.5, value: 150, damage: 36, blunt: true },
+  { id: "flanged_mace", name: "Flanged mace", note: "Seven steel flanges on an ash haft; it breaks bone through mail", kind: "Main hand", category: "weapon", slot: "sword", w: 1, h: 3, rarity: "common", weight: 1.5, value: 150, damage: 36, blunt: true, held: "mace" },
+  { id: "oak_staff", name: "Oak staff", note: "Knotted oak shod in iron, a blue crystal in its crown; it hums when you think of fire", kind: "Main hand", category: "weapon", slot: "sword", w: 1, h: 4, rarity: "common", weight: 1.8, value: 170, damage: 24, blunt: true, held: "staff", magic: 6 },
   { id: "short_bow", name: "Short bow", note: "Ash, quick in the hand; ten arrows to a load", kind: "Bow", category: "weapon", slot: "bow", w: 1, h: 3, rarity: "common", weight: 0.7, value: 110, damage: 26 },
   { id: "long_bow", name: "Longbow", note: "A yew stave as tall as a man; slow to draw, it punches through mail. Five to a load", kind: "Bow", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 1.4, value: 240, damage: 46 },
   { id: "recurve_bow", name: "Recurve bow", note: "Ash and horn, the tips bent forward; a strong draw", kind: "Ranged", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 1.1, value: 160, damage: 34 },
@@ -201,6 +206,16 @@ for (const a of ARMOR) {
 for (const a of LEATHERS) ITEM_DEFS[a.id] = { ...a, category: "armor", value: priceFor(a), finish: "leather" };
 /** The leathers' ids, and the plate piece each one stands in for (icons are drawn from that shape). */
 export const LEATHER_IDS: Array<[string, ArmorSlot]> = LEATHERS.map((a) => [a.id, a.slot]);
+
+/** The wizard's cloth: the doublet, cape and tabard shapes in a scholar's blue. Next to no armour. */
+const CLOTHS: Array<Omit<ItemDef, "category" | "value" | "slot" | "finish"> & { slot: ArmorSlot }> = [
+  { id: "wizard_robe", slot: "doublet", name: "Scholar's robe", note: "Blue wool, ink on the cuffs, a lining of something that is not quite silk", kind: "Under", w: 2, h: 3, rarity: "common", armor: 6, weight: 1.6 },
+  { id: "wizard_surcoat", slot: "tabard", name: "Star-stitched surcoat", note: "The constellations of a sky nobody has seen", kind: "Over", w: 2, h: 3, rarity: "common", armor: 3, weight: 0.5 },
+  { id: "wizard_mantle", slot: "cape", name: "Night mantle", note: "Heavy, dark and warm; it smells of candle smoke", kind: "Back", w: 2, h: 3, rarity: "common", armor: 4, weight: 1.3 },
+];
+for (const a of CLOTHS) ITEM_DEFS[a.id] = { ...a, category: "armor", value: priceFor(a), finish: "cloth" };
+/** The cloths' ids and the slot each sits in (icons are drawn from that shape in cloth). */
+export const CLOTH_IDS: Array<[string, ArmorSlot]> = CLOTHS.map((a) => [a.id, a.slot]);
 for (const o of OTHER) ITEM_DEFS[o.id] = o;
 
 /** The paladin's kit, one def per armour slot (the stats the game reads). */

@@ -1,0 +1,87 @@
+{
+  "bless": {
+    "batch_seed": 1160692241,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "cast_charge": {
+    "batch_seed": 1867184888,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "fire_boom": {
+    "batch_seed": 2265961244,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "fireball": {
+    "batch_seed": 3687054295,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "focus": {
+    "batch_seed": 376252357,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "haste": {
+    "batch_seed": 3248494946,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "heal": {
+    "batch_seed": 2910074883,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "holy_light": {
+    "batch_seed": 724735240,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "ice_bolt": {
+    "batch_seed": 466687538,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "ice_hit": {
+    "batch_seed": 971922882,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "missile": {
+    "batch_seed": 620826690,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "missile_hit": {
+    "batch_seed": 3409428692,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "rest_charge": {
+    "batch_seed": 2413398969,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "sanctuary": {
+    "batch_seed": 159115474,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "shield": {
+    "batch_seed": 1025601851,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "smite": {
+    "batch_seed": 1337822177,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "zap": {
+    "batch_seed": 757067944,
+    "model": "small-sfx",
+    "take": 2
+  }
+}

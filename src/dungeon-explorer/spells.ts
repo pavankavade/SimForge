@@ -1,10 +1,10 @@
 // Spells, Dark and Darker style: a caster memorises spells up to his memory capacity (Knowledge,
 // stats.ts; each spell costs its tier), each comes with a few charges, and charges come back only
-// by praying (sit down with X). Picked in the lobby's Class tab with the perks and skill (skills.ts
+// by resting (sit down with X: the cleric prays, the wizard meditates). Picked in the lobby's Class tab with the perks and skill (skills.ts
 // keeps them in the loadout). The game casts them with 5–9 (or the touch spell buttons).
 import type { ClassId } from "./classes";
 
-export type SpellId = "lesser_heal" | "bless" | "protection" | "holy_light" | "sanctuary";
+export type SpellId = "lesser_heal" | "bless" | "protection" | "holy_light" | "sanctuary" | "zap" | "magic_missile" | "ice_bolt" | "fireball" | "haste";
 
 export interface Spell {
   id: SpellId;
@@ -20,6 +20,8 @@ export interface Spell {
   cast: number;
   /** Its light (CSS and three.js). */
   color: string;
+  /** A bolt it looses at where he aims (the wizard's): how fast it flies (m/s). */
+  bolt?: number;
 }
 
 /** The numbers the game uses (DungeonApp), kept beside the words that describe them. */
@@ -42,6 +44,18 @@ export const SPELL = {
   restFirst: 2.5,
   restEach: 1.6,
   restHps: 1.5,
+  // The wizard's.
+  zapDamage: 18,
+  zapReachM: 7,
+  missileDamage: 16,
+  iceDamage: 22,
+  iceFreezeS: 1.6,
+  fireDamage: 42,
+  fireRadiusM: 2.5,
+  boltLifeS: 2.2,
+  hasteS: 15,
+  hasteMove: 0.15,
+  hasteAction: 0.15,
 };
 
 const SPELLS: Partial<Record<ClassId, Spell[]>> = {
@@ -51,6 +65,13 @@ const SPELLS: Partial<Record<ClassId, Spell[]>> = {
     { id: "protection", name: "Protection", short: "WARD", note: "A ward of light takes the next 30 damage for you (for twenty seconds).", tier: 2, charges: 2, cast: 1.2, color: "#bfe3ff" },
     { id: "holy_light", name: "Holy Light", short: "LIGHT", note: "Light bursts three metres ahead: 20 magic damage to everything in it, twice that to the undead.", tier: 2, charges: 3, cast: 0.9, color: "#fff6d8" },
     { id: "sanctuary", name: "Sanctuary", short: "SANCT", note: "Holy ground at your feet for ten seconds: four health a second to everyone standing in it.", tier: 3, charges: 1, cast: 1.6, color: "#ffd77a" },
+  ],
+  wizard: [
+    { id: "zap", name: "Zap", short: "ZAP", note: "Lightning jumps from your staff to the nearest monster in front of you (seven metres): 18 magic damage.", tier: 1, charges: 6, cast: 0.45, color: "#b9d8ff" },
+    { id: "magic_missile", name: "Magic Missile", short: "MISSL", note: "A bolt of raw mana flies where you aim: 16 magic damage.", tier: 1, charges: 8, cast: 0.55, color: "#c79bff", bolt: 24 },
+    { id: "ice_bolt", name: "Ice Bolt", short: "ICE", note: "A shard of ice where you aim: 22 magic damage, and what it hits is frozen in place for a moment.", tier: 2, charges: 4, cast: 0.9, color: "#9fe6ff", bolt: 19 },
+    { id: "fireball", name: "Fireball", short: "FIRE", note: "A ball of fire that bursts on whatever it hits: 42 magic damage at the heart, less out to two and a half metres.", tier: 3, charges: 2, cast: 1.4, color: "#ff9a3c", bolt: 15 },
+    { id: "haste", name: "Haste", short: "HASTE", note: "For fifteen seconds you move 15% faster and swing and draw 15% faster.", tier: 2, charges: 2, cast: 0.7, color: "#d6ffb0" },
   ],
 };
 
@@ -86,6 +107,9 @@ export function fitSpells(ids: SpellId[], memory: number): SpellId[] {
   }
   return out;
 }
+
+/** A wizard's spells: he meditates (the cleric prays). */
+export const meditates = (ids: SpellId[]): boolean => ids.some((id) => spellsOf("wizard").some((s) => s.id === id));
 
 /** Keys that cast the memorised spells, in order. */
 export const SPELL_KEYS = ["5", "6", "7", "8", "9"];

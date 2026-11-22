@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import { crystalId, RARITIES } from "../items";
 import { BOWS, BOW_WOOD, bowLimbs } from "../bows";
-import { buildMace } from "../mace";
+import { buildMace, buildStaff } from "../mace";
 import { arrowGeometry, bowGeometry, crystalGeometry, crystalMaterial, staffGeometry } from "./props";
 import { boneGeometry, skullObject } from "./skeletonBody";
 
@@ -88,6 +88,17 @@ export const PROC_ICONS: Record<string, () => THREE.Object3D> = {
     const steel = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, metalness: 0.85, roughness: 0.32 });
     const m = buildMace(steel, new THREE.MeshStandardMaterial({ color: 0x94693f, roughness: 0.65 }), new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.8 }));
     m.rotation.x = -Math.PI / 2;
+    const o = new THREE.Group();
+    o.add(m);
+    return o;
+  },
+  oak_staff: () => {
+    const m = buildStaff(
+      new THREE.MeshStandardMaterial({ color: 0x6a4a2e, roughness: 0.8 }),
+      new THREE.MeshStandardMaterial({ color: 0x5a5c62, metalness: 0.8, roughness: 0.45 }),
+      new THREE.MeshStandardMaterial({ color: 0x3f7bff, emissive: 0x5aa2ff, emissiveIntensity: 1, roughness: 0.15, flatShading: true })
+    );
+    m.rotation.set(-Math.PI / 2, 0, 0.12);
     const o = new THREE.Group();
     o.add(m);
     return o;

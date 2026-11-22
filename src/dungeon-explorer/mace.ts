@@ -1,8 +1,10 @@
-// The cleric's flanged mace, built in code, and how a worn set puts it in his hand. The paladin rig
-// only knows a sword: the mace rides on the sword's group (same grip, same swing and hit sweep) with
-// the blade hidden. A worn set (playerInv.wornOf) carries `mainHand: "mace"` beside its finishes,
-// so the table, the portrait and other players draw the mace too.
+// The cleric's flanged mace and the wizard's oak staff, built in code, and how a worn set puts them in
+// his hand. The paladin rig only knows a sword: either rides on the sword's group (same grip, same
+// swing and hit sweep) with the blade hidden. A worn set (playerInv.wornOf) carries
+// `mainHand: "mace" | "staff"` beside its finishes, so the table, the portrait and other players
+// draw it too.
 import * as THREE from "three";
+import { crystalGeometry } from "./monsters/props";
 import { wearKey, type ArmorEquipment, type Paladin } from "../artifacts/characters/paladin";
 import { finishIn } from "./playerInv";
 
@@ -53,40 +55,115 @@ export function buildMace(steel: THREE.Material, wood: THREE.Material, leather: 
   return g;
 }
 
-/** A worn set's main hand, if it is not the sword. */
-export const mainHandIn = (e: ArmorEquipment): "mace" | undefined => (e as ArmorEquipment & { mainHand?: "mace" }).mainHand;
-
-/** A key for "what he wears and holds" (the armour, what it is made of, and the mace). */
-export const gearKey = (e: ArmorEquipment): string => wearKey(e, finishIn(e)) + (mainHandIn(e) === "mace" ? "m" : "");
-/** The same key for what a built paladin has on now. */
-export const paladinGearKey = (p: Paladin): string => wearKey(p.equipment, p.finish) + (p.sword.userData.mace ? "m" : "");
-
-/** Swap the sword's blade for the mace (or back). The mace is built once per paladin. */
-export function setMace(p: Paladin, on: boolean): void {
-  const s = p.sword;
-  if (!!s.userData.mace === on) return;
-  let mace = s.getObjectByName("cleric-mace") as THREE.Group | undefined;
-  if (on && !mace) {
-    const wood = new THREE.MeshStandardMaterial({ color: 0x94693f, roughness: 0.65 });
-    mace = buildMace(p.materials.skinned.steel, wood, p.materials.skinned.leather);
-    s.add(mace);
-    s.userData.maceWood = wood;
+/**
+ * The wizard's oak staff along +Z from the grip: a knotted shaft from an iron shoe below his hand to
+ * an iron crown above his head, three prongs holding a blue crystal (the tip spells leave from:
+ * STAFF_TIP_Z). About 1.6 m long.
+ */
+export const STAFF_TIP_Z = 1.08;
+export function buildStaff(wood: THREE.Material, iron: THREE.Material, crystal: THREE.Material): THREE.Group {
+  const g = new THREE.Group();
+  g.name = "wizard-staff";
+  const pts: THREE.Vector2[] = [];
+  // The shaft's outline, bottom to top: a slight taper and a few knots.
+  for (let i = 0; i <= 24; i++) {
+    const t = i / 24;
+    const z = -0.52 + t * 1.46;
+    const knot = 0.0035 * Math.exp(-(((t - 0.28) / 0.025) ** 2)) + 0.004 * Math.exp(-(((t - 0.62) / 0.02) ** 2)) + 0.003 * Math.exp(-(((t - 0.83) / 0.02) ** 2));
+    pts.push(new THREE.Vector2(0.016 + 0.004 * t + knot, z));
   }
-  for (const c of s.children) c.visible = c === mace ? on : !on;
-  s.userData.mace = on;
+  const shaft = new THREE.LatheGeometry(pts, 10);
+  shaft.rotateX(Math.PI / 2);
+  const parts: Array<[THREE.BufferGeometry, THREE.Material]> = [[shaft, wood]];
+  const along = (geo: THREE.BufferGeometry, z: number) => {
+    geo.rotateX(Math.PI / 2);
+    geo.translate(0, 0, z);
+    return geo;
+  };
+  parts.push([along(new THREE.CylinderGeometry(0.019, 0.013, 0.07, 10), -0.52), iron]);
+  parts.push([along(new THREE.CylinderGeometry(0.024, 0.022, 0.035, 10), 0.93), iron]);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    const prong = new THREE.TubeGeometry(
+      new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.cos(a) * 0.018, Math.sin(a) * 0.018, 0.94),
+        new THREE.Vector3(Math.cos(a) * 0.05, Math.sin(a) * 0.05, 1.02),
+        new THREE.Vector3(Math.cos(a) * 0.026, Math.sin(a) * 0.026, 1.12),
+      ]),
+      8,
+      0.0055,
+      5,
+      false
+    );
+    parts.push([prong, iron]);
+  }
+  const head = crystalGeometry("rare").clone();
+  head.rotateX(Math.PI / 2);
+  head.translate(0, 0, STAFF_TIP_Z - 0.04);
+  parts.push([head, crystal]);
+  for (const [geo, mat] of parts) {
+    const m = new THREE.Mesh(geo, mat);
+    m.castShadow = mat !== crystal;
+    m.receiveShadow = true;
+    g.add(m);
+  }
+  return g;
 }
 
-/** Put a worn set on a paladin: the armour in its finishes, and the mace if he holds one. */
+type Held = "mace" | "staff";
+/** A worn set's main hand, if it is not the sword. */
+export const mainHandIn = (e: ArmorEquipment): Held | undefined => (e as ArmorEquipment & { mainHand?: Held }).mainHand;
+
+const heldKey = (h: Held | undefined) => (h === "mace" ? "m" : h === "staff" ? "s" : "");
+/** A key for "what he wears and holds" (the armour, what it is made of, and a mace or staff). */
+export const gearKey = (e: ArmorEquipment): string => wearKey(e, finishIn(e)) + heldKey(mainHandIn(e));
+/** The same key for what a built paladin has on now. */
+export const paladinGearKey = (p: Paladin): string => wearKey(p.equipment, p.finish) + heldKey(p.sword.userData.held as Held | undefined);
+
+/** What he holds on the sword's grip now (the staff's tip is where spells leave from). */
+export const heldBy = (p: Paladin): Held | undefined => p.sword.userData.held as Held | undefined;
+
+/** Swap the sword's blade for the mace or the staff (or back). Each is built once per paladin. */
+export function setHeld(p: Paladin, held: Held | undefined): void {
+  const s = p.sword;
+  if (s.userData.held === held) return;
+  const names: Record<Held, string> = { mace: "cleric-mace", staff: "wizard-staff" };
+  let shown: THREE.Object3D | undefined;
+  if (held) {
+    shown = s.getObjectByName(names[held]);
+    if (!shown) {
+      const mats = (s.userData.heldMats ??= [] as THREE.Material[]) as THREE.Material[];
+      if (held === "mace") {
+        const wood = new THREE.MeshStandardMaterial({ color: 0x94693f, roughness: 0.65 });
+        mats.push(wood);
+        shown = buildMace(p.materials.skinned.steel, wood, p.materials.skinned.leather);
+      } else {
+        const oak = new THREE.MeshStandardMaterial({ color: 0x6a4a2e, roughness: 0.8 });
+        const iron = new THREE.MeshStandardMaterial({ color: 0x4a4c52, metalness: 0.8, roughness: 0.45 });
+        const crystal = new THREE.MeshStandardMaterial({ color: 0x3f7bff, emissive: 0x5aa2ff, emissiveIntensity: 1.2, roughness: 0.15, flatShading: true });
+        mats.push(oak, iron, crystal);
+        shown = buildStaff(oak, iron, crystal);
+      }
+      s.add(shown);
+    }
+  }
+  const ours = [names.mace, names.staff];
+  for (const c of s.children) c.visible = held ? c === shown : ours.indexOf(c.name) < 0;
+  s.userData.held = held;
+}
+
+/** Put a worn set on a paladin: the armour in its finishes, and the mace or staff if he holds one. */
 export function dressGear(p: Paladin, e: ArmorEquipment): void {
   p.wear(e, finishIn(e));
-  setMace(p, mainHandIn(e) === "mace");
+  setHeld(p, mainHandIn(e));
 }
 
-/** Free what setMace made (the shared steel and leather belong to the paladin). */
+/** Free what setHeld made (the shared steel and leather belong to the paladin). */
 export function disposeMace(p: Paladin): void {
-  const mace = p.sword.getObjectByName("cleric-mace");
-  mace?.traverse((o) => {
-    if (o instanceof THREE.Mesh) o.geometry.dispose();
-  });
-  (p.sword.userData.maceWood as THREE.Material | undefined)?.dispose();
+  for (const n of ["cleric-mace", "wizard-staff"]) {
+    p.sword.getObjectByName(n)?.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.geometry.dispose();
+    });
+  }
+  for (const m of (p.sword.userData.heldMats as THREE.Material[] | undefined) ?? []) m.dispose();
 }

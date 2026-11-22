@@ -16,8 +16,12 @@ export type PerkId =
   | "advanced_healer"
   | "undead_slaying"
   | "blunt_mastery"
-  | "protection_evil";
-export type SkillId = "second_wind" | "quick_shot" | "snare" | "smite" | "prayer";
+  | "protection_evil"
+  | "arcane_mastery"
+  | "sage"
+  | "quick_chant"
+  | "fire_mastery";
+export type SkillId = "second_wind" | "quick_shot" | "snare" | "smite" | "prayer" | "arcane_shield" | "intense_focus";
 
 export interface Perk {
   id: PerkId;
@@ -53,6 +57,12 @@ const PERKS: Partial<Record<ClassId, Perk[]>> = {
     { id: "blunt_mastery", name: "Blunt Weapon Mastery", note: "+10% damage with the mace." },
     { id: "protection_evil", name: "Protection from Evil", note: "+25 magic resistance." },
   ],
+  wizard: [
+    { id: "arcane_mastery", name: "Arcane Mastery", note: "+15% damage with your spells." },
+    { id: "sage", name: "Sage", note: "+3 memory capacity: room for another spell." },
+    { id: "quick_chant", name: "Quick Chant", note: "Cast 20% faster." },
+    { id: "fire_mastery", name: "Fire Mastery", note: "Fireball hits 25% harder and bursts a metre wider." },
+  ],
 };
 
 const SKILLS: Partial<Record<ClassId, Skill[]>> = {
@@ -64,6 +74,10 @@ const SKILLS: Partial<Record<ClassId, Skill[]>> = {
   cleric: [
     { id: "smite", name: "Smite", note: "Your next weapon blow in ten seconds strikes with holy fire: 25 more magic damage, twice that to the undead.", cooldown: 18 },
     { id: "prayer", name: "Prayer", note: "A quick word with the gods: one charge back on every spell you know.", cooldown: 75 },
+  ],
+  wizard: [
+    { id: "arcane_shield", name: "Arcane Shield", note: "A shell of mana takes the next 40 damage for you (for ten seconds).", cooldown: 30 },
+    { id: "intense_focus", name: "Intense Focus", note: "Your next three spells cost no charges.", cooldown: 50 },
   ],
 };
 

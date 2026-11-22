@@ -134,6 +134,9 @@ export interface Stats {
   /** Fractions from perks: extra healing from spells, extra damage of every kind on the undead. */
   healBonus: number;
   undeadBonus: number;
+  /** Extra spell damage (Arcane Mastery), and Fireball's (Fire Mastery: harder and wider). */
+  spellBonus: number;
+  fireBonus: number;
 }
 
 /** Everything that counts: the armour he wears and the weapon set `set` (only weapons in hand count). */
@@ -160,7 +163,9 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
   const a = {} as Attributes;
   for (const k of ATTRIBUTES) a[k] = base[k] + add[k];
   const physicalPower = a.str + add.physicalPower;
-  const magicalPower = a.wil + add.magicalPower;
+  const mainItem = equipped[set === 1 ? "main1" : "main2"];
+  // A staff in hand adds to his magical power.
+  const magicalPower = a.wil + add.magicalPower + (mainItem ? def(mainItem.id).magic ?? 0 : 0);
   const armorRating = armor + add.armorRating + (has("defense_expert") ? 15 : 0);
   const magicResist = MAGIC_RESIST(a.wil) + add.magicResist + (has("protection_evil") ? 25 : 0);
   const main = equipped[set === 1 ? "main1" : "main2"];
@@ -191,13 +196,15 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
     moveSpeed: MOVE(a.agi) + add.moveSpeed / 100 + moveExtra,
     actionSpeed: ACTION(0.25 * a.agi + 0.75 * a.dex) + add.actionSpeed / 100,
     interactionSpeed: INTERACT(0.25 * a.dex + 0.75 * a.res),
-    castingSpeed: CAST(a.kno),
+    castingSpeed: CAST(a.kno) + (has("quick_chant") ? 0.2 : 0),
     cooldownReduction: Math.min(0.65, COOLDOWN(a.res)),
-    memoryCapacity: Math.round(MEMORY(a.kno)),
+    memoryCapacity: Math.round(MEMORY(a.kno)) + (has("sage") ? 3 : 0),
     drawSpeed: has("steady_aim") ? 0.25 : 0,
     reloadSpeed: has("nimble_fingers") ? 0.35 : 0,
     healBonus: has("advanced_healer") ? 0.25 : 0,
     undeadBonus: has("undead_slaying") ? 0.2 : 0,
+    spellBonus: has("arcane_mastery") ? 0.15 : 0,
+    fireBonus: has("fire_mastery") ? 0.25 : 0,
   };
 }
 
