@@ -10,8 +10,9 @@ import { MERCHANTS, css } from "../merchants";
 import { mp, useMp } from "../net/mp";
 import { trade, useTrade } from "../net/trade";
 import type { ScreenRect } from "../portrait";
-import { PERK_SLOTS, perksOf, skillsOf, type Loadout, type PerkId } from "../skills";
-import { SPELL_KEYS, fitSpells, memoryUsed, spellsOf, type SpellId } from "../spells";
+import { ABILITY_KEYS, PERK_SLOTS, assignAbility, hasWheel, perksOf, skillsOf, type Loadout, type PerkId, type Skill } from "../skills";
+import { SpellWheel } from "../spellHud";
+import { fitSpells, memoryUsed, spellsOf, type SpellId } from "../spells";
 import { ATTRIBUTES, ATTRIBUTE_INFO, statLines, type Attributes, type Stats } from "../stats";
 import { createLobbyStage, type Guest, type LobbyStage, type StageMode } from "./stage";
 
@@ -414,7 +415,55 @@ const Pick: React.FC<{ name: string; note: string; on: boolean; extra?: string; 
   </button>
 );
 
-/** Class: what he plays, his perks and skill, its base attributes and what his gear makes of them. */
+/** An ability card with a key chip per slot: click Q or E to put it there (it swaps with what was). */
+const AbilityPick: React.FC<{ k: Skill; slots: Array<string | null>; onSlot: (slot: 0 | 1) => void }> = ({ k, slots, onSlot }) => {
+  const on = slots.indexOf(k.id) >= 0;
+  return (
+    <div
+      style={{
+        padding: "9px 11px",
+        background: on ? "rgba(242,210,122,0.13)" : "rgba(0,0,0,0.35)",
+        border: `1px solid ${on ? GOLDC : "rgba(214,186,128,0.18)"}`,
+        borderRadius: 3,
+        color: on ? "#fff3d2" : "#cdbf9f",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontFamily: serif, fontSize: 15 }}>
+        <span>{k.name}</span>
+        <span style={{ display: "flex", gap: 5, alignItems: "center", fontFamily: "system-ui, sans-serif" }}>
+          {k.wheel ? null : <span style={{ fontSize: 11, color: "#8a7f6c", marginRight: 2 }}>{k.cooldown}s</span>}
+          {ABILITY_KEYS.map((key, i) => {
+            const here = slots[i] === k.id;
+            return (
+              <button
+                key={key}
+                type="button"
+                title={`Put ${k.name} on ${key}`}
+                onClick={() => onSlot(i as 0 | 1)}
+                style={{
+                  width: 26,
+                  height: 24,
+                  borderRadius: 3,
+                  cursor: "pointer",
+                  fontWeight: 800,
+                  fontSize: 12,
+                  border: `1px solid ${here ? GOLDC : "rgba(214,186,128,0.3)"}`,
+                  background: here ? GOLDC : "rgba(0,0,0,0.4)",
+                  color: here ? "#1a1408" : "#cdbf9f",
+                }}
+              >
+                {key}
+              </button>
+            );
+          })}
+        </span>
+      </div>
+      <div style={{ fontSize: 12, color: on ? "#d8ccb0" : "#8a7f6c", marginTop: 3, lineHeight: 1.4 }}>{k.note}</div>
+    </div>
+  );
+};
+
+/** Class: what he plays, his perks and abilities, his spell wheel, its base attributes and what his gear makes of them. */
 export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes; compact: boolean; onChange: () => void; loadout: Loadout; onLoadout: (l: Loadout) => void }> = ({
   cls,
   stats,
@@ -471,10 +520,12 @@ export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes;
       ) : null}
       {skills.length ? (
         <>
-          <Sub>SKILL · G (the green button on a phone) · in the dungeon</Sub>
+          <Sub>
+            ABILITIES · {ABILITY_KEYS.map((k, i) => `${k}: ${skills.find((x) => x.id === loadout.abilities[i])?.name ?? "none"}`).join(" · ")} · the two ability buttons on a phone
+          </Sub>
           <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 1fr", gap: 8 }}>
             {skills.map((k) => (
-              <Pick key={k.id} name={k.name} note={k.note} extra={`${k.cooldown}s cooldown`} on={loadout.skill === k.id} onClick={() => onLoadout({ ...loadout, skill: k.id })} />
+              <AbilityPick key={k.id} k={k} slots={loadout.abilities} onSlot={(slot) => onLoadout(assignAbility(loadout, slot, k.id))} />
             ))}
           </div>
         </>
@@ -482,8 +533,14 @@ export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes;
       {spells.length ? (
         <>
           <Sub>
-            SPELLS · MEMORY {used} / {memory} · keys {SPELL_KEYS[0]}–{SPELL_KEYS[SPELL_KEYS.length - 1]} (the spell buttons on a phone) · X to sit and {cls === "wizard" ? "meditate" : "pray"} the charges back
+            SPELL WHEEL · MEMORY {used} / {memory} · hold {ABILITY_KEYS[loadout.abilities.indexOf("spell_memory")] ?? "Spell Memory"} and pick, attack to cast · X to sit and {cls === "wizard" ? "meditate" : "pray"} the charges back
           </Sub>
+          {!hasWheel(loadout) ? (
+            <div style={{ fontSize: 12, color: "#e0a46a", marginBottom: 8 }}>Spell Memory is on neither Q nor E: put it on one to use the wheel.</div>
+          ) : null}
+          <div style={{ display: "flex", justifyContent: "center", margin: "4px 0 12px" }}>
+            <SpellWheel spells={known} size={compact ? 190 : 220} />
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 1fr", gap: 8 }}>
             {spells.map((sp) => {
               const at = known.indexOf(sp.id);
@@ -491,7 +548,7 @@ export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes;
               return (
                 <div key={sp.id} style={{ opacity: fits ? 1 : 0.5, display: "grid" }}>
                   <Pick
-                    name={at >= 0 ? `${sp.name}  [${SPELL_KEYS[at]}]` : sp.name}
+                    name={at >= 0 ? `${sp.name}  (wheel ${at + 1})` : sp.name}
                     note={fits ? sp.note : `${sp.note} Not enough memory: drop another spell first.`}
                     extra={`tier ${sp.tier} · ${sp.charges} charge${sp.charges === 1 ? "" : "s"}`}
                     on={at >= 0}

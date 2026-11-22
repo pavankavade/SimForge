@@ -832,15 +832,20 @@ only through gear.**
   - Arrows stick in monsters and stay in the stone, where the fighter can walk over them to pick
     them up again.
   - A new bow is a def with `slot: "bow"` plus a `BOWS` entry.
-- **Perks and skills** (`skills.ts`), Dark and Darker style:
-  - Each class has perks (always on; two are picked) and skills (one is picked, used with G or the
-    touch button, in the dungeon only). They are picked in the lobby's Class tab and kept per class.
+- **Perks and abilities** (`skills.ts`), Dark and Darker style:
+  - Each class has perks (always on; two are picked) and abilities: two go on the ability keys,
+    **Q and E** (`Loadout.abilities`; the two ability buttons on a phone), in the dungeon only. Every
+    class has at least two. Picked in the lobby's Class tab (a Q / E chip per ability; picking one
+    already on the other key swaps them) and kept per class.
+  - Keys: Q / E abilities, **F use** (search, loot, doors, shops), LMB swing (Z without the mouse
+    captured), RMB shield, X rest. Don't put anything else on Q, E or F.
   - Perks only change numbers inside `computeStats` (its `perks` argument). Never apply a perk at
     the call site.
-  - Skills run in the game loop (`DungeonScene`, the class skill block). The snare lives in the
+  - Abilities run in the game loop (`DungeonScene`, the ability block); each has its own timers
+    (`abOf` / `abOn`). The snare lives in the
     monster sim (`setSnare`, `snares`); in a party the leader's floor springs it (`coop.sendSnare`).
-  - A new perk: an entry in `PERKS` plus its effect in `computeStats`. A new skill: an entry in
-    `SKILLS` plus its branch in the skill block.
+  - A new perk: an entry in `PERKS` plus its effect in `computeStats`. A new ability: an entry in
+    `SKILLS` plus its branch in the ability block.
 - **Leathers.** Armour can be plate or leather on the same shape (`ItemDef.finish`). The rig swaps
   the plate's steel and gilt for hide (`Paladin.setFinish` / `wear`), and the cape and tabard for a
   plain green cloak. What each worn piece is made of rides on the worn set (`wornOf` sets `finish`,
@@ -858,8 +863,12 @@ only through gear.**
 - **Spells** (`spells.ts`; the cleric and the wizard):
   - A caster memorises spells up to `memoryCapacity` (Knowledge); each costs its tier. They are
     picked in the Class tab (kept in the loadout's `spells`, trimmed with `fitSpells` where used).
-  - Each spell has charges. Keys 5–9 cast them in pick order (touch: the spell buttons over the
-    belt); a cast takes `cast / (1 + castingSpeed)` seconds at half walking pace. Charges come back
+  - **The spell wheel.** A caster's spells are reached through the Spell Memory ability (`wheel`):
+    holding its key opens the wheel (`SpellWheel`, spells round a ring in pick order), the mouse
+    points at one, letting go readies it, and the attack casts the readied spell instead of swinging
+    (taking up a weapon set puts it away). On a phone the ability button opens the wheel and a tap
+    readies. Without Spell Memory on Q or E he has no spells.
+  - Each spell has charges; a cast takes `cast / (1 + castingSpeed)` seconds at half walking pace. Charges come back
     only by resting: X sits him down (the cleric prays, the wizard meditates: `meditates`), one
     charge returns every `restEach` seconds. In town every charge is full again.
   - A spell with `bolt` (the wizard's) flies from the staff's crystal to where he aims (the

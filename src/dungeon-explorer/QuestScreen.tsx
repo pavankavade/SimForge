@@ -47,7 +47,7 @@ export const QuestScreen: React.FC<{
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
           <div style={{ fontFamily: serif, fontSize: compact ? 18 : 22, color: "#f3e6c4", letterSpacing: "0.06em" }}>The Guild Representative</div>
           <button type="button" style={button} onClick={onClose}>
-            Close (E)
+            Close (F)
           </button>
         </div>
         <div style={{ fontSize: 13, color: "#b9a982", fontStyle: "italic", marginBottom: 10 }}>

@@ -1,6 +1,9 @@
-// Perks and skills, Dark and Darker style: each class has a few perks (always on; he picks two) and
-// a few skills (used with G; he picks one). They are chosen in the lobby's Class tab and kept per
-// class. Perks only change numbers in computeStats (stats.ts); skills are run by the game.
+// Perks and abilities, Dark and Darker style: each class has a few perks (always on; he picks two)
+// and a few abilities, of which he puts two on his ability keys, Q and E (the two ability buttons on
+// a phone). A caster's Spell Memory is one of them: held, it opens the spell wheel (the spells he
+// memorised, filled in the Class tab), and the spell he picks there is cast with the attack. They are
+// chosen in the lobby's Class tab and kept per class. Perks only change numbers in computeStats
+// (stats.ts); abilities are run by the game.
 import type { ClassId } from "./classes";
 import { spellsOf, type SpellId } from "./spells";
 
@@ -25,7 +28,7 @@ export type PerkId =
   | "ambush"
   | "light_fingers"
   | "fleet_foot";
-export type SkillId = "second_wind" | "quick_shot" | "snare" | "smite" | "prayer" | "arcane_shield" | "intense_focus" | "hide" | "poison_blade";
+export type SkillId = "spell_memory" | "second_wind" | "sprint" | "quick_shot" | "snare" | "smite" | "prayer" | "arcane_shield" | "intense_focus" | "hide" | "poison_blade";
 
 export interface Perk {
   id: PerkId;
@@ -38,7 +41,23 @@ export interface Skill {
   note: string;
   /** Seconds before it can be used again (cooldown reduction shortens it). */
   cooldown: number;
+  /** Spell Memory: held, it opens the spell wheel instead of running on a cooldown. */
+  wheel?: boolean;
 }
+
+/** The ability keys, in slot order. */
+export const ABILITY_KEYS = ["Q", "E"] as const;
+export const ABILITY_SLOTS = 2;
+/** The two slots: an ability each (or none). */
+export type AbilitySlots = [SkillId | null, SkillId | null];
+
+const SPELL_MEMORY: Skill = {
+  id: "spell_memory",
+  name: "Spell Memory",
+  note: "Hold to open your spell wheel and pick a spell; the attack casts it. Fill the wheel below.",
+  cooldown: 0,
+  wheel: true,
+};
 
 export const PERK_SLOTS = 2;
 
@@ -76,16 +95,21 @@ const PERKS: Partial<Record<ClassId, Perk[]>> = {
 };
 
 const SKILLS: Partial<Record<ClassId, Skill[]>> = {
-  fighter: [{ id: "second_wind", name: "Second Wind", note: "Get your breath back: heal a third of your health over eight seconds.", cooldown: 90 }],
+  fighter: [
+    { id: "second_wind", name: "Second Wind", note: "Get your breath back: heal a third of your health over eight seconds.", cooldown: 90 },
+    { id: "sprint", name: "Sprint", note: "For six seconds you move 25% faster.", cooldown: 24 },
+  ],
   ranger: [
     { id: "quick_shot", name: "Quick Shot", note: "For six seconds the bow draws three times as fast.", cooldown: 30 },
     { id: "snare", name: "Snare Trap", note: "Set iron jaws at your feet. The first monster to step in is bitten and held for three seconds.", cooldown: 20 },
   ],
   cleric: [
+    SPELL_MEMORY,
     { id: "smite", name: "Smite", note: "Your next weapon blow in ten seconds strikes with holy fire: 25 more magic damage, twice that to the undead.", cooldown: 18 },
     { id: "prayer", name: "Prayer", note: "A quick word with the gods: one charge back on every spell you know.", cooldown: 75 },
   ],
   wizard: [
+    SPELL_MEMORY,
     { id: "arcane_shield", name: "Arcane Shield", note: "A shell of mana takes the next 40 damage for you (for ten seconds).", cooldown: 30 },
     { id: "intense_focus", name: "Intense Focus", note: "Your next three spells cost no charges.", cooldown: 50 },
   ],
@@ -106,33 +130,61 @@ export const skillById = (id: SkillId | null | undefined): Skill | null => {
 /** What he has picked for a class. */
 export interface Loadout {
   perks: PerkId[];
-  skill: SkillId | null;
-  /** Memorised spells (casters; spells.ts), in key order. Trimmed to his memory where it is used. */
+  /** The abilities on Q and E. */
+  abilities: AbilitySlots;
+  /** The spell wheel (casters; spells.ts), in wheel order from the top. Trimmed to his memory where it is used. */
   spells: SpellId[];
 }
 
-/** A class's first two perks and first skill, until he picks. */
-export const defaultLoadout = (cls: ClassId): Loadout => ({
-  perks: perksOf(cls).slice(0, PERK_SLOTS).map((p) => p.id),
-  skill: skillsOf(cls)[0]?.id ?? null,
-  spells: spellsOf(cls).map((s) => s.id),
-});
+/** A class's first two perks and first two abilities (Spell Memory first for a caster), until he picks. */
+export const defaultLoadout = (cls: ClassId): Loadout => {
+  const ids = skillsOf(cls).map((s) => s.id);
+  return {
+    perks: perksOf(cls).slice(0, PERK_SLOTS).map((p) => p.id),
+    abilities: [ids[0] ?? null, ids[1] ?? null],
+    spells: spellsOf(cls).map((s) => s.id),
+  };
+};
+
+/** Is Spell Memory on one of his keys (so the spell wheel is his)? */
+export const hasWheel = (l: Loadout): boolean => l.abilities.some((a) => !!a && !!skillById(a)?.wheel);
+
+/** Put ability `id` on slot `slot`; if it was on the other slot, the two swap. */
+export function assignAbility(l: Loadout, slot: 0 | 1, id: SkillId): Loadout {
+  const next: AbilitySlots = [l.abilities[0], l.abilities[1]];
+  const other = slot === 0 ? 1 : 0;
+  if (next[other] === id) next[other] = next[slot];
+  next[slot] = id;
+  return { ...l, abilities: next };
+}
 
 const KEY = "simforge.explorer.loadout.v1";
 
 /** His picks for every class he has set up (a class he has not is given its default). */
 export function loadLoadout(cls: ClassId): Loadout {
   try {
-    const all = JSON.parse(localStorage.getItem(KEY) || "{}") as Record<string, Loadout>;
+    const all = JSON.parse(localStorage.getItem(KEY) || "{}") as Record<string, Loadout & { skill?: SkillId | null }>;
     const l = all[cls];
     if (l && Array.isArray(l.perks)) {
       const perks = perksOf(cls).map((p) => p.id);
       const skills = skillsOf(cls).map((s) => s.id);
       const spells = spellsOf(cls).map((s) => s.id);
+      const ok = (a: SkillId | null | undefined): SkillId | null => (a && skills.indexOf(a) >= 0 ? a : null);
+      // His two abilities; a save from before them had one skill (a caster gets Spell Memory beside it).
+      let slots: AbilitySlots;
+      if (Array.isArray(l.abilities)) slots = [ok(l.abilities[0]), ok(l.abilities[1])];
+      else {
+        const one = ok(l.skill);
+        const wheel = skills.indexOf("spell_memory") >= 0 ? "spell_memory" : null;
+        slots = wheel ? [wheel, one] : [one, skills.filter((x) => x !== one)[0] ?? null];
+      }
+      if (slots[0] && slots[0] === slots[1]) slots[1] = null;
+      // An empty slot takes the next ability not already on the other.
+      for (const k of [0, 1] as const) if (!slots[k]) slots[k] = skills.filter((x) => x !== slots[0] && x !== slots[1])[0] ?? null;
       return {
         spells: Array.isArray(l.spells) ? l.spells.filter((p) => spells.indexOf(p) >= 0) : spells,
         perks: l.perks.filter((p) => perks.indexOf(p) >= 0).slice(0, PERK_SLOTS),
-        skill: l.skill && skills.indexOf(l.skill) >= 0 ? l.skill : skills[0] ?? null,
+        abilities: slots,
       };
     }
   } catch {

@@ -151,7 +151,7 @@ export const LootScreen: React.FC<LootScreenProps> = ({ title, subtitle, contain
           {touch ? "Take all" : "Take all (R)"}
         </button>
         <button type="button" onClick={onClose} style={btn}>
-          {touch ? "Close" : "Close (E)"}
+          {touch ? "Close" : "Close (F)"}
         </button>
       </div>
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: compact ? "column" : "row", gap: compact ? 10 : 24, alignItems: compact ? "center" : "flex-start", justifyContent: "center", padding: compact ? 10 : 24, overflow: "auto" }}>

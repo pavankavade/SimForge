@@ -1,10 +1,10 @@
-// The caster's spell bar: each memorised spell with its key, its charges as pips and the cast
-// filling under it, then X to rest (the cleric prays, the wizard meditates), and what his spells and
-// skill have on him (ward, bless, holy ground, haste, free casts).
-// On a keyboard it sits above the skill box; on a phone it is a row of round buttons over the
-// fighting buttons (tap to cast, PRAY to sit and pray).
+// The caster's spell HUD. The spell wheel (Spell Memory, held on its ability key or tapped on a
+// phone): his memorised spells round a ring, the one he points at lit; let go (or tap) and it is
+// readied, and the attack casts it. The spell bar under it shows each spell's charges as pips, the
+// readied one and the cast filling, then X to rest (the cleric prays, the wizard meditates), and what
+// his spells and abilities have on him (ward, bless, holy ground, haste, free casts).
 import React from "react";
-import { SPELL_KEYS, meditates, spellById, type SpellId } from "./spells";
+import { meditates, spellById, type SpellId } from "./spells";
 
 /** His spells for the HUD (casters): charges left by spell, the cast under way and how far it
  * is, and the blessings on him (seconds left; the ward's points). */
@@ -31,7 +31,120 @@ const pips = (n: number, of: number) => (
   </span>
 );
 
-export const SpellBar: React.FC<{ spells: SpellId[]; hud: SpellHud }> = ({ spells, hud }) => {
+/** Which slice of an n-slice wheel the direction (x right, y down) points at: 0 at the top, clockwise. */
+export function wheelSlice(x: number, y: number, n: number): number {
+  if (n <= 0) return -1;
+  const a = (Math.atan2(x, -y) + Math.PI * 2) % (Math.PI * 2);
+  return Math.floor((a + Math.PI / n) / ((Math.PI * 2) / n)) % n;
+}
+
+/**
+ * The ring of spells: slice i sits at angle i/n from the top, clockwise. `pick` is lit (pointed at),
+ * `ready` is ringed in gold. With `onPick` each slice is a button (a phone, or a click).
+ */
+export const SpellWheel: React.FC<{
+  spells: SpellId[];
+  size: number;
+  pick?: number;
+  ready?: number;
+  charges?: Record<string, number>;
+  onPick?: (i: number) => void;
+  onClose?: () => void;
+}> = ({ spells, size, pick = -1, ready = -1, charges, onPick, onClose }) => {
+  const n = spells.length;
+  const r = size * 0.36;
+  const slot = Math.max(54, size * 0.27);
+  return (
+    <div style={{ position: "relative", width: size, height: size, fontFamily: "system-ui, sans-serif" }}>
+      <div style={{ position: "absolute", inset: size * 0.08, borderRadius: "50%", border: "1px solid rgba(214,186,128,0.25)", background: "radial-gradient(circle, rgba(10,8,14,0.55), rgba(10,8,14,0.82))" }} />
+      {spells.map((id, i) => {
+        const s = spellById(id);
+        if (!s) return null;
+        const a = (i / Math.max(1, n)) * Math.PI * 2;
+        const x = size / 2 + Math.sin(a) * r - slot / 2;
+        const y = size / 2 - Math.cos(a) * r - slot / 2;
+        const left = charges ? charges[id] ?? s.charges : s.charges;
+        const lit = i === pick;
+        const isReady = i === ready;
+        const style: React.CSSProperties = {
+          position: "absolute",
+          left: x,
+          top: y,
+          width: slot,
+          height: slot,
+          borderRadius: "50%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
+          padding: 2,
+          cursor: onPick ? "pointer" : "default",
+          touchAction: "none",
+          background: lit ? `radial-gradient(circle, ${s.color}55, rgba(20,16,10,0.92))` : "rgba(20,16,10,0.88)",
+          border: `2px solid ${isReady ? "#ffd84d" : lit ? s.color : left > 0 ? "rgba(255,224,138,0.45)" : "rgba(255,255,255,0.15)"}`,
+          boxShadow: lit ? `0 0 14px ${s.color}` : "none",
+          color: left > 0 ? "#f3ead2" : "#7d776a",
+          transform: lit ? "scale(1.12)" : "none",
+        };
+        const body = (
+          <>
+            <span style={{ fontSize: Math.max(9, slot * 0.17), fontWeight: 800, lineHeight: 1.05, textAlign: "center" }}>{s.short}</span>
+            {charges ? pips(left, s.charges) : <span style={{ fontSize: 9, color: "#a89c84" }}>tier {s.tier}</span>}
+          </>
+        );
+        return onPick ? (
+          <button
+            key={id}
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onPick(i);
+            }}
+            style={style}
+          >
+            {body}
+          </button>
+        ) : (
+          <div key={id} style={style}>
+            {body}
+          </div>
+        );
+      })}
+      <div
+        onPointerDown={
+          onClose
+            ? (e) => {
+                e.stopPropagation();
+                onClose();
+              }
+            : undefined
+        }
+        style={{
+          position: "absolute",
+          left: size / 2 - size * 0.16,
+          top: size / 2 - size * 0.16,
+          width: size * 0.32,
+          height: size * 0.32,
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          fontSize: 11,
+          lineHeight: 1.2,
+          color: "#d8ccb0",
+          cursor: onClose ? "pointer" : "default",
+        }}
+      >
+        {n === 0 ? "No spells" : pick >= 0 ? spellById(spells[pick])?.name : onClose ? "Close" : "Spell wheel"}
+      </div>
+    </div>
+  );
+};
+
+/** Under the abilities: his spells' charges, the readied one, the cast filling; X to rest; his buffs. */
+export const SpellBar: React.FC<{ spells: SpellId[]; hud: SpellHud; ready: number }> = ({ spells, hud, ready }) => {
   const buffs: string[] = [];
   if (hud.ward > 0) buffs.push(`Ward ${Math.ceil(hud.ward)}`);
   if (hud.bless > 0) buffs.push(`Blessed ${Math.ceil(hud.bless)}s`);
@@ -48,25 +161,23 @@ export const SpellBar: React.FC<{ spells: SpellId[]; hud: SpellHud }> = ({ spell
           if (!s) return null;
           const n = hud.charges[id] ?? s.charges;
           const casting = hud.casting === id;
+          const isReady = i === ready;
           return (
             <div
               key={id}
               style={{
                 position: "relative",
                 padding: "4px 8px 5px",
-                minWidth: 74,
-                background: "rgba(8,8,12,0.72)",
-                border: `1px solid ${casting ? s.color : n > 0 ? "rgba(255,224,138,0.4)" : "rgba(255,255,255,0.12)"}`,
+                minWidth: 70,
+                background: isReady ? "rgba(60,48,16,0.8)" : "rgba(8,8,12,0.72)",
+                border: `1px solid ${casting ? s.color : isReady ? "#ffd84d" : n > 0 ? "rgba(255,224,138,0.3)" : "rgba(255,255,255,0.12)"}`,
                 borderRadius: 3,
                 color: n > 0 ? "#f3ead2" : "#7d776a",
                 fontSize: 11,
                 overflow: "hidden",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ minWidth: 14, padding: "0 4px", textAlign: "center", border: "1px solid currentColor", borderRadius: 3, fontWeight: 800, fontSize: 10 }}>{SPELL_KEYS[i]}</span>
-                <span style={{ whiteSpace: "nowrap" }}>{s.name}</span>
-              </div>
+              <div style={{ whiteSpace: "nowrap" }}>{s.name}</div>
               <div style={{ marginTop: 2 }}>{pips(n, s.charges)}</div>
               {casting ? <div style={{ position: "absolute", left: 0, bottom: 0, height: 3, width: `${Math.round(hud.castU * 100)}%`, background: s.color }} /> : null}
             </div>
@@ -93,60 +204,54 @@ export const SpellBar: React.FC<{ spells: SpellId[]; hud: SpellHud }> = ({ spell
   );
 };
 
-/** Phone: a round button per spell (tap to cast) and PRAY (REST for the wizard). */
-export const SpellButtons: React.FC<{ spells: SpellId[]; hud: SpellHud; onCast: (i: number) => void; onPray: () => void }> = ({ spells, hud, onCast, onPray }) => (
-  <div style={{ display: "flex", gap: 7, alignItems: "flex-end" }}>
-    {spells.map((id, i) => {
-      const s = spellById(id);
-      if (!s) return null;
-      const n = hud.charges[id] ?? s.charges;
-      const casting = hud.casting === id;
-      return (
+/** Phone: the readied spell (tap to drop it) and REST / PRAY. */
+export const SpellButtons: React.FC<{ spells: SpellId[]; hud: SpellHud; ready: number; onUnready: () => void; onPray: () => void }> = ({ spells, hud, ready, onUnready, onPray }) => {
+  const s = ready >= 0 && ready < spells.length ? spellById(spells[ready]) : null;
+  const n = s ? hud.charges[s.id] ?? s.charges : 0;
+  return (
+    <div style={{ display: "flex", gap: 7, alignItems: "flex-end" }}>
+      {s ? (
         <button
-          key={id}
           type="button"
           onPointerDown={(e) => {
             e.stopPropagation();
-            onCast(i);
+            onUnready();
           }}
           style={{
-            width: 46,
             height: 46,
-            borderRadius: "50%",
-            border: `2px solid ${casting ? s.color : n > 0 ? "rgba(255,224,138,0.6)" : "rgba(255,255,255,0.18)"}`,
-            background: casting ? `conic-gradient(${s.color}55 ${Math.round(hud.castU * 360)}deg, rgba(24,20,10,0.8) 0)` : "rgba(24,20,10,0.78)",
+            padding: "0 12px",
+            borderRadius: 23,
+            border: `2px solid ${hud.casting === s.id ? s.color : "#ffd84d"}`,
+            background: hud.casting === s.id ? `linear-gradient(90deg, ${s.color}55 ${Math.round(hud.castU * 100)}%, rgba(24,20,10,0.85) 0)` : "rgba(24,20,10,0.85)",
             color: n > 0 ? "#ffe9b0" : "#77705f",
-            fontWeight: 900,
-            fontSize: 8.5,
-            lineHeight: 1.1,
-            padding: 1,
+            fontWeight: 800,
+            fontSize: 11,
             touchAction: "none",
           }}
         >
-          {s.short}
-          <div style={{ fontSize: 9, fontWeight: 700 }}>{n}</div>
+          {s.name} · {n}
         </button>
-      );
-    })}
-    <button
-      type="button"
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        onPray();
-      }}
-      style={{
-        width: 46,
-        height: 46,
-        borderRadius: "50%",
-        border: `2px solid ${hud.resting ? "#ffe08a" : "rgba(255,255,255,0.25)"}`,
-        background: hud.resting ? "rgba(70,56,18,0.85)" : "rgba(20,20,24,0.75)",
-        color: "#f3e6c4",
-        fontWeight: 900,
-        fontSize: 9,
-        touchAction: "none",
-      }}
-    >
-      {meditates(spells) ? "REST" : "PRAY"}
-    </button>
-  </div>
-);
+      ) : null}
+      <button
+        type="button"
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          onPray();
+        }}
+        style={{
+          width: 46,
+          height: 46,
+          borderRadius: "50%",
+          border: `2px solid ${hud.resting ? "#ffe08a" : "rgba(255,255,255,0.25)"}`,
+          background: hud.resting ? "rgba(70,56,18,0.85)" : "rgba(20,20,24,0.75)",
+          color: "#f3e6c4",
+          fontWeight: 900,
+          fontSize: 9,
+          touchAction: "none",
+        }}
+      >
+        {meditates(spells) ? "REST" : "PRAY"}
+      </button>
+    </div>
+  );
+};

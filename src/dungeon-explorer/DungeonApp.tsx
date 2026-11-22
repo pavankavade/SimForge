@@ -43,10 +43,10 @@ import { ChatBox, InviteCards, JoinRunCard, PartyScreen, SpectateBar } from "./S
 import { QuestScreen } from "./QuestScreen";
 import { abandon as abandonQuest, accept as acceptQuest, loadQuests, record as recordQuest, saveQuests, turnIn as turnInQuest, type QuestEvent, type QuestState } from "./quests";
 import { computeStats, type Stats } from "./stats";
-import { loadLoadout, saveLoadout, skillById, type Loadout, type SkillId } from "./skills";
+import { ABILITY_KEYS, hasWheel, loadLoadout, saveLoadout, skillById, type AbilitySlots, type Loadout, type SkillId } from "./skills";
 import { createHolyFx, type BoltView, type BurstKind, type HolyFx } from "./holyFx";
-import { SpellBar, SpellButtons, type SpellHud } from "./spellHud";
-import { SPELL, SPELL_KEYS, fitSpells, meditates, spellById, type SpellId } from "./spells";
+import { SpellBar, SpellButtons, SpellWheel, wheelSlice, type SpellHud } from "./spellHud";
+import { SPELL, fitSpells, meditates, spellById, type SpellId } from "./spells";
 import { createPortrait, type Portrait, type ScreenRect } from "./portrait";
 import { createMonsterSfx, type MonsterSfx } from "./monsters/monsterSfx";
 import { createSpellSfx, type SpellSfx, type SpellSound } from "./spellSfx";
@@ -203,17 +203,47 @@ async function enterLandscapeMode(): Promise<void> {
 
 /** How long Quick Shot speeds the draw (seconds). */
 const QUICK_SHOT_S = 6;
+/** The fighter's Sprint: how long, and how much faster. */
+const SPRINT_S = 6;
+const SPRINT_MOVE = 0.25;
 /** Smite: how long it waits for a blow, and the holy fire it adds (before magical power). */
 const SMITE_S = 10;
 const SMITE_DAMAGE = 25;
 /** How high his hips sit when he sits down to pray (metres; the floor is his seat). */
 const PRAY_SEAT_Y = 0.22;
-/** The class skill's state for the HUD: cooldown left of `total`, and seconds it still runs. */
+/** An ability's state for the HUD (one per slot): cooldown left of `total`, and seconds it still runs. */
 interface SkillHud {
   cd: number;
   total: number;
   active: number;
 }
+const NO_SKILL: SkillHud = { cd: 0, total: 0, active: 0 };
+
+/**
+ * The spell wheel (Spell Memory): open while its key is held (or tapped open on a phone), pointed
+ * with the mouse (x, y: how far it has moved since it opened, screen pixels), `pick` the slice it
+ * points at, `ready` the spell readied (the attack casts it; -1 for none).
+ */
+export interface WheelState {
+  open: boolean;
+  x: number;
+  y: number;
+  pick: number;
+  ready: number;
+}
+
+type AbilityMap = Map<SkillId, SkillHud>;
+/** An ability's timers (made on first use). */
+function abOf(m: AbilityMap, id: SkillId): SkillHud {
+  let a = m.get(id);
+  if (!a) {
+    a = { cd: 0, total: 0, active: 0 };
+    m.set(id, a);
+  }
+  return a;
+}
+/** Is ability `id` on one of his keys and running now? */
+const abOn = (slots: AbilitySlots, m: AbilityMap, id: SkillId): boolean => slots.indexOf(id) >= 0 && abOf(m, id).active > 0;
 
 const NO_SPELLS: SpellHud = { charges: {}, casting: null, castU: 0, resting: false, ward: 0, bless: 0, sanctuary: 0, haste: 0, free: 0 };
 
@@ -376,11 +406,16 @@ interface DungeonSceneProps {
   onBowHint: (text: string) => void;
   /** His class skill (skills.ts; G uses it), the ask from the touch button, and its cooldown and
    * running seconds for the HUD (sent when the whole seconds change). */
-  skill: SkillId | null;
-  skillAskRef: React.MutableRefObject<boolean>;
+  /** The abilities on Q and E (skills.ts). */
+  abilities: AbilitySlots;
+  /** The ability slot asked for (0 Q, 1 E; -1 none). */
+  skillAskRef: React.MutableRefObject<number>;
+  /** The spell wheel (shared with the HUD that draws it). */
+  wheelRef: React.MutableRefObject<WheelState>;
+  onWheelState: (w: WheelState) => void;
   /** The touch Reload button (R on a keyboard). */
   reloadTouchRef: React.MutableRefObject<boolean>;
-  onSkillState: (s: SkillHud) => void;
+  onSkillState: (s: SkillHud[]) => void;
   /** His memorised spells (spells.ts, already fitted to his memory), the cast asked for (the
    * spell's index; 5–9 or the touch buttons), sitting down to pray (X), and the HUD's state. */
   spells: SpellId[];
@@ -559,8 +594,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   onArrowsPicked,
   onReloadStart,
   onBowHint,
-  skill,
+  abilities,
   skillAskRef,
+  wheelRef,
+  onWheelState,
   reloadTouchRef,
   onSkillState,
   spells,
@@ -661,10 +698,14 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   weaponDamageRef.current = weaponDamage;
   const statsRef = useRef(stats);
   statsRef.current = stats;
-  const skillIdRef = useRef(skill);
-  skillIdRef.current = skill;
+  const abilitiesRef = useRef(abilities);
+  abilitiesRef.current = abilities;
+  /** The key holding the spell wheel open (its release readies the spell pointed at). */
+  const wheelHeldRef = useRef<string | null>(null);
   /** The skill's cooldown and how long it still runs (seconds), and the last state sent up. */
-  const skillRef = useRef({ cd: 0, total: 0, active: 0, sent: "" });
+  /** Each ability's timers, and the last state sent up. */
+  const abRef = useRef<AbilityMap>(new Map());
+  const skillSentRef = useRef("");
   const spellsRef = useRef(spells);
   spellsRef.current = spells;
   /** Spell charges (by spell), the cast under way, resting, and what his spells left on him. */
@@ -996,7 +1037,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     // Protection's ward of light takes what it can; a blow also ends a rest, and hiding.
     const sp = spellRef.current;
     sp.rest.on = false;
-    if (skillIdRef.current === "hide" && skillRef.current.active > 0) skillRef.current.active = 0;
+    if (abOn(abilitiesRef.current, abRef.current, "hide")) abOf(abRef.current, "hide").active = 0;
     if (sp.ward.amt > 0) {
       const took = Math.min(sp.ward.amt, dmg);
       sp.ward.amt -= took;
@@ -1195,12 +1236,24 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (!playingRef.current && !freeMoveRef.current) return;
       if (e.code === "Space" && !e.repeat) jumpQueueRef.current = true;
       if (e.code === "KeyR" && !e.repeat && playingRef.current) reloadAskRef.current = true;
-      if (e.code === "KeyG" && !e.repeat && playingRef.current) skillAskRef.current = true;
-      // Spells on 5–9 (in the order he memorised them), X to sit and pray.
-      if (!e.repeat && playingRef.current && e.code.startsWith("Digit") && SPELL_KEYS.indexOf(e.code.slice(5)) >= 0) spellAskRef.current = SPELL_KEYS.indexOf(e.code.slice(5));
+      // Q and E: the abilities. Spell Memory opens the wheel while its key is held.
+      if ((e.code === "KeyQ" || e.code === "KeyE") && !e.repeat && playingRef.current) {
+        const slot = e.code === "KeyQ" ? 0 : 1;
+        if (skillById(abilitiesRef.current[slot])?.wheel) {
+          const w = wheelRef.current;
+          w.open = true;
+          w.x = 0;
+          w.y = 0;
+          w.pick = -1;
+          wheelHeldRef.current = e.code;
+          onWheelState({ ...w });
+        } else skillAskRef.current = slot;
+      }
+      // X to sit and pray (or meditate).
       if (e.code === "KeyX" && !e.repeat && playingRef.current) restAskRef.current = true;
       if (!playingRef.current) return;
-      if (e.code === "KeyF" && !e.repeat) {
+      // Z swings without the mouse captured (the mouse's left button once it is).
+      if (e.code === "KeyZ" && !e.repeat) {
         attackQueueRef.current = true;
         attackHeldRef.current = true;
       }
@@ -1221,10 +1274,23 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const onContextMenu = (e: Event) => e.preventDefault();
     const onKeyUp = (e: KeyboardEvent) => {
       keysRef.current.delete(e.code);
-      if (e.code === "KeyF") attackHeldRef.current = false;
+      if (e.code === "KeyZ") attackHeldRef.current = false;
+      // Letting go of Spell Memory readies the spell it points at (pointing nowhere keeps the last).
+      if (wheelHeldRef.current === e.code) {
+        wheelHeldRef.current = null;
+        const w = wheelRef.current;
+        w.open = false;
+        if (w.pick >= 0) w.ready = w.pick;
+        onWheelState({ ...w });
+      }
     };
     const onBlur = () => {
       keysRef.current.clear();
+      if (wheelRef.current.open) {
+        wheelRef.current.open = false;
+        wheelHeldRef.current = null;
+        onWheelState({ ...wheelRef.current });
+      }
       lookPointerRef.current = null;
       mouseBlockRef.current = false;
       attackHeldRef.current = false;
@@ -1265,6 +1331,28 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const onPointerMove = (e: PointerEvent) => {
       const world = worldRef.current;
       if (!world) return;
+      const wh = wheelRef.current;
+      if (wh.open && e.pointerType === "mouse") {
+        if (document.pointerLockElement === dom) {
+          wh.x += e.movementX;
+          wh.y += e.movementY;
+        } else {
+          wh.x = e.clientX - window.innerWidth / 2;
+          wh.y = e.clientY - window.innerHeight / 2;
+        }
+        // Keep the pointer within the ring, so a turn back finds the other side at once.
+        const len = Math.hypot(wh.x, wh.y);
+        if (len > 140) {
+          wh.x *= 140 / len;
+          wh.y *= 140 / len;
+        }
+        const pick = len > 28 ? wheelSlice(wh.x, wh.y, spellsRef.current.length) : -1;
+        if (pick !== wh.pick) {
+          wh.pick = pick;
+          onWheelState({ ...wh });
+        }
+        return;
+      }
       let dx = 0;
       let dy = 0;
       let sens = LOOK_SENS;
@@ -1333,7 +1421,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       window.removeEventListener("pointermove", onPointerMove);
       dom.removeEventListener("wheel", onWheel);
     };
-  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, attackHeldRef, jumpQueueRef, showcaseRef, skillAskRef, spellAskRef, restAskRef]);
+  }, [gl, firstPerson, onHudUpdate, onTouchDetected, attackQueueRef, attackHeldRef, jumpQueueRef, showcaseRef, skillAskRef, spellAskRef, restAskRef, wheelRef, onWheelState]);
 
   // In town: the dungeon put away, the town shown, and he stands in the tavern or on the dais.
   const placedVisitRef = useRef(-1);
@@ -1584,8 +1672,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           const undead = m?.family === "skeleton";
           const st = statsRef.current;
           let dmg = (equipmentRef.current.sword ? weaponDamageRef.current : 6) * (0.9 + rand() * 0.2) * (spellRef.current.bless > 0 ? 1 + SPELL.blessDamage : 1);
-          const sk = skillRef.current;
-          if (skillIdRef.current === "smite" && sk.active > 0 && m && !m.dead) {
+          const sk = abOf(abRef.current, "smite");
+          if (abOn(abilitiesRef.current, abRef.current, "smite") && m && !m.dead) {
             sk.active = 0;
             dmg += SMITE_DAMAGE * (1 + st.magicalBonus) * (undead ? SPELL.undeadTimes : 1);
             holyFxRef.current?.burst("smite", m.wx, m.wy + 1, m.wz);
@@ -1620,7 +1708,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             paladinRef.current?.animator.bounce();
           } else if (r && m) {
             // Poisoned Blade: the poison goes in with the blow (and keeps working; see the skill block).
-            if (r === "hit" && skillIdRef.current === "poison_blade" && skillRef.current.active > 0) {
+            if (r === "hit" && abOn(abilitiesRef.current, abRef.current, "poison_blade")) {
               const was = rg.poisons.find((q) => q.id === m.id);
               if (was) was.t = POISON_S;
               else rg.poisons.push({ id: m.id, t: POISON_S, tick: 1 });
@@ -1972,6 +2060,17 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const kbStrafe =
       (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0) - (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0);
     const tMove = touchMoveRef.current;
+    // A readied spell (the wheel): the attack casts it instead of swinging (or drawing the bow).
+    {
+      const wh = wheelRef.current;
+      const list = spellsRef.current;
+      if (wh.ready >= list.length) wh.ready = -1;
+      if (wh.ready >= 0 && attackQueueRef.current) {
+        spellAskRef.current = wh.ready;
+        attackQueueRef.current = false;
+        attackHeldRef.current = false;
+      }
+    }
     const still = active ? 1 : 0;
     const forward = Math.max(-1, Math.min(1, kbForward + tMove.forward)) * still;
     const strafe = Math.max(-1, Math.min(1, kbStrafe + tMove.strafe)) * still;
@@ -1979,7 +2078,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const sprinting =
       keys.has("ShiftLeft") || keys.has("ShiftRight") || touchSprintRef.current || stickMag > 0.88;
     const paladin = paladinRef.current;
-    const blocking = active && equipmentRef.current.shield && (mouseBlockRef.current || keys.has("KeyQ") || touchBlockRef.current);
+    const blocking = active && equipmentRef.current.shield && (mouseBlockRef.current || touchBlockRef.current);
     blockingRef.current = blocking;
     if (!active) {
       attackQueueRef.current = false;
@@ -1991,7 +2090,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       (swinging ? 0.72 : 1) *
       (drawRef.current > 0 ? 0.55 : reloadRef.current.t > 0 ? 0.75 : 1) *
       (spellRef.current.cast ? 0.5 : 1) *
-      (1 + statsRef.current.moveSpeed + (spellRef.current.bless > 0 ? SPELL.blessMove : 0) + (spellRef.current.haste > 0 ? SPELL.hasteMove : 0));
+      (1 + statsRef.current.moveSpeed + (spellRef.current.bless > 0 ? SPELL.blessMove : 0) + (spellRef.current.haste > 0 ? SPELL.hasteMove : 0) + (abOn(abilitiesRef.current, abRef.current, "sprint") ? SPRINT_MOVE : 0));
 
     // A jump needs his feet on the ground, a moment since the last landing, and no shield up or swing under way.
     world.jumpRest = Math.max(0, world.jumpRest - dt);
@@ -2109,11 +2208,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       }
       // The monsters in two half steps on a slow frame (so a long step never carries one through a wall).
       const simSteps = dt > 0.04 ? 2 : 1;
-      if (skillIdRef.current === "hide" && skillRef.current.active > 0 && swingStarted) {
-        skillRef.current.active = 0;
+      if (abOn(abilitiesRef.current, abRef.current, "hide") && swingStarted) {
+        abOf(abRef.current, "hide").active = 0;
         rogueRef.current.ambush = AMBUSH_WINDOW_S;
       }
-      const hidden = skillIdRef.current === "hide" && skillRef.current.active > 0;
+      const hidden = abOn(abilitiesRef.current, abRef.current, "hide");
       for (let k = 0; k < simSteps; k++) {
         sim.step(
           dt / simSteps,
@@ -2309,16 +2408,19 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     attackQueueRef.current = false;
     prevYawRef.current = walker.yaw;
 
-    // The class skill (skills.ts, G or the touch button): Quick Shot speeds the draw for a while,
-    // a snare goes down at his feet, Second Wind heals over a few seconds. Down here only.
+    // The abilities on Q and E (skills.ts; the two ability buttons on a phone): Quick Shot speeds the
+    // draw for a while, a snare goes down at his feet, Second Wind heals over a few seconds, and so on.
+    // Spell Memory is not run here: it opens the spell wheel (the key handler and the HUD). Down here only.
     {
-      const sk = skillRef.current;
-      const asked = skillAskRef.current;
-      skillAskRef.current = false;
-      const sd = skillById(skillIdRef.current);
-      sk.cd = Math.max(0, sk.cd - dt);
-      sk.active = Math.max(0, sk.active - dt);
-      if (asked && sd) {
+      for (const a of abRef.current.values()) {
+        a.cd = Math.max(0, a.cd - dt);
+        a.active = Math.max(0, a.active - dt);
+      }
+      const slot = skillAskRef.current;
+      skillAskRef.current = -1;
+      const sd = slot >= 0 ? skillById(abilitiesRef.current[slot]) : null;
+      const sk = sd ? abOf(abRef.current, sd.id) : null;
+      if (sd && sk && !sd.wheel) {
         if (world.place !== "dungeon" || world.dead || world.escaped) bowRef.current.onHint("Skills are for the dungeon.");
         else if (sk.cd > 0) bowRef.current.onHint(`${sd.name} is ready again in ${Math.ceil(sk.cd)} s.`);
         else {
@@ -2336,6 +2438,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           } else if (sd.id === "second_wind") {
             regenQueueRef.current = { amount: world.maxHp / 3, seconds: 8 };
             sk.active = 8;
+          } else if (sd.id === "sprint") {
+            sk.active = SPRINT_S;
+            holyFxRef.current?.burst("bless", px, world.playerFloor * CELL_M, pz);
           } else if (sd.id === "smite") {
             // Waits for his next blow (combat.onHit spends it).
             sk.active = SMITE_S;
@@ -2394,10 +2499,15 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         else if (sim.hit(m.id, 0, 0, POISON_DPS, true) === "killed" && m.family === "skeleton") monsterSfxRef.current?.collapse();
         holyFxRef.current?.burst("poison", m.wx, m.wy + m.height * 0.6, m.wz);
       }
-      const sent = `${Math.ceil(sk.cd)}|${Math.ceil(sk.active)}`;
-      if (sent !== sk.sent) {
-        sk.sent = sent;
-        onSkillState({ cd: sk.cd, total: sk.total, active: sk.active });
+      const hudOf = (id: SkillId | null): SkillHud => {
+        const a = id ? abRef.current.get(id) : undefined;
+        return a ? { cd: a.cd, total: a.total, active: a.active } : NO_SKILL;
+      };
+      const states = abilitiesRef.current.map(hudOf);
+      const sent = states.map((a) => `${Math.ceil(a.cd)}|${Math.ceil(a.active)}`).join(",");
+      if (sent !== skillSentRef.current) {
+        skillSentRef.current = sent;
+        onSkillState(states);
       }
     }
 
@@ -2513,7 +2623,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             // No spell on that key.
           } else if (sp.cast) bowRef.current.onHint("You are already casting.");
           else if ((sp.charges[id] ?? 0) <= 0 && sp.free <= 0) bowRef.current.onHint(`${s.name} has no charges left. Sit and ${rest.verb} (X) to get them back.`);
-          else if (drawRef.current > 0 || swinging || blocking || !fighting) bowRef.current.onHint("Lower your guard to cast.");
+          else if (drawRef.current > 0 || swinging || blocking) bowRef.current.onHint("Lower your guard to cast.");
           else {
             sp.rest.on = false;
             sp.cast = { id, t: 0, total: s.cast / (1 + Math.max(-0.5, st.castingSpeed)) };
@@ -2779,7 +2889,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       const pressed = attackHeldRef.current && !heldBeforeRef.current;
       heldBeforeRef.current = attackHeldRef.current;
       if (ready && pressed && bow.loaded <= 0 && rl.t <= 0) bow.onHint(bow.arrows > 0 ? "Out of loaded arrows: press R to reload." : "No arrows left.");
-      const quick = skillIdRef.current === "quick_shot" && skillRef.current.active > 0 ? 3 : 1;
+      const quick = abOn(abilitiesRef.current, abRef.current, "quick_shot") ? 3 : 1;
       if (canDraw && attackHeldRef.current) drawRef.current = Math.min(3, drawRef.current + dt * (1 + statsRef.current.actionSpeed + statsRef.current.drawSpeed + (spellRef.current.haste > 0 ? SPELL.hasteAction : 0)) * quick);
       else if (drawRef.current > 0) {
         if (canDraw && spec && !attackHeldRef.current && drawRef.current >= 0.12 && paladin) {
@@ -2822,7 +2932,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           monsterSfxRef.current?.twang();
           bow.onShot();
           // A shot gives a hidden rogue away.
-          if (skillIdRef.current === "hide" && skillRef.current.active > 0) skillRef.current.active = 0;
+          if (abOn(abilitiesRef.current, abRef.current, "hide")) abOf(abRef.current, "hide").active = 0;
         }
         drawRef.current = 0;
       }
@@ -3716,6 +3826,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       return;
     }
     if (h.bow && arrowCount(invRef.current) === 0) setToast("No arrows in your bag.");
+    if (wheelRef.current.ready >= 0) {
+      wheelRef.current.ready = -1;
+      setWheelUi({ ...wheelRef.current });
+    }
     setActiveSet((a) => (a === set ? 0 : set));
   }, []);
   /** Keys 3 and 4: use what is on that belt slot (the next of its kind in the bag takes its place). */
@@ -3758,13 +3872,18 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     },
     [heroClass]
   );
-  const skillAskRef = useRef(false);
+  const skillAskRef = useRef(-1);
+  /** The spell wheel: the scene points it, the HUD draws it (wheelUi is its last state for React). */
+  const wheelRef = useRef<WheelState>({ open: false, x: 0, y: 0, pick: -1, ready: -1 });
+  const [wheelUi, setWheelUi] = useState<WheelState>(wheelRef.current);
   const reloadTouchRef = useRef(false);
-  const [skillHud, setSkillHud] = useState<SkillHud>({ cd: 0, total: 0, active: 0 });
-  const skillDef = skillById(loadout.skill);
+  const [skillHuds, setSkillHuds] = useState<SkillHud[]>([NO_SKILL, NO_SKILL]);
+  const abilityDefs = loadout.abilities.map((a) => skillById(a));
   const stats = useMemo(() => computeStats(classById(heroClass).attributes, inv.equipped, activeSet || 1, loadout.perks), [heroClass, inv.equipped, activeSet, loadout.perks]);
   // His spells as far as his memory holds them (gear can raise or lower it).
-  const spells = useMemo(() => fitSpells(loadout.spells, stats.memoryCapacity), [loadout.spells, stats.memoryCapacity]);
+  // The spell wheel holds them only while Spell Memory is on Q or E.
+  const wheelOn = hasWheel(loadout);
+  const spells = useMemo(() => (wheelOn ? fitSpells(loadout.spells, stats.memoryCapacity) : []), [wheelOn, loadout.spells, stats.memoryCapacity]);
   const spellAskRef = useRef(-1);
   const restAskRef = useRef(false);
   const [spellHud, setSpellHud] = useState<SpellHud>(NO_SPELLS);
@@ -4287,8 +4406,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         else openScreen("play");
         return;
       }
-      // E: trade, search, loot, open or close what is in front of him (and E again walks away).
-      if (e.code === "KeyE") {
+      // F: trade, search, loot, open or close what is in front of him (and F again walks away).
+      if (e.code === "KeyF") {
         if (screenRef.current === "shop" || screenRef.current === "loot" || screenRef.current === "quests") resume();
         else if (screenRef.current === "play") interactNow(interactRef.current);
         return;
@@ -4530,10 +4649,12 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onArrowsPicked={handleArrowsPicked}
           onReloadStart={handleReloadStart}
           onBowHint={handleBowHint}
-          skill={loadout.skill}
+          abilities={loadout.abilities}
           skillAskRef={skillAskRef}
+          wheelRef={wheelRef}
+          onWheelState={setWheelUi}
           reloadTouchRef={reloadTouchRef}
-          onSkillState={setSkillHud}
+          onSkillState={setSkillHuds}
           spells={spells}
           spellAskRef={spellAskRef}
           restAskRef={restAskRef}
@@ -5145,8 +5266,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {hud.pointerLocked
-            ? (spells.length ? `5–9 Spells · X ${meditates(spells) ? "Meditate" : "Pray"} · ` : "") + "1 / 2 Weapon sets · R Reload bow · G Skill · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"
-            : "Click to capture the mouse · " + (spells.length ? `5–9 Spells · X ${meditates(spells) ? "Meditate" : "Pray"} · ` : "") + "1 / 2 Weapon sets · R Reload bow · G Skill · 3 / 4 Belt · F Swing (hold to draw the bow) · Q / RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · E Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"}
+            ? "Q / E Abilities" + (spells.length ? ` (hold for the spell wheel) · X ${meditates(spells) ? "Meditate" : "Pray"}` : "") + " · 1 / 2 Weapon sets · R Reload bow · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · F Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"
+            : "Click to capture the mouse · Q / E Abilities" + (spells.length ? ` (hold for the spell wheel) · X ${meditates(spells) ? "Meditate" : "Pray"}` : "") + " · 1 / 2 Weapon sets · R Reload bow · 3 / 4 Belt · Z Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · F Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"}
         </div>
       ) : null}
 
@@ -5245,30 +5366,43 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
                   RELOAD
                 </button>
               ) : null}
-              {place === "dungeon" && skillDef ? (
-                <button
-                  type="button"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    skillAskRef.current = true;
-                  }}
-                  style={{
-                    width: 58,
-                    height: 58,
-                    borderRadius: "50%",
-                    border: `2px solid ${skillHud.active > 0 ? "#7df39b" : skillHud.cd > 0 ? "rgba(255,255,255,0.2)" : "rgba(125,243,155,0.7)"}`,
-                    background: "rgba(10,26,16,0.78)",
-                    color: skillHud.cd > 0 && skillHud.active <= 0 ? "#7d8a80" : "#bff5cc",
-                    fontWeight: 900,
-                    fontSize: 9,
-                    lineHeight: 1.15,
-                    padding: 2,
-                    touchAction: "none",
-                  }}
-                >
-                  {skillHud.cd > 0 && skillHud.active <= 0 ? `${Math.ceil(skillHud.cd)}s` : skillDef.name.toUpperCase()}
-                </button>
-              ) : null}
+              {place === "dungeon"
+                ? abilityDefs.map((d, i) => {
+                    if (!d) return null;
+                    const a = skillHuds[i] ?? NO_SKILL;
+                    const waiting = a.cd > 0 && a.active <= 0;
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          if (d.wheel) {
+                            const w = wheelRef.current;
+                            w.open = !w.open;
+                            w.pick = -1;
+                            setWheelUi({ ...w });
+                          } else skillAskRef.current = i;
+                        }}
+                        style={{
+                          width: 58,
+                          height: 58,
+                          borderRadius: "50%",
+                          border: `2px solid ${a.active > 0 ? "#7df39b" : waiting ? "rgba(255,255,255,0.2)" : d.wheel ? "rgba(255,216,77,0.7)" : "rgba(125,243,155,0.7)"}`,
+                          background: d.wheel ? "rgba(30,24,10,0.8)" : "rgba(10,26,16,0.78)",
+                          color: waiting ? "#7d8a80" : d.wheel ? "#ffe08a" : "#bff5cc",
+                          fontWeight: 900,
+                          fontSize: 9,
+                          lineHeight: 1.15,
+                          padding: 2,
+                          touchAction: "none",
+                        }}
+                      >
+                        {waiting ? `${Math.ceil(a.cd)}s` : d.wheel ? "SPELLS" : d.name.toUpperCase()}
+                      </button>
+                    );
+                  })
+                : null}
               <button
                 type="button"
                 onPointerDown={(e) => {
@@ -5445,7 +5579,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
                                 : "LOOT"}
             </button>
           ) : (
-            <span style={{ display: "inline-block", minWidth: 22, padding: "2px 6px", textAlign: "center", border: "1px solid #e8dcc0", borderRadius: 3, fontSize: 12, fontWeight: 800, color: "#f3e6c4" }}>E</span>
+            <span style={{ display: "inline-block", minWidth: 22, padding: "2px 6px", textAlign: "center", border: "1px solid #e8dcc0", borderRadius: 3, fontSize: 12, fontWeight: 800, color: "#f3e6c4" }}>F</span>
           )}
           <span style={{ fontSize: 13, color: "#e8dcc0" }}>
             {hud.interact.verb} <b style={{ color: "#f3e6c4", fontFamily: "Georgia, 'Times New Roman', serif" }}>{hud.interact.label}</b>
@@ -5484,10 +5618,10 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       ) : null}
 
       {/* The caster's spells (5–9) and praying (X). */}
-      {showGameHud && !isTouchUI && spells.length && place === "dungeon" && screen === "play" && !hud.dead ? <SpellBar spells={spells} hud={spellHud} /> : null}
+      {showGameHud && !isTouchUI && spells.length && place === "dungeon" && screen === "play" && !hud.dead ? <SpellBar spells={spells} hud={spellHud} ready={wheelUi.ready} /> : null}
 
       {/* Hidden (the rogue's Hide): the world darkens at the edges while the shadows hold him. */}
-      {showGameHud && skillDef?.id === "hide" && skillHud.active > 0 && place === "dungeon" && !hud.dead ? (
+      {showGameHud && abilityDefs.some((d, i) => d?.id === "hide" && (skillHuds[i]?.active ?? 0) > 0) && place === "dungeon" && !hud.dead ? (
         <div
           style={{
             position: "fixed",
@@ -5499,31 +5633,34 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         />
       ) : null}
 
-      {/* The class skill (G): its name, then its cooldown; green while it runs. */}
-      {showGameHud && !isTouchUI && skillDef && place === "dungeon" && screen === "play" && !hud.dead ? (
-        <div
-          style={{
-            position: "fixed",
-            left: "50%",
-            bottom: 132,
-            transform: "translateX(-50%)",
-            zIndex: 9,
-            pointerEvents: "none",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "5px 12px",
-            background: "rgba(8,10,8,0.7)",
-            border: `1px solid ${skillHud.active > 0 ? "#7df39b" : "rgba(214,186,128,0.35)"}`,
-            borderRadius: 3,
-            fontFamily: "system-ui, sans-serif",
-            fontSize: 12,
-            color: skillHud.cd > 0 && skillHud.active <= 0 ? "#8a8272" : "#e8f3e4",
-          }}
-        >
-          <span style={{ display: "inline-block", minWidth: 20, padding: "1px 5px", textAlign: "center", border: "1px solid currentColor", borderRadius: 3, fontWeight: 800 }}>G</span>
-          {skillDef.name}
-          {skillHud.active > 0 ? <b style={{ color: "#7df39b" }}>{Math.ceil(skillHud.active)}s</b> : skillHud.cd > 0 ? <b>{Math.ceil(skillHud.cd)}s</b> : null}
+      {/* The abilities on Q and E: name (or the readied spell), then the cooldown; green while running. */}
+      {showGameHud && !isTouchUI && place === "dungeon" && screen === "play" && !hud.dead && abilityDefs.some((d) => !!d) ? (
+        <div style={{ position: "fixed", left: "50%", bottom: 132, transform: "translateX(-50%)", zIndex: 9, pointerEvents: "none", display: "flex", gap: 8, fontFamily: "system-ui, sans-serif" }}>
+          {abilityDefs.map((d, i) => {
+            if (!d) return null;
+            const a = skillHuds[i] ?? NO_SKILL;
+            const ready = d.wheel && wheelUi.ready >= 0 ? spellById(spells[wheelUi.ready])?.name : null;
+            return (
+              <div
+                key={d.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "5px 12px",
+                  background: "rgba(8,10,8,0.7)",
+                  border: `1px solid ${a.active > 0 ? "#7df39b" : d.wheel && ready ? "#ffd84d" : "rgba(214,186,128,0.35)"}`,
+                  borderRadius: 3,
+                  fontSize: 12,
+                  color: a.cd > 0 && a.active <= 0 ? "#8a8272" : "#e8f3e4",
+                }}
+              >
+                <span style={{ display: "inline-block", minWidth: 20, padding: "1px 5px", textAlign: "center", border: "1px solid currentColor", borderRadius: 3, fontWeight: 800 }}>{ABILITY_KEYS[i]}</span>
+                {d.wheel ? (ready ? <span style={{ color: "#ffe08a" }}>{ready} (attack to cast)</span> : "Spell wheel (hold)") : d.name}
+                {a.active > 0 ? <b style={{ color: "#7df39b" }}>{Math.ceil(a.active)}s</b> : a.cd > 0 ? <b>{Math.ceil(a.cd)}s</b> : null}
+              </div>
+            );
+          })}
         </div>
       ) : null}
 
@@ -5606,18 +5743,52 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         ))}
       </div>
 
-      {/* Phone: the caster's spells (tap to cast) and PRAY, in a row over the belt. */}
+      {/* Phone: the readied spell (tap to put it away) and PRAY, in a row over the belt. */}
       {showGameHud && isTouchUI && !hud.loading && !hud.dead && place === "dungeon" && spells.length ? (
         <div style={{ position: "fixed", zIndex: 11, left: "max(18px, env(safe-area-inset-left))", bottom: "calc(max(18px, env(safe-area-inset-bottom)) + 178px)", touchAction: "none" }}>
           <SpellButtons
             spells={spells}
             hud={spellHud}
-            onCast={(i) => {
-              spellAskRef.current = i;
+            ready={wheelUi.ready}
+            onUnready={() => {
+              wheelRef.current.ready = -1;
+              setWheelUi({ ...wheelRef.current });
             }}
             onPray={() => {
               restAskRef.current = true;
             }}
+          />
+        </div>
+      ) : null}
+
+      {/* The spell wheel: held open on its key (point with the mouse), or tapped open on a phone. */}
+      {showGameHud && wheelUi.open && place === "dungeon" && !hud.dead && spells.length ? (
+        <div style={{ position: "fixed", inset: 0, zIndex: 13, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: isTouchUI ? "auto" : "none", background: isTouchUI ? "rgba(0,0,0,0.25)" : "none" }}>
+          <SpellWheel
+            spells={spells}
+            size={isTouchUI ? 260 : 300}
+            pick={wheelUi.pick}
+            ready={wheelUi.ready}
+            charges={spellHud.charges}
+            onPick={
+              isTouchUI
+                ? (i) => {
+                    const w = wheelRef.current;
+                    w.ready = i;
+                    w.open = false;
+                    w.pick = -1;
+                    setWheelUi({ ...w });
+                  }
+                : undefined
+            }
+            onClose={
+              isTouchUI
+                ? () => {
+                    wheelRef.current.open = false;
+                    setWheelUi({ ...wheelRef.current });
+                  }
+                : undefined
+            }
           />
         </div>
       ) : null}
