@@ -322,6 +322,8 @@ export interface PlayerView {
   /** A new cut started this step. */
   swingStarted: boolean;
   dead: boolean;
+  /** Hidden (the rogue's Hide): still in the way, but nothing can see him to pick him as a target. */
+  hidden?: boolean;
 }
 
 export function createMobSimulation(d: DungeonData, playerStartX: number, playerStartZ: number, solid: (x: number, y: number, z: number) => boolean) {
@@ -838,7 +840,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
 
       // Whom it is after: the nearest of the living (it only turns to another a good step closer).
       if (party.length > 1) {
-        const far = (w: number) => (party[w].dead ? Infinity : Math.hypot(party[w].wx - m.wx, party[w].wz - m.wz));
+        const far = (w: number) => (party[w].dead || party[w].hidden ? Infinity : Math.hypot(party[w].wx - m.wx, party[w].wz - m.wz));
         let best = m.target < party.length ? m.target : 0;
         let bestD = far(best) - 1.5;
         for (let w = 0; w < party.length; w++) {
@@ -861,7 +863,8 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
 
       // Calm: does it see the fighter (in front of it, in reach of its eyes, no wall between)?
       // Nothing picks a fight in the market.
-      if (!m.hostile && !pl.dead && !inMarket) {
+      const unseen = pl.dead || !!pl.hidden;
+      if (!m.hostile && !unseen && !inMarket) {
         const boss = !!m.kind.boss;
         const ahead = Math.cos(facePlayer - m.yaw) > -0.26;
         const range = boss ? BOSS_SIGHT_M : m.kind.ranged ? RANGED_SIGHT_M : SIGHT_M;
@@ -876,7 +879,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
         }
       }
 
-      if (m.hostile && !pl.dead) {
+      if (m.hostile && !unseen) {
         const chase = (paceK: number) => {
           m.repath -= dt;
           if (m.repath <= 0 || !m.path.length) {
@@ -999,18 +1002,21 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
    * The fighter's blade reached monster `id`, travelling along (dirX, dirZ). Returns what happened:
    * "blocked" (its shield took it), "hit" (damage dealt) or "killed".
    */
-  const hit = (id: number, dirX: number, dirZ: number, damage: number): "blocked" | "hit" | "killed" | null => {
+  const hit = (id: number, dirX: number, dirZ: number, damage: number, soft = false): "blocked" | "hit" | "killed" | null => {
     const m = mobs.find((o) => o.id === id);
     if (!m || m.dead) return null;
     if (!m.hostile) alertRoom(m);
-    // A raised shield facing the cut takes it.
-    if (m.blockT > 0 && m.equipment.shield && Math.cos(m.yaw - Math.atan2(-dirX, -dirZ)) > 0.4) {
+    // A raised shield facing the cut takes it (not poison already in the blood).
+    if (!soft && m.blockT > 0 && m.equipment.shield && Math.cos(m.yaw - Math.atan2(-dirX, -dirZ)) > 0.4) {
       m.blockT = Math.max(m.blockT, 0.3);
       return "blocked";
     }
-    m.hp -= damage * (1 - armorReduction(m.stats.armor));
-    m.flinch = 0.22;
-    m.aimT = 0;
+    // Soft damage (poison) goes past armour and neither staggers nor knocks it back.
+    m.hp -= soft ? damage : damage * (1 - armorReduction(m.stats.armor));
+    if (!soft) {
+      m.flinch = 0.22;
+      m.aimT = 0;
+    }
     if (m.hp <= 0) {
       m.hp = 0;
       m.dead = true;
@@ -1032,6 +1038,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
       }
       return "killed";
     }
+    if (soft) return "hit";
     // Slimes are not knocked about as far as men, and the big one hardly at all.
     const knock = m.family === "slime" ? 1.0 / m.scale : m.kind.boss ? 0.6 : 1.4;
     m.stun = m.kind.boss ? 0.18 : 0.32;

@@ -847,7 +847,14 @@ only through gear.**
   `finishIn` reads it), so the table, the portrait and other players see it. Icons come from
   `gearIcons.ts`.
 - **Cloth** (the wizard's robe, surcoat and mantle, `CLOTH_IDS`) is the third finish: the doublet,
-  tabard and cape shapes dyed a scholar's blue. It rides on the worn set like leather.
+  tabard and cape shapes dyed a scholar's blue. **Shadow** (the rogue's, `SHADOW_IDS`) is the fourth:
+  blackened hide and a charcoal cloak. Both ride on the worn set like leather.
+- **The rogue's skills.** Hide sets `PlayerView.hidden` for the monster step (`mobSim.ts`): he stays
+  solid but nothing can pick him as a target, and monsters beyond `HIDE_LOSE_M` forget him. A swing,
+  a shot or a blow taken ends it; the first blow out of it is an ambush. Backstab compares the
+  monster's facing with the blade's direction. Poison ticks through `sim.hit(..., soft = true)`:
+  past armour, no stagger or knock-back. In a party only the leader's own Hide fools the monsters
+  (the others' hidden flag is not sent yet).
 - **Spells** (`spells.ts`; the cleric and the wizard):
   - A caster memorises spells up to `memoryCapacity` (Knowledge); each costs its tier. They are
     picked in the Class tab (kept in the loadout's `spells`, trimmed with `fitSpells` where used).
@@ -866,13 +873,15 @@ only through gear.**
     that never leaves the scene).
   - **Sound is AI-generated, never synthesised.** Every spell sound is a take from the Stable Audio
     model (§9 "AI SFX"): prompts in `scripts/sfx-prompts/explorer-spells.json`, picked with
-    `python scripts/gen-sfx.py explorer-spells --pick name=take`, which writes
+    `python scripts/gen-sfx.py explorer-spells --pick name=take` (skills' sounds live there too),
+    which writes
     `public/dungeon-explorer/explorer-spells/sfx_ai/<name>.mp3`. `spellSfx.ts` plays them. A new
     sound: a prompt, generate, pick, a name in `SpellSound`. Don't add WebAudio-made spell sounds.
   - A new spell: an entry in `SPELLS`, its number in `SPELL`, a branch where the cast lands, its
     sound in `CAST_SOUND`.
-- **Mace and staff.** A main-hand weapon with `ItemDef.held` (`flanged_mace`, `oak_staff`) is built
+- **Mace, staff and dagger.** A main-hand weapon with `ItemDef.held` (`flanged_mace`, `oak_staff`,
+  `rondel_dagger`) is built
   in code (`mace.ts`) on the sword's group with the blade hidden, so it keeps the sword's swing and
-  hit sweep. `ItemDef.magic` (the staff) adds magical power while in hand. The worn set carries
-  `mainHand: "mace" | "staff"`; put sets on with `dressGear` and compare them with `gearKey`, never
+  hit sweep. `ItemDef.magic` (the staff) adds magical power while in hand and `ItemDef.quick` (the
+  dagger) adds action speed. The worn set carries `mainHand: "mace" | "staff" | "dagger"`; put sets on with `dressGear` and compare them with `gearKey`, never
   `p.wear` / `wearKey` alone, or the weapon is lost.

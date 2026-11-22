@@ -137,6 +137,9 @@ export interface Stats {
   /** Extra spell damage (Arcane Mastery), and Fireball's (Fire Mastery: harder and wider). */
   spellBonus: number;
   fireBonus: number;
+  /** The rogue's: extra damage from behind (Backstab) and out of hiding (Ambush). */
+  backstabBonus: number;
+  ambushBonus: number;
 }
 
 /** Everything that counts: the armour he wears and the weapon set `set` (only weapons in hand count). */
@@ -179,7 +182,9 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
     const d = it ? itemOf(it) : null;
     return !!d && (d.armor ?? 0) >= 14 && d.finish !== "leather" && s !== "doublet" && s !== "cape" && s !== "tabard";
   });
-  const moveExtra = (has("swift") ? 0.04 : 0) + (has("light_step") && !plate ? 0.06 : 0);
+  const moveExtra = (has("swift") ? 0.04 : 0) + (has("light_step") && !plate ? 0.06 : 0) + (has("fleet_foot") ? 0.06 : 0);
+  // A quick weapon in hand (the dagger) swings faster.
+  const quick = mainItem ? def(mainItem.id).quick ?? 0 : 0;
   return {
     attributes: a,
     maxHealth: Math.round(HEALTH(0.25 * a.str + 0.75 * a.vig) + add.maxHealth + (has("robust") ? 10 : 0)),
@@ -194,8 +199,8 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
     swordDamage: (sword + add.weaponDamage) * (1 + physicalBonus) * (has("weapon_mastery") ? 1.1 : 1) * (blunt ? 1.1 : 1),
     bowDamage: bow ? (bow + add.weaponDamage) * (1 + physicalBonus) * (has("ranged_mastery") ? 1.12 : 1) : 0,
     moveSpeed: MOVE(a.agi) + add.moveSpeed / 100 + moveExtra,
-    actionSpeed: ACTION(0.25 * a.agi + 0.75 * a.dex) + add.actionSpeed / 100,
-    interactionSpeed: INTERACT(0.25 * a.dex + 0.75 * a.res),
+    actionSpeed: ACTION(0.25 * a.agi + 0.75 * a.dex) + add.actionSpeed / 100 + quick,
+    interactionSpeed: INTERACT(0.25 * a.dex + 0.75 * a.res) + (has("light_fingers") ? 0.3 : 0),
     castingSpeed: CAST(a.kno) + (has("quick_chant") ? 0.2 : 0),
     cooldownReduction: Math.min(0.65, COOLDOWN(a.res)),
     memoryCapacity: Math.round(MEMORY(a.kno)) + (has("sage") ? 3 : 0),
@@ -205,6 +210,8 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
     undeadBonus: has("undead_slaying") ? 0.2 : 0,
     spellBonus: has("arcane_mastery") ? 0.15 : 0,
     fireBonus: has("fire_mastery") ? 0.25 : 0,
+    backstabBonus: has("backstab") ? 0.4 : 0,
+    ambushBonus: has("ambush") ? 0.6 : 0,
   };
 }
 

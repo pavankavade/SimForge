@@ -1,20 +1,87 @@
 {
   "_style": "fantasy video game spell sound effect, close-mic, clean, punchy, no music, no voices",
-  "cast_charge": { "prompt": "magic energy gathering in a wizard's staff, rising shimmering hum with soft crackles", "seconds": 2 },
-  "zap": { "prompt": "short sharp lightning bolt zap, electric crackle and snap", "seconds": 1 },
-  "missile": { "prompt": "magic arcane missile launched, quick airy whoosh with a glassy shimmer", "seconds": 1 },
-  "missile_hit": { "prompt": "arcane magic bolt hitting a target, bright crystalline pop and thump", "seconds": 1 },
-  "ice_bolt": { "prompt": "shard of ice flying fast through the air, cold whistling whoosh with frosty crackle", "seconds": 1 },
-  "ice_hit": { "prompt": "ice shard hitting and freezing, bright glassy crack with tinkling crystal shards", "seconds": 1 },
-  "fireball": { "prompt": "fireball launched from a staff, roaring flame whoosh", "seconds": 1 },
-  "fire_boom": { "prompt": "fireball exploding in a stone dungeon, big fiery boom with crackling flames and rumble", "seconds": 2 },
-  "haste": { "prompt": "speed magic spell, quick rising swirl of wind with a bright chime", "seconds": 1 },
-  "shield": { "prompt": "magic shield barrier forming around a person, deep resonant shimmering hum", "seconds": 2 },
-  "focus": { "prompt": "mystical concentration spell, soft deep gong with a shimmering tail", "seconds": 2 },
-  "heal": { "prompt": "warm healing spell, gentle angelic chime sparkle rising", "seconds": 2 },
-  "holy_light": { "prompt": "burst of holy light, bright radiant whoosh with a choir-like shimmer and a soft boom", "seconds": 2 },
-  "bless": { "prompt": "blessing spell, soft bell chime with warm glowing shimmer", "seconds": 2 },
-  "sanctuary": { "prompt": "sacred ground consecrated, low warm resonant hum with soft chimes", "seconds": 2 },
-  "smite": { "prompt": "holy smite, heavy weapon strike with a bright sizzling flash of holy fire", "seconds": 1 },
-  "rest_charge": { "prompt": "single soft magical twinkle, gentle restoring chime", "seconds": 1 }
+  "cast_charge": {
+    "prompt": "magic energy gathering in a wizard's staff, rising shimmering hum with soft crackles",
+    "seconds": 2
+  },
+  "zap": {
+    "prompt": "short sharp lightning bolt zap, electric crackle and snap",
+    "seconds": 1
+  },
+  "missile": {
+    "prompt": "magic arcane missile launched, quick airy whoosh with a glassy shimmer",
+    "seconds": 1
+  },
+  "missile_hit": {
+    "prompt": "arcane magic bolt hitting a target, bright crystalline pop and thump",
+    "seconds": 1
+  },
+  "ice_bolt": {
+    "prompt": "shard of ice flying fast through the air, cold whistling whoosh with frosty crackle",
+    "seconds": 1
+  },
+  "ice_hit": {
+    "prompt": "ice shard hitting and freezing, bright glassy crack with tinkling crystal shards",
+    "seconds": 1
+  },
+  "fireball": {
+    "prompt": "fireball launched from a staff, roaring flame whoosh",
+    "seconds": 1
+  },
+  "fire_boom": {
+    "prompt": "fireball exploding in a stone dungeon, big fiery boom with crackling flames and rumble",
+    "seconds": 2
+  },
+  "haste": {
+    "prompt": "speed magic spell, quick rising swirl of wind with a bright chime",
+    "seconds": 1
+  },
+  "shield": {
+    "prompt": "magic shield barrier forming around a person, deep resonant shimmering hum",
+    "seconds": 2
+  },
+  "focus": {
+    "prompt": "mystical concentration spell, soft deep gong with a shimmering tail",
+    "seconds": 2
+  },
+  "heal": {
+    "prompt": "warm healing spell, gentle angelic chime sparkle rising",
+    "seconds": 2
+  },
+  "holy_light": {
+    "prompt": "burst of holy light, bright radiant whoosh with a choir-like shimmer and a soft boom",
+    "seconds": 2
+  },
+  "bless": {
+    "prompt": "blessing spell, soft bell chime with warm glowing shimmer",
+    "seconds": 2
+  },
+  "sanctuary": {
+    "prompt": "sacred ground consecrated, low warm resonant hum with soft chimes",
+    "seconds": 2
+  },
+  "smite": {
+    "prompt": "holy smite, heavy weapon strike with a bright sizzling flash of holy fire",
+    "seconds": 1
+  },
+  "rest_charge": {
+    "prompt": "single soft magical twinkle, gentle restoring chime",
+    "seconds": 1
+  },
+  "vanish": {
+    "prompt": "thief vanishing in a puff of smoke, soft quick smoke poof with a dark whoosh",
+    "seconds": 1
+  },
+  "poison_coat": {
+    "prompt": "thick poison liquid smeared along a steel dagger blade, wet sticky drip with a faint metallic scrape",
+    "seconds": 1
+  },
+  "poison_hit": {
+    "prompt": "venom sizzling into a wound, short wet acidic hiss",
+    "seconds": 1
+  },
+  "backstab": {
+    "prompt": "dagger stabbing deep from behind, sharp quick stab with a meaty thud",
+    "seconds": 1
+  }
 }

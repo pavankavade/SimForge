@@ -5,7 +5,7 @@
 // would recompile every material).
 import * as THREE from "three";
 
-export type BurstKind = "light" | "heal" | "smite" | "bless" | "fire" | "frost" | "arcane" | "zap";
+export type BurstKind = "light" | "heal" | "smite" | "bless" | "fire" | "frost" | "arcane" | "zap" | "smoke" | "poison";
 /** A bolt in flight (world metres), its colour and how big its glow is. */
 export interface BoltView {
   x: number;
@@ -24,6 +24,8 @@ const BURST_COLOR: Record<BurstKind, number> = {
   frost: 0x9fe6ff,
   arcane: 0xc79bff,
   zap: 0xb9d8ff,
+  smoke: 0x2c2c33,
+  poison: 0x86f05a,
 };
 
 interface Burst {
@@ -163,13 +165,23 @@ export function createHolyFx(scene: THREE.Scene) {
     /** A spell landing at a point (feet height for heals and blessings, chest height for light). */
     burst(kind: BurstKind, x: number, y: number, z: number) {
       const color = BURST_COLOR[kind];
-      const mesh = kind === "heal" || kind === "bless" ? new THREE.Mesh(columnGeo, additive(color, 0.5, columnTex)) : glowSprite(color, 1, glowTex);
+      // Smoke darkens what is behind it (ordinary blending); everything else is light.
+      const mesh =
+        kind === "heal" || kind === "bless"
+          ? new THREE.Mesh(columnGeo, additive(color, 0.5, columnTex))
+          : kind === "smoke"
+            ? new THREE.Sprite(new THREE.SpriteMaterial({ color, map: glowTex, transparent: true, opacity: 0.9, depthWrite: false }))
+            : glowSprite(color, 1, glowTex);
       const ring = new THREE.Mesh(ringGeo, additive(color, 0.8));
       root.add(mesh, ring);
-      const life = kind === "light" ? 0.7 : kind === "fire" ? 0.8 : kind === "frost" ? 0.6 : kind === "smite" || kind === "zap" || kind === "arcane" ? 0.4 : 0.9;
+      const life = kind === "light" ? 0.7 : kind === "fire" ? 0.8 : kind === "smoke" ? 1.1 : kind === "frost" || kind === "poison" ? 0.6 : kind === "smite" || kind === "zap" || kind === "arcane" ? 0.4 : 0.9;
       bursts.push({ kind, x, y, z, t: 0, life, mesh, ring });
-      flash = Math.max(flash, kind === "light" || kind === "fire" ? 1 : kind === "smite" || kind === "frost" ? 0.7 : 0.45);
-      light.color.setHex(kind === "fire" ? 0xff9a48 : kind === "frost" || kind === "zap" ? 0xbfe0ff : kind === "arcane" ? 0xc9a6ff : 0xffe9b0);
+      if (kind === "smoke") {
+        ring.visible = false;
+        return;
+      }
+      flash = Math.max(flash, kind === "light" || kind === "fire" ? 1 : kind === "smite" || kind === "frost" ? 0.7 : kind === "poison" ? 0.2 : 0.45);
+      light.color.setHex(kind === "fire" ? 0xff9a48 : kind === "frost" || kind === "zap" ? 0xbfe0ff : kind === "arcane" ? 0xc9a6ff : kind === "poison" ? 0x86f05a : 0xffe9b0);
       light.position.set(x, y + (kind === "heal" || kind === "bless" ? 1.1 : 0), z);
     },
     /** Lightning from his staff to what it struck (a quarter of a second). */
@@ -275,7 +287,7 @@ export function createHolyFx(scene: THREE.Scene) {
           rm.opacity = 0.8 * fade;
         } else {
           // A ball of light swelling and fading, a ring running out along the floor.
-          const r = b.kind === "light" ? 2.2 : b.kind === "fire" ? 2.5 : b.kind === "frost" ? 0.9 : 0.7;
+          const r = b.kind === "light" ? 2.2 : b.kind === "fire" ? 2.5 : b.kind === "smoke" ? 1.1 : b.kind === "frost" ? 0.9 : b.kind === "poison" ? 0.45 : 0.7;
           b.mesh.position.set(b.x, b.y, b.z);
           // A sprite's scale is its full width: twice the radius, and a bit for the soft edge.
           b.mesh.scale.setScalar(2.6 * r * (0.3 + 0.7 * Math.sqrt(u)));

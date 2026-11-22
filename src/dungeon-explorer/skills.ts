@@ -20,8 +20,12 @@ export type PerkId =
   | "arcane_mastery"
   | "sage"
   | "quick_chant"
-  | "fire_mastery";
-export type SkillId = "second_wind" | "quick_shot" | "snare" | "smite" | "prayer" | "arcane_shield" | "intense_focus";
+  | "fire_mastery"
+  | "backstab"
+  | "ambush"
+  | "light_fingers"
+  | "fleet_foot";
+export type SkillId = "second_wind" | "quick_shot" | "snare" | "smite" | "prayer" | "arcane_shield" | "intense_focus" | "hide" | "poison_blade";
 
 export interface Perk {
   id: PerkId;
@@ -63,6 +67,12 @@ const PERKS: Partial<Record<ClassId, Perk[]>> = {
     { id: "quick_chant", name: "Quick Chant", note: "Cast 20% faster." },
     { id: "fire_mastery", name: "Fire Mastery", note: "Fireball hits 25% harder and bursts a metre wider." },
   ],
+  rogue: [
+    { id: "backstab", name: "Backstab", note: "+40% damage on blows that land from behind." },
+    { id: "ambush", name: "Ambush", note: "The first blow out of hiding deals 60% more on top." },
+    { id: "light_fingers", name: "Light Fingers", note: "+30% interaction speed: bandages and the like go faster." },
+    { id: "fleet_foot", name: "Fleet Foot", note: "+6% move speed." },
+  ],
 };
 
 const SKILLS: Partial<Record<ClassId, Skill[]>> = {
@@ -78,6 +88,10 @@ const SKILLS: Partial<Record<ClassId, Skill[]>> = {
   wizard: [
     { id: "arcane_shield", name: "Arcane Shield", note: "A shell of mana takes the next 40 damage for you (for ten seconds).", cooldown: 30 },
     { id: "intense_focus", name: "Intense Focus", note: "Your next three spells cost no charges.", cooldown: 50 },
+  ],
+  rogue: [
+    { id: "hide", name: "Hide", note: "Melt into the shadows for ten seconds: monsters lose you. A blow out of hiding hits 25% harder; striking or being hurt ends it.", cooldown: 25 },
+    { id: "poison_blade", name: "Poisoned Blade", note: "For fifteen seconds every blow poisons: 4 damage a second for five seconds, through armour.", cooldown: 30 },
   ],
 };
 

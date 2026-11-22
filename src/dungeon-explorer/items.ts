@@ -88,7 +88,9 @@ export interface ItemDef {
   /** A blunt main-hand weapon (the cleric's mace): Blunt Weapon Mastery counts. */
   blunt?: boolean;
   /** A main-hand weapon drawn as something other than the sword (mace.ts). */
-  held?: "mace" | "staff";
+  held?: "mace" | "staff" | "dagger";
+  /** How much faster it swings while in hand (the dagger), added to action speed. */
+  quick?: number;
   /** Magical power it adds while in hand (the wizard's staff). */
   magic?: number;
 }
@@ -146,6 +148,7 @@ const OTHER: ItemDef[] = [
   // The fighter's ranged kit: a recurve bow (the bow slot, key 2) and arrows, a stack to a cell pair.
   { id: "flanged_mace", name: "Flanged mace", note: "Seven steel flanges on an ash haft; it breaks bone through mail", kind: "Main hand", category: "weapon", slot: "sword", w: 1, h: 3, rarity: "common", weight: 1.5, value: 150, damage: 36, blunt: true, held: "mace" },
   { id: "oak_staff", name: "Oak staff", note: "Knotted oak shod in iron, a blue crystal in its crown; it hums when you think of fire", kind: "Main hand", category: "weapon", slot: "sword", w: 1, h: 4, rarity: "common", weight: 1.8, value: 170, damage: 24, blunt: true, held: "staff", magic: 6 },
+  { id: "rondel_dagger", name: "Rondel dagger", note: "A square spike of a blade between two steel discs; made for the gaps in armour", kind: "Main hand", category: "weapon", slot: "sword", w: 1, h: 2, rarity: "common", weight: 0.5, value: 130, damage: 24, held: "dagger", quick: 0.35 },
   { id: "short_bow", name: "Short bow", note: "Ash, quick in the hand; ten arrows to a load", kind: "Bow", category: "weapon", slot: "bow", w: 1, h: 3, rarity: "common", weight: 0.7, value: 110, damage: 26 },
   { id: "long_bow", name: "Longbow", note: "A yew stave as tall as a man; slow to draw, it punches through mail. Five to a load", kind: "Bow", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 1.4, value: 240, damage: 46 },
   { id: "recurve_bow", name: "Recurve bow", note: "Ash and horn, the tips bent forward; a strong draw", kind: "Ranged", category: "weapon", slot: "bow", w: 1, h: 4, rarity: "common", weight: 1.1, value: 160, damage: 34 },
@@ -216,6 +219,17 @@ const CLOTHS: Array<Omit<ItemDef, "category" | "value" | "slot" | "finish"> & { 
 for (const a of CLOTHS) ITEM_DEFS[a.id] = { ...a, category: "armor", value: priceFor(a), finish: "cloth" };
 /** The cloths' ids and the slot each sits in (icons are drawn from that shape in cloth). */
 export const CLOTH_IDS: Array<[string, ArmorSlot]> = CLOTHS.map((a) => [a.id, a.slot]);
+
+/** The rogue's shadow leathers: blackened hide on the plate shapes, a charcoal cloak. Quiet and light. */
+const SHADOWS: Array<Omit<ItemDef, "category" | "value" | "slot" | "finish"> & { slot: ArmorSlot }> = [
+  { id: "shadow_jerkin", slot: "cuirass", name: "Shadow jerkin", note: "Blackened hide, laced tight so nothing creaks", kind: "Chest", w: 2, h: 3, rarity: "common", armor: 26, weight: 2.6 },
+  { id: "shadow_gloves", slot: "gauntlets", name: "Thief's gloves", note: "Thin black kid; you can feel a lock's pins through them", kind: "Hands", w: 2, h: 2, rarity: "common", armor: 6, weight: 0.2 },
+  { id: "shadow_boots", slot: "sabatons", name: "Soft-soled boots", note: "Felt under the leather; they make no sound on stone", kind: "Feet", w: 2, h: 2, rarity: "common", armor: 5, weight: 0.5 },
+  { id: "shadow_cloak", slot: "cape", name: "Charcoal cloak", note: "The colour of a corner nobody looks into", kind: "Back", w: 2, h: 3, rarity: "common", armor: 4, weight: 0.9 },
+];
+for (const a of SHADOWS) ITEM_DEFS[a.id] = { ...a, category: "armor", value: priceFor(a), finish: "shadow" };
+/** The shadow leathers' ids and the slot each sits in (icons are drawn from that shape in shadow). */
+export const SHADOW_IDS: Array<[string, ArmorSlot]> = SHADOWS.map((a) => [a.id, a.slot]);
 for (const o of OTHER) ITEM_DEFS[o.id] = o;
 
 /** The paladin's kit, one def per armour slot (the stats the game reads). */

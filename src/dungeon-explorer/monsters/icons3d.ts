@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import { crystalId, RARITIES } from "../items";
 import { BOWS, BOW_WOOD, bowLimbs } from "../bows";
-import { buildMace, buildStaff } from "../mace";
+import { buildDagger, buildMace, buildStaff } from "../mace";
 import { arrowGeometry, bowGeometry, crystalGeometry, crystalMaterial, staffGeometry } from "./props";
 import { boneGeometry, skullObject } from "./skeletonBody";
 
@@ -97,6 +97,16 @@ export const PROC_ICONS: Record<string, () => THREE.Object3D> = {
       new THREE.MeshStandardMaterial({ color: 0x6a4a2e, roughness: 0.8 }),
       new THREE.MeshStandardMaterial({ color: 0x5a5c62, metalness: 0.8, roughness: 0.45 }),
       new THREE.MeshStandardMaterial({ color: 0x3f7bff, emissive: 0x5aa2ff, emissiveIntensity: 1, roughness: 0.15, flatShading: true })
+    );
+    m.rotation.set(-Math.PI / 2, 0, 0.12);
+    const o = new THREE.Group();
+    o.add(m);
+    return o;
+  },
+  rondel_dagger: () => {
+    const m = buildDagger(
+      new THREE.MeshStandardMaterial({ color: 0xc4c8ce, metalness: 0.85, roughness: 0.3 }),
+      new THREE.MeshStandardMaterial({ color: 0x2b2018, roughness: 0.8 })
     );
     m.rotation.set(-Math.PI / 2, 0, 0.12);
     const o = new THREE.Group();

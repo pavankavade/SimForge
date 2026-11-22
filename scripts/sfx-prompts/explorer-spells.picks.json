@@ -1,4 +1,9 @@
 {
+  "backstab": {
+    "batch_seed": 2088698175,
+    "model": "small-sfx",
+    "take": 1
+  },
   "bless": {
     "batch_seed": 1160692241,
     "model": "small-sfx",
@@ -59,6 +64,16 @@
     "model": "small-sfx",
     "take": 3
   },
+  "poison_coat": {
+    "batch_seed": 480557130,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "poison_hit": {
+    "batch_seed": 24934450,
+    "model": "small-sfx",
+    "take": 2
+  },
   "rest_charge": {
     "batch_seed": 2413398969,
     "model": "small-sfx",
@@ -78,6 +93,11 @@
     "batch_seed": 1337822177,
     "model": "small-sfx",
     "take": 3
+  },
+  "vanish": {
+    "batch_seed": 2158090018,
+    "model": "small-sfx",
+    "take": 2
   },
   "zap": {
     "batch_seed": 757067944,

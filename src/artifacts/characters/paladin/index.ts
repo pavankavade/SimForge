@@ -54,12 +54,13 @@ export type ArmorEquipment = Record<ArmorSlot, boolean>;
  * What a worn piece is made of: the plate it was built as, or hardened leather on the same shape
  * (the ranger's jerkin, bracers, gloves and boots). On the cape and tabard, leather means a plain
  * forest-green cloak instead of the order's colours. Cloth (the wizard's) dyes the doublet, cape and
- * tabard a scholar's blue: a robe, a night mantle and a surcoat.
+ * tabard a scholar's blue: a robe, a night mantle and a surcoat. Shadow (the rogue's) is leather
+ * blackened, with a charcoal cloak.
  */
-export type Finish = "plate" | "leather" | "cloth";
+export type Finish = "plate" | "leather" | "cloth" | "shadow";
 export type Finishes = Partial<Record<ArmorSlot, Finish>>;
 /** A key for "what he wears": the pieces on and what each is made of. */
-export const wearKey = (e: ArmorEquipment, f?: Finishes): string => ARMOR_SLOTS.map((s) => (e[s] ? (f?.[s] === "leather" ? 2 : f?.[s] === "cloth" ? 3 : 1) : 0)).join("");
+export const wearKey = (e: ArmorEquipment, f?: Finishes): string => ARMOR_SLOTS.map((s) => (e[s] ? (f?.[s] === "leather" ? 2 : f?.[s] === "cloth" ? 3 : f?.[s] === "shadow" ? 4 : 1) : 0)).join("");
 
 /**
  * Workwear, separate from the armour (the game's inventory only knows the armour): a miner's
@@ -333,6 +334,13 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
   surcoat.color.setHex(0x2b3f8a);
   const clothOf = (m: THREE.Material): THREE.Material =>
     m === materials.human.quiltFit ? robe : m === materials.cape ? mantle : m === materials.tabard ? surcoat : m;
+  const shade = hide.clone();
+  shade.color.setHex(0x161618);
+  const shadeDark = hide.clone();
+  shadeDark.color.setHex(0x0a0a0b);
+  const charcoal = materials.cape.clone();
+  charcoal.map = null;
+  charcoal.color.setHex(0x141519);
   const steelFit = materials.human.steelFit;
   const leatherOf = (m: THREE.Material): THREE.Material =>
     m === materials.skinned.steel || m === materials.skinned.mail || m === steelFit
@@ -342,6 +350,14 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
         : m === materials.cape || m === materials.tabard
           ? forest
           : m;
+  const shadowOf = (m: THREE.Material): THREE.Material =>
+    m === materials.skinned.steel || m === materials.skinned.mail || m === steelFit
+      ? shade
+      : m === materials.skinned.gold || m === materials.skinned.dark
+        ? shadeDark
+        : m === materials.cape || m === materials.tabard
+          ? charcoal
+          : m;
   const finishObjects = (slot: ArmorSlot): THREE.Object3D[] =>
     slot === "cape" ? [cape.mesh] : slot === "tabard" ? [tabard.mesh] : slot === "sword" || slot === "shield" ? [] : model.meshes[slot] ?? [];
   const applyFinish = (slot: ArmorSlot) => {
@@ -350,7 +366,7 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
       const mesh = o as THREE.Mesh;
       if (!mesh.material || Array.isArray(mesh.material)) continue;
       const plate = (mesh.userData.plateMat as THREE.Material | undefined) ?? (mesh.userData.plateMat = mesh.material);
-      mesh.material = f === "leather" ? leatherOf(plate) : f === "cloth" ? clothOf(plate) : plate;
+      mesh.material = f === "leather" ? leatherOf(plate) : f === "cloth" ? clothOf(plate) : f === "shadow" ? shadowOf(plate) : plate;
     }
   };
   const workwear: Workwear = { ...NO_WORKWEAR };

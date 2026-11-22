@@ -1,9 +1,9 @@
 // The merchants of the market street and what they deal in. The armourer and the weaponsmith sell
-// the fighter's own kit, the cleric's mace and the ranger's leathers (a new piece each time), the
+// the fighter's own kit, the cleric's mace, the rogue's dagger and the ranger's and rogue's leathers (a new piece each time), the
 // woodsmith bows and arrows, the alchemist draughts, bandages and food for the belt, the arcanist the
 // wizard's staff and cloth. For now every one of them buys whatever he brings up from the dungeon.
 import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
-import { CLOTH_IDS, LEATHER_IDS, def, itemOf, type ItemInst } from "./items";
+import { CLOTH_IDS, LEATHER_IDS, SHADOW_IDS, def, itemOf, type ItemInst } from "./items";
 
 export type MerchantId = "armourer" | "weaponsmith" | "alchemist" | "mage" | "woodsmith";
 
@@ -35,7 +35,7 @@ export const MERCHANTS: Merchant[] = [
     shop: "Holt's Plate & Mail",
     cloth: 0x6b1f1a,
     trim: 0xd9b25a,
-    stock: (ARMOUR as string[]).concat(LEATHER_IDS.map(([id]) => id)),
+    stock: (ARMOUR as string[]).concat(LEATHER_IDS.map(([id]) => id)).concat(SHADOW_IDS.map(([id]) => id)),
     greeting: "Plate, mail and padding, all fitted to a man your size.",
     empty: "",
   },
@@ -46,7 +46,7 @@ export const MERCHANTS: Merchant[] = [
     shop: "The Tempered Edge",
     cloth: 0x2a3440,
     trim: 0xc8ccd2,
-    stock: ["sword", "flanged_mace", "shield", "short_bow", "recurve_bow", "long_bow", "arrows"],
+    stock: ["sword", "flanged_mace", "rondel_dagger", "shield", "short_bow", "recurve_bow", "long_bow", "arrows"],
     greeting: "Steel that holds an edge. Oak that holds a line.",
     empty: "",
   },

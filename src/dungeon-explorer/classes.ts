@@ -1,5 +1,5 @@
-// The classes a player can pick at the start: the fighter, the ranger, the cleric and the wizard are playable
-// (all the realistic human, dressed and armed for the class); the others are shown as coming soon. Each has
+// The classes a player can pick at the start: the fighter, the rogue, the wizard, the ranger and the
+// cleric, all playable (the realistic human, dressed and armed for the class). Each has
 // base attributes summing to 105 (an average of 15; stats.ts): gear adds the rest.
 import type { Attributes } from "./stats";
 
@@ -45,13 +45,15 @@ export const CLASSES: HeroClass[] = [
     attributes: { str: 9, vig: 10, agi: 21, dex: 23, wil: 10, kno: 10, res: 22 },
     name: "Rogue",
     tagline: "Quick hands, quicker knives",
-    blurb: "Moves quietly, picks locks and strikes from behind with twin daggers. Light armour, so every hit taken counts.",
-    kit: ["Twin daggers", "Leather jerkin", "Lockpicks"],
+    blurb: "Strikes fast with a rondel dagger, hides in plain sight and opens the fight from behind. Light shadow leathers, so every hit taken counts.",
+    kit: ["Rondel dagger (set 1; swings 35% faster)", "Shadow jerkin, thief's gloves, soft-soled boots and a charcoal cloak", "Leather bracers and shin guards", "Two healing draughts"],
     traits: [
+      ["Health", "~90"],
       ["Armour", "Light leather"],
-      ["Weapons", "Daggers"],
+      ["Weapons", "Dagger"],
+      ["Strength", "Hiding, backstabs, poison"],
     ],
-    available: false,
+    available: true,
     color: "#7fc29b",
   },
   {

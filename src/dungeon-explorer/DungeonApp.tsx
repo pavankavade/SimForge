@@ -134,6 +134,15 @@ const REMOTE_SOUND: Record<string, SpellSound> = {
   arcane: "missile_hit",
   zap: "zap",
 };
+/** The rogue's: Hide (seconds; a blow out of it hits harder for a moment after), Poisoned Blade. */
+const HIDE_S = 10;
+const HIDE_AMBUSH = 0.25;
+const AMBUSH_WINDOW_S = 0.9;
+const POISON_BLADE_S = 15;
+const POISON_S = 5;
+const POISON_DPS = 4;
+/** Monsters farther than this lose him when he hides (nearer ones still cannot see him to strike). */
+const HIDE_LOSE_M = 2.5;
 /** The wizard's Arcane Shield (a ward from his skill). */
 const ARCANE_SHIELD = 40;
 const ARCANE_SHIELD_S = 10;
@@ -673,6 +682,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     sent: "",
   });
   const holyFxRef = useRef<HolyFx | null>(null);
+  /** The rogue's: the moment after he strikes out of hiding, and the monsters his blade poisoned. */
+  const rogueRef = useRef({ ambush: 0, poisons: [] as Array<{ id: number; t: number; tick: number }> });
   /** The spells' sounds (AI-generated takes, spellSfx.ts). */
   const spellSfxRef = useRef<SpellSfx | null>(null);
   useEffect(() => {
@@ -982,9 +993,10 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const st = statsRef.current;
     const armour = hit.how === "acid" ? 0 : hit.how === "bolt" ? st.magicalReduction : st.physicalReduction;
     let dmg = hit.damage * (hit.how === "acid" ? 1 : 0.9 + w.rand() * 0.2) * (1 - armour);
-    // Protection's ward of light takes what it can; a blow also ends a rest.
+    // Protection's ward of light takes what it can; a blow also ends a rest, and hiding.
     const sp = spellRef.current;
     sp.rest.on = false;
+    if (skillIdRef.current === "hide" && skillRef.current.active > 0) skillRef.current.active = 0;
     if (sp.ward.amt > 0) {
       const took = Math.min(sp.ward.amt, dmg);
       sp.ward.amt -= took;
@@ -1580,6 +1592,21 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             spellSfxRef.current?.play("smite");
           }
           if (undead) dmg *= 1 + st.undeadBonus;
+          // The rogue: out of hiding, and from behind (it faces the way the blade travels).
+          const rg = rogueRef.current;
+          let sneak = false;
+          if (m && !m.dead) {
+            if (rg.ambush > 0) {
+              rg.ambush = 0;
+              dmg *= 1 + HIDE_AMBUSH + st.ambushBonus;
+              sneak = true;
+            }
+            if (st.backstabBonus > 0 && Math.cos(m.yaw - Math.atan2(dirX, dirZ)) > 0.5) {
+              dmg *= 1 + st.backstabBonus;
+              sneak = true;
+            }
+          }
+          if (sneak) spellSfxRef.current?.play("backstab");
           // In a party the authority's floor takes the blow (net/coop.ts); this copy only sounds it.
           const co = coopRef.current;
           let r: ReturnType<typeof sim.hit>;
@@ -1592,6 +1619,14 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             sfxRef.current?.clang();
             paladinRef.current?.animator.bounce();
           } else if (r && m) {
+            // Poisoned Blade: the poison goes in with the blow (and keeps working; see the skill block).
+            if (r === "hit" && skillIdRef.current === "poison_blade" && skillRef.current.active > 0) {
+              const was = rg.poisons.find((q) => q.id === m.id);
+              if (was) was.t = POISON_S;
+              else rg.poisons.push({ id: m.id, t: POISON_S, tick: 1 });
+              holyFxRef.current?.burst("poison", m.wx, m.wy + m.height * 0.6, m.wz);
+              spellSfxRef.current?.play("poison_hit", 0.7);
+            }
             // Bone cracks and rattles; jelly squelches.
             if (m.family === "slime") ms?.squelch(m.scale);
             else ms?.boneHit();
@@ -2074,6 +2109,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       }
       // The monsters in two half steps on a slow frame (so a long step never carries one through a wall).
       const simSteps = dt > 0.04 ? 2 : 1;
+      if (skillIdRef.current === "hide" && skillRef.current.active > 0 && swingStarted) {
+        skillRef.current.active = 0;
+        rogueRef.current.ambush = AMBUSH_WINDOW_S;
+      }
+      const hidden = skillIdRef.current === "hide" && skillRef.current.active > 0;
       for (let k = 0; k < simSteps; k++) {
         sim.step(
           dt / simSteps,
@@ -2084,6 +2124,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             swinging: paladin !== null && (paladin.animator.state === "windup" || paladin.animator.state === "strike"),
             swingStarted: swingStarted && k === 0,
             dead: world.dead || world.escaped,
+            hidden,
           },
           others,
         );
@@ -2310,6 +2351,22 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             spellRef.current.ward = { amt: ARCANE_SHIELD, t: ARCANE_SHIELD_S };
             holyFxRef.current?.burst("arcane", px, world.playerFloor * CELL_M + 1, pz);
             spellSfxRef.current?.play("shield");
+          } else if (sd.id === "hide") {
+            sk.active = HIDE_S;
+            // Those not on top of him lose him at once; the rest cannot see him to strike.
+            for (const m of sim.mobs) {
+              if (m.dead || !m.hostile || Math.hypot(m.wx - px, m.wz - pz) < HIDE_LOSE_M) continue;
+              m.hostile = false;
+              m.notice = 0;
+              m.path = [];
+            }
+            holyFxRef.current?.burst("smoke", px, world.playerFloor * CELL_M + 1, pz);
+            spellSfxRef.current?.play("vanish");
+            bowRef.current.onHint("You melt into the shadows. Strike to come out of them (the first blow hits harder).");
+          } else if (sd.id === "poison_blade") {
+            sk.active = POISON_BLADE_S;
+            holyFxRef.current?.burst("poison", px, world.playerFloor * CELL_M + 1.1, pz);
+            spellSfxRef.current?.play("poison_coat");
           } else if (sd.id === "intense_focus") {
             spellRef.current.free = FOCUS_CASTS;
             holyFxRef.current?.burst("arcane", px, world.playerFloor * CELL_M + 1, pz);
@@ -2317,6 +2374,25 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             bowRef.current.onHint("Intense Focus: your next three spells cost no charges.");
           }
         }
+      }
+      // Poison works on (through armour, no stagger), a tick a second; the ambush moment runs out.
+      const rg = rogueRef.current;
+      rg.ambush = Math.max(0, rg.ambush - dt);
+      if (world.place !== "dungeon") rg.poisons.length = 0;
+      for (let i = rg.poisons.length - 1; i >= 0; i--) {
+        const q = rg.poisons[i];
+        const m = sim.mobs.find((o) => o.id === q.id);
+        q.t -= dt;
+        q.tick -= dt;
+        if (!m || m.dead || q.t <= 0) {
+          rg.poisons.splice(i, 1);
+          continue;
+        }
+        if (q.tick > 0) continue;
+        q.tick += 1;
+        if (coop && !coop.leads()) coop.sendHit(m.id, 0, 0, POISON_DPS);
+        else if (sim.hit(m.id, 0, 0, POISON_DPS, true) === "killed" && m.family === "skeleton") monsterSfxRef.current?.collapse();
+        holyFxRef.current?.burst("poison", m.wx, m.wy + m.height * 0.6, m.wz);
       }
       const sent = `${Math.ceil(sk.cd)}|${Math.ceil(sk.active)}`;
       if (sent !== sk.sent) {
@@ -2745,6 +2821,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           else sim.shoot(shot.x, shot.y, shot.z, shot.vx, shot.vy, shot.vz, shot.dmg);
           monsterSfxRef.current?.twang();
           bow.onShot();
+          // A shot gives a hidden rogue away.
+          if (skillIdRef.current === "hide" && skillRef.current.active > 0) skillRef.current.active = 0;
         }
         drawRef.current = 0;
       }
@@ -5407,6 +5485,19 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
 
       {/* The caster's spells (5–9) and praying (X). */}
       {showGameHud && !isTouchUI && spells.length && place === "dungeon" && screen === "play" && !hud.dead ? <SpellBar spells={spells} hud={spellHud} /> : null}
+
+      {/* Hidden (the rogue's Hide): the world darkens at the edges while the shadows hold him. */}
+      {showGameHud && skillDef?.id === "hide" && skillHud.active > 0 && place === "dungeon" && !hud.dead ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 4,
+            pointerEvents: "none",
+            background: "radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(6,4,12,0.7) 75%, rgba(4,2,10,0.94) 100%)",
+          }}
+        />
+      ) : null}
 
       {/* The class skill (G): its name, then its cooldown; green while it runs. */}
       {showGameHud && !isTouchUI && skillDef && place === "dungeon" && screen === "play" && !hud.dead ? (

@@ -105,7 +105,7 @@ export function wornOf(inv: PlayerInv, set: 0 | 1 | 2 = 1): ArmorEquipment {
   e.finish = finishOf(inv);
   // A mace or a staff in hand is drawn on the sword's grip (mace.ts).
   const held = h.sword && h.main ? def(h.main.id).held : undefined;
-  if (held) (e as ArmorEquipment & { mainHand?: "mace" | "staff" }).mainHand = held;
+  if (held) (e as ArmorEquipment & { mainHand?: "mace" | "staff" | "dagger" }).mainHand = held;
   return e;
 }
 
@@ -351,6 +351,7 @@ export function grantClassKit(inv: PlayerInv, cls: string): PlayerInv {
   if ((inv.kits ?? []).indexOf(cls) >= 0) return inv;
   if (cls === "cleric") return clericKit(inv);
   if (cls === "wizard") return wizardKit(inv);
+  if (cls === "rogue") return rogueKit(inv);
   if (cls !== "ranger") return inv;
   let next: PlayerInv = { ...inv, kits: (inv.kits ?? []).concat([cls]) };
   const eq = { ...next.equipped };
@@ -433,4 +434,35 @@ function wizardKit(inv: PlayerInv): PlayerInv {
   }
   for (let i = 0; i < 2; i++) bag = addItem(bag, newItem("potion")) ?? bag;
   return { ...inv, kits: (inv.kits ?? []).concat(["wizard"]), equipped: eq, bag };
+}
+
+/** The rogue's leathers (on where the slot is free, else in the bag). */
+const ROGUE_WEAR = ["shadow_jerkin", "shadow_gloves", "shadow_boots", "shadow_cloak", "leather_bracers", "leather_leggings"];
+
+/**
+ * The rogue's kit: the rondel dagger in set 1 (what was there, shield too, moves to set 2 if it is
+ * free, else to the bag), his shadow leathers and two draughts.
+ */
+function rogueKit(inv: PlayerInv): PlayerInv {
+  const eq = { ...inv.equipped };
+  let bag = inv.bag;
+  const m1 = eq.main1;
+  const o1 = eq.off1;
+  if (m1 || o1) {
+    if (!eq.main2 && !eq.off2) {
+      if (m1) eq.main2 = m1;
+      if (o1) eq.off2 = o1;
+    } else {
+      for (const it of [m1, o1]) if (it) bag = addItem(bag, it) ?? bag;
+    }
+    delete eq.off1;
+  }
+  eq.main1 = newItem("rondel_dagger");
+  for (const id of ROGUE_WEAR) {
+    const slot = def(id).slot as ArmorSlot;
+    if (!eq[slot]) eq[slot] = newItem(id);
+    else bag = addItem(bag, newItem(id)) ?? bag;
+  }
+  for (let i = 0; i < 2; i++) bag = addItem(bag, newItem("potion")) ?? bag;
+  return { ...inv, kits: (inv.kits ?? []).concat(["rogue"]), equipped: eq, bag };
 }

@@ -1,4 +1,4 @@
-// The spells' sounds: recorded takes from the AI sound model (scripts/gen-sfx.py with
+// The spells' and skills' sounds: recorded takes from the AI sound model (scripts/gen-sfx.py with
 // scripts/sfx-prompts/explorer-spells.json; the picks are in public/dungeon-explorer/explorer-spells/
 // sfx_ai/ as mp3). Nothing here is synthesised: a sound whose file is missing stays silent.
 // Loaded once the first gesture unlocks audio; a cast's charge-up hum plays until the spell leaves.
@@ -20,7 +20,11 @@ export type SpellSound =
   | "bless"
   | "sanctuary"
   | "smite"
-  | "rest_charge";
+  | "rest_charge"
+  | "vanish"
+  | "poison_coat"
+  | "poison_hit"
+  | "backstab";
 
 const SOUNDS: SpellSound[] = [
   "cast_charge",
@@ -40,6 +44,10 @@ const SOUNDS: SpellSound[] = [
   "sanctuary",
   "smite",
   "rest_charge",
+  "vanish",
+  "poison_coat",
+  "poison_hit",
+  "backstab",
 ];
 const BASE = "explorer-spells/sfx_ai/";
 
