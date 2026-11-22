@@ -127,10 +127,17 @@ export const LobbyChrome: React.FC<LobbyChromeProps> = (p) => {
   const c = p.compact;
   // Full screen: the button shows until the page is full screen (and comes back if he leaves it).
   const [full, setFull] = React.useState(() => typeof document !== "undefined" && !!document.fullscreenElement);
+  // Held upright, the bottom row is full (Play, User List): the button sits above it.
+  const [upright, setUpright] = React.useState(() => typeof window !== "undefined" && window.innerHeight > window.innerWidth);
   useEffect(() => {
     const on = () => setFull(!!document.fullscreenElement);
+    const size = () => setUpright(window.innerHeight > window.innerWidth);
     document.addEventListener("fullscreenchange", on);
-    return () => document.removeEventListener("fullscreenchange", on);
+    window.addEventListener("resize", size);
+    return () => {
+      document.removeEventListener("fullscreenchange", on);
+      window.removeEventListener("resize", size);
+    };
   }, []);
   const tabsEl = (
     <div
@@ -148,7 +155,7 @@ export const LobbyChrome: React.FC<LobbyChromeProps> = (p) => {
         background: "linear-gradient(180deg, rgba(6,5,4,0.96), rgba(10,9,7,0.88))",
         borderBottom: `1px solid ${LINE}`,
         overflowX: "auto",
-        padding: p.onFullscreen && !full ? "0 8px 0 78px" : "0 8px",
+        padding: "0 8px",
       }}
     >
       {LOBBY_TABS.map(([id, label]) => {
@@ -176,16 +183,6 @@ export const LobbyChrome: React.FC<LobbyChromeProps> = (p) => {
           </button>
         );
       })}
-      {p.onFullscreen && !full ? (
-        <button
-          type="button"
-          onClick={p.onFullscreen}
-          title="Full screen"
-          style={{ position: "absolute", left: 6, top: 9, height: 32, padding: "0 9px", background: "rgba(30,27,23,0.95)", border: "1px solid rgba(125,243,155,0.45)", borderRadius: 3, color: "#7df39b", fontSize: 12, fontWeight: 700, cursor: "pointer", zIndex: 1 }}
-        >
-          ⛶ Full
-        </button>
-      ) : null}
       {c ? null : (
         <div style={{ position: "absolute", right: 16, fontSize: 13, color: "#cdbf9f" }}>
           <b style={{ color: GOLDC }}>{p.gold}</b> gold
@@ -247,6 +244,37 @@ export const LobbyChrome: React.FC<LobbyChromeProps> = (p) => {
           </div>
         );
       })}
+
+      {/* Phones: full screen, bottom centre where the thumb finds it (gone once full screen). */}
+      {p.onFullscreen && !full ? (
+        <button
+          type="button"
+          onClick={p.onFullscreen}
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: upright ? "calc(max(14px, env(safe-area-inset-bottom)) + 118px)" : "max(12px, env(safe-area-inset-bottom))",
+            transform: "translateX(-50%)",
+            zIndex: 21,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "9px 18px",
+            background: "#6ce88a",
+            color: "#071a0d",
+            border: "none",
+            borderRadius: 999,
+            fontSize: 14,
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+            boxShadow: "0 0 0 3px rgba(108,232,138,0.25), 0 4px 16px rgba(0,0,0,0.6)",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span style={{ fontSize: 17, lineHeight: 1 }}>⛶</span> Full screen
+        </button>
+      ) : null}
 
       {/* Bottom left: the dungeon and the tavern. */}
       <div style={{ position: "fixed", left: "max(14px, env(safe-area-inset-left))", bottom: "max(14px, env(safe-area-inset-bottom))", zIndex: 20, display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start", maxWidth: "calc(100vw - 28px)" }}>
