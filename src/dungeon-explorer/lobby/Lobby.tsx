@@ -11,8 +11,6 @@ import { mp, useMp } from "../net/mp";
 import { trade, useTrade } from "../net/trade";
 import type { ScreenRect } from "../portrait";
 import { ATTRIBUTES, ATTRIBUTE_INFO, statLines, type Attributes, type Stats } from "../stats";
-import { CHESTS_PER_ROOM, ROOMS } from "../town/layout";
-import type { TownSave } from "../town/townSave";
 import { createLobbyStage, type Guest, type LobbyStage, type StageMode } from "./stage";
 
 export type LobbyTab = "play" | "class" | "stash" | "merchants" | "quests" | "trade";
@@ -112,6 +110,8 @@ export interface LobbyChromeProps {
   themeLabel: string;
   onUsers: () => void;
   onClassChange: () => void;
+  /** Phones: go full screen and turn the view sideways (none on desktop). */
+  onFullscreen?: () => void;
 }
 
 const FLOORS: Array<{ n: number; name: string; open: boolean; note: string }> = [
@@ -125,6 +125,13 @@ export const LobbyChrome: React.FC<LobbyChromeProps> = (p) => {
   const [picking, setPicking] = React.useState(false);
   const [floor, setFloor] = React.useState(1);
   const c = p.compact;
+  // Full screen: the button shows until the page is full screen (and comes back if he leaves it).
+  const [full, setFull] = React.useState(() => typeof document !== "undefined" && !!document.fullscreenElement);
+  useEffect(() => {
+    const on = () => setFull(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", on);
+    return () => document.removeEventListener("fullscreenchange", on);
+  }, []);
   const tabsEl = (
     <div
       style={{
@@ -141,7 +148,7 @@ export const LobbyChrome: React.FC<LobbyChromeProps> = (p) => {
         background: "linear-gradient(180deg, rgba(6,5,4,0.96), rgba(10,9,7,0.88))",
         borderBottom: `1px solid ${LINE}`,
         overflowX: "auto",
-        padding: "0 8px",
+        padding: p.onFullscreen && !full ? "0 8px 0 78px" : "0 8px",
       }}
     >
       {LOBBY_TABS.map(([id, label]) => {
@@ -169,6 +176,16 @@ export const LobbyChrome: React.FC<LobbyChromeProps> = (p) => {
           </button>
         );
       })}
+      {p.onFullscreen && !full ? (
+        <button
+          type="button"
+          onClick={p.onFullscreen}
+          title="Full screen"
+          style={{ position: "absolute", left: 6, top: 9, height: 32, padding: "0 9px", background: "rgba(30,27,23,0.95)", border: "1px solid rgba(125,243,155,0.45)", borderRadius: 3, color: "#7df39b", fontSize: 12, fontWeight: 700, cursor: "pointer", zIndex: 1 }}
+        >
+          ⛶ Full
+        </button>
+      ) : null}
       {c ? null : (
         <div style={{ position: "absolute", right: 16, fontSize: 13, color: "#cdbf9f" }}>
           <b style={{ color: GOLDC }}>{p.gold}</b> gold
@@ -386,52 +403,6 @@ export const ClassPage: React.FC<{ cls: ClassId; stats: Stats; base: Attributes;
     </Page>
   );
 };
-
-/** Stash: his rented rooms' chests (open one, or rent a room), and his gear. */
-export const StashPicker: React.FC<{ town: TownSave; gold: number; compact: boolean; onOpen: (room: number, chest: number) => void; onRent: (room: number) => void; onGear: () => void }> = ({
-  town,
-  gold,
-  compact,
-  onOpen,
-  onRent,
-  onGear,
-}) => (
-  <Page compact={compact} width={640}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <H>Stash</H>
-      <button type="button" style={goldBtn} onClick={onGear}>
-        Gear &amp; bag
-      </button>
-    </div>
-    <div style={{ fontSize: 13, color: "#cdbf9f", marginBottom: 6 }}>Your rooms upstairs at the Guild Tavern. Their chests keep what you leave in them between dives.</div>
-    {ROOMS.map((r, ri) => (
-      <div key={r.name} style={{ padding: "10px 0", borderBottom: "1px solid rgba(214,186,128,0.12)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontFamily: serif, fontSize: 16 }}>{r.name}</span>
-          {town.rented[ri] ? (
-            <span style={{ fontSize: 12, color: "#7ad06d" }}>Yours</span>
-          ) : (
-            <button type="button" style={gold >= r.rent ? goldBtn : { ...button, opacity: 0.5 }} onClick={() => onRent(ri)}>
-              Rent · {r.rent} gold
-            </button>
-          )}
-        </div>
-        {town.rented[ri] ? (
-          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-            {Array.from({ length: CHESTS_PER_ROOM }, (_, k) => {
-              const n = town.stash[ri]?.[k]?.items.length ?? 0;
-              return (
-                <button key={k} type="button" style={{ ...button, padding: "10px 16px" }} onClick={() => onOpen(ri, k)}>
-                  Chest {k + 1} <span style={{ color: "#8a7f6c", fontWeight: 400 }}>· {n} item{n === 1 ? "" : "s"}</span>
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
-    ))}
-  </Page>
-);
 
 /** Merchants: every stall in the guild street, one click away. */
 export const MerchantsPage: React.FC<{ compact: boolean; onOpen: (i: number) => void }> = ({ compact, onOpen }) => (

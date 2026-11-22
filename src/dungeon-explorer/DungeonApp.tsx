@@ -61,7 +61,8 @@ import { InventoryScreen, type FrameRect } from "./Inventory";
 import { ItemIcon } from "./itemsUi";
 import { PauseMenu } from "./PauseMenu";
 import { ClassSelect } from "./ClassSelect";
-import { ClassPage, LobbyChrome, LobbyView, MerchantsPage, StashPicker, TradePage, type LobbyTab } from "./lobby/Lobby";
+import { ClassPage, LobbyChrome, LobbyView, MerchantsPage, TAB_BAR, TradePage, type LobbyTab } from "./lobby/Lobby";
+import { StashScreen } from "./lobby/StashScreen";
 import type { Guest } from "./lobby/stage";
 import { TradeAsks, TradeWindow } from "./TradeScreen";
 import { trade, useTrade } from "./net/trade";
@@ -3055,7 +3056,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   inLobbyRef.current = inLobby;
   const [lobbyTab, setLobbyTab] = useState<LobbyTab>("play");
   // A screen opened from a lobby tab: a merchant, a stash chest, his gear, or the user list.
-  type LobbySub = { kind: "shop"; i: number } | { kind: "chest"; room: number; chest: number } | { kind: "gear" } | { kind: "users" } | null;
+  type LobbySub = { kind: "shop"; i: number } | { kind: "gear" } | { kind: "users" } | null;
   const [lobbySub, setLobbySub] = useState<LobbySub>(null);
   const lobbyAnchorsRef = useRef<Array<HTMLElement | null>>([]);
   const [lobbyPortrait, setLobbyPortrait] = useState<FrameRect | null>(null);
@@ -3845,25 +3846,23 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
               themeLabel={THEMES[theme].label}
               onUsers={() => setLobbySub({ kind: "users" })}
               onClassChange={() => openScreen("class")}
+              onFullscreen={isTouchUI ? () => void enterLandscapeMode() : undefined}
             />
           )}
           {lobbyTab === "class" ? <ClassPage cls={heroClass} stats={stats} base={classById(heroClass).attributes} compact={mobileMode} onChange={() => openScreen("class")} /> : null}
           {lobbyTab === "stash" && !lobbySub ? (
-            <StashPicker town={townSave} gold={inv.gold} compact={mobileMode} onOpen={(room, chest) => setLobbySub({ kind: "chest", room, chest })} onRent={rentRoom} onGear={() => setLobbySub({ kind: "gear" })} />
-          ) : null}
-          {lobbySub?.kind === "chest" ? (
-            <LootScreen
-              title={`${Town.ROOMS[lobbySub.room].name} · Chest ${lobbySub.chest + 1}`}
-              subtitle="Your stash · kept between dives"
-              container={townSave.stash[lobbySub.room][lobbySub.chest]}
-              onContainer={(g) => setTownSave((t) => withStash(t, lobbySub.room, lobbySub.chest, g))}
+            <StashScreen
+              top={TAB_BAR}
+              town={townSave}
+              setTown={setTownSave}
               inv={inv}
               onInv={setInv}
+              onRent={rentRoom}
+              onGear={() => setLobbySub({ kind: "gear" })}
               icons={allIcons}
               viewport={viewport}
               compact={gearCompact}
               touch={isTouchUI}
-              onClose={() => setLobbySub(null)}
             />
           ) : null}
           {lobbySub?.kind === "gear" ? (

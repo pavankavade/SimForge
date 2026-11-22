@@ -286,7 +286,9 @@ export function createLobbyStage(canvas: HTMLCanvasElement, opts: StageOptions =
         tmp.set(s.x, i === 0 ? 1.4 : i === 3 ? 0.95 : 1.05, s.z).project(camera);
         const vis = tmp.z < 1;
         el.style.display = vis ? "" : "none";
-        el.style.transform = `translate(-50%, -50%) translate(${((tmp.x + 1) / 2) * w}px, ${((1 - tmp.y) / 2) * h}px)`;
+        // His name never slides under the tab bar (short landscape phones).
+        const y = ((1 - tmp.y) / 2) * h;
+        el.style.transform = `translate(-50%, -50%) translate(${((tmp.x + 1) / 2) * w}px, ${i === 0 ? Math.max(66, y) : y}px)`;
       }
     } else {
       for (const el of anchors) if (el) el.style.display = "none";
