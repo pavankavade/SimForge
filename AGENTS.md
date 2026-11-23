@@ -48,6 +48,12 @@ A "first pass" that only puts geometry on screen is not done. The user rejected 
 - characters walking through objects;
 - victims that reappeared after they died.
 
+**Channel research.** Before you pick, title or script a video for the OmnixxLabs channel (the
+`src/shelter` shorts and survival what-ifs), read `docs/omnixxlabs.md`. It covers every upload's
+view count with dated snapshots, which formats and titles worked and which flopped, the title and
+script rules that follow from that, and a ranked list of next ideas. Update it when you check the
+channel again.
+
 ## 2. Scaffolding a new episode
 
 ```pwsh
@@ -369,6 +375,12 @@ It is not the chibi cast: never mix the two in one shot.
   - Add warm `GlowSprite`s, `DustMotes` and hazard stripes on dangerous parts.
   - Do not use external models or textures (this includes Patch's asset library; that is for the
     game only, see §14).
+    **One approved exception (2026-11-21):** the fantasy-biology dragon short (`src/bio/dragon`)
+    uses three CC-BY 4.0 Sketchfab models (realistic dragon, cow, Komodo), listed in
+    `public/bio/dragon/models/CREDITS.md`. Every upload of it must carry that credit block. Ask
+    the user before using any other external model. The dragon is loaded by
+    `src/artifacts/bio/RealDragon.tsx` (clips sampled by frame, jaw `DEF-Bone.002` about −X,
+    x-ray shell); static scans go through `StaticModel` in `DragonSets.tsx`.
   - Installs animate in: they drop, unfold or slide in with an overshoot (`easeOutBack`). Never pop.
 - Every contact gets a burst keyed to the same beat as its SFX:
   - feet landing → `dust`;

@@ -222,12 +222,22 @@ sf.EXTRA_SFX.update({
     "cavern": sfx_cavern,
 })
 
+def build_sfx():
+    """Procedural sfx, then the AI takes picked with scripts/gen-sfx.py laid over them."""
+    sf.build_sfx()
+    ai = sorted((sf.EP / "sfx_ai").glob("*.wav"))
+    for f in ai:
+        (sf.SFX_DIR / f.name).write_bytes(f.read_bytes())
+    if ai:
+        print(f"{len(ai)} AI sfx laid over from {sf.EP / 'sfx_ai'}")
+
+
 if __name__ == "__main__":
     modes = set(sys.argv[1:]) or {"narration", "sfx", "score"}
     if "narration" in modes:
         sf.build_narration()
     if "sfx" in modes:
-        sf.build_sfx()
+        build_sfx()
     if "score" in modes:
         sf.build_score()
     print(json.dumps({"slug": SLUG, "version": VERSION}))

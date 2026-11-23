@@ -1,0 +1,88 @@
+{
+  "_style": "realistic cinematic creature foley, film sound design, close-mic, high quality, no music, no voices",
+  "growl": {
+    "prompt": "huge dragon low growl, deep guttural throat rumble of a giant reptile, menacing breath",
+    "seconds": 2
+  },
+  "roar": {
+    "prompt": "massive dragon roar, enormous beast bellowing, deep powerful roar with throat rasp and cave echo",
+    "seconds": 3
+  },
+  "cavern": {
+    "prompt": "steady constant low cave room tone, continuous dark rumbling ambience with soft distant water drips, even level, no sudden sounds",
+    "seconds": 6,
+    "loop": true
+  },
+  "fire_burst": {
+    "prompt": "fire igniting with a deep whoomp, flames bursting to life and roaring inside an enclosed space",
+    "seconds": 2
+  },
+  "gurgle": {
+    "prompt": "large animal stomach gurgling and rumbling during digestion, wet churning belly sounds",
+    "seconds": 2
+  },
+  "bubble": {
+    "prompt": "thick fermenting liquid bubbling, slow wet bubbles rising and popping in a vat of rotting mush",
+    "seconds": 2
+  },
+  "chew": {
+    "prompt": "large animal chewing a mouthful of wet leaves and stalks, crunchy wet chomping, big jaws",
+    "seconds": 2
+  },
+  "burp": {
+    "prompt": "cow burping, short low lazy belch from a large animal",
+    "seconds": 1
+  },
+  "candle": {
+    "prompt": "candle flame fluttering in a small puff of air, soft flicker and tiny whoosh",
+    "seconds": 1
+  },
+  "pressurize": {
+    "prompt": "gas being pumped into a pressurized tank, rising pneumatic hiss with a tight squeeze",
+    "seconds": 2
+  },
+  "squeeze": {
+    "prompt": "wet fleshy muscle contracting and squeezing, organic squelch and stretch",
+    "seconds": 1
+  },
+  "spark_small": {
+    "prompt": "single tiny ember spark crackling and drifting, faint crackle",
+    "seconds": 1
+  },
+  "explosion": {
+    "prompt": "huge fireball explosion, deep concussive boom with roaring flames and debris, cinematic",
+    "seconds": 3
+  },
+  "sizzle": {
+    "prompt": "flesh burning in intense fire, aggressive sizzle and crackle with a hot hiss",
+    "seconds": 2
+  },
+  "iron_clack": {
+    "prompt": "heavy iron jaws snapping shut, metallic teeth clashing together with a sharp clang",
+    "seconds": 1
+  },
+  "spark": {
+    "prompt": "flint striking steel, bright shower of sparks crackling",
+    "seconds": 1
+  },
+  "gas_hiss": {
+    "prompt": "pressurized gas venting from a nozzle, steady sharp hiss",
+    "seconds": 2
+  },
+  "flashback": {
+    "prompt": "flame rushing backwards down a pipe, fast fiery whoosh sucked inward with a roar",
+    "seconds": 2
+  },
+  "flamethrower": {
+    "prompt": "roaring flamethrower jet, powerful continuous blast of fire with turbulent roar",
+    "seconds": 3
+  },
+  "rocket": {
+    "prompt": "rocket engine firing on a test stand, thunderous roaring exhaust with crackle",
+    "seconds": 3
+  },
+  "stove": {
+    "prompt": "gas stove burner igniting, click click then a soft blue flame whoomp and steady gentle hiss",
+    "seconds": 2
+  }
+}

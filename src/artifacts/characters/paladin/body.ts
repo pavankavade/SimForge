@@ -265,6 +265,24 @@ export function buildBody(a: HumanAsset, spec: HumanSpec): BodyBuild {
   // A work belt over it.
   const workBelt = (i: number) => region[i] === "torso" && y[i] > waistY - 0.03 && y[i] < waistY + 0.022;
   pieces.push({ slot: "coverall", mat: "leatherFit", geometry: shell(body, all3(workBelt), () => SUIT.torso + 0.008, N) });
+  // Sports kit: a short-sleeved shirt over shorts that stop above the knee (arms and legs bare).
+  const jointOf = (i: number) => a.joints[dom[i]];
+  const along = (i: number, from: string, to: string) => {
+    const A = P(from);
+    const Bp = P(to);
+    const dx = Bp.x - A.x;
+    const dy = Bp.y - A.y;
+    const dz = Bp.z - A.z;
+    return ((pos.getX(i) - A.x) * dx + (pos.getY(i) - A.y) * dy + (pos.getZ(i) - A.z) * dz) / (dx * dx + dy * dy + dz * dz || 1);
+  };
+  const side = (i: number) => (jointOf(i).endsWith("_l") ? "l" : "r");
+  const sleeve = (i: number) => /^upperarm_/.test(jointOf(i)) && along(i, `upperarm_${side(i)}`, `lowerarm_${side(i)}`) < 0.48;
+  const shirt = (i: number) => (region[i] === "torso" && y[i] > hipJointY + 0.02) || sleeve(i);
+  pieces.push({ slot: "kit", mat: "shirtFit", geometry: shell(body, all3(shirt), (i) => (region[i] === "arm" ? 0.009 : 0.012), N) });
+  const thighUp = (i: number) => /^thigh_/.test(jointOf(i)) && along(i, `thigh_${side(i)}`, `calf_${side(i)}`) < 0.72;
+  const shorts = (i: number) => (region[i] === "torso" && y[i] < waistY + 0.02) || thighUp(i);
+  pieces.push({ slot: "kit", mat: "shortsFit", geometry: shell(body, all3(shorts), () => 0.008, N) });
+
   // Rubber boots to mid-calf.
   const boot = (i: number) => region[i] === "foot" || (region[i] === "leg" && y[i] < 0.3);
   pieces.push({ slot: "boots", mat: "rubber", geometry: shell(body, all3(boot), (i) => (region[i] === "foot" ? 0.009 : SUIT.leg + 0.006), N) });

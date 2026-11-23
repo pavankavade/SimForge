@@ -61,7 +61,7 @@ export const DragonHUD: React.FC = () => {
       )}
 
       {/* ---------------- 2. Thermal Hazard Alert (Hook) ---------------- */}
-      {currentShot === "hook" && frame >= BEATS.fire && (
+      {(currentShot === "hook" || currentShot === "hookXray") && frame >= BEATS.fire && (
         <div
           style={{
             ...panel,
@@ -69,7 +69,7 @@ export const DragonHUD: React.FC = () => {
             padding: "18px 40px",
             border: `3px solid ${RED}`,
             transform: `translateX(-50%) scale(${pop(frame, BEATS.fire, fps)})`,
-            opacity: fadeOut(frame, shotEnd("hook")),
+            opacity: fadeOut(frame, shotEnd("hookXray")),
             textAlign: "center",
           }}
         >
@@ -82,7 +82,7 @@ export const DragonHUD: React.FC = () => {
       )}
 
       {/* ---------------- 3. Stomach 1: Methane Fermentation Gauge ---------------- */}
-      {(currentShot === "cow" || currentShot === "ferment") && frame >= BEATS.bacteria - 6 && (
+      {currentShot === "ferment" && frame >= BEATS.bacteria - 6 && (
         <div
           style={{
             ...panel,
@@ -166,7 +166,7 @@ export const DragonHUD: React.FC = () => {
       )}
 
       {/* ---------------- 7. Komodo Iron Enamel Spark Badge ---------------- */}
-      {(currentShot === "teeth" || currentShot === "strike") && frame >= BEATS.armor - 4 && (
+      {currentShot === "teeth" && frame >= BEATS.armor - 4 && (
         <div
           style={{
             ...panel,
@@ -174,7 +174,7 @@ export const DragonHUD: React.FC = () => {
             padding: "16px 36px",
             border: `3px solid ${AMBER}`,
             transform: `translateX(-50%) scale(${pop(frame, BEATS.armor - 4, fps)})`,
-            opacity: fadeOut(frame, shotEnd("strike")),
+            opacity: fadeOut(frame, shotEnd("teeth")),
             textAlign: "center",
           }}
         >
@@ -187,7 +187,7 @@ export const DragonHUD: React.FC = () => {
       )}
 
       {/* ---------------- 8. Fluid Dynamics Velocity Meter ---------------- */}
-      {(currentShot === "clench" || currentShot === "gasblast" || currentShot === "flamethrower") && (
+      {(currentShot === "clench" || currentShot === "blast") && (
         <div
           style={{
             ...panel,
@@ -195,7 +195,7 @@ export const DragonHUD: React.FC = () => {
             padding: "18px 40px",
             border: `3px solid ${CYAN}`,
             transform: `translateX(-50%) scale(${pop(frame, shotStart("clench") + 2, fps)})`,
-            opacity: fadeOut(frame, shotEnd("flamethrower")),
+            opacity: fadeOut(frame, shotEnd("blast")),
             textAlign: "center",
           }}
         >

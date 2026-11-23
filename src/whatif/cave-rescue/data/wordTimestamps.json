@@ -1,0 +1,1418 @@
+[
+  {
+    "startFrame": 12,
+    "endFrame": 177,
+    "text": "The rain came early, and the cave you walked into after practice is filling with water behind you.",
+    "words": [
+      {
+        "word": "The",
+        "startFrame": 12,
+        "endFrame": 15
+      },
+      {
+        "word": "rain",
+        "startFrame": 15,
+        "endFrame": 27
+      },
+      {
+        "word": "came",
+        "startFrame": 27,
+        "endFrame": 36
+      },
+      {
+        "word": "early,",
+        "startFrame": 36,
+        "endFrame": 51
+      },
+      {
+        "word": "and",
+        "startFrame": 57,
+        "endFrame": 66
+      },
+      {
+        "word": "the",
+        "startFrame": 66,
+        "endFrame": 69
+      },
+      {
+        "word": "cave",
+        "startFrame": 69,
+        "endFrame": 84
+      },
+      {
+        "word": "you",
+        "startFrame": 84,
+        "endFrame": 87
+      },
+      {
+        "word": "walked",
+        "startFrame": 87,
+        "endFrame": 96
+      },
+      {
+        "word": "into",
+        "startFrame": 96,
+        "endFrame": 108
+      },
+      {
+        "word": "after",
+        "startFrame": 108,
+        "endFrame": 114
+      },
+      {
+        "word": "practice",
+        "startFrame": 114,
+        "endFrame": 132
+      },
+      {
+        "word": "is",
+        "startFrame": 132,
+        "endFrame": 138
+      },
+      {
+        "word": "filling",
+        "startFrame": 138,
+        "endFrame": 147
+      },
+      {
+        "word": "with",
+        "startFrame": 147,
+        "endFrame": 150
+      },
+      {
+        "word": "water",
+        "startFrame": 150,
+        "endFrame": 159
+      },
+      {
+        "word": "behind",
+        "startFrame": 159,
+        "endFrame": 171
+      },
+      {
+        "word": "you.",
+        "startFrame": 171,
+        "endFrame": 177
+      }
+    ]
+  },
+  {
+    "startFrame": 191,
+    "endFrame": 365,
+    "text": "Twelve boys and your coach climb deeper, four kilometers into the mountain, to a muddy ledge above the flood.",
+    "words": [
+      {
+        "word": "Twelve",
+        "startFrame": 191,
+        "endFrame": 200
+      },
+      {
+        "word": "boys",
+        "startFrame": 200,
+        "endFrame": 212
+      },
+      {
+        "word": "and",
+        "startFrame": 212,
+        "endFrame": 215
+      },
+      {
+        "word": "your",
+        "startFrame": 215,
+        "endFrame": 218
+      },
+      {
+        "word": "coach",
+        "startFrame": 218,
+        "endFrame": 227
+      },
+      {
+        "word": "climb",
+        "startFrame": 227,
+        "endFrame": 239
+      },
+      {
+        "word": "deeper,",
+        "startFrame": 239,
+        "endFrame": 251
+      },
+      {
+        "word": "four",
+        "startFrame": 263,
+        "endFrame": 272
+      },
+      {
+        "word": "kilometers",
+        "startFrame": 272,
+        "endFrame": 290
+      },
+      {
+        "word": "into",
+        "startFrame": 290,
+        "endFrame": 299
+      },
+      {
+        "word": "the",
+        "startFrame": 299,
+        "endFrame": 302
+      },
+      {
+        "word": "mountain,",
+        "startFrame": 302,
+        "endFrame": 314
+      },
+      {
+        "word": "to",
+        "startFrame": 320,
+        "endFrame": 323
+      },
+      {
+        "word": "a",
+        "startFrame": 323,
+        "endFrame": 324
+      },
+      {
+        "word": "muddy",
+        "startFrame": 323,
+        "endFrame": 338
+      },
+      {
+        "word": "ledge",
+        "startFrame": 338,
+        "endFrame": 347
+      },
+      {
+        "word": "above",
+        "startFrame": 347,
+        "endFrame": 353
+      },
+      {
+        "word": "the",
+        "startFrame": 353,
+        "endFrame": 356
+      },
+      {
+        "word": "flood.",
+        "startFrame": 356,
+        "endFrame": 365
+      }
+    ]
+  },
+  {
+    "startFrame": 386,
+    "endFrame": 605,
+    "text": "There is no food. You drink the water dripping off the rock, and your coach teaches you to sit still and breathe slowly.",
+    "words": [
+      {
+        "word": "There",
+        "startFrame": 386,
+        "endFrame": 392
+      },
+      {
+        "word": "is",
+        "startFrame": 392,
+        "endFrame": 398
+      },
+      {
+        "word": "no",
+        "startFrame": 398,
+        "endFrame": 404
+      },
+      {
+        "word": "food.",
+        "startFrame": 404,
+        "endFrame": 428
+      },
+      {
+        "word": "You",
+        "startFrame": 431,
+        "endFrame": 434
+      },
+      {
+        "word": "drink",
+        "startFrame": 434,
+        "endFrame": 443
+      },
+      {
+        "word": "the",
+        "startFrame": 443,
+        "endFrame": 446
+      },
+      {
+        "word": "water",
+        "startFrame": 446,
+        "endFrame": 458
+      },
+      {
+        "word": "dripping",
+        "startFrame": 458,
+        "endFrame": 470
+      },
+      {
+        "word": "off",
+        "startFrame": 470,
+        "endFrame": 473
+      },
+      {
+        "word": "the",
+        "startFrame": 473,
+        "endFrame": 476
+      },
+      {
+        "word": "rock,",
+        "startFrame": 476,
+        "endFrame": 497
+      },
+      {
+        "word": "and",
+        "startFrame": 497,
+        "endFrame": 500
+      },
+      {
+        "word": "your",
+        "startFrame": 500,
+        "endFrame": 503
+      },
+      {
+        "word": "coach",
+        "startFrame": 503,
+        "endFrame": 518
+      },
+      {
+        "word": "teaches",
+        "startFrame": 518,
+        "endFrame": 530
+      },
+      {
+        "word": "you",
+        "startFrame": 530,
+        "endFrame": 533
+      },
+      {
+        "word": "to",
+        "startFrame": 533,
+        "endFrame": 539
+      },
+      {
+        "word": "sit",
+        "startFrame": 539,
+        "endFrame": 548
+      },
+      {
+        "word": "still",
+        "startFrame": 548,
+        "endFrame": 563
+      },
+      {
+        "word": "and",
+        "startFrame": 563,
+        "endFrame": 569
+      },
+      {
+        "word": "breathe",
+        "startFrame": 569,
+        "endFrame": 587
+      },
+      {
+        "word": "slowly.",
+        "startFrame": 587,
+        "endFrame": 605
+      }
+    ]
+  },
+  {
+    "startFrame": 635,
+    "endFrame": 818,
+    "text": "Outside, pumps drain the cave day and night, while divers push in through water too muddy to see.",
+    "words": [
+      {
+        "word": "Outside,",
+        "startFrame": 635,
+        "endFrame": 656
+      },
+      {
+        "word": "pumps",
+        "startFrame": 656,
+        "endFrame": 671
+      },
+      {
+        "word": "drain",
+        "startFrame": 671,
+        "endFrame": 680
+      },
+      {
+        "word": "the",
+        "startFrame": 680,
+        "endFrame": 683
+      },
+      {
+        "word": "cave",
+        "startFrame": 683,
+        "endFrame": 695
+      },
+      {
+        "word": "day",
+        "startFrame": 695,
+        "endFrame": 704
+      },
+      {
+        "word": "and",
+        "startFrame": 704,
+        "endFrame": 710
+      },
+      {
+        "word": "night,",
+        "startFrame": 710,
+        "endFrame": 728
+      },
+      {
+        "word": "while",
+        "startFrame": 731,
+        "endFrame": 734
+      },
+      {
+        "word": "divers",
+        "startFrame": 734,
+        "endFrame": 752
+      },
+      {
+        "word": "push",
+        "startFrame": 752,
+        "endFrame": 758
+      },
+      {
+        "word": "in",
+        "startFrame": 758,
+        "endFrame": 764
+      },
+      {
+        "word": "through",
+        "startFrame": 764,
+        "endFrame": 770
+      },
+      {
+        "word": "water",
+        "startFrame": 770,
+        "endFrame": 782
+      },
+      {
+        "word": "too",
+        "startFrame": 782,
+        "endFrame": 791
+      },
+      {
+        "word": "muddy",
+        "startFrame": 791,
+        "endFrame": 803
+      },
+      {
+        "word": "to",
+        "startFrame": 803,
+        "endFrame": 806
+      },
+      {
+        "word": "see.",
+        "startFrame": 806,
+        "endFrame": 818
+      }
+    ]
+  },
+  {
+    "startFrame": 835,
+    "endFrame": 1078,
+    "text": "Day ten. A light comes up out of the water. Two British divers, and one question. How many of you?",
+    "words": [
+      {
+        "word": "Day",
+        "startFrame": 835,
+        "endFrame": 841
+      },
+      {
+        "word": "ten.",
+        "startFrame": 841,
+        "endFrame": 854
+      },
+      {
+        "word": "A",
+        "startFrame": 874,
+        "endFrame": 875
+      },
+      {
+        "word": "light",
+        "startFrame": 874,
+        "endFrame": 890
+      },
+      {
+        "word": "comes",
+        "startFrame": 892,
+        "endFrame": 898
+      },
+      {
+        "word": "up",
+        "startFrame": 898,
+        "endFrame": 904
+      },
+      {
+        "word": "out",
+        "startFrame": 904,
+        "endFrame": 908
+      },
+      {
+        "word": "of",
+        "startFrame": 908,
+        "endFrame": 909
+      },
+      {
+        "word": "the",
+        "startFrame": 908,
+        "endFrame": 914
+      },
+      {
+        "word": "water.",
+        "startFrame": 914,
+        "endFrame": 922
+      },
+      {
+        "word": "Two",
+        "startFrame": 938,
+        "endFrame": 944
+      },
+      {
+        "word": "British",
+        "startFrame": 944,
+        "endFrame": 955
+      },
+      {
+        "word": "divers,",
+        "startFrame": 955,
+        "endFrame": 970
+      },
+      {
+        "word": "and",
+        "startFrame": 986,
+        "endFrame": 988
+      },
+      {
+        "word": "one",
+        "startFrame": 988,
+        "endFrame": 998
+      },
+      {
+        "word": "question.",
+        "startFrame": 998,
+        "endFrame": 1012
+      },
+      {
+        "word": "How",
+        "startFrame": 1036,
+        "endFrame": 1046
+      },
+      {
+        "word": "many",
+        "startFrame": 1046,
+        "endFrame": 1060
+      },
+      {
+        "word": "of",
+        "startFrame": 1063,
+        "endFrame": 1072
+      },
+      {
+        "word": "you?",
+        "startFrame": 1072,
+        "endFrame": 1078
+      }
+    ]
+  },
+  {
+    "startFrame": 1090,
+    "endFrame": 1183,
+    "text": "Thirteen. All of you, alive.",
+    "words": [
+      {
+        "word": "Thirteen.",
+        "startFrame": 1090,
+        "endFrame": 1108
+      },
+      {
+        "word": "All",
+        "startFrame": 1126,
+        "endFrame": 1135
+      },
+      {
+        "word": "of",
+        "startFrame": 1135,
+        "endFrame": 1136
+      },
+      {
+        "word": "you,",
+        "startFrame": 1135,
+        "endFrame": 1141
+      },
+      {
+        "word": "alive.",
+        "startFrame": 1159,
+        "endFrame": 1183
+      }
+    ]
+  },
+  {
+    "startFrame": 1216,
+    "endFrame": 1447,
+    "text": "But the way out is hours of diving through flooded tunnels, some barely wider than a body, in total darkness.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 1216,
+        "endFrame": 1219
+      },
+      {
+        "word": "the",
+        "startFrame": 1219,
+        "endFrame": 1222
+      },
+      {
+        "word": "way",
+        "startFrame": 1222,
+        "endFrame": 1231
+      },
+      {
+        "word": "out",
+        "startFrame": 1231,
+        "endFrame": 1243
+      },
+      {
+        "word": "is",
+        "startFrame": 1243,
+        "endFrame": 1252
+      },
+      {
+        "word": "hours",
+        "startFrame": 1252,
+        "endFrame": 1267
+      },
+      {
+        "word": "of",
+        "startFrame": 1267,
+        "endFrame": 1273
+      },
+      {
+        "word": "diving",
+        "startFrame": 1273,
+        "endFrame": 1288
+      },
+      {
+        "word": "through",
+        "startFrame": 1288,
+        "endFrame": 1294
+      },
+      {
+        "word": "flooded",
+        "startFrame": 1294,
+        "endFrame": 1312
+      },
+      {
+        "word": "tunnels,",
+        "startFrame": 1312,
+        "endFrame": 1333
+      },
+      {
+        "word": "some",
+        "startFrame": 1336,
+        "endFrame": 1345
+      },
+      {
+        "word": "barely",
+        "startFrame": 1345,
+        "endFrame": 1357
+      },
+      {
+        "word": "wider",
+        "startFrame": 1357,
+        "endFrame": 1369
+      },
+      {
+        "word": "than",
+        "startFrame": 1369,
+        "endFrame": 1372
+      },
+      {
+        "word": "a",
+        "startFrame": 1372,
+        "endFrame": 1375
+      },
+      {
+        "word": "body,",
+        "startFrame": 1375,
+        "endFrame": 1393
+      },
+      {
+        "word": "in",
+        "startFrame": 1399,
+        "endFrame": 1405
+      },
+      {
+        "word": "total",
+        "startFrame": 1405,
+        "endFrame": 1423
+      },
+      {
+        "word": "darkness.",
+        "startFrame": 1423,
+        "endFrame": 1447
+      }
+    ]
+  },
+  {
+    "startFrame": 1462,
+    "endFrame": 1684,
+    "text": "The air in your chamber is running thin. A volunteer diver dies on his way back from laying air tanks along the route.",
+    "words": [
+      {
+        "word": "The",
+        "startFrame": 1462,
+        "endFrame": 1468
+      },
+      {
+        "word": "air",
+        "startFrame": 1468,
+        "endFrame": 1483
+      },
+      {
+        "word": "in",
+        "startFrame": 1483,
+        "endFrame": 1486
+      },
+      {
+        "word": "your",
+        "startFrame": 1486,
+        "endFrame": 1489
+      },
+      {
+        "word": "chamber",
+        "startFrame": 1489,
+        "endFrame": 1510
+      },
+      {
+        "word": "is",
+        "startFrame": 1510,
+        "endFrame": 1513
+      },
+      {
+        "word": "running",
+        "startFrame": 1513,
+        "endFrame": 1522
+      },
+      {
+        "word": "thin.",
+        "startFrame": 1522,
+        "endFrame": 1537
+      },
+      {
+        "word": "A",
+        "startFrame": 1555,
+        "endFrame": 1558
+      },
+      {
+        "word": "volunteer",
+        "startFrame": 1558,
+        "endFrame": 1576
+      },
+      {
+        "word": "diver",
+        "startFrame": 1576,
+        "endFrame": 1588
+      },
+      {
+        "word": "dies",
+        "startFrame": 1588,
+        "endFrame": 1603
+      },
+      {
+        "word": "on",
+        "startFrame": 1603,
+        "endFrame": 1606
+      },
+      {
+        "word": "his",
+        "startFrame": 1606,
+        "endFrame": 1612
+      },
+      {
+        "word": "way",
+        "startFrame": 1612,
+        "endFrame": 1618
+      },
+      {
+        "word": "back",
+        "startFrame": 1618,
+        "endFrame": 1630
+      },
+      {
+        "word": "from",
+        "startFrame": 1630,
+        "endFrame": 1633
+      },
+      {
+        "word": "laying",
+        "startFrame": 1633,
+        "endFrame": 1645
+      },
+      {
+        "word": "air",
+        "startFrame": 1645,
+        "endFrame": 1654
+      },
+      {
+        "word": "tanks",
+        "startFrame": 1654,
+        "endFrame": 1666
+      },
+      {
+        "word": "along",
+        "startFrame": 1666,
+        "endFrame": 1672
+      },
+      {
+        "word": "the",
+        "startFrame": 1672,
+        "endFrame": 1675
+      },
+      {
+        "word": "route.",
+        "startFrame": 1675,
+        "endFrame": 1684
+      }
+    ]
+  },
+  {
+    "startFrame": 1716,
+    "endFrame": 1998,
+    "text": "Elon Musk's engineers build a kid-sized submarine out of rocket parts and fly it to the cave. The rescue team says it's not practical, and it's never used.",
+    "words": [
+      {
+        "word": "Elon",
+        "startFrame": 1716,
+        "endFrame": 1725
+      },
+      {
+        "word": "Musk's",
+        "startFrame": 1725,
+        "endFrame": 1737
+      },
+      {
+        "word": "engineers",
+        "startFrame": 1737,
+        "endFrame": 1755
+      },
+      {
+        "word": "build",
+        "startFrame": 1755,
+        "endFrame": 1761
+      },
+      {
+        "word": "a",
+        "startFrame": 1761,
+        "endFrame": 1764
+      },
+      {
+        "word": "kid-sized",
+        "startFrame": 1764,
+        "endFrame": 1791
+      },
+      {
+        "word": "submarine",
+        "startFrame": 1791,
+        "endFrame": 1809
+      },
+      {
+        "word": "out",
+        "startFrame": 1809,
+        "endFrame": 1812
+      },
+      {
+        "word": "of",
+        "startFrame": 1812,
+        "endFrame": 1815
+      },
+      {
+        "word": "rocket",
+        "startFrame": 1815,
+        "endFrame": 1827
+      },
+      {
+        "word": "parts",
+        "startFrame": 1827,
+        "endFrame": 1842
+      },
+      {
+        "word": "and",
+        "startFrame": 1848,
+        "endFrame": 1854
+      },
+      {
+        "word": "fly",
+        "startFrame": 1854,
+        "endFrame": 1866
+      },
+      {
+        "word": "it",
+        "startFrame": 1866,
+        "endFrame": 1869
+      },
+      {
+        "word": "to",
+        "startFrame": 1869,
+        "endFrame": 1872
+      },
+      {
+        "word": "the",
+        "startFrame": 1872,
+        "endFrame": 1875
+      },
+      {
+        "word": "cave.",
+        "startFrame": 1875,
+        "endFrame": 1887
+      },
+      {
+        "word": "The",
+        "startFrame": 1905,
+        "endFrame": 1908
+      },
+      {
+        "word": "rescue",
+        "startFrame": 1908,
+        "endFrame": 1917
+      },
+      {
+        "word": "team",
+        "startFrame": 1917,
+        "endFrame": 1929
+      },
+      {
+        "word": "says",
+        "startFrame": 1929,
+        "endFrame": 1932
+      },
+      {
+        "word": "it's",
+        "startFrame": 1932,
+        "endFrame": 1938
+      },
+      {
+        "word": "not",
+        "startFrame": 1938,
+        "endFrame": 1944
+      },
+      {
+        "word": "practical,",
+        "startFrame": 1944,
+        "endFrame": 1962
+      },
+      {
+        "word": "and",
+        "startFrame": 1968,
+        "endFrame": 1974
+      },
+      {
+        "word": "it's",
+        "startFrame": 1974,
+        "endFrame": 1977
+      },
+      {
+        "word": "never",
+        "startFrame": 1977,
+        "endFrame": 1983
+      },
+      {
+        "word": "used.",
+        "startFrame": 1983,
+        "endFrame": 1998
+      }
+    ]
+  },
+  {
+    "startFrame": 2019,
+    "endFrame": 2235,
+    "text": "So the doctors put you to sleep. A full-face mask, a stretcher wrapped around you, and a diver pulls you out like cargo.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 2019,
+        "endFrame": 2028
+      },
+      {
+        "word": "the",
+        "startFrame": 2028,
+        "endFrame": 2038
+      },
+      {
+        "word": "doctors",
+        "startFrame": 2038,
+        "endFrame": 2047
+      },
+      {
+        "word": "put",
+        "startFrame": 2047,
+        "endFrame": 2057
+      },
+      {
+        "word": "you",
+        "startFrame": 2057,
+        "endFrame": 2066
+      },
+      {
+        "word": "to",
+        "startFrame": 2066,
+        "endFrame": 2075
+      },
+      {
+        "word": "sleep.",
+        "startFrame": 2075,
+        "endFrame": 2085
+      },
+      {
+        "word": "A",
+        "startFrame": 2085,
+        "endFrame": 2094
+      },
+      {
+        "word": "full-face",
+        "startFrame": 2094,
+        "endFrame": 2104
+      },
+      {
+        "word": "mask,",
+        "startFrame": 2104,
+        "endFrame": 2113
+      },
+      {
+        "word": "a",
+        "startFrame": 2113,
+        "endFrame": 2122
+      },
+      {
+        "word": "stretcher",
+        "startFrame": 2122,
+        "endFrame": 2132
+      },
+      {
+        "word": "wrapped",
+        "startFrame": 2132,
+        "endFrame": 2141
+      },
+      {
+        "word": "around",
+        "startFrame": 2141,
+        "endFrame": 2150
+      },
+      {
+        "word": "you,",
+        "startFrame": 2150,
+        "endFrame": 2160
+      },
+      {
+        "word": "and",
+        "startFrame": 2160,
+        "endFrame": 2169
+      },
+      {
+        "word": "a",
+        "startFrame": 2169,
+        "endFrame": 2179
+      },
+      {
+        "word": "diver",
+        "startFrame": 2179,
+        "endFrame": 2188
+      },
+      {
+        "word": "pulls",
+        "startFrame": 2188,
+        "endFrame": 2197
+      },
+      {
+        "word": "you",
+        "startFrame": 2197,
+        "endFrame": 2207
+      },
+      {
+        "word": "out",
+        "startFrame": 2207,
+        "endFrame": 2216
+      },
+      {
+        "word": "like",
+        "startFrame": 2216,
+        "endFrame": 2226
+      },
+      {
+        "word": "cargo.",
+        "startFrame": 2226,
+        "endFrame": 2235
+      }
+    ]
+  },
+  {
+    "startFrame": 2253,
+    "endFrame": 2445,
+    "text": "Four boys on the first day. Four on the second. And on the last, four more and the coach.",
+    "words": [
+      {
+        "word": "Four",
+        "startFrame": 2253,
+        "endFrame": 2262
+      },
+      {
+        "word": "boys",
+        "startFrame": 2262,
+        "endFrame": 2274
+      },
+      {
+        "word": "on",
+        "startFrame": 2274,
+        "endFrame": 2277
+      },
+      {
+        "word": "the",
+        "startFrame": 2277,
+        "endFrame": 2280
+      },
+      {
+        "word": "first",
+        "startFrame": 2280,
+        "endFrame": 2292
+      },
+      {
+        "word": "day.",
+        "startFrame": 2292,
+        "endFrame": 2301
+      },
+      {
+        "word": "Four",
+        "startFrame": 2316,
+        "endFrame": 2328
+      },
+      {
+        "word": "on",
+        "startFrame": 2328,
+        "endFrame": 2331
+      },
+      {
+        "word": "the",
+        "startFrame": 2331,
+        "endFrame": 2334
+      },
+      {
+        "word": "second.",
+        "startFrame": 2334,
+        "endFrame": 2346
+      },
+      {
+        "word": "And",
+        "startFrame": 2358,
+        "endFrame": 2361
+      },
+      {
+        "word": "on",
+        "startFrame": 2361,
+        "endFrame": 2364
+      },
+      {
+        "word": "the",
+        "startFrame": 2364,
+        "endFrame": 2367
+      },
+      {
+        "word": "last,",
+        "startFrame": 2367,
+        "endFrame": 2388
+      },
+      {
+        "word": "four",
+        "startFrame": 2391,
+        "endFrame": 2397
+      },
+      {
+        "word": "more",
+        "startFrame": 2397,
+        "endFrame": 2412
+      },
+      {
+        "word": "and",
+        "startFrame": 2421,
+        "endFrame": 2427
+      },
+      {
+        "word": "the",
+        "startFrame": 2427,
+        "endFrame": 2430
+      },
+      {
+        "word": "coach.",
+        "startFrame": 2430,
+        "endFrame": 2445
+      }
+    ]
+  },
+  {
+    "startFrame": 2477,
+    "endFrame": 2873,
+    "text": "Later, a British caver who helped the rescue calls the submarine a PR stunt. Musk calls him pedo guy on Twitter, then deletes it and apologizes. In twenty nineteen, a jury rules it wasn't defamation.",
+    "words": [
+      {
+        "word": "Later,",
+        "startFrame": 2477,
+        "endFrame": 2489
+      },
+      {
+        "word": "a",
+        "startFrame": 2498,
+        "endFrame": 2501
+      },
+      {
+        "word": "British",
+        "startFrame": 2501,
+        "endFrame": 2510
+      },
+      {
+        "word": "caver",
+        "startFrame": 2510,
+        "endFrame": 2525
+      },
+      {
+        "word": "who",
+        "startFrame": 2525,
+        "endFrame": 2531
+      },
+      {
+        "word": "helped",
+        "startFrame": 2531,
+        "endFrame": 2540
+      },
+      {
+        "word": "the",
+        "startFrame": 2540,
+        "endFrame": 2541
+      },
+      {
+        "word": "rescue",
+        "startFrame": 2540,
+        "endFrame": 2555
+      },
+      {
+        "word": "calls",
+        "startFrame": 2555,
+        "endFrame": 2567
+      },
+      {
+        "word": "the",
+        "startFrame": 2567,
+        "endFrame": 2570
+      },
+      {
+        "word": "submarine",
+        "startFrame": 2570,
+        "endFrame": 2585
+      },
+      {
+        "word": "a",
+        "startFrame": 2585,
+        "endFrame": 2588
+      },
+      {
+        "word": "PR",
+        "startFrame": 2588,
+        "endFrame": 2606
+      },
+      {
+        "word": "stunt.",
+        "startFrame": 2606,
+        "endFrame": 2621
+      },
+      {
+        "word": "Musk",
+        "startFrame": 2633,
+        "endFrame": 2645
+      },
+      {
+        "word": "calls",
+        "startFrame": 2645,
+        "endFrame": 2654
+      },
+      {
+        "word": "him",
+        "startFrame": 2654,
+        "endFrame": 2663
+      },
+      {
+        "word": "pedo",
+        "startFrame": 2669,
+        "endFrame": 2684
+      },
+      {
+        "word": "guy",
+        "startFrame": 2684,
+        "endFrame": 2693
+      },
+      {
+        "word": "on",
+        "startFrame": 2693,
+        "endFrame": 2699
+      },
+      {
+        "word": "Twitter,",
+        "startFrame": 2699,
+        "endFrame": 2714
+      },
+      {
+        "word": "then",
+        "startFrame": 2720,
+        "endFrame": 2726
+      },
+      {
+        "word": "deletes",
+        "startFrame": 2726,
+        "endFrame": 2735
+      },
+      {
+        "word": "it",
+        "startFrame": 2735,
+        "endFrame": 2744
+      },
+      {
+        "word": "and",
+        "startFrame": 2744,
+        "endFrame": 2747
+      },
+      {
+        "word": "apologizes.",
+        "startFrame": 2747,
+        "endFrame": 2771
+      },
+      {
+        "word": "In",
+        "startFrame": 2786,
+        "endFrame": 2789
+      },
+      {
+        "word": "twenty",
+        "startFrame": 2789,
+        "endFrame": 2800
+      },
+      {
+        "word": "nineteen,",
+        "startFrame": 2800,
+        "endFrame": 2810
+      },
+      {
+        "word": "a",
+        "startFrame": 2810,
+        "endFrame": 2813
+      },
+      {
+        "word": "jury",
+        "startFrame": 2813,
+        "endFrame": 2822
+      },
+      {
+        "word": "rules",
+        "startFrame": 2822,
+        "endFrame": 2834
+      },
+      {
+        "word": "it",
+        "startFrame": 2834,
+        "endFrame": 2840
+      },
+      {
+        "word": "wasn't",
+        "startFrame": 2840,
+        "endFrame": 2852
+      },
+      {
+        "word": "defamation.",
+        "startFrame": 2852,
+        "endFrame": 2873
+      }
+    ]
+  },
+  {
+    "startFrame": 2906,
+    "endFrame": 3044,
+    "text": "Eighteen days, four kilometers into a mountain, and every one of you came home.",
+    "words": [
+      {
+        "word": "Eighteen",
+        "startFrame": 2906,
+        "endFrame": 2916
+      },
+      {
+        "word": "days,",
+        "startFrame": 2916,
+        "endFrame": 2926
+      },
+      {
+        "word": "four",
+        "startFrame": 2926,
+        "endFrame": 2936
+      },
+      {
+        "word": "kilometers",
+        "startFrame": 2936,
+        "endFrame": 2946
+      },
+      {
+        "word": "into",
+        "startFrame": 2946,
+        "endFrame": 2955
+      },
+      {
+        "word": "a",
+        "startFrame": 2955,
+        "endFrame": 2965
+      },
+      {
+        "word": "mountain,",
+        "startFrame": 2965,
+        "endFrame": 2975
+      },
+      {
+        "word": "and",
+        "startFrame": 2975,
+        "endFrame": 2985
+      },
+      {
+        "word": "every",
+        "startFrame": 2985,
+        "endFrame": 2995
+      },
+      {
+        "word": "one",
+        "startFrame": 2995,
+        "endFrame": 3005
+      },
+      {
+        "word": "of",
+        "startFrame": 3005,
+        "endFrame": 3015
+      },
+      {
+        "word": "you",
+        "startFrame": 3015,
+        "endFrame": 3024
+      },
+      {
+        "word": "came",
+        "startFrame": 3024,
+        "endFrame": 3034
+      },
+      {
+        "word": "home.",
+        "startFrame": 3034,
+        "endFrame": 3044
+      }
+    ]
+  }
+]

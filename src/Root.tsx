@@ -32,6 +32,7 @@ import { teleportEpisode } from "./whatif/teleport";
 import { reflexesEpisode } from "./whatif/reflexes";
 import { healEpisode } from "./whatif/heal";
 import { mineRescueEpisode, mineRescueLab, mineWorldLab } from "./whatif/mine-rescue";
+import { caveRescueEpisode, caveRescueLab, caveWorldLab } from "./whatif/cave-rescue";
 import { mimicBioEpisode } from "./bio/mimic";
 import { slimeBioEpisode } from "./bio/slime";
 import { dragonBioEpisode } from "./bio/dragon";
@@ -224,6 +225,33 @@ export const RemotionRoot: React.FC = () => {
         width={mineWorldLab.config.width}
         height={mineWorldLab.config.height}
         defaultProps={{ beats: mineWorldLab.beats, audit: mineWorldLab.audit }}
+      />
+      <Composition
+        id={caveRescueEpisode.config.id}
+        component={caveRescueEpisode.Video}
+        durationInFrames={caveRescueEpisode.config.durationInFrames}
+        fps={caveRescueEpisode.config.fps}
+        width={caveRescueEpisode.config.width}
+        height={caveRescueEpisode.config.height}
+        defaultProps={{ beats: caveRescueEpisode.beats, audit: caveRescueEpisode.audit }}
+      />
+      <Composition
+        id={caveRescueLab.config.id}
+        component={caveRescueLab.Video}
+        durationInFrames={caveRescueLab.config.durationInFrames}
+        fps={caveRescueLab.config.fps}
+        width={caveRescueLab.config.width}
+        height={caveRescueLab.config.height}
+        defaultProps={{ beats: caveRescueLab.beats, audit: caveRescueLab.audit }}
+      />
+      <Composition
+        id={caveWorldLab.config.id}
+        component={caveWorldLab.Video}
+        durationInFrames={caveWorldLab.config.durationInFrames}
+        fps={caveWorldLab.config.fps}
+        width={caveWorldLab.config.width}
+        height={caveWorldLab.config.height}
+        defaultProps={{ beats: caveWorldLab.beats, audit: caveWorldLab.audit }}
       />
       <Composition
         id={mimicBioEpisode.config.id}

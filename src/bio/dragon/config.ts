@@ -4,7 +4,9 @@ import wordTimestamps from "./data/wordTimestamps.json";
 import { DragonHUD } from "./DragonHUD";
 import {
   BEATS,
+  D,
   DURATION,
+  SNAPS,
   easeInOut,
   lerp,
   progress,
@@ -17,48 +19,74 @@ const cue = sfxFor("dragon", "bio");
 /** Effects sit about 6 dB under the voice. */
 const SFX_GAIN = 0.55;
 const sfx: typeof cue = (name, frame, volume = 1, extra) => cue(name, frame, volume * SFX_GAIN, extra);
-const bed = (name: string, id: ShotId, volume = 0.5) => loopCue(sfx(name, shotStart(id), volume), shotEnd(id), 8);
 
-/** Every cue keys to a beat or shot boundary, never a literal frame. */
+/** Cave room tone under every lair stretch (not under the cow, Komodo, rocket and stove inserts). */
+const lairBed = (from: number, to: number) => loopCue(sfx("cavern", from, 0.35), to, 10);
+
+/** Every cue keys to a beat or shot boundary, never a literal frame. Sounds: AI takes (scripts/sfx-prompts/dragon.json). */
 export const SFX: SfxCue[] = [
-  // 1. Cold open: beast rumble, belly burn, danger
-  sfx("growl", 0, 0.75),
-  bed("cavern", "hook", 0.4),
-  sfx("blast", BEATS.fire, 0.6),
+  // Cave beds
+  lairBed(0, shotStart("cow")),
+  lairBed(shotStart("stomach2"), shotStart("komodo")),
+  lairBed(shotStart("strike"), shotStart("rocket")),
+  lairBed(shotStart("face"), DURATION),
 
-  // 2. Stomach 1: Fermentation & cow analogy
-  bed("cavern", "cow", 0.35),
-  sfx("growl", BEATS.gorge, 0.6),
-  sfx("gurgle", BEATS.bacteria, 0.8),
-  sfx("gurgle", BEATS.ferment, 0.85),
-  sfx("burp", BEATS.burps, 0.9),
+  // 1. Cold open: fire lit in the belly, the organs cook
+  sfx("growl", 2, 0.55),
+  sfx("fire_burst", BEATS.fire, 0.75),
+  sfx("sizzle", BEATS.roast, 0.45),
+  sfx("growl", BEATS.organs - 2, 0.7),
+  sfx("gas_hiss", BEATS.never, 0.3),
+  sfx("bubble", BEATS.fuel, 0.5),
 
-  // 3. Stomach 2: Muscular pressure vessel
-  sfx("pressurize", BEATS.pressure, 0.85),
-  sfx("pressurize", BEATS.pumps, 0.9),
+  // 2. Gut: chewing, fermentation, the cow
+  sfx("growl", BEATS.gorge, 0.4),
+  sfx("chew", BEATS.rotting, 0.85),
+  sfx("chew", BEATS.rotting + 40, 0.7),
+  sfx("gurgle", BEATS.bacteria, 0.85),
+  sfx("bubble", BEATS.ferment, 0.8),
+  sfx("bubble", BEATS.methane, 0.6),
+  sfx("burp", BEATS.burps, 0.95),
+  sfx("candle", BEATS.burps + 6, 0.7),
 
-  // 4. Living bomb & Oxygen safety
-  sfx("blast", BEATS.bomb, 0.5),
+  // 3. Second stomach: grows, pumps
+  sfx("squeeze", BEATS.stomach, 0.7),
+  sfx("pressurize", BEATS.pumps, 0.85),
+  ...[0, 15, 30].map((k) => sfx("squeeze", BEATS.pumps + k, 0.55)),
 
-  // 5. Gland trap & Komodo iron teeth strike
-  sfx("growl", BEATS.light, 0.5),
-  sfx("iron_clack", BEATS.snap, 1.0),
-  sfx("spark", BEATS.snap, 0.95),
-  sfx("spark", BEATS.sparks, 0.8),
+  // 4. Living bomb
+  sfx("spark_small", BEATS.spark - 6, 0.7),
+  sfx("explosion", BEATS.detonates, 1.0),
 
-  // 6. Flashback hazard & high velocity blast
-  sfx("pressurize", BEATS.clench, 0.9),
-  sfx("blast", BEATS.blast, 1.0),
-  sfx("flamethrower", BEATS.blast + 2, 1.0),
-  sfx("thud", BEATS.blast + 14, 0.75),
+  // 5. Inert tank, venting lips, the gland
+  sfx("spark_small", BEATS.air, 0.4),
+  sfx("gas_hiss", BEATS.lips - 8, 0.5),
+  sfx("fire_burst", BEATS.incinerates, 0.6),
+  sfx("sizzle", BEATS.incinerates, 0.9),
+  sfx("roar", BEATS.incinerates + 2, 0.6),
 
-  // 7. Grand finale roar & flamethrower
-  sfx("flamethrower", BEATS.congratulations, 0.95),
-  sfx("growl", BEATS.flamethrower, 0.8),
+  // 6. Iron teeth: three snaps
+  ...SNAPS.map((t) => sfx("iron_clack", t, 1.0)),
+  ...SNAPS.map((t) => sfx("spark", t, 0.8)),
+
+  // 7. Flashback, clench, blast
+  sfx("fire_burst", BEATS.backwards - 14, 0.5),
+  sfx("flashback", BEATS.backwards - 6, 0.85),
+  sfx("squeeze", BEATS.clench, 0.9),
+  sfx("pressurize", BEATS.clench + 4, 0.75),
+  sfx("gas_hiss", BEATS.blast - 4, 0.6),
+  loopCue(sfx("flamethrower", BEATS.blast, 0.9), shotStart("rocket"), 6),
+
+  // 8. Rocket, stove, the walking flamethrower
+  sfx("rocket", shotStart("rocket"), 0.9, { durationInFrames: shotEnd("rocket") - shotStart("rocket") + 4, fadeOutFrames: 4 }),
+  sfx("stove", shotStart("stove"), 0.8),
+  loopCue(sfx("flamethrower", shotStart("face"), 0.85), DURATION, 12),
+  sfx("roar", BEATS.congratulations, 0.85),
+  sfx("growl", BEATS.flamethrower, 0.6),
 ];
 
 // ---------------------------------------------------------------------------
-// Camera Staging & Poses
+// Camera: one or two poses per shot, eased between them; hard cuts between shots
 // ---------------------------------------------------------------------------
 const P = (position: Vec3, lookAt: Vec3, fov = 40): CameraPose => ({ position, lookAt, fov });
 const mix = (a: CameraPose, b: CameraPose, t: number): CameraPose => ({
@@ -67,6 +95,7 @@ const mix = (a: CameraPose, b: CameraPose, t: number): CameraPose => ({
   fov: lerp(a.fov ?? 40, b.fov ?? 40, t),
 });
 
+/** Lift the subject above the subtitle band: aim a little low. */
 const LIFT = 0.085;
 const framed = (p: CameraPose): CameraPose => {
   const d = Math.hypot(p.position[0] - p.lookAt[0], p.position[1] - p.lookAt[1], p.position[2] - p.lookAt[2]);
@@ -74,113 +103,54 @@ const framed = (p: CameraPose): CameraPose => {
   return { ...p, position: [p.position[0], p.position[1] - drop, p.position[2]], lookAt: [p.lookAt[0], p.lookAt[1] - drop, p.lookAt[2]] };
 };
 
-const track = (start: number, end: number, fn: (f: number) => CameraPose): CameraTrack => ({
-  start: start - 1,
-  end,
-  blend: 1,
-  fn: (f) => framed(fn(f)),
-});
-
-const cuts = (end: number, list: [number, CameraPose, CameraPose?][]): CameraTrack[] =>
-  list.map(([start, a, b], i) => {
-    const stop = i + 1 < list.length ? list[i + 1][0] : end;
-    return track(start, stop, (f) => mix(a, b ?? a, easeInOut(progress(f, [start, stop]))));
-  });
-
 const S = shotStart;
 const E = shotEnd;
+/** One shot: hard cut in, ease from `a` to `b` over the shot. */
+const shot = (id: ShotId, a: CameraPose, b?: CameraPose): CameraTrack => ({
+  start: S(id) - 1,
+  end: E(id),
+  blend: 1,
+  fn: (f) => framed(mix(a, b ?? a, easeInOut(progress(f, [S(id), E(id)])))),
+});
+const at = (p: Vec3, dx = 0, dy = 0, dz = 0): Vec3 => [p[0] + dx, p[1] + dy, p[2] + dz];
 
 const TRACKS: CameraTrack[] = [
-  // 1. Hook: Medium establishing shot drifting closer to glowing cutaway belly
-  ...cuts(E("hook"), [
-    [0, P([-0.3, 1.5, 7.2], [-0.55, 1.0, 0]), P([-0.4, 1.35, 6.0], [-0.55, 0.95, 0])],
-  ]),
-
-  // 2. Fuel: Camera pulls back to reveal the whole proud beast
-  ...cuts(E("fuel"), [
-    [S("fuel"), P([0.1, 1.6, 8.2], [0.1, 1.1, 0]), P([0.2, 1.55, 7.8], [0.1, 1.1, 0])],
-  ]),
-
-  // 3. Cow: Framing dragon and goblin entering
-  ...cuts(E("cow"), [
-    [S("cow"), P([0.9, 1.5, 7.2], [0.7, 1.0, 0.2]), P([0.8, 1.45, 6.8], [0.7, 1.0, 0.2])],
-  ]),
-
-  // 4. Ferment: Close-up on Stomach 1 (Rumen) bubbling
-  ...cuts(E("ferment"), [
-    [S("ferment"), P([-0.85, 0.95, 3.6], [-0.87, 0.83, 0.18], 34), P([-0.85, 0.9, 3.3], [-0.87, 0.83, 0.18], 34)],
-  ]),
-
-  // 5. Burp: Cut to snout releasing a tiny comical puff
-  ...cuts(E("burp"), [
-    [S("burp"), P([1.35, 1.85, 3.8], [1.34, 1.84, 0], 34), P([1.38, 1.85, 4.0], [1.34, 1.84, 0], 34)],
-  ]),
-
-  // 6. Stomach 2: Close-up on Stomach 2 forming
-  ...cuts(E("stomach2"), [
-    [S("stomach2"), P([-0.28, 1.1, 3.6], [-0.29, 1.0, 0.18], 34), P([-0.28, 1.05, 3.3], [-0.29, 1.0, 0.18], 34)],
-  ]),
-
-  // 7. Pressure: Squeezing under pressure
-  ...cuts(E("pressure"), [
-    [S("pressure"), P([-0.28, 1.05, 3.3], [-0.29, 1.0, 0.18], 33), P([-0.28, 1.02, 2.9], [-0.29, 1.0, 0.18], 31)],
-  ]),
-
-  // 8. Living Bomb: Dramatic low-angle danger view
-  ...cuts(E("bomb"), [
-    [S("bomb"), P([-0.3, 0.7, 5.4], [-0.3, 1.1, 0]), P([-0.3, 0.75, 4.8], [-0.3, 1.1, 0])],
-  ]),
-
-  // 9. Oxygen: Close on pure cyan anaerobic tank (0% O2)
-  ...cuts(E("oxygen"), [
-    [S("oxygen"), P([-0.28, 1.08, 3.3], [-0.29, 1.0, 0.18], 33), P([-0.28, 1.05, 3.0], [-0.29, 1.0, 0.18], 33)],
-  ]),
-
-  // 10. Lips: Tight focus on lips and snout
-  ...cuts(E("lips"), [
-    [S("lips"), P([1.35, 1.85, 3.4], [1.34, 1.84, 0], 32), P([1.38, 1.85, 3.2], [1.34, 1.84, 0], 32)],
-  ]),
-
-  // 11. Gland: High-angle inspection of the throat hazard
-  ...cuts(E("gland"), [
-    [S("gland"), P([0.45, 1.65, 4.0], [0.45, 1.5, 0], 35), P([0.5, 1.6, 3.7], [0.45, 1.5, 0], 35)],
-  ]),
-
-  // 12. Teeth: Close-up of dark serrated Komodo iron teeth & head
-  ...cuts(E("teeth"), [
-    [S("teeth"), P([1.25, 1.85, 4.2], [1.25, 1.8, 0], 34), P([1.28, 1.85, 3.9], [1.25, 1.8, 0], 34)],
-  ]),
-
-  // 13. Strike: Jaws snap violently with sparks!
-  ...cuts(E("strike"), [
-    [S("strike"), P([1.28, 1.85, 3.9], [1.25, 1.8, 0], 34), P([1.3, 1.85, 3.5], [1.25, 1.8, 0], 32)],
-  ]),
-
-  // 14. Flashback: Side angle showing neck fuel conduit
-  ...cuts(E("flashback"), [
-    [S("flashback"), P([0.3, 1.5, 4.4], [0.3, 1.35, 0], 35), P([0.25, 1.45, 4.0], [0.3, 1.35, 0], 35)],
-  ]),
-
-  // 15. Clench: Tight muscular contraction
-  ...cuts(E("clench"), [
-    [S("clench"), P([-0.28, 1.08, 3.3], [-0.29, 1.0, 0.18], 33), P([-0.28, 1.02, 2.8], [-0.29, 1.0, 0.18], 31)],
-  ]),
-
-  // 16. Gas blast: Jetstream rushing out
-  ...cuts(E("gasblast"), [
-    [S("gasblast"), P([1.8, 1.75, 4.6], [1.6, 1.65, 0], 35), P([1.9, 1.75, 5.0], [1.7, 1.65, 0], 35)],
-  ]),
-
-  // 17. Flamethrower: Roaring inferno locked outside mouth, goblin blown back
-  ...cuts(E("flamethrower"), [
-    [S("flamethrower"), P([1.8, 1.75, 8.8], [1.7, 1.25, 0]), P([1.9, 1.75, 9.2], [1.7, 1.25, 0])],
-  ]),
-
-  // 18. Finale: Majestic full-cavern pull-back
-  ...cuts(DURATION, [
-    [S("finale"), P([1.8, 1.9, 10.2], [1.6, 1.2, 0]), P([1.8, 1.95, 10.8], [1.6, 1.2, 0])],
-  ]),
+  // Hook: the whole beast in its cave, low and wide, pushing in; then side-on through the glass.
+  shot("hook", P([6.0, 1.4, 6.6], [0.4, 1.6, 0]), P([4.9, 1.45, 5.5], [0.5, 1.6, 0])),
+  shot("hookXray", P([0.4, 1.6, 6.4], [0.3, 1.5, 0]), P([0.5, 1.4, 4.8], at(D.chest, 0, 0.1))),
+  shot("fuel", P([0.3, 1.4, 4.6], at(D.gut, 0.1, 0.1)), P([0.3, 1.3, 4.0], at(D.gut, 0.1, 0.05))),
+  // Gut: head down into the heap, then the rumen up close.
+  shot("gorge", P([4.4, 1.4, 4.6], [1.5, 0.95, 0.2]), P([3.9, 1.2, 3.9], [1.6, 0.8, 0.3])),
+  shot("ferment", P([0.3, 1.15, 3.0], D.gut, 36), P([0.25, 1.1, 2.5], D.gut, 36)),
+  // Cow: side medium, then the mouth and the candle.
+  shot("cow", P([0.5, 1.0, 4.6], [0.3, 0.8, 0]), P([0.7, 1.0, 4.0], [0.4, 0.8, 0])),
+  shot("burp", P([1.3, 1.0, 2.1], [1.25, 0.9, 0], 36), P([1.3, 0.98, 1.85], [1.25, 0.9, 0], 36)),
+  // Second stomach grows, then pumps.
+  shot("stomach2", P([0.6, 1.35, 4.2], at(D.tank, -0.15, 0.1)), P([0.65, 1.3, 3.5], at(D.tank, -0.1, 0.05))),
+  shot("pressure", P([0.75, 1.15, 2.8], D.tank, 36), P([0.72, 1.13, 2.3], D.tank, 36)),
+  // Bomb: low hero angle; the ember drifts in; the blast.
+  shot("bomb", P([3.8, 0.6, 8.0], [0.2, 1.55, 0]), P([3.3, 0.65, 7.0], [0.2, 1.5, 0])),
+  // Oxygen: the sealed tank, then the lips.
+  shot("oxygen", P([0.9, 1.25, 3.1], D.tank, 36), P([0.8, 1.2, 2.6], D.tank, 36)),
+  shot("lips", P([1.5, 1.6, 2.2], [1.25, 1.5, 0], 36), P([1.5, 1.58, 1.95], [1.25, 1.5, 0], 36)),
+  // Gland: head and neck side-on through the glass.
+  shot("gland", P([1.0, 1.75, 3.6], [0.95, 1.65, 0])),
+  // Teeth turn to iron; the Komodo; the snaps.
+  shot("teeth", P([1.3, 1.62, 2.3], [1.2, 1.55, 0], 38), P([1.3, 1.6, 2.0], [1.2, 1.53, 0], 38)),
+  shot("komodo", P([1.2, 0.8, 3.0], [0.95, 0.45, 0], 36), P([1.25, 0.7, 2.5], [1.05, 0.4, 0], 36)),
+  shot("strike", P([1.45, 1.55, 2.5], [1.15, 1.42, 0], 38), P([1.4, 1.52, 2.25], [1.15, 1.4, 0], 38)),
+  // Flashback down the duct, the clench, the blast.
+  shot("flashback", P([0.95, 1.6, 4.2], [0.95, 1.5, 0])),
+  shot("clench", P([0.8, 1.45, 4.2], [0.8, 1.38, 0]), P([0.8, 1.4, 3.8], [0.8, 1.35, 0])),
+  shot("blast", P([1.7, 1.8, 7.0], [1.6, 1.7, 0]), P([1.95, 1.8, 6.4], [1.8, 1.7, 0])),
+  // Comparisons.
+  shot("rocket", P([0.3, 2.4, 5.6], [0, 2.0, 0]), P([0.2, 2.3, 5.0], [0, 2.0, 0])),
+  shot("stove", P([0, 1.0, 1.7], [0, 0.15, 0], 40), P([0, 0.9, 1.45], [0, 0.15, 0], 40)),
+  // The flame held off the face, then the walking flamethrower, wide.
+  shot("face", P([2.8, 1.95, 3.9], [1.45, 1.8, 0]), P([2.6, 1.92, 3.5], [1.5, 1.8, 0])),
+  shot("finale", P([4.6, 1.9, 8.6], [2.0, 1.7, 0.4]), P([6.0, 2.0, 9.0], [3.6, 1.7, 0.8])),
 ];
+
 
 const opening = TRACKS[0].fn(0);
 
@@ -203,11 +173,12 @@ export const config: EpisodeConfig = {
     tracks: TRACKS,
     shake: [
       { at: BEATS.fire, strength: 0.1, spread: 6 },
-      { at: BEATS.burps, strength: 0.05, spread: 4 },
-      { at: BEATS.snap, strength: 0.28, spread: 7 },
-      { at: BEATS.blast, strength: 0.36, spread: 12 },
-      { at: BEATS.blast + 14, strength: 0.12, spread: 5 },
-      { at: BEATS.congratulations, strength: 0.24, spread: 10 },
+      { at: BEATS.organs, strength: 0.12, spread: 6 },
+      { at: BEATS.detonates, strength: 0.36, spread: 12 },
+      { at: BEATS.incinerates, strength: 0.16, spread: 7 },
+      ...SNAPS.map((t) => ({ at: t, strength: 0.14, spread: 5 })),
+      { at: BEATS.blast, strength: 0.3, spread: 10 },
+      { at: BEATS.congratulations, strength: 0.18, spread: 8 },
     ],
   },
   audio: { src: "bio/dragon/narration_v1.mp3", volume: 1, fadeInFrames: 0, fadeOutFrames: 6 },
@@ -226,11 +197,11 @@ export const config: EpisodeConfig = {
     fadeOutFrames: 6,
     backgroundColor: "#0d0f14",
     postfx: {
-      aoIntensity: 1.8,
-      bloomIntensity: 0.45,
-      bloomThreshold: 0.82,
-      grain: 0.012,
-      dof: { bokehScale: 3.5, range: 0.45 },
+      aoIntensity: 1.4,
+      bloomIntensity: 0.7,
+      bloomThreshold: 0.9,
+      grain: 0.018,
+      dof: { bokehScale: 1.8, range: 0.6 },
     },
   },
   OverlayComponent: DragonHUD,

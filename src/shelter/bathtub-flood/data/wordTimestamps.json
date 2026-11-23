@@ -1,0 +1,1276 @@
+[
+  {
+    "startFrame": 15,
+    "endFrame": 144,
+    "text": "When the flood warning comes, you hide in the bathtub, like you would for a tornado.",
+    "words": [
+      {
+        "word": "When",
+        "startFrame": 15,
+        "endFrame": 21
+      },
+      {
+        "word": "the",
+        "startFrame": 21,
+        "endFrame": 24
+      },
+      {
+        "word": "flood",
+        "startFrame": 24,
+        "endFrame": 33
+      },
+      {
+        "word": "warning",
+        "startFrame": 33,
+        "endFrame": 42
+      },
+      {
+        "word": "comes,",
+        "startFrame": 42,
+        "endFrame": 60
+      },
+      {
+        "word": "you",
+        "startFrame": 60,
+        "endFrame": 66
+      },
+      {
+        "word": "hide",
+        "startFrame": 66,
+        "endFrame": 75
+      },
+      {
+        "word": "in",
+        "startFrame": 75,
+        "endFrame": 78
+      },
+      {
+        "word": "the",
+        "startFrame": 78,
+        "endFrame": 81
+      },
+      {
+        "word": "bathtub,",
+        "startFrame": 81,
+        "endFrame": 105
+      },
+      {
+        "word": "like",
+        "startFrame": 108,
+        "endFrame": 111
+      },
+      {
+        "word": "you",
+        "startFrame": 111,
+        "endFrame": 114
+      },
+      {
+        "word": "would",
+        "startFrame": 114,
+        "endFrame": 120
+      },
+      {
+        "word": "for",
+        "startFrame": 120,
+        "endFrame": 123
+      },
+      {
+        "word": "a",
+        "startFrame": 123,
+        "endFrame": 124
+      },
+      {
+        "word": "tornado.",
+        "startFrame": 123,
+        "endFrame": 144
+      }
+    ]
+  },
+  {
+    "startFrame": 155,
+    "endFrame": 302,
+    "text": "But the water pours in under the door, and the tub fills up with you in it.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 155,
+        "endFrame": 158
+      },
+      {
+        "word": "the",
+        "startFrame": 158,
+        "endFrame": 161
+      },
+      {
+        "word": "water",
+        "startFrame": 161,
+        "endFrame": 179
+      },
+      {
+        "word": "pours",
+        "startFrame": 179,
+        "endFrame": 194
+      },
+      {
+        "word": "in",
+        "startFrame": 194,
+        "endFrame": 200
+      },
+      {
+        "word": "under",
+        "startFrame": 200,
+        "endFrame": 206
+      },
+      {
+        "word": "the",
+        "startFrame": 206,
+        "endFrame": 209
+      },
+      {
+        "word": "door,",
+        "startFrame": 209,
+        "endFrame": 224
+      },
+      {
+        "word": "and",
+        "startFrame": 230,
+        "endFrame": 233
+      },
+      {
+        "word": "the",
+        "startFrame": 233,
+        "endFrame": 236
+      },
+      {
+        "word": "tub",
+        "startFrame": 236,
+        "endFrame": 251
+      },
+      {
+        "word": "fills",
+        "startFrame": 251,
+        "endFrame": 263
+      },
+      {
+        "word": "up",
+        "startFrame": 263,
+        "endFrame": 278
+      },
+      {
+        "word": "with",
+        "startFrame": 281,
+        "endFrame": 284
+      },
+      {
+        "word": "you",
+        "startFrame": 284,
+        "endFrame": 290
+      },
+      {
+        "word": "in",
+        "startFrame": 290,
+        "endFrame": 296
+      },
+      {
+        "word": "it.",
+        "startFrame": 296,
+        "endFrame": 302
+      }
+    ]
+  },
+  {
+    "startFrame": 332,
+    "endFrame": 494,
+    "text": "You might think you should drive away. Don't. Just one foot of moving water can carry away a car.",
+    "words": [
+      {
+        "word": "You",
+        "startFrame": 332,
+        "endFrame": 335
+      },
+      {
+        "word": "might",
+        "startFrame": 335,
+        "endFrame": 341
+      },
+      {
+        "word": "think",
+        "startFrame": 341,
+        "endFrame": 347
+      },
+      {
+        "word": "you",
+        "startFrame": 347,
+        "endFrame": 350
+      },
+      {
+        "word": "should",
+        "startFrame": 350,
+        "endFrame": 356
+      },
+      {
+        "word": "drive",
+        "startFrame": 356,
+        "endFrame": 365
+      },
+      {
+        "word": "away.",
+        "startFrame": 365,
+        "endFrame": 377
+      },
+      {
+        "word": "Don't.",
+        "startFrame": 392,
+        "endFrame": 404
+      },
+      {
+        "word": "Just",
+        "startFrame": 413,
+        "endFrame": 419
+      },
+      {
+        "word": "one",
+        "startFrame": 419,
+        "endFrame": 428
+      },
+      {
+        "word": "foot",
+        "startFrame": 428,
+        "endFrame": 437
+      },
+      {
+        "word": "of",
+        "startFrame": 437,
+        "endFrame": 440
+      },
+      {
+        "word": "moving",
+        "startFrame": 440,
+        "endFrame": 449
+      },
+      {
+        "word": "water",
+        "startFrame": 449,
+        "endFrame": 461
+      },
+      {
+        "word": "can",
+        "startFrame": 461,
+        "endFrame": 464
+      },
+      {
+        "word": "carry",
+        "startFrame": 464,
+        "endFrame": 473
+      },
+      {
+        "word": "away",
+        "startFrame": 473,
+        "endFrame": 479
+      },
+      {
+        "word": "a",
+        "startFrame": 479,
+        "endFrame": 482
+      },
+      {
+        "word": "car.",
+        "startFrame": 482,
+        "endFrame": 494
+      }
+    ]
+  },
+  {
+    "startFrame": 524,
+    "endFrame": 608,
+    "text": "So you pull the bathtub free, and ride it like a boat.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 524,
+        "endFrame": 527
+      },
+      {
+        "word": "you",
+        "startFrame": 527,
+        "endFrame": 533
+      },
+      {
+        "word": "pull",
+        "startFrame": 533,
+        "endFrame": 542
+      },
+      {
+        "word": "the",
+        "startFrame": 542,
+        "endFrame": 545
+      },
+      {
+        "word": "bathtub",
+        "startFrame": 545,
+        "endFrame": 560
+      },
+      {
+        "word": "free,",
+        "startFrame": 560,
+        "endFrame": 572
+      },
+      {
+        "word": "and",
+        "startFrame": 575,
+        "endFrame": 581
+      },
+      {
+        "word": "ride",
+        "startFrame": 581,
+        "endFrame": 587
+      },
+      {
+        "word": "it",
+        "startFrame": 587,
+        "endFrame": 590
+      },
+      {
+        "word": "like",
+        "startFrame": 593,
+        "endFrame": 596
+      },
+      {
+        "word": "a",
+        "startFrame": 596,
+        "endFrame": 599
+      },
+      {
+        "word": "boat.",
+        "startFrame": 599,
+        "endFrame": 608
+      }
+    ]
+  },
+  {
+    "startFrame": 620,
+    "endFrame": 722,
+    "text": "It floats. But the first wave tips it over.",
+    "words": [
+      {
+        "word": "It",
+        "startFrame": 620,
+        "endFrame": 626
+      },
+      {
+        "word": "floats.",
+        "startFrame": 626,
+        "endFrame": 650
+      },
+      {
+        "word": "But",
+        "startFrame": 653,
+        "endFrame": 656
+      },
+      {
+        "word": "the",
+        "startFrame": 656,
+        "endFrame": 659
+      },
+      {
+        "word": "first",
+        "startFrame": 659,
+        "endFrame": 680
+      },
+      {
+        "word": "wave",
+        "startFrame": 680,
+        "endFrame": 698
+      },
+      {
+        "word": "tips",
+        "startFrame": 698,
+        "endFrame": 707
+      },
+      {
+        "word": "it",
+        "startFrame": 707,
+        "endFrame": 710
+      },
+      {
+        "word": "over.",
+        "startFrame": 710,
+        "endFrame": 722
+      }
+    ]
+  },
+  {
+    "startFrame": 754,
+    "endFrame": 874,
+    "text": "So you seal it with a lid and a rubber gasket. Not a drop gets in.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 754,
+        "endFrame": 757
+      },
+      {
+        "word": "you",
+        "startFrame": 757,
+        "endFrame": 763
+      },
+      {
+        "word": "seal",
+        "startFrame": 763,
+        "endFrame": 775
+      },
+      {
+        "word": "it",
+        "startFrame": 775,
+        "endFrame": 778
+      },
+      {
+        "word": "with",
+        "startFrame": 778,
+        "endFrame": 784
+      },
+      {
+        "word": "a",
+        "startFrame": 784,
+        "endFrame": 785
+      },
+      {
+        "word": "lid",
+        "startFrame": 784,
+        "endFrame": 799
+      },
+      {
+        "word": "and",
+        "startFrame": 799,
+        "endFrame": 802
+      },
+      {
+        "word": "a",
+        "startFrame": 802,
+        "endFrame": 805
+      },
+      {
+        "word": "rubber",
+        "startFrame": 805,
+        "endFrame": 814
+      },
+      {
+        "word": "gasket.",
+        "startFrame": 814,
+        "endFrame": 832
+      },
+      {
+        "word": "Not",
+        "startFrame": 835,
+        "endFrame": 841
+      },
+      {
+        "word": "a",
+        "startFrame": 841,
+        "endFrame": 844
+      },
+      {
+        "word": "drop",
+        "startFrame": 844,
+        "endFrame": 859
+      },
+      {
+        "word": "gets",
+        "startFrame": 859,
+        "endFrame": 865
+      },
+      {
+        "word": "in.",
+        "startFrame": 865,
+        "endFrame": 874
+      }
+    ]
+  },
+  {
+    "startFrame": 886,
+    "endFrame": 979,
+    "text": "But the next wave rolls it over, and it stays upside down.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 886,
+        "endFrame": 889
+      },
+      {
+        "word": "the",
+        "startFrame": 889,
+        "endFrame": 892
+      },
+      {
+        "word": "next",
+        "startFrame": 892,
+        "endFrame": 898
+      },
+      {
+        "word": "wave",
+        "startFrame": 898,
+        "endFrame": 907
+      },
+      {
+        "word": "rolls",
+        "startFrame": 907,
+        "endFrame": 913
+      },
+      {
+        "word": "it",
+        "startFrame": 913,
+        "endFrame": 916
+      },
+      {
+        "word": "over,",
+        "startFrame": 916,
+        "endFrame": 928
+      },
+      {
+        "word": "and",
+        "startFrame": 934,
+        "endFrame": 937
+      },
+      {
+        "word": "it",
+        "startFrame": 937,
+        "endFrame": 940
+      },
+      {
+        "word": "stays",
+        "startFrame": 940,
+        "endFrame": 955
+      },
+      {
+        "word": "upside",
+        "startFrame": 955,
+        "endFrame": 967
+      },
+      {
+        "word": "down.",
+        "startFrame": 967,
+        "endFrame": 979
+      }
+    ]
+  },
+  {
+    "startFrame": 1009,
+    "endFrame": 1189,
+    "text": "So you bolt a heavy weight to the bottom. Like the keel of a boat, it flips you back up every time.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1009,
+        "endFrame": 1012
+      },
+      {
+        "word": "you",
+        "startFrame": 1012,
+        "endFrame": 1018
+      },
+      {
+        "word": "bolt",
+        "startFrame": 1018,
+        "endFrame": 1033
+      },
+      {
+        "word": "a",
+        "startFrame": 1033,
+        "endFrame": 1036
+      },
+      {
+        "word": "heavy",
+        "startFrame": 1036,
+        "endFrame": 1051
+      },
+      {
+        "word": "weight",
+        "startFrame": 1051,
+        "endFrame": 1063
+      },
+      {
+        "word": "to",
+        "startFrame": 1063,
+        "endFrame": 1066
+      },
+      {
+        "word": "the",
+        "startFrame": 1066,
+        "endFrame": 1072
+      },
+      {
+        "word": "bottom.",
+        "startFrame": 1072,
+        "endFrame": 1087
+      },
+      {
+        "word": "Like",
+        "startFrame": 1096,
+        "endFrame": 1102
+      },
+      {
+        "word": "the",
+        "startFrame": 1102,
+        "endFrame": 1105
+      },
+      {
+        "word": "keel",
+        "startFrame": 1105,
+        "endFrame": 1114
+      },
+      {
+        "word": "of",
+        "startFrame": 1114,
+        "endFrame": 1117
+      },
+      {
+        "word": "a",
+        "startFrame": 1117,
+        "endFrame": 1118
+      },
+      {
+        "word": "boat,",
+        "startFrame": 1117,
+        "endFrame": 1129
+      },
+      {
+        "word": "it",
+        "startFrame": 1141,
+        "endFrame": 1142
+      },
+      {
+        "word": "flips",
+        "startFrame": 1141,
+        "endFrame": 1153
+      },
+      {
+        "word": "you",
+        "startFrame": 1153,
+        "endFrame": 1156
+      },
+      {
+        "word": "back",
+        "startFrame": 1156,
+        "endFrame": 1162
+      },
+      {
+        "word": "up",
+        "startFrame": 1162,
+        "endFrame": 1168
+      },
+      {
+        "word": "every",
+        "startFrame": 1168,
+        "endFrame": 1177
+      },
+      {
+        "word": "time.",
+        "startFrame": 1177,
+        "endFrame": 1189
+      }
+    ]
+  },
+  {
+    "startFrame": 1203,
+    "endFrame": 1350,
+    "text": "Then a floating log slams into it, and you bounce around inside like a pinball.",
+    "words": [
+      {
+        "word": "Then",
+        "startFrame": 1203,
+        "endFrame": 1209
+      },
+      {
+        "word": "a",
+        "startFrame": 1215,
+        "endFrame": 1216
+      },
+      {
+        "word": "floating",
+        "startFrame": 1221,
+        "endFrame": 1233
+      },
+      {
+        "word": "log",
+        "startFrame": 1233,
+        "endFrame": 1248
+      },
+      {
+        "word": "slams",
+        "startFrame": 1248,
+        "endFrame": 1263
+      },
+      {
+        "word": "into",
+        "startFrame": 1263,
+        "endFrame": 1272
+      },
+      {
+        "word": "it,",
+        "startFrame": 1272,
+        "endFrame": 1278
+      },
+      {
+        "word": "and",
+        "startFrame": 1281,
+        "endFrame": 1284
+      },
+      {
+        "word": "you",
+        "startFrame": 1284,
+        "endFrame": 1287
+      },
+      {
+        "word": "bounce",
+        "startFrame": 1287,
+        "endFrame": 1299
+      },
+      {
+        "word": "around",
+        "startFrame": 1299,
+        "endFrame": 1308
+      },
+      {
+        "word": "inside",
+        "startFrame": 1308,
+        "endFrame": 1320
+      },
+      {
+        "word": "like",
+        "startFrame": 1320,
+        "endFrame": 1326
+      },
+      {
+        "word": "a",
+        "startFrame": 1326,
+        "endFrame": 1329
+      },
+      {
+        "word": "pinball.",
+        "startFrame": 1329,
+        "endFrame": 1350
+      }
+    ]
+  },
+  {
+    "startFrame": 1380,
+    "endFrame": 1458,
+    "text": "So you add padded seats with seat belts.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1380,
+        "endFrame": 1389
+      },
+      {
+        "word": "you",
+        "startFrame": 1389,
+        "endFrame": 1398
+      },
+      {
+        "word": "add",
+        "startFrame": 1398,
+        "endFrame": 1407
+      },
+      {
+        "word": "padded",
+        "startFrame": 1407,
+        "endFrame": 1419
+      },
+      {
+        "word": "seats",
+        "startFrame": 1419,
+        "endFrame": 1434
+      },
+      {
+        "word": "with",
+        "startFrame": 1434,
+        "endFrame": 1440
+      },
+      {
+        "word": "seat",
+        "startFrame": 1440,
+        "endFrame": 1446
+      },
+      {
+        "word": "belts.",
+        "startFrame": 1446,
+        "endFrame": 1458
+      }
+    ]
+  },
+  {
+    "startFrame": 1471,
+    "endFrame": 1594,
+    "text": "Now it is sealed so tight that the air inside starts running out.",
+    "words": [
+      {
+        "word": "Now",
+        "startFrame": 1471,
+        "endFrame": 1486
+      },
+      {
+        "word": "it",
+        "startFrame": 1486,
+        "endFrame": 1489
+      },
+      {
+        "word": "is",
+        "startFrame": 1489,
+        "endFrame": 1492
+      },
+      {
+        "word": "sealed",
+        "startFrame": 1492,
+        "endFrame": 1507
+      },
+      {
+        "word": "so",
+        "startFrame": 1507,
+        "endFrame": 1516
+      },
+      {
+        "word": "tight",
+        "startFrame": 1516,
+        "endFrame": 1534
+      },
+      {
+        "word": "that",
+        "startFrame": 1537,
+        "endFrame": 1540
+      },
+      {
+        "word": "the",
+        "startFrame": 1540,
+        "endFrame": 1546
+      },
+      {
+        "word": "air",
+        "startFrame": 1546,
+        "endFrame": 1552
+      },
+      {
+        "word": "inside",
+        "startFrame": 1552,
+        "endFrame": 1567
+      },
+      {
+        "word": "starts",
+        "startFrame": 1567,
+        "endFrame": 1576
+      },
+      {
+        "word": "running",
+        "startFrame": 1576,
+        "endFrame": 1588
+      },
+      {
+        "word": "out.",
+        "startFrame": 1588,
+        "endFrame": 1594
+      }
+    ]
+  },
+  {
+    "startFrame": 1626,
+    "endFrame": 1785,
+    "text": "So you add air vents on top, with valves that let air in but keep the water out.",
+    "words": [
+      {
+        "word": "So",
+        "startFrame": 1626,
+        "endFrame": 1632
+      },
+      {
+        "word": "you",
+        "startFrame": 1632,
+        "endFrame": 1638
+      },
+      {
+        "word": "add",
+        "startFrame": 1638,
+        "endFrame": 1650
+      },
+      {
+        "word": "air",
+        "startFrame": 1650,
+        "endFrame": 1656
+      },
+      {
+        "word": "vents",
+        "startFrame": 1656,
+        "endFrame": 1668
+      },
+      {
+        "word": "on",
+        "startFrame": 1668,
+        "endFrame": 1671
+      },
+      {
+        "word": "top,",
+        "startFrame": 1671,
+        "endFrame": 1686
+      },
+      {
+        "word": "with",
+        "startFrame": 1689,
+        "endFrame": 1692
+      },
+      {
+        "word": "valves",
+        "startFrame": 1692,
+        "endFrame": 1710
+      },
+      {
+        "word": "that",
+        "startFrame": 1710,
+        "endFrame": 1716
+      },
+      {
+        "word": "let",
+        "startFrame": 1716,
+        "endFrame": 1722
+      },
+      {
+        "word": "air",
+        "startFrame": 1722,
+        "endFrame": 1734
+      },
+      {
+        "word": "in",
+        "startFrame": 1734,
+        "endFrame": 1743
+      },
+      {
+        "word": "but",
+        "startFrame": 1743,
+        "endFrame": 1752
+      },
+      {
+        "word": "keep",
+        "startFrame": 1752,
+        "endFrame": 1761
+      },
+      {
+        "word": "the",
+        "startFrame": 1761,
+        "endFrame": 1764
+      },
+      {
+        "word": "water",
+        "startFrame": 1764,
+        "endFrame": 1776
+      },
+      {
+        "word": "out.",
+        "startFrame": 1776,
+        "endFrame": 1785
+      }
+    ]
+  },
+  {
+    "startFrame": 1797,
+    "endFrame": 1917,
+    "text": "And you paint it bright yellow, so a rescue helicopter can spot you.",
+    "words": [
+      {
+        "word": "And",
+        "startFrame": 1797,
+        "endFrame": 1809
+      },
+      {
+        "word": "you",
+        "startFrame": 1812,
+        "endFrame": 1815
+      },
+      {
+        "word": "paint",
+        "startFrame": 1815,
+        "endFrame": 1824
+      },
+      {
+        "word": "it",
+        "startFrame": 1824,
+        "endFrame": 1827
+      },
+      {
+        "word": "bright",
+        "startFrame": 1827,
+        "endFrame": 1842
+      },
+      {
+        "word": "yellow,",
+        "startFrame": 1842,
+        "endFrame": 1860
+      },
+      {
+        "word": "so",
+        "startFrame": 1863,
+        "endFrame": 1866
+      },
+      {
+        "word": "a",
+        "startFrame": 1866,
+        "endFrame": 1872
+      },
+      {
+        "word": "rescue",
+        "startFrame": 1872,
+        "endFrame": 1884
+      },
+      {
+        "word": "helicopter",
+        "startFrame": 1884,
+        "endFrame": 1896
+      },
+      {
+        "word": "can",
+        "startFrame": 1896,
+        "endFrame": 1902
+      },
+      {
+        "word": "spot",
+        "startFrame": 1902,
+        "endFrame": 1911
+      },
+      {
+        "word": "you.",
+        "startFrame": 1911,
+        "endFrame": 1917
+      }
+    ]
+  },
+  {
+    "startFrame": 1947,
+    "endFrame": 2052,
+    "text": "Real tsunami survival pods are built just like this.",
+    "words": [
+      {
+        "word": "Real",
+        "startFrame": 1947,
+        "endFrame": 1959
+      },
+      {
+        "word": "tsunami",
+        "startFrame": 1959,
+        "endFrame": 1977
+      },
+      {
+        "word": "survival",
+        "startFrame": 1977,
+        "endFrame": 1995
+      },
+      {
+        "word": "pods",
+        "startFrame": 1995,
+        "endFrame": 2007
+      },
+      {
+        "word": "are",
+        "startFrame": 2007,
+        "endFrame": 2010
+      },
+      {
+        "word": "built",
+        "startFrame": 2010,
+        "endFrame": 2025
+      },
+      {
+        "word": "just",
+        "startFrame": 2025,
+        "endFrame": 2031
+      },
+      {
+        "word": "like",
+        "startFrame": 2031,
+        "endFrame": 2037
+      },
+      {
+        "word": "this.",
+        "startFrame": 2037,
+        "endFrame": 2052
+      }
+    ]
+  },
+  {
+    "startFrame": 2065,
+    "endFrame": 2239,
+    "text": "But the best flood shelter is still higher ground. When they tell you to evacuate, go.",
+    "words": [
+      {
+        "word": "But",
+        "startFrame": 2065,
+        "endFrame": 2068
+      },
+      {
+        "word": "the",
+        "startFrame": 2068,
+        "endFrame": 2071
+      },
+      {
+        "word": "best",
+        "startFrame": 2071,
+        "endFrame": 2080
+      },
+      {
+        "word": "flood",
+        "startFrame": 2080,
+        "endFrame": 2089
+      },
+      {
+        "word": "shelter",
+        "startFrame": 2089,
+        "endFrame": 2101
+      },
+      {
+        "word": "is",
+        "startFrame": 2101,
+        "endFrame": 2104
+      },
+      {
+        "word": "still",
+        "startFrame": 2104,
+        "endFrame": 2125
+      },
+      {
+        "word": "higher",
+        "startFrame": 2128,
+        "endFrame": 2140
+      },
+      {
+        "word": "ground.",
+        "startFrame": 2140,
+        "endFrame": 2164
+      },
+      {
+        "word": "When",
+        "startFrame": 2173,
+        "endFrame": 2176
+      },
+      {
+        "word": "they",
+        "startFrame": 2176,
+        "endFrame": 2179
+      },
+      {
+        "word": "tell",
+        "startFrame": 2179,
+        "endFrame": 2185
+      },
+      {
+        "word": "you",
+        "startFrame": 2185,
+        "endFrame": 2188
+      },
+      {
+        "word": "to",
+        "startFrame": 2188,
+        "endFrame": 2194
+      },
+      {
+        "word": "evacuate,",
+        "startFrame": 2194,
+        "endFrame": 2212
+      },
+      {
+        "word": "go.",
+        "startFrame": 2230,
+        "endFrame": 2239
+      }
+    ]
+  },
+  {
+    "startFrame": 2272,
+    "endFrame": 2371,
+    "text": "Congratulations. You have built a flood shelter.",
+    "words": [
+      {
+        "word": "Congratulations.",
+        "startFrame": 2272,
+        "endFrame": 2308
+      },
+      {
+        "word": "You",
+        "startFrame": 2311,
+        "endFrame": 2317
+      },
+      {
+        "word": "have",
+        "startFrame": 2317,
+        "endFrame": 2323
+      },
+      {
+        "word": "built",
+        "startFrame": 2323,
+        "endFrame": 2335
+      },
+      {
+        "word": "a",
+        "startFrame": 2338,
+        "endFrame": 2341
+      },
+      {
+        "word": "flood",
+        "startFrame": 2341,
+        "endFrame": 2359
+      },
+      {
+        "word": "shelter.",
+        "startFrame": 2359,
+        "endFrame": 2371
+      }
+    ]
+  },
+  {
+    "startFrame": 2384,
+    "endFrame": 2456,
+    "text": "Unless you can prove us wrong in the comments.",
+    "words": [
+      {
+        "word": "Unless",
+        "startFrame": 2384,
+        "endFrame": 2396
+      },
+      {
+        "word": "you",
+        "startFrame": 2396,
+        "endFrame": 2399
+      },
+      {
+        "word": "can",
+        "startFrame": 2399,
+        "endFrame": 2408
+      },
+      {
+        "word": "prove",
+        "startFrame": 2408,
+        "endFrame": 2414
+      },
+      {
+        "word": "us",
+        "startFrame": 2414,
+        "endFrame": 2420
+      },
+      {
+        "word": "wrong",
+        "startFrame": 2420,
+        "endFrame": 2432
+      },
+      {
+        "word": "in",
+        "startFrame": 2432,
+        "endFrame": 2435
+      },
+      {
+        "word": "the",
+        "startFrame": 2435,
+        "endFrame": 2438
+      },
+      {
+        "word": "comments.",
+        "startFrame": 2438,
+        "endFrame": 2456
+      }
+    ]
+  }
+]

@@ -229,7 +229,7 @@ export function paintSkin(base: THREE.Texture, geo: THREE.BufferGeometry, layers
 }
 
 /** Harness materials re-used on layers cut from the skin, with finer texture repeats for its UVs. */
-export const FIT_KEYS = ["mail", "quilt", "wool", "braies", "leather", "steel", "coverall"] as const;
+export const FIT_KEYS = ["mail", "quilt", "wool", "braies", "leather", "steel", "coverall", "shirt", "shorts"] as const;
 type FitKey = `${(typeof FIT_KEYS)[number]}Fit`;
 
 export type HumanMaterials = Record<"skin" | "eye" | "brows" | "lashes" | "hairCrop" | "hairSwept" | FitKey, THREE.MeshStandardMaterial>;
@@ -642,6 +642,26 @@ function tabardFace(): THREE.Texture {
   });
 }
 
+/** Undyed-looking plain wool: the colour, a little mottling, and grime toward the hem. */
+function plainCloth(rgb: RGB, seed: number): THREE.Texture {
+  const hex = (k: number) => Math.round(Math.max(0, Math.min(1, k)) * 255);
+  const css = (f: number) => `rgb(${hex(rgb[0] * f)},${hex(rgb[1] * f)},${hex(rgb[2] * f)})`;
+  return canvasTex(256, 512, (c) => {
+    c.fillStyle = css(1);
+    c.fillRect(0, 0, 256, 512);
+    // Faint seams down the sides.
+    c.fillStyle = css(0.78);
+    c.fillRect(10, 0, 3, 512);
+    c.fillRect(243, 0, 3, 512);
+    speckle(c, 256, 512, seed, 0.18);
+    const hem = c.createLinearGradient(0, 380, 0, 512);
+    hem.addColorStop(0, "rgba(25,14,10,0)");
+    hem.addColorStop(1, "rgba(25,14,10,0.55)");
+    c.fillStyle = hem;
+    c.fillRect(0, 380, 256, 132);
+  });
+}
+
 function woodBack(): THREE.Texture {
   return canvasTex(256, 320, (c) => {
     c.fillStyle = "#5a3d24";
@@ -714,6 +734,9 @@ export type MatKey =
   | "wool"
   // Workwear (miners): coveralls, reflective tape, rubber boots, the hard hat, its lamp, sunglasses.
   | "coverall"
+  // Sports kit: a short-sleeved shirt and shorts.
+  | "shirt"
+  | "shorts"
   | "reflect"
   | "rubber"
   | "hat"
@@ -724,6 +747,25 @@ export type MatKey =
 export interface Outfit {
   coverall: RGB;
   hat: RGB;
+  /** Reflective tape colour (defaults to the pale miner's tape; give the coverall colour to hide it). */
+  tape?: RGB;
+  /** Boot colour (defaults to black rubber). */
+  boots?: RGB;
+  /** Coverall roughness (defaults to 0.92 cloth; ~0.35 reads as a wet neoprene suit). */
+  roughness?: number;
+  /** Sports kit colours (the `kit` workwear): shirt and shorts (default to the coverall colour). */
+  shirt?: RGB;
+  shorts?: RGB;
+  /** Plain cloak and tabard cloth in this colour, without the paladin's device (a priest's cloak, a soldier's coat). */
+  cape?: RGB;
+  tabard?: RGB;
+  /**
+   * Cut of the cloth (non-armour wearers): `robe` makes the tabard a long skirt front and back
+   * (its length in metres from the hips), `capelet` shortens the cape to a shoulder mantle (its
+   * length), `hood` adds a hood ("up" over the head, or "down" folded behind the neck) with a
+   * thick padded collar, in `hoodColor` (defaults to the cape's colour).
+   */
+  garb?: { robe?: number; capelet?: number; hood?: "up" | "down"; hoodColor?: RGB };
 }
 
 export const DEFAULT_OUTFIT: Outfit = { coverall: [0.86, 0.38, 0.1], hat: [0.93, 0.92, 0.88] };
@@ -870,15 +912,33 @@ export function createPaladinMaterials(renderer: THREE.WebGLRenderer, spec: Huma
     wool: std({ color: 0x2f2a25, roughness: 1, metalness: 0, normalMap: coarse, normalScale: new THREE.Vector2(0.7, 0.7), envMapIntensity: 0.15 }),
     coverall: std({
       color: new THREE.Color().setRGB(outfit.coverall[0], outfit.coverall[1], outfit.coverall[2], THREE.SRGBColorSpace),
-      roughness: 0.92,
+      roughness: outfit.roughness ?? 0.92,
       metalness: 0,
       normalMap: coarse,
       normalScale: new THREE.Vector2(0.55, 0.55),
-      envMapIntensity: 0.2,
+      envMapIntensity: outfit.roughness !== undefined && outfit.roughness < 0.6 ? 0.8 : 0.2,
+    }),
+    shirt: std({
+      color: new THREE.Color().setRGB(...(outfit.shirt ?? outfit.coverall), THREE.SRGBColorSpace),
+      roughness: 0.8,
+      metalness: 0,
+      normalMap: coarse,
+      normalScale: new THREE.Vector2(0.25, 0.25),
+      envMapIntensity: 0.3,
+    }),
+    shorts: std({
+      color: new THREE.Color().setRGB(...(outfit.shorts ?? outfit.coverall), THREE.SRGBColorSpace),
+      roughness: 0.7,
+      metalness: 0,
+      normalMap: coarse,
+      normalScale: new THREE.Vector2(0.25, 0.25),
+      envMapIntensity: 0.3,
     }),
     // Retroreflective tape: pale and a little glossy, with a faint glow so it catches the lamps.
-    reflect: std({ color: 0xd8dcd6, roughness: 0.3, metalness: 0.2, emissive: 0x2a2c28, envMapIntensity: 1.3 }),
-    rubber: std({ color: 0x17181a, roughness: 0.55, metalness: 0, envMapIntensity: 0.5 }),
+    reflect: outfit.tape
+      ? std({ color: new THREE.Color().setRGB(outfit.tape[0], outfit.tape[1], outfit.tape[2], THREE.SRGBColorSpace), roughness: outfit.roughness ?? 0.92, metalness: 0, envMapIntensity: 0.3 })
+      : std({ color: 0xd8dcd6, roughness: 0.3, metalness: 0.2, emissive: 0x2a2c28, envMapIntensity: 1.3 }),
+    rubber: std({ color: outfit.boots ? new THREE.Color().setRGB(outfit.boots[0], outfit.boots[1], outfit.boots[2], THREE.SRGBColorSpace) : 0x17181a, roughness: 0.55, metalness: 0, envMapIntensity: 0.5 }),
     hat: std({
       color: new THREE.Color().setRGB(outfit.hat[0], outfit.hat[1], outfit.hat[2], THREE.SRGBColorSpace),
       roughness: 0.32,
@@ -942,8 +1002,8 @@ export function createPaladinMaterials(renderer: THREE.WebGLRenderer, spec: Huma
 
   const face = shieldFace();
   const back = woodBack();
-  const capeMap = capeFace();
-  const tabardMap = tabardFace();
+  const capeMap = outfit.cape ? plainCloth(outfit.cape, 41) : capeFace();
+  const tabardMap = outfit.tabard ? plainCloth(outfit.tabard, 43) : tabardFace();
   const clothWeave = weave.clone();
   clothWeave.repeat.set(14, 28);
   clothWeave.needsUpdate = true;

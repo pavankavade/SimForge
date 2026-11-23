@@ -50,6 +50,7 @@ export const SLOTS = [
   "greaves",
   "sabatons",
   "coverall",
+  "kit",
   "boots",
   "hardhat",
   "sunglasses",

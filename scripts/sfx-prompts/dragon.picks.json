@@ -1,0 +1,107 @@
+{
+  "bubble": {
+    "batch_seed": 1667704332,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "burp": {
+    "batch_seed": 3370899433,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "candle": {
+    "batch_seed": 4196799695,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "cavern": {
+    "batch_seed": 2154333208,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "chew": {
+    "batch_seed": 2871025941,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "explosion": {
+    "batch_seed": 3376877193,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "fire_burst": {
+    "batch_seed": 2844101538,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "flamethrower": {
+    "batch_seed": 1069938124,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "flashback": {
+    "batch_seed": 3609679659,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "gas_hiss": {
+    "batch_seed": 800712868,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "growl": {
+    "batch_seed": 1806901627,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "gurgle": {
+    "batch_seed": 2769318941,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "iron_clack": {
+    "batch_seed": 2211770203,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "pressurize": {
+    "batch_seed": 3197387045,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "roar": {
+    "batch_seed": 735516292,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "rocket": {
+    "batch_seed": 2447759321,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "sizzle": {
+    "batch_seed": 2400972272,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "spark": {
+    "batch_seed": 1902941363,
+    "model": "small-sfx",
+    "take": 2
+  },
+  "spark_small": {
+    "batch_seed": 740888679,
+    "model": "small-sfx",
+    "take": 3
+  },
+  "squeeze": {
+    "batch_seed": 1698426472,
+    "model": "small-sfx",
+    "take": 1
+  },
+  "stove": {
+    "batch_seed": 3231071030,
+    "model": "small-sfx",
+    "take": 3
+  }
+}

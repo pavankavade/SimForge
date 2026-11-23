@@ -1,54 +1,47 @@
-# 🏃 Vardhan's Stumble Sandbox
+# 🎮 Vardhan's Arcade: CS Gun Game & Stumble Sandbox
 
-Welcome to **Vardhan's Stumble Sandbox**! A vibrant 3D obstacle course inspired by **Stumble Guys** and built with our existing SimForge cartoony chibi characters!
+Welcome to **Vardhan's Game Hub**! You now have TWO fully playable 3D games in one place:
+1. 🔫 **Counter-Strike Gun Game (Arms Race)**: First-person shooter with mouse aim, 5 weapon tiers, headshots, recoil, and tactical Dust 2 arena bots!
+2. 🏃 **Stumble Sandbox**: Bouncy obstacle course with rotating sweepers, trampolines, and winner's crown!
 
 ---
 
-## 🌐 1. Live Deployment & Local Play
+## 🌐 1. How to Play Live & Locally
 
-### Live on the Web (after git push):
-👉 **[http://simforge-game.pages.dev/vardhan](http://simforge-game.pages.dev/vardhan)**  
-(Also accessible from the main arcade selector at `http://simforge-game.pages.dev`)
-
-### Run Locally on your computer:
+### Run Locally:
 ```bash
 npm run vardhan
 ```
-Then open: **[http://127.0.0.1:5400](http://127.0.0.1:5400)**
+Open in browser: 👉 **[http://127.0.0.1:5400](http://127.0.0.1:5400)**
+
+### Play on Cloudflare Pages (when pushed to git):
+👉 **[http://simforge-game.pages.dev/vardhan](http://simforge-game.pages.dev/vardhan)**
 
 ---
 
-## 🕹️ 2. How to Play & Stumble
+## 🔫 2. Counter-Strike Gun Game Guide
 
-| Action | PC / Keyboard | Mobile / Tablet |
-| :--- | :--- | :--- |
-| **Run Around** | `W`, `A`, `S`, `D` or `Arrow Keys` | Virtual drag |
-| **Jump** | `Spacebar` | `🦘 JUMP` button |
-| **Dive / Slide** | `Shift` or `E` | `💨 DIVE` button |
-| **Select Hero** | Click Knight, Ninja, Wizard, Goblin | Tap hero icon |
+### 🕹️ Controls:
+| Control | Action |
+| :--- | :--- |
+| **Click Canvas** | **Lock Mouse** for First-Person 360° Aiming |
+| `W`, `A`, `S`, `D` | Move around the Dust Arena |
+| `Left Click` | **Shoot Weapon** (Recoil & Muzzle Flash) |
+| `Right Click` | **Scope In** (AWP Sniper Zoom) |
+| `Spacebar` | Jump onto crates & catwalks |
+| `Shift` | Tactical Walk (Silent stealth) |
+| `R` | Reload Magazine |
 
----
+### 🏆 Gun Game (Arms Race) Weapon Tiers:
+Eliminate enemy bots to automatically upgrade your weapon:
+1. **Level 1 — Glock-18 🔫**: Snappy semi-auto pistol.
+2. **Level 2 — MP5-SD ⚡**: High fire rate silenced SMG.
+3. **Level 3 — AK-47 🔥**: Heavy assault rifle with 1-shot headshot capability.
+4. **Level 4 — AWP 🎯**: Thunderous sniper rifle with right-click scope zoom.
+5. **Level 5 — Golden Knife 🗡️**: The final kill with the golden blade wins the entire match!
 
-## 🎪 3. Stumble Guys Obstacles in the Sandbox
-
-1. **🌀 Rotating Foam Sweeper Arms**:  
-   A giant 3-armed spinning sweeper in the center of the arena. Time your jumps or get swept off your feet!
-2. **🦘 Trampoline Boing Pads**:  
-   Neon green bounce pads that launch you high into the clouds!
-3. **💥 Pinball Bumpers**:  
-   Bouncy cylinders that deflect and launch your character across the platform.
-4. **🏝️ Stepping Islands & Void Respawn**:  
-   Hop between stepping platforms. If you fall off into the clouds, you instantly respawn safely at the start!
-5. **👑 Winner's Podium & Golden Crown**:  
-   Cross the obstacles and reach the podium to claim the spinning 3D Golden Crown with victory cheers and fanfare!
-
----
-
-## 🛠️ 4. Vardhan's In-Game Workshop (Guiding the Agent)
-
-Click the **"💡 Vardhan's Workshop"** button at the top-right of your screen while playing:
-- **Hero Switcher**: Swap between Knight (Paladin), Ninja (Rogue), Wizard (Mage), and Goblin.
-- **Speed Presets**: Normal (1x), Rush (1.5x), or Sonic (2.2x).
-- **Jump Presets**: Standard, High Jump, or Moon Bounce.
-- **Color Themes**: Stumble Blue, Candy Land Pink, or Neon Arcade.
-- **Wishlist Checklist**: Check off what you want built next (Wall boxing gloves, Ice slide, Giant cannonballs, AI Bot runners, Speedrun timer).
+### 💥 Combat Features:
+- **Headshot Multipliers**: Hitting an enemy in the head deals massive critical damage and plays the signature CS headshot *DING!*
+- **Hitmarkers**: Red `✕` flash when your bullets land on target.
+- **Bot Rivals**: 4 tactical AI bots patrolling and peeking around crates, shooting back when they spot you.
+- **Kill Feed**: Live top-right kill notification tracker.

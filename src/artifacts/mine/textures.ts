@@ -144,10 +144,13 @@ export const makeRock = ({
   size = 2048,
   palette = ["#ecd3b0", "#dcbc94", "#caa57c", "#b38b62"],
   seed = 3,
+  cracks = 1,
 }: {
   size?: number;
   palette?: string[];
   seed?: number;
+  /** How dark the joints and fractures are (1 = the mine's sandstone; less for smooth limestone). */
+  cracks?: number;
 }): SurfaceSet => {
   const pal = palette.map(hex);
   const { canvas, ctx } = canvasOf(size);
@@ -184,7 +187,7 @@ export const makeRock = ({
       const f = t * (pal.length - 1);
       const k = Math.floor(f);
       let c = mix(pal[k], pal[Math.min(pal.length - 1, k + 1)], f - k);
-      const dark = Math.max(0.5, 1 - 0.42 * crackBig - 0.22 * crackSmall - 0.2 * bedLine);
+      const dark = Math.max(0.5, 1 - (0.42 * crackBig + 0.22 * crackSmall + 0.2 * bedLine) * cracks);
       const g = dark * (0.86 + grain * 0.2 + (fine - 0.5) * 0.3);
       c = [c[0] * g, c[1] * g, c[2] * g];
       const i = (y * size + x) * 4;

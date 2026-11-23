@@ -66,13 +66,13 @@ export const wearKey = (e: ArmorEquipment, f?: Finishes): string => ARMOR_SLOTS.
  * Workwear, separate from the armour (the game's inventory only knows the armour): a miner's
  * coveralls with reflective tape, rubber boots, a hard hat, its cap lamp, and sunglasses.
  */
-export const WORK_SLOTS = ["coverall", "boots", "hardhat", "lamp", "sunglasses"] as const;
+export const WORK_SLOTS = ["coverall", "kit", "boots", "hardhat", "lamp", "sunglasses"] as const;
 
 export type WorkSlot = (typeof WORK_SLOTS)[number];
 
 export type Workwear = Record<WorkSlot, boolean>;
 
-export const NO_WORKWEAR: Workwear = { coverall: false, boots: false, hardhat: false, lamp: false, sunglasses: false };
+export const NO_WORKWEAR: Workwear = { coverall: false, kit: false, boots: false, hardhat: false, lamp: false, sunglasses: false };
 
 /** A miner: no armour, coveralls, boots and a hard hat with the lamp on. */
 export const MINER_EQUIPMENT: ArmorEquipment = {
@@ -93,7 +93,7 @@ export const MINER_EQUIPMENT: ArmorEquipment = {
   sword: false,
   shield: false,
 };
-export const MINER_WORKWEAR: Workwear = { coverall: true, boots: true, hardhat: true, lamp: true, sunglasses: false };
+export const MINER_WORKWEAR: Workwear = { coverall: true, kit: false, boots: true, hardhat: true, lamp: true, sunglasses: false };
 
 /** The plate harness (everything but the soft layers, cloth and weapons). */
 export const PLATE_SLOTS: ArmorSlot[] = ["helm", "gorget", "cuirass", "pauldrons", "arms", "gauntlets", "waist", "cuisses", "greaves", "sabatons"];
@@ -229,15 +229,16 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
     pinB: at(c.bone, c.pinB),
     colliders: c.colliders.map((k) => ({ ...k, at: at(k.bone, k.at) })),
   });
+  const garb = options.outfit?.garb ?? {};
   const cape = new Cloth(fitCloth({
     cols: 11,
-    rows: 14,
+    rows: garb.capelet ? 8 : 14,
     bone: "chest",
     pinA: [0.128, 0.228, -0.04],
     pinB: [-0.128, 0.228, -0.04],
     pinBow: [0, -0.014, -0.1],
-    widthBottom: 0.74,
-    length: 1.0,
+    widthBottom: garb.capelet ? 0.62 : 0.74,
+    length: garb.capelet ?? 1.0,
     material: materials.cape,
     drape: [0, 0, -1],
     colliders: [
@@ -254,7 +255,46 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
       { bone: "shinR", at: [0, -0.12, -0.01], r: 0.086 },
     ],
   }));
-  const tabard = new Cloth(fitCloth({
+  // A robe: the tabard cut wide and long, and the same panel again behind.
+  const robeColliders: ClothSpec["colliders"] = [
+    { bone: "hips", at: [0, -0.1, 0], r: 0.19 },
+    { bone: "thighL", at: [0, -0.12, 0], r: 0.13 },
+    { bone: "thighR", at: [0, -0.12, 0], r: 0.13 },
+    { bone: "thighL", at: [0, -0.3, 0], r: 0.105 },
+    { bone: "thighR", at: [0, -0.3, 0], r: 0.105 },
+    { bone: "shinL", at: [0, 0, 0], r: 0.09 },
+    { bone: "shinR", at: [0, 0, 0], r: 0.09 },
+    { bone: "shinL", at: [0, -0.18, 0], r: 0.08 },
+    { bone: "shinR", at: [0, -0.18, 0], r: 0.08 },
+  ];
+  const robeBack = garb.robe
+    ? new Cloth(fitCloth({
+        cols: 7,
+        rows: 12,
+        bone: "hips",
+        pinA: [-0.15, 0.03, -0.12],
+        pinB: [0.15, 0.03, -0.12],
+        pinBow: [0, 0, -0.03],
+        widthBottom: 0.46,
+        length: garb.robe,
+        material: materials.tabard,
+        drape: [0, 0, -1],
+        colliders: robeColliders,
+      }))
+    : null;
+  const tabard = new Cloth(fitCloth(garb.robe ? {
+    cols: 7,
+    rows: 12,
+    bone: "hips",
+    pinA: [0.15, 0.03, 0.12],
+    pinB: [-0.15, 0.03, 0.12],
+    pinBow: [0, 0, 0.03],
+    widthBottom: 0.46,
+    length: garb.robe,
+    material: materials.tabard,
+    drape: [0, 0, 1],
+    colliders: robeColliders,
+  } : {
     cols: 5,
     rows: 8,
     bone: "hips",
@@ -276,6 +316,45 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
     ],
   }));
   group.add(cape.mesh, tabard.mesh);
+  if (robeBack) group.add(robeBack.mesh);
+  // The hood: a padded roll collar round the shoulders, and the hood itself, either up over the
+  // head (an open-faced shell on the head bone) or folded down behind the neck.
+  const hood = new THREE.Group();
+  const hoodMats: THREE.Material[] = [];
+  if (garb.hood) {
+    const hc = garb.hoodColor ?? options.outfit?.cape ?? [0.3, 0.15, 0.12];
+    const cloth = new THREE.MeshStandardMaterial({ color: new THREE.Color().setRGB(hc[0], hc[1], hc[2], THREE.SRGBColorSpace), roughness: 0.92, side: THREE.DoubleSide });
+    hoodMats.push(cloth);
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.055, 12, 32), cloth);
+    collar.rotation.x = Math.PI / 2;
+    collar.scale.set(1.3, 1.05, 1);
+    const neck = at("chest", [0, 0.235, -0.005]);
+    collar.position.set(neck[0], neck[1], neck[2]);
+    rig.bone("chest").add(collar);
+    if (garb.hood === "up") {
+      // Open in front for the face (about 95 degrees), down to the jaw at the sides.
+      const open = 1.65;
+      const shell = new THREE.Mesh(new THREE.SphereGeometry(0.125, 32, 16, Math.PI / 2 + open / 2, Math.PI * 2 - open, 0, Math.PI * 0.7), cloth);
+      shell.scale.set(1.0, 1.12, 1.1);
+      const c = authorLocal("head", [0, 0.075, 0.005]);
+      shell.position.set(c[0], c[1], c[2]);
+      // A short drape from the back of the hood down onto the collar.
+      const drape = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.135, 0.12, 24, 1, true, Math.PI / 2 + open / 2, Math.PI * 2 - open), cloth);
+      drape.position.set(c[0], c[1] - 0.12, c[2] - 0.01);
+      rig.bone("head").add(shell, drape);
+      for (const m of [shell, drape]) m.castShadow = true;
+      // Kept in the group's list for visibility and disposal (they live on the head bone).
+      hood.userData.parts = [collar, shell, drape];
+    } else {
+      const fold = new THREE.Mesh(new THREE.SphereGeometry(0.1, 18, 12), cloth);
+      fold.scale.set(1.3, 0.85, 0.6);
+      fold.position.set(neck[0], neck[1] - 0.04, neck[2] - 0.12);
+      rig.bone("chest").add(fold);
+      hood.userData.parts = [collar, fold];
+    }
+    collar.castShadow = true;
+  }
+  const hoodParts = (): THREE.Object3D[] => (hood.userData.parts as THREE.Object3D[] | undefined) ?? [];
 
   // The cap lamp: a narrow spot from the hat's lamp, and a faint cone of light in the dust.
   const head = rig.bone("head");
@@ -378,6 +457,9 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
   const syncEquipment = () => {
     cape.mesh.visible = equipment.cape;
     tabard.mesh.visible = equipment.tabard;
+    // Under a full cloak the back of the robe is hidden anyway (and would poke through its folds).
+    if (robeBack) robeBack.mesh.visible = equipment.tabard && !(equipment.cape && !garb.capelet);
+    for (const o of hoodParts()) o.visible = !!garb.hood && (equipment.cape || equipment.tabard);
     model.sword.visible = equipment.sword;
     model.shield.visible = equipment.shield;
 
@@ -391,6 +473,8 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
     const booted = workwear.boots && !equipment.sabatons;
     const hatted = workwear.hardhat && !equipment.helm && !firstPersonMode;
     show("coverall", workwear.coverall && !equipment.mail);
+    // Sports kit (shirt and shorts) leaves the arms and legs bare, so it does not hide the body.
+    show("kit", workwear.kit && !workwear.coverall && !equipment.mail);
     show("boots", booted);
     show("hardhat", hatted);
     show("sunglasses", workwear.sunglasses && !equipment.helm && !firstPersonMode);
@@ -438,6 +522,7 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
 
     if (equipment.cape) cape.step(dt, rig, group, floorY);
     if (equipment.tabard) tabard.step(dt, rig, group, floorY);
+    if (robeBack && robeBack.mesh.visible) robeBack.step(dt, rig, group, floorY);
 
     base.set(0, 0, SWORD.base).applyMatrix4(model.sword.matrixWorld);
     tip.set(0, 0, SWORD.tip).applyMatrix4(model.sword.matrixWorld);
@@ -470,6 +555,7 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
     bodyRig.update(rig, "relaxed", "relaxed", 10);
     cape.invalidate();
     tabard.invalidate();
+    robeBack?.invalidate();
     fx.clear();
     sweep.reset();
     shake.value = 0;
@@ -559,6 +645,9 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
       model.shield.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
       cape.dispose();
       tabard.dispose();
+      robeBack?.dispose();
+      for (const o of hoodParts()) (o as THREE.Mesh).geometry.dispose();
+      for (const m of hoodMats) m.dispose();
       beamGeo.dispose();
       beamMat.dispose();
       beamFade.dispose();

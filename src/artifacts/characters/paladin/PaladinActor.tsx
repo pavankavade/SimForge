@@ -78,6 +78,10 @@ export interface PaladinActorProps {
   envIntensity?: number;
   /** Base human file (defaults to the one in public/dungeon-explorer). */
   assetUrl?: string;
+  /** Overall size (1 = the 1.8 m adult; ~0.8 for a twelve-year-old). The gait is matched to it. */
+  scale?: number;
+  /** Forward tilt about the feet, radians, per frame (PI/2 = lying face down, e.g. swimming). */
+  pitch?: (frame: number) => number;
 }
 
 const FULL: ArmorEquipment = { ...DEFAULT_EQUIPMENT };
@@ -100,6 +104,8 @@ export const PaladinActor: React.FC<PaladinActorProps> = ({
   substeps = 2,
   envIntensity = 0.7,
   assetUrl,
+  scale = 1,
+  pitch,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -179,8 +185,9 @@ export const PaladinActor: React.FC<PaladinActorProps> = ({
       // Ground speed in his own frame (x toward his left, z forward), from the path.
       // A jump of more than 1.5 m in one frame is a cut (he was moved), not a walk.
       const jump = Math.hypot(pos[0] - prev[0], pos[2] - prev[2]) > 1.5;
-      const vx = jump ? 0 : (pos[0] - prev[0]) * fps;
-      const vz = jump ? 0 : (pos[2] - prev[2]) * fps;
+      // A smaller body takes shorter steps: the gait sees the speed in its own (unscaled) metres.
+      const vx = jump ? 0 : ((pos[0] - prev[0]) * fps) / scale;
+      const vz = jump ? 0 : ((pos[2] - prev[2]) * fps) / scale;
       const s = Math.sin(facing);
       const c = Math.cos(facing);
       const input: PaladinInput = {
@@ -188,14 +195,17 @@ export const PaladinActor: React.FC<PaladinActorProps> = ({
         moveZ: vx * s + vz * c,
         aimPitch: 0,
         turnRate: turn,
-        air: Math.max(0, pos[1] - floorAt(f)),
+        air: Math.max(0, pos[1] - floorAt(f)) / scale,
         block: false,
         attack: !settle && swingAt.has(f),
         firstPerson: false,
         ...(act ? act(f) : {}),
       };
       p.group.position.set(pos[0], pos[1], pos[2]);
+      p.group.rotation.order = "YXZ";
       p.group.rotation.y = facing;
+      p.group.rotation.x = pitch ? pitch(f) : 0;
+      p.group.scale.setScalar(scale);
       for (let k = 0; k < substeps; k++) {
         p.update(dt, k === 0 ? input : { ...input, attack: false }, floorAt(f), world);
       }

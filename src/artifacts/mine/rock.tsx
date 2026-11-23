@@ -50,8 +50,23 @@ export interface RockMaterials {
   desert: THREE.MeshStandardMaterial;
 }
 
-export const useRockMaterials = (): RockMaterials => {
-  const rock = useSurface("mine-rock-5", () => makeRock({ seed: 3 }), [1, 1]);
+/** The rock's colours: the mine's warm sandstone by default; the cave uses grey limestone and mud. */
+export interface RockLook {
+  key: string;
+  palette?: string[];
+  seed?: number;
+  /** Crack darkness (1 = sandstone). */
+  cracks?: number;
+  face: string;
+  wall: string;
+  back: string;
+  loose: string;
+  floor: string;
+}
+export const MINE_LOOK: RockLook = { key: "mine-rock-5", seed: 3, face: "#ffffff", wall: "#e8dccf", back: "#a89888", loose: "#d9cdc0", floor: "#f1e9df" };
+
+export const useRockMaterials = (look: RockLook = MINE_LOOK): RockMaterials => {
+  const rock = useSurface(look.key, () => makeRock({ seed: look.seed ?? 3, palette: look.palette, cracks: look.cracks }), [1, 1]);
   const gravel = useGravel([1, 1], 12);
   const desert = useDesert([1, 1]);
   return useMemo(() => {
@@ -67,20 +82,20 @@ export const useRockMaterials = (): RockMaterials => {
         })
       );
     return {
-      face: base("#ffffff"),
-      wall: base("#e8dccf", { vertexColors: true }),
-      back: base("#a89888"),
-      loose: base("#d9cdc0"),
+      face: base(look.face),
+      wall: base(look.wall, { vertexColors: true }),
+      back: base(look.back),
+      loose: base(look.loose),
       floor: new THREE.MeshStandardMaterial({
         map: gravel.map ?? undefined,
         normalMap: gravel.normalMap ?? undefined,
         roughness: 0.96,
-        color: "#f1e9df",
+        color: look.floor,
         vertexColors: true,
       }),
       desert: new THREE.MeshStandardMaterial({ map: desert.map ?? undefined, normalMap: desert.normalMap ?? undefined, roughness: 0.97, color: "#f4e6d2" }),
     };
-  }, [rock, gravel, desert]);
+  }, [rock, gravel, desert, look]);
 };
 
 /** Lays a geometry's UVs out in world space (it must not be moved afterwards): one tile per `tile` m. */
@@ -155,7 +170,9 @@ export const carve = (
   bounds: { x0: number; x1: number; y0: number; y1: number },
   face: number,
   depth: number,
-  floorTile = 3
+  floorTile = 3,
+  /** Opening edges to leave unlined (a cave mouth that opens onto the outside). */
+  skip?: (a: V2, b: V2) => boolean
 ): Carving => {
   const polys = openings.map(ccw);
   const edges: Edge[][] = polys.map((p) => p.map((a, i) => [a, p[(i + 1) % p.length]] as Edge));
@@ -238,6 +255,7 @@ export const carve = (
   const EPS = 1e-4;
   polys.forEach((_, pi) => {
     edges[pi].forEach(([p, q]) => {
+      if (skip && skip(p, q)) return;
       let keep: Array<[number, number]> = [[0, 1]];
       polys.forEach((other, oi) => {
         if (oi === pi) return;
