@@ -205,10 +205,19 @@ export function slotFor(inv: PlayerInv, id: string, target?: GearSlot, cls?: Cla
  * piece was, or anywhere it fits; with no room the swap does not happen.
  */
 export function equipFromBag(inv: PlayerInv, uid: string, target?: GearSlot, cls?: ClassId): PlayerInv | null {
-  const p = inv.bag.items.find((q) => q.item.uid === uid);
+  const r = equipFromGrid(inv, inv.bag, uid, target, cls);
+  return r ? { ...r.inv, bag: r.from } : null;
+}
+
+/**
+ * Put on a piece from any grid (the bag, a stash chest). What comes off goes into that grid where
+ * the new piece was, or anywhere it fits there; with no room the swap does not happen.
+ */
+export function equipFromGrid(inv: PlayerInv, from: Grid, uid: string, target?: GearSlot, cls?: ClassId): { inv: PlayerInv; from: Grid } | null {
+  const p = from.items.find((q) => q.item.uid === uid);
   const slot = p ? slotFor(inv, p.item.id, target, cls) : null;
   if (!p || !slot) return null;
-  let bag = removeItem(inv.bag, uid);
+  let bag = removeItem(from, uid);
   const equipped = { ...inv.equipped };
   // What has to come off: whatever was in the slot, and for a two-handed bow the set's off hand
   // (or the bow, when a shield goes in beside it).
@@ -233,7 +242,7 @@ export function equipFromBag(inv: PlayerInv, uid: string, target?: GearSlot, cls
     }
   }
   equipped[slot] = p.item;
-  return { ...inv, bag, equipped };
+  return { inv: { ...inv, equipped }, from: bag };
 }
 
 /** Take a piece off into the bag (at a cell, or the first gap); null when it doesn't fit. */

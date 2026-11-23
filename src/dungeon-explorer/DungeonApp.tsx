@@ -3959,7 +3959,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   inLobbyRef.current = inLobby;
   const [lobbyTab, setLobbyTab] = useState<LobbyTab>("play");
   // A screen opened from a lobby tab: a merchant, a stash chest, his gear, or the user list.
-  type LobbySub = { kind: "shop"; i: number } | { kind: "gear" } | { kind: "users" } | null;
+  type LobbySub = { kind: "shop"; i: number } | { kind: "users" } | null;
   const [lobbySub, setLobbySub] = useState<LobbySub>(null);
   const lobbyAnchorsRef = useRef<Array<HTMLElement | null>>([]);
   const [lobbyPortrait, setLobbyPortrait] = useState<FrameRect | null>(null);
@@ -4737,7 +4737,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           mode={screen === "class" ? "class" : "table"}
           classFrame={panelFrame}
           guests={lobbyGuests}
-          portraitRect={lobbySub?.kind === "gear" && !gearCompact ? lobbyPortrait : null}
+          portraitRect={screen === "lobby" && lobbyTab === "stash" && !lobbySub && !gearCompact ? lobbyPortrait : null}
           portraitView={portraitViewRef.current}
           anchorsRef={lobbyAnchorsRef}
           onBusy={handleCharacterBusy}
@@ -4770,22 +4770,12 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           )}
           {lobbyTab === "class" ? <ClassPage cls={heroClass} stats={stats} base={classById(heroClass).attributes} compact={mobileMode} onChange={() => openScreen("class")} loadout={loadout} onLoadout={pickLoadout} /> : null}
           {lobbyTab === "stash" && !lobbySub ? (
+            // The gear screen with the room's chests beside him: drag pieces between them and onto him.
             <StashScreen
               top={TAB_BAR}
               town={townSave}
               setTown={setTownSave}
-              inv={inv}
-              onInv={setInv}
               onRent={rentRoom}
-              onGear={() => setLobbySub({ kind: "gear" })}
-              icons={allIcons}
-              viewport={viewport}
-              compact={gearCompact}
-              touch={isTouchUI}
-            />
-          ) : null}
-          {lobbySub?.kind === "gear" ? (
-            <InventoryScreen
               name={spec.name}
               heroClass={className}
               cls={heroClass}
@@ -4806,8 +4796,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
                 const v = portraitViewRef.current;
                 v.zoom = Math.max(0.35, Math.min(1.1, v.zoom * Math.exp(dy * 0.0012)));
               }}
-              onGround={() => setToast("Nothing to drop it on here. Sell it to a merchant or keep it in your stash.")}
-              onClose={() => setLobbySub(null)}
+              onClose={() => setLobbyTab("play")}
             />
           ) : null}
           {lobbyTab === "merchants" && !lobbySub ? <MerchantsPage compact={mobileMode} onOpen={(i) => setLobbySub({ kind: "shop", i })} /> : null}

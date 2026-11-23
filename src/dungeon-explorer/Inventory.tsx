@@ -3,12 +3,14 @@
 // boots; on his right the cloak, necklace and two rings), the two weapon sets under him, and a grid
 // bag on the right where every item takes up its real footprint. Items move by drag and drop (mouse or finger); right-click, or a
 // double-click / double-tap, puts a piece on or takes it off, and drinks or eats what can be used.
+// The lobby's Stash tab is this same screen with the room's chests beside him: drag between the
+// chests, the bag, the belt and his slots (a chest piece dropped on him is put on straight away).
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ClassId } from "./classes";
-import { ARMOR_TYPE, RARITY, SLOT_LABEL, arrowsIn, def, fitsAt, handOf, isWeaponSlot, itemOf, placeItem, removeItem, wearableBy, type GearSlot, type ItemInst, type WeaponSlot } from "./items";
+import { ARMOR_TYPE, RARITY, SLOT_LABEL, addItem, arrowsIn, def, fitsAt, handOf, isWeaponSlot, itemOf, placeItem, removeItem, wearableBy, type GearSlot, type Grid, type ItemInst, type WeaponSlot } from "./items";
 import { DragGhost, GOLD, GridView, ItemIcon, ItemTooltip, PANEL_BG, PANEL_BORDER, btn, useItemDrag, type DragFrom, type DragState, type DropTarget, type Icons } from "./itemsUi";
 import { ATTRIBUTES, ATTRIBUTE_INFO, statLines, type Attributes, type Stats } from "./stats";
-import { BAG_H, BAG_W, BELT_SLOTS, allItems, beltable, equipFromBag, fromBelt, slotFor, sortBag, toBelt, unequipToBag, type PlayerInv } from "./playerInv";
+import { BAG_H, BAG_W, BELT_SLOTS, allItems, beltable, equipFromBag, equipFromGrid, fromBelt, intoPurse, slotFor, sortBag, toBelt, unequipToBag, type PlayerInv } from "./playerInv";
 
 
 /** A screen rectangle in CSS pixels (where the 3D view frames the paladin). */
@@ -49,6 +51,21 @@ const PLACEHOLDER: Record<GearSlot, string> = {
 const CAPTION = 13;
 const SHORT: Partial<Record<GearSlot, string>> = { necklace: "Neck", hands: "Hands", main1: "Main", off1: "Off", main2: "Main", off2: "Off" };
 
+/** The stash beside him (the lobby's Stash tab): one room's chests, each its own grid. */
+export interface StashView {
+  /** The room tabs over the chests. */
+  tabs: React.ReactNode;
+  /** The room's chests top to bottom (ids other than "bag"); none when the room isn't his. */
+  chests: Array<{ id: string; label: string; grid: Grid }>;
+  /** Shown instead of the chests when the room isn't his (its rent). */
+  locked?: React.ReactNode;
+  /** Over the chests: the room's name and what is in it. */
+  title: string;
+  summary: string;
+  /** Write changed chests back (a move between two chests changes both). */
+  onChests: (changes: Array<[string, Grid]>) => void;
+}
+
 export interface InventoryScreenProps {
   name: string;
   /** His class's name (Fighter), and the class itself (what he may wear). */
@@ -73,10 +90,14 @@ export interface InventoryScreenProps {
   onZoom: (dy: number) => void;
   /** A piece dragged out of the window: it is dropped on the ground at his feet. */
   onGround: (item: ItemInst) => void;
+  /** Open as the Stash tab: the room's chests beside him, and nothing drops on the floor. */
+  stash?: StashView;
+  /** Space kept clear at the top (the lobby's tab bar), in px. */
+  top?: number;
   onClose: () => void;
 }
 
-export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClass, cls, stats: sheet, base, inv, onInv, onUse, icons, viewport, compact, touch, onModelRect, onTurn, onZoom, onGround, onClose }) => {
+export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClass, cls, stats: sheet, base, inv, onInv, onUse, icons, viewport, compact, touch, onModelRect, onTurn, onZoom, onGround, stash, top = 0, onClose }) => {
   const [toast, setToast] = useState<string | null>(null);
   const modelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -85,8 +106,109 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
     return () => window.clearTimeout(t);
   }, [toast]);
 
+  // ---- The stash's chests ----
+
+  const chestGrid = (id: string): Grid | null => {
+    const c = stash ? stash.chests.find((k) => k.id === id) : undefined;
+    return c ? c.grid : null;
+  };
+
+  /** Out of a chest into the bag (at a cell, or the first gap); coins into his purse. */
+  const takeFromChest = (s: StashView, chest: string, item: ItemInst, at?: { x: number; y: number }) => {
+    const g = chestGrid(chest);
+    if (!g) return;
+    if (def(item.id).category === "coins") {
+      onInv(intoPurse(inv, item));
+      s.onChests([[chest, removeItem(g, item.uid)]]);
+      return;
+    }
+    const bag = at ? (fitsAt(inv.bag, item.id, at.x, at.y) ? placeItem(inv.bag, item, at.x, at.y) : null) : addItem(inv.bag, item);
+    if (!bag) return setToast(at ? "It doesn't fit there" : "No room in your bag");
+    onInv({ ...inv, bag });
+    s.onChests([[chest, removeItem(g, item.uid)]]);
+  };
+
+  /** Into a chest (at a cell, or the first gap) from the bag, another chest, his body or the belt. */
+  const putInChest = (s: StashView, chest: string, item: ItemInst, from: DragFrom, at?: { x: number; y: number }) => {
+    const g = chestGrid(chest);
+    if (!g) return;
+    const same = from.kind === "grid" && from.grid === chest;
+    const next = at ? (fitsAt(g, item.id, at.x, at.y, same ? item.uid : undefined) ? placeItem(g, item, at.x, at.y) : null) : addItem(g, item);
+    if (!next) return setToast(at ? "It doesn't fit there" : "That chest is full");
+    if (from.kind === "grid" && from.grid !== "bag") {
+      const was = same ? null : chestGrid(from.grid);
+      s.onChests(was ? [[from.grid, removeItem(was, item.uid)], [chest, next]] : [[chest, next]]);
+      return;
+    }
+    s.onChests([[chest, next]]);
+    if (from.kind === "grid") onInv({ ...inv, bag: removeItem(inv.bag, item.uid) });
+    else if (from.kind === "slot") {
+      const equipped = { ...inv.equipped };
+      delete equipped[from.slot];
+      onInv({ ...inv, equipped });
+    } else {
+      const belt = inv.belt.slice();
+      belt[from.index] = null;
+      onInv({ ...inv, belt });
+    }
+  };
+
+  /** A chest piece dropped on him or on a slot: put on; what it replaces goes into that chest. */
+  const wearFromChest = (s: StashView, chest: string, item: ItemInst, target?: GearSlot) => {
+    const it = def(item.id);
+    const g = chestGrid(chest);
+    if (!g) return;
+    if (!it.slot) return setToast(it.heal ? "Put it in the bag or on the belt first" : `The ${it.name.toLowerCase()} isn't something to wear`);
+    if (!wearableBy(item.id, cls)) return setToast(cantWear(item.id));
+    if (target && slotFor(inv, item.id, target, cls) !== target) return setToast(`The ${it.name.toLowerCase()} goes in the ${it.kind.toLowerCase()} slot`);
+    const r = equipFromGrid(inv, g, item.uid, target, cls);
+    if (!r) return setToast("No room in the chest for what you are wearing");
+    onInv(r.inv);
+    s.onChests([[chest, r.from]]);
+  };
+
+  /** A drag that starts or ends at a chest; false when it is an ordinary inventory move. */
+  const stashDrop = (s: StashView, d: DragState, t: DropTarget): boolean => {
+    if (t && t.kind === "ground") {
+      setToast("Nothing to drop it on here: keep it in a chest or sell it");
+      return true;
+    }
+    if (t && t.kind === "grid" && t.grid !== "bag") {
+      putInChest(s, t.grid, d.item, d.from, t);
+      return true;
+    }
+    if (d.from.kind !== "grid" || d.from.grid === "bag") return false;
+    const chest = d.from.grid;
+    if (!t) return true;
+    if (t.kind === "grid") takeFromChest(s, chest, d.item, t);
+    else if (t.kind === "slot") wearFromChest(s, chest, d.item, t.slot);
+    else if (t.kind === "body") wearFromChest(s, chest, d.item);
+    else if (t.kind === "belt") {
+      // Through the bag onto the belt (what was on the belt goes into the bag).
+      const g = chestGrid(chest);
+      const bag = beltable(d.item.id) ? addItem(inv.bag, d.item) : null;
+      const next = bag ? toBelt({ ...inv, bag }, d.item.uid, t.index) : null;
+      if (!beltable(d.item.id)) setToast(`The ${def(d.item.id).name.toLowerCase()} doesn't go on the belt`);
+      else if (!next || !g) setToast("No room in the bag");
+      else {
+        onInv(next);
+        s.onChests([[chest, removeItem(g, d.item.uid)]]);
+      }
+    }
+    return true;
+  };
+
   const quick = (item: ItemInst, from: DragFrom) => {
     const d = def(item.id);
+    // At the stash a right-click moves a piece between the chests and the bag.
+    if (stash && from.kind === "grid") {
+      if (from.grid !== "bag") return takeFromChest(stash, from.grid, item);
+      if (!stash.chests.length) return setToast("Rent this room to use its chests");
+      const room = stash.chests.find((c) => addItem(c.grid, item));
+      if (room) putInChest(stash, room.id, item, from);
+      else setToast("This room's chests are full");
+      return;
+    }
     if (from.kind === "belt") {
       const next = fromBelt(inv, from.index);
       if (next) onInv(next);
@@ -109,6 +231,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
   const cantWear = (id: string) => `A ${heroClass.toLowerCase()} can't wear ${ARMOR_TYPE[def(id).armorType ?? "cloth"].label.toLowerCase()}`;
 
   const drop = (d: DragState, t: DropTarget) => {
+    if (stash && stashDrop(stash, d, t)) return;
     if (!t) return;
     const it = def(d.item.id);
     if (t.kind === "ground") {
@@ -193,17 +316,20 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
   // Sizes. On a desktop the inventory is a panel docked on the right over the live game (which
   // keeps playing to its left): the slot columns round his picture, then the bag; the full stat
   // sheet joins on the left when the window is wide enough. Phones keep the sheet along the bottom.
-  const { w: vw, h: vh } = viewport;
-  const wide = !compact && vw >= 1700;
+  // Under the lobby's tab bar the screen is shorter; at the stash the chests take the stat sheet's place.
+  const vw = viewport.w;
+  const vh = viewport.h - top;
+  const wide = !compact && vw >= 1700 && !stash;
+  const chestW = stash ? (stash.chests[0]?.grid.w ?? 10) : 0;
   const topBar = compact ? 44 : 46;
   const slot = compact
     ? Math.max(30, Math.min(58, Math.floor((vw - 24 - 8 * 5) / 9)))
     : Math.max(36, Math.min(72, Math.floor((vh - topBar - 90) / (ROWS + 1.6)) - 10 - CAPTION));
   const portraitW = Math.max(150, Math.min(250, Math.round(slot * 3.4)));
-  const bagBudget = vw * 0.8 - (2 * slot + portraitW + (wide ? 250 : 0) + 90);
+  const bagBudget = (stash ? vw * 0.95 - 50 : vw * 0.8) - (2 * slot + portraitW + (wide ? 250 : 0) + 90);
   const cell = compact
-    ? Math.max(20, Math.min(42, Math.floor((vw - 28) / BAG_W)))
-    : Math.max(18, Math.min(44, Math.floor(Math.min(bagBudget / BAG_W, (vh - topBar - (wide ? 110 : 190)) / BAG_H))));
+    ? Math.max(20, Math.min(42, Math.floor((vw - 28) / Math.max(BAG_W, chestW))))
+    : Math.max(18, Math.min(44, Math.floor(Math.min(bagBudget / (BAG_W + chestW), (vh - topBar - (wide ? 110 : 190)) / BAG_H))));
 
   // Tell the 3D view where he stands.
   useLayoutEffect(() => {
@@ -392,7 +518,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
       </button>
       <div style={{ flex: 1 }} />
       <div style={{ fontSize: 11, color: toast ? "#ff9a8a" : "#6e675b", minHeight: 14 }}>
-        {toast || (touch ? "Double-tap to equip, unequip or use" : "Right-click to equip, unequip or use")}
+        {toast || (stash ? (touch ? "Double-tap to move between the bag and the chests" : "Drag onto him to equip · Right-click to move across") : touch ? "Double-tap to equip, unequip or use" : "Right-click to equip, unequip or use")}
       </div>
     </div>
   );
@@ -431,13 +557,13 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
         pointerEvents: "auto",
       }}
     >
-      <div style={{ fontSize: compact ? 15 : 18, fontWeight: 800, letterSpacing: "0.2em", color: "#e8d9b0" }}>INVENTORY</div>
+      <div style={{ fontSize: compact ? 15 : 18, fontWeight: 800, letterSpacing: "0.2em", color: "#e8d9b0" }}>{stash ? "STASH" : "INVENTORY"}</div>
       <div style={{ fontSize: 12, color: "#8f8676" }}>
         <span style={{ color: GOLD, fontWeight: 700 }}>{name || heroClass}</span> · {heroClass}
       </div>
       <div style={{ flex: 1 }} />
       <button type="button" onClick={onClose} style={btn}>
-        {touch ? "Close" : "Close (Tab)"}
+        {touch || stash ? "Close" : "Close (Tab)"}
       </button>
     </div>
   );
@@ -512,6 +638,43 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
 
   const Bag = <GridView id="bag" grid={inv.bag} cell={cell} icons={icons} dnd={dnd} cls={cls} />;
 
+  // The room's chests, under its tabs (they scroll inside the panel when they don't fit).
+  const StashPanel = stash ? (
+    <div
+      style={{
+        flex: "0 0 auto",
+        display: "flex",
+        flexDirection: "column",
+        background: PANEL_BG,
+        border: PANEL_BORDER,
+        pointerEvents: "auto",
+        ...(compact ? { marginBottom: 10 } : { alignSelf: "flex-start", maxHeight: vh - topBar - 30 }),
+      }}
+    >
+      {stash.tabs}
+      <div style={{ padding: compact ? "8px 8px" : "10px 14px", overflowY: compact ? undefined : drag ? "hidden" : "auto", overflowX: "hidden", scrollbarGutter: compact ? undefined : "stable", minHeight: 0 }}>
+        {stash.chests.length ? (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, gap: 12 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.16em", color: "#8f8676" }}>{stash.title}</div>
+              <div style={{ fontSize: 11, color: "#6e675b" }}>{stash.summary}</div>
+            </div>
+            {stash.chests.map((c, k) => (
+              <div key={c.id} style={{ marginBottom: k < stash.chests.length - 1 ? 6 : 0 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.14em", color: "#6e675b", margin: "2px 0 3px" }}>{c.label}</div>
+                <div style={{ display: "flex", justifyContent: compact ? "center" : "flex-start" }}>
+                  <GridView id={c.id} grid={c.grid} cell={cell} icons={icons} dnd={dnd} cls={cls} />
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div style={{ width: chestW * cell + 2, maxWidth: "100%", minHeight: 220, display: "flex" }}>{stash.locked}</div>
+        )}
+      </div>
+    </div>
+  ) : null;
+
   // The belt: two slots for what he uses in a hurry (keys 3 and 4).
   const beltSize = Math.max(34, Math.min(54, cell + 10));
   const Belt = (
@@ -554,7 +717,17 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
 
   const hover = dnd.hover;
   const hint = hover
-    ? hover.from.kind === "belt"
+    ? stash && hover.from.kind === "grid"
+      ? hover.from.grid !== "bag"
+        ? def(hover.item.id).slot
+          ? "Right-click to take it · Drag onto him to put it on"
+          : "Right-click to take it · Drag to move"
+        : def(hover.item.id).slot
+          ? "Right-click to stash it · Drag onto him to put it on"
+          : "Right-click to stash it · Drag to move"
+      : stash && hover.from.kind === "slot"
+      ? "Right-click to take it off · Drag to a chest to store it"
+      : hover.from.kind === "belt"
       ? "Right-click to put it back in the bag · Drag to move"
       : hover.from.kind === "slot"
       ? "Right-click to take it off · Drag to move"
@@ -569,7 +742,10 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
     <div
       style={{
         position: "fixed",
-        inset: 0,
+        top,
+        left: 0,
+        right: 0,
+        bottom: 0,
         zIndex: 16,
         display: "flex",
         flexDirection: "column",
@@ -605,6 +781,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
             <div style={{ height: 10 }} />
             {Attrs}
             {StatsStrip}
+            {StashPanel}
             <div style={{ display: "flex", justifyContent: "center" }}>{Bag}</div>
             {Belt}
             {BagButtons}
@@ -612,7 +789,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
         </>
       ) : (
         // The window, centred over the live game; drag a piece out of it to drop it on the ground.
-        <div data-drop="panel" style={{ display: "flex", flexDirection: "column", maxWidth: "96vw", maxHeight: "96vh", pointerEvents: "auto", boxShadow: "0 18px 60px rgba(0,0,0,0.65)" }}>
+        <div data-drop="panel" style={{ display: "flex", flexDirection: "column", maxWidth: "98vw", maxHeight: vh - 12, pointerEvents: "auto", boxShadow: "0 18px 60px rgba(0,0,0,0.65)" }}>
         {header}
         <div style={{ display: "flex", gap: 8, padding: "8px 10px 10px", alignItems: "flex-start", background: "rgba(8,7,6,0.35)" }}>
           {wide ? (
@@ -627,6 +804,7 @@ export const InventoryScreen: React.FC<InventoryScreenProps> = ({ name, heroClas
               {StatsRows.slice(5)}
             </div>
           ) : null}
+          {StashPanel}
           <div style={{ display: "flex", flexDirection: "column", alignSelf: "flex-start" }}>
             <div style={{ display: "flex", gap: 0, height: ROWS * (slot + CAPTION + 8) + 20 }}>
               <div style={{ background: PANEL_BG, border: PANEL_BORDER, borderRight: "none", padding: "8px 8px", display: "flex" }}>{column(LEFT)}</div>
