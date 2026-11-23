@@ -802,11 +802,22 @@ only through gear.**
 
   Armour rating and magic resistance both turn into damage reduction through `reductionOf`. Tune
   numbers in the curves, never at the call site.
+- **Damage reduction**, Dark and Darker style:
+  - **PDR** (`physicalReduction`) is the armour rating's curve plus gear's flat "+% Physical Damage
+    Reduction"; **MDR** (`magicalReduction`) the same from magic resistance. Both cap at
+    `REDUCTION_CAP` (65%).
+  - **Projectile reduction** (`projectileReduction`, summed from the pieces' `projectile` and the
+    modifier, same cap) comes off arrows and bolts on top of PDR/MDR.
+  - **Headshots:** a monster's arrow or bolt above his shoulders does +50% (`HEADSHOT_BONUS`); his
+    helmet's headshot reduction (`headshotReduction`, at most 50 points) takes points off that bonus
+    (`headshotMultiplier`): a great helm (25%) makes it ×1.25. His own arrows' headshots do the +50%
+    plus `headshotDamage` (the wolf-tooth necklace, a modifier).
 - **What reads them:**
   - `maxHealth`;
   - `swordDamage` and `bowDamage`: (weapon + weapon damage) × (1 + physical bonus);
-  - `physicalReduction` for blades, lunges and arrows;
-  - `magicalReduction` for bolts (acid ignores both);
+  - `physicalReduction` for blades, lunges and arrows (arrows also `projectileReduction`);
+  - `magicalReduction` for bolts (and `projectileReduction`; acid ignores all of them);
+  - `headshotReduction` for a missile in the head, `headshotDamage` for his own headshots;
   - `moveSpeed`;
   - `actionSpeed` for swings and the bow draw;
   - `interactionSpeed` for bandages.
@@ -815,11 +826,13 @@ only through gear.**
   `memoryCapacity`: each spell costs its tier in memory, and charges restore by resting. Never add a
   parallel stat.
 - **Gear modifiers.**
-  - Weapons and armour roll a rarity when they drop (`rollsRarity`), then `MOD_COUNT[rarity]` distinct
-    modifiers (`rollMods`): common 0, uncommon 1, rare 2, epic 3, legendary 4, unique and artifact 5.
+  - Weapons, armour and jewellery roll a rarity when they drop (`rollsRarity`), then
+    `MOD_COUNT[rarity]` distinct modifiers (`rollMods`): common 0, uncommon 1, rare 2, epic 3,
+    legendary 4, unique and artifact 5.
   - Rarer pieces roll slightly larger values.
   - Modifiers live on the instance (`ItemInst.mods`) and show in the tooltip (`modLine`).
-  - A new modifier goes in `MOD_INFO` (label, range, weapon/armour) and is summed in `computeStats`.
+  - A new modifier goes in `MOD_INFO` (label, range, and what it rolls on: weapon, armour, `head`
+    for helmets only, jewellery) and is summed in `computeStats`.
 - **Show it.** The inventory sheet shows the attributes (gear-raised ones in green) and every derived
   line (`statLines`). The class screen shows each class's base attributes.
 - **Bows** (`bows.ts`) all share these rules:
@@ -828,7 +841,7 @@ only through gear.**
   - Loaded arrows live on the bow instance (`ItemInst.loaded`). R (or the touch Reload button)
     reloads from the bag's arrow stacks (30 to a stack).
   - Arrows fly without aim lift: they fall (`ARROW_G`) and slow (`ARROW_DRAG`).
-  - A skeleton headshot does ×1.5 damage.
+  - A skeleton headshot does ×1.5 damage, plus his `headshotDamage`.
   - Arrows stick in monsters and stay in the stone, where the fighter can walk over them to pick
     them up again.
   - A new bow is a def with `slot: "bow"` plus a `BOWS` entry.
@@ -846,14 +859,26 @@ only through gear.**
     monster sim (`setSnare`, `snares`); in a party the leader's floor springs it (`coop.sendSnare`).
   - A new perk: an entry in `PERKS` plus its effect in `computeStats`. A new ability: an entry in
     `SKILLS` plus its branch in the ability block.
-- **Leathers.** Armour can be plate or leather on the same shape (`ItemDef.finish`). The rig swaps
-  the plate's steel and gilt for hide (`Paladin.setFinish` / `wear`), and the cape and tabard for a
-  plain green cloak. What each worn piece is made of rides on the worn set (`wornOf` sets `finish`,
-  `finishIn` reads it), so the table, the portrait and other players see it. Icons come from
-  `gearIcons.ts`.
-- **Cloth** (the wizard's robe, surcoat and mantle, `CLOTH_IDS`) is the third finish: the doublet,
-  tabard and cape shapes dyed a scholar's blue. **Shadow** (the rogue's, `SHADOW_IDS`) is the fourth:
-  blackened hide and a charcoal cloak. Both ride on the worn set like leather.
+- **Equipment slots** (Dark and Darker's): six armour slots (`WEAR_SLOTS`: head, chest, hands, legs,
+  feet, cloak), a necklace and two rings (`JEWEL_SLOTS`), and the two weapon sets. Never add a slot.
+  - **Armour** (`ARMOR_ROWS` in `items.ts`) is plate, leather or cloth (`armorType`). Plate is for the
+    fighter and cleric, leather for everyone but the wizard, cloth (and every cloak) for anyone
+    (`ARMOR_TYPE`, `wearableBy`); the inventory refuses the rest, tints it red in the bag, and
+    `fitClass` takes it off when he changes class. Each piece has armour, magic resistance, move
+    speed, projectile and (helmets) headshot reduction, and one attribute or two.
+  - One armour item shows as one or more of the rig's 16 pieces (`shows`; plate armour is the
+    cuirass, pauldrons, arm harness and mail), in its `finish`: plate as built, leather (steel and
+    gilt become hide, the cape a green cloak) or cloth (the doublet, tabard and cape a scholar's blue,
+    plate shapes dark wool). What each piece is made of rides on the worn set (`wornOf` sets
+    `finish`, `finishIn` reads it), so the table, the portrait and other players see it. Icons are
+    those pieces rendered together (`gearIcons.ts`, `Paladin.renderGroupIcons`); hats, hoods and
+    jewellery show nothing on him and are drawn (`icons.ts`). New armour is a row in `ARMOR_ROWS`.
+  - **Jewellery** (`JEWEL_ROWS`): a pendant and a ring per attribute plus a few special necklaces.
+    Its number is the common value, and it grows by that much again for every rung of rarity
+    (`itemOf`).
+  - Saves from before these slots are converted on load (`migrateItem`, `migrateGrid`, `withSlots`
+    in `playerInv.ts`): old pieces get their new ids, and the ones now folded into a whole armour
+    are sold back.
 - **The rogue's skills.** Hide sets `PlayerView.hidden` for the monster step (`mobSim.ts`): he stays
   solid but nothing can pick him as a target, and monsters beyond `HIDE_LOSE_M` forget him. A swing,
   a shot or a blow taken ends it; the first blow out of it is an ambush. Backstab compares the

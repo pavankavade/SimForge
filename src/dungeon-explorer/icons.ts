@@ -1,7 +1,8 @@
 // Pictures of the items that are not part of the paladin's kit (his pieces are rendered off his own
 // body). Valuables and trophies are rendered from their Patch models on a small off-screen
-// renderer; coins, the draught, the bandage and the gems are drawn.
+// renderer; coins, the draught, the bandage, the gems, the jewellery and the soft hats are drawn.
 import * as THREE from "three";
+import { JEWEL_GEM, JEWEL_IDS } from "./items";
 import { PROC_ICONS } from "./monsters/icons3d";
 import { loadModel } from "./props3d";
 
@@ -19,12 +20,123 @@ const MODEL_ICONS: Record<string, { path: string; tilt?: number; turn?: number }
   saber: { path: "market/wooden_handle_saber", turn: 1.4 },
 };
 
+/** A gem: a bright core fading to `color`, a dark rim and a highlight. */
+function gem(g: CanvasRenderingContext2D, x: number, y: number, r: number, color: string): void {
+  const grad = g.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+  grad.addColorStop(0, "#ffffff");
+  grad.addColorStop(0.35, color);
+  grad.addColorStop(1, "rgba(0,0,0,0.85)");
+  g.fillStyle = grad;
+  g.beginPath();
+  g.arc(x, y, r, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "rgba(255,255,255,0.7)";
+  g.beginPath();
+  g.ellipse(x - r * 0.35, y - r * 0.4, r * 0.25, r * 0.15, -0.6, 0, Math.PI * 2);
+  g.fill();
+}
+
+/** Jewellery: one drawing for every ring and every necklace, the stone in its own colour. */
+function drawJewel(g: CanvasRenderingContext2D, kind: "necklace" | "ring", color: string): void {
+  const gold = g.createLinearGradient(20, 20, 108, 108);
+  gold.addColorStop(0, "#fff0b0");
+  gold.addColorStop(0.5, "#d0a040");
+  gold.addColorStop(1, "#6a4810");
+  if (kind === "ring") {
+    g.strokeStyle = gold;
+    g.lineWidth = 13;
+    g.beginPath();
+    g.ellipse(64, 74, 34, 30, 0, 0, Math.PI * 2);
+    g.stroke();
+    g.fillStyle = gold;
+    g.beginPath();
+    g.moveTo(44, 46);
+    g.lineTo(84, 46);
+    g.lineTo(74, 30);
+    g.lineTo(54, 30);
+    g.closePath();
+    g.fill();
+    gem(g, 64, 32, 17, color);
+  } else {
+    g.strokeStyle = gold;
+    g.lineWidth = 4;
+    g.setLineDash([5, 3]);
+    g.beginPath();
+    g.moveTo(18, 14);
+    g.quadraticCurveTo(28, 74, 64, 78);
+    g.quadraticCurveTo(100, 74, 110, 14);
+    g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = gold;
+    g.beginPath();
+    g.moveTo(64, 70);
+    g.lineTo(86, 92);
+    g.lineTo(64, 120);
+    g.lineTo(42, 92);
+    g.closePath();
+    g.fill();
+    gem(g, 64, 94, 16, color);
+  }
+}
+
+/** Hats and hoods (nothing shows on him): a plain silhouette in the cloth's colour. */
+function drawHat(g: CanvasRenderingContext2D, id: string): void {
+  const shade = (top: string, bottom: string) => {
+    const grad = g.createLinearGradient(0, 16, 0, 116);
+    grad.addColorStop(0, top);
+    grad.addColorStop(1, bottom);
+    return grad;
+  };
+  if (id === "wizard_hat") {
+    g.fillStyle = shade("#4a62c8", "#1a2460");
+    g.beginPath();
+    g.moveTo(70, 10);
+    g.quadraticCurveTo(84, 40, 90, 92);
+    g.lineTo(40, 92);
+    g.quadraticCurveTo(52, 50, 70, 10);
+    g.fill();
+    g.beginPath();
+    g.ellipse(64, 96, 54, 14, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "#e0c060";
+    g.fillRect(42, 82, 46, 8);
+    g.fillStyle = "#fff3a0";
+    g.beginPath();
+    g.arc(66, 52, 5, 0, Math.PI * 2);
+    g.fill();
+  } else {
+    // A hood (the ranger's, green-brown leather) or a chaperon (red wool with its tail).
+    const hood = id === "ranger_hood";
+    g.fillStyle = hood ? shade("#6a5a36", "#2e2614") : shade("#c0403a", "#5a1412");
+    g.beginPath();
+    g.moveTo(64, 14);
+    g.bezierCurveTo(104, 14, 112, 70, 104, 108);
+    g.lineTo(24, 108);
+    g.bezierCurveTo(16, 70, 24, 14, 64, 14);
+    g.fill();
+    if (!hood) {
+      g.beginPath();
+      g.moveTo(96, 40);
+      g.bezierCurveTo(120, 60, 122, 96, 112, 120);
+      g.lineTo(100, 116);
+      g.bezierCurveTo(108, 90, 100, 66, 90, 52);
+      g.fill();
+    }
+    g.fillStyle = "rgba(10,8,6,0.9)";
+    g.beginPath();
+    g.ellipse(64, 72, 24, 30, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
 function drawn(id: string): string | null {
   const c = document.createElement("canvas");
   c.width = c.height = 128;
   const g = c.getContext("2d");
   if (!g) return null;
-  if (id === "coins") {
+  if (JEWEL_GEM[id]) drawJewel(g, JEWEL_GEM[id].slot, JEWEL_GEM[id].gem);
+  else if (id === "wizard_hat" || id === "ranger_hood" || id === "chaperon") drawHat(g, id);
+  else if (id === "coins") {
     for (const [x, y, r] of [
       [50, 78, 30],
       [80, 70, 28],
@@ -210,7 +322,7 @@ export function itemIcons(onProgress?: (sofar: Record<string, string>) => void):
   if (made) return made;
   made = (async () => {
     const out: Record<string, string> = {};
-    for (const id of ["coins", "potion", "bandage", "ruby", "sapphire", "grave_dust", "spell_page", "candle", "rusty_sword"]) {
+    for (const id of ["coins", "potion", "bandage", "ruby", "sapphire", "grave_dust", "spell_page", "candle", "rusty_sword", "wizard_hat", "ranger_hood", "chaperon"].concat(JEWEL_IDS)) {
       const u = drawn(id);
       if (u) out[id] = u;
     }

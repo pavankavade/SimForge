@@ -8,12 +8,12 @@
 //   (projectiles fly here, walls stop them, a raised shield takes them),
 // - slimes hop, acid slimes leave burning puddles, and the Bloated Slime bursts into slimelets.
 // The market (entrance) is safe ground. Hits on the fighter come out as `events` for the app.
-import { ARMOR_SLOTS, type ArmorEquipment } from "../artifacts/characters/paladin";
+import { ARMOR_SLOTS, type ArmorEquipment, type ArmorSlot } from "../artifacts/characters/paladin";
 import { floorAt } from "./dungeon/floors";
 import type { DungeonData } from "./dungeon/generator";
 import { CELL_M } from "./dungeon/view";
 import { createAgentCollider } from "./dungeon/walker";
-import { ITEMS, bumpRarity, type Rarity } from "./items";
+import { bumpRarity, type Rarity } from "./items";
 import { ELITE_CHANCE, FAMILY_BOSS, FAMILY_MIX, KINDS, ROOM_FAMILY, pick, type MobFamily, type MobKind, type MobKindId } from "./monsters/kinds";
 
 export interface MobStats {
@@ -109,6 +109,8 @@ export interface Projectile {
   damage: number;
   /** Who loosed it: a monster's id, or 0 for the fighter (his arrows hit monsters, not him). */
   from: number;
+  /** His arrows: what a headshot multiplies the damage by. */
+  headBonus?: number;
   /** Seconds left; an arrow stuck in a wall stays a while. */
   life: number;
   stuck: boolean;
@@ -154,7 +156,7 @@ const MAX_SNARES = 3;
 
 /** Something that happened to the fighter (or near him) this step. */
 export type MobEvent =
-  | { type: "hit"; mob: MobAgent; damage: number; fromX: number; fromZ: number; blockable: boolean; how: "lunge" | "arrow" | "bolt" | "acid"; who: number }
+  | { type: "hit"; mob: MobAgent; damage: number; fromX: number; fromZ: number; blockable: boolean; how: "lunge" | "arrow" | "bolt" | "acid"; who: number; head?: boolean }
   | { type: "loose"; mob: MobAgent; projectile: "arrow" | "bolt" }
   | { type: "impact"; projectile: Projectile; wall: boolean }
   | { type: "split"; mob: MobAgent }
@@ -222,7 +224,9 @@ function findPath(d: DungeonData, sx: number, sz: number, tx: number, tz: number
 export const armorReduction = (armor: number): number => armor / (armor + 250);
 
 /** Armour rating of a set of worn pieces (the inventory's numbers). */
-export const armorOf = (e: ArmorEquipment): number => ARMOR_SLOTS.reduce((a, s) => a + (e[s] ? (ITEMS[s].armor ?? 0) : 0), 0);
+/** A skeleton's armour from the rig pieces it wears (the old per-piece numbers). */
+const PIECE_ARMOR: Record<ArmorSlot, number> = { helm: 32, gorget: 14, cuirass: 68, pauldrons: 24, arms: 22, gauntlets: 18, waist: 16, cuisses: 26, greaves: 22, sabatons: 16, mail: 40, doublet: 10, cape: 4, tabard: 3, sword: 0, shield: 0 };
+export const armorOf = (e: ArmorEquipment): number => ARMOR_SLOTS.reduce((a, s) => a + (e[s] ? PIECE_ARMOR[s] : 0), 0);
 
 const NO_GEAR = (): ArmorEquipment => {
   const e = {} as ArmorEquipment;
@@ -642,7 +646,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
               const sp = Math.hypot(p.vx, p.vz) || 1;
               // A skeleton's skull (the top eighth of it) takes half again.
               const head = m.family === "skeleton" && p.y > m.wy + m.height * 0.86;
-              const result = hit(m.id, p.vx / sp, p.vz / sp, p.damage * (head ? HEAD_BONUS : 1));
+              const result = hit(m.id, p.vx / sp, p.vz / sp, p.damage * (head ? p.headBonus ?? HEAD_BONUS : 1));
               if (result) events.push({ type: "struck", mob: m, result, head });
               // It stays in him where it went in (a shield turns it aside).
               if (result === "hit") {
@@ -679,6 +683,8 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
                 blockable: true,
                 how: p.kind,
                 who: w,
+                // The top of him (above the shoulders) is the head.
+                head: p.y > f.wy + 1.45,
               });
               break;
             }
@@ -1051,9 +1057,12 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
     return "hit";
   };
 
-  /** The fighter looses an arrow from (x, y, z) with velocity (vx, vy, vz), metres and m/s. */
-  const shoot = (x: number, y: number, z: number, vx: number, vy: number, vz: number, damage: number) => {
-    projectiles.push({ id: nextShot++, kind: "arrow", x, y, z, vx, vy, vz, damage, from: 0, life: 4, stuck: false, dead: false });
+  /**
+   * The fighter looses an arrow from (x, y, z) with velocity (vx, vy, vz), metres and m/s;
+   * `headBonus` multiplies a headshot (his headshot damage on top of the usual half again).
+   */
+  const shoot = (x: number, y: number, z: number, vx: number, vy: number, vz: number, damage: number, headBonus = HEAD_BONUS) => {
+    projectiles.push({ id: nextShot++, kind: "arrow", x, y, z, vx, vy, vz, damage, from: 0, life: 4, stuck: false, dead: false, headBonus });
   };
 
   /**

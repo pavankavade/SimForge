@@ -1,5 +1,6 @@
-// Everything that can sit in a bag, a chest or on a corpse: the fighter's kit (one item per armour
-// slot, wearable), valuables to sell, trophy weapons, mana crystals and monster parts, coins and
+// Everything that can sit in a bag, a chest or on a corpse: armour (six slots, Dark and Darker
+// style: head, chest, hands, legs, feet, cloak; plate, leather or cloth), jewellery (a necklace and
+// two rings), weapons, valuables to sell, trophy weapons, mana crystals and monster parts, coins and
 // things to eat or drink. Items in the world are instances (`ItemInst`: a uid and a def id), so there
 // can be two breastplates; grids hold them at a cell, Dark and Darker style, each taking its real
 // footprint.
@@ -7,8 +8,9 @@
 // RARITY (AGENTS.md §15): one ladder for the whole game, common to artifact. Every item def has a
 // base rarity; a weapon instance rolls its own (`ItemInst.rarity`), which scales its damage, block
 // and price (`itemOf`). Monsters carry a rarity too, and drop a mana crystal of it.
-import { ARMOR_SLOTS, type ArmorSlot, type Finish } from "../artifacts/characters/paladin";
-import type { ModId } from "./stats";
+import type { ArmorSlot, Finish } from "../artifacts/characters/paladin";
+import type { ClassId } from "./classes";
+import type { AttributeId, ModId } from "./stats";
 
 /** The rarity ladder, lowest first. */
 export const RARITIES = ["common", "uncommon", "rare", "epic", "legendary", "unique", "artifact"] as const;
@@ -34,18 +36,54 @@ export const RARITY_POWER: Record<Rarity, number> = { common: 1, uncommon: 1.08,
 /** A rolled weapon's price at each rarity, against its common self. */
 export const RARITY_PRICE: Record<Rarity, number> = { common: 1, uncommon: 1.7, rare: 2.8, epic: 4.6, legendary: 8, unique: 13, artifact: 22 };
 
-export type ItemCategory = "armor" | "weapon" | "valuable" | "trophy" | "consumable" | "coins" | "crystal" | "material" | "ammo";
+export type ItemCategory = "armor" | "jewelry" | "weapon" | "valuable" | "trophy" | "consumable" | "coins" | "crystal" | "material" | "ammo";
 
 /**
- * Where a piece is worn or held: an armour slot, or one of the two weapon sets (Dark and Darker
- * style): set 1 and set 2 each have a main hand and an off hand. Keys 1 and 2 take a set up.
- * (The rig's "sword" and "shield" slots are only what is in his hands; items never sit there.)
+ * Where a piece is worn or held, Dark and Darker style: six armour slots, a necklace and two rings,
+ * and two weapon sets (set 1 and set 2 each have a main hand and an off hand; keys 1 and 2 take a
+ * set up). One armour item shows as one or more of the rig's pieces (`ItemDef.shows`): plate
+ * armour is the cuirass, pauldrons, arm harness and mail together.
  */
+export type WearSlot = "head" | "chest" | "hands" | "legs" | "feet" | "cloak";
+export type JewelSlot = "necklace" | "ring1" | "ring2";
 export type WeaponSlot = "main1" | "off1" | "main2" | "off2";
-export type GearSlot = ArmorSlot | WeaponSlot;
+export type GearSlot = WearSlot | JewelSlot | WeaponSlot;
+export const WEAR_SLOTS: WearSlot[] = ["head", "chest", "hands", "legs", "feet", "cloak"];
+export const JEWEL_SLOTS: JewelSlot[] = ["necklace", "ring1", "ring2"];
 export const WEAPON_SLOTS: WeaponSlot[] = ["main1", "off1", "main2", "off2"];
-/** The armour slots items are worn in (every rig slot but the hands). */
-export const WEAR_SLOTS: ArmorSlot[] = ARMOR_SLOTS.filter((s) => s !== "sword" && s !== "shield");
+/** Everything worn whatever is in hand: the armour and the jewellery (what counts for stats). */
+export const WORN_SLOTS: GearSlot[] = (WEAR_SLOTS as GearSlot[]).concat(JEWEL_SLOTS);
+/** What an item says it goes in: an armour slot, a necklace or ring, or a hand ("sword" main, "shield" off, "bow" both). */
+export type ItemSlot = WearSlot | "necklace" | "ring" | "sword" | "shield" | "bow";
+/** Slot names as the screens show them. */
+export const SLOT_LABEL: Record<GearSlot, string> = {
+  head: "Head",
+  chest: "Chest",
+  hands: "Gloves",
+  legs: "Legs",
+  feet: "Boots",
+  cloak: "Cloak",
+  necklace: "Necklace",
+  ring1: "Ring",
+  ring2: "Ring",
+  main1: "Main hand",
+  off1: "Off hand",
+  main2: "Main hand",
+  off2: "Off hand",
+};
+
+/** Armour weight: plate, leather or cloth, and who may wear it (cloaks are cloth: anyone). */
+export type ArmorType = "plate" | "leather" | "cloth";
+export const ARMOR_TYPE: Record<ArmorType, { label: string; classes: ClassId[] }> = {
+  plate: { label: "Plate", classes: ["fighter", "cleric"] },
+  leather: { label: "Leather", classes: ["fighter", "rogue", "ranger", "cleric"] },
+  cloth: { label: "Cloth", classes: ["fighter", "rogue", "wizard", "ranger", "cleric"] },
+};
+/** Can a hero of class `cls` wear or hold it? (Only armour has a weight; everything else is anyone's.) */
+export const wearableBy = (id: string, cls: ClassId): boolean => {
+  const t = def(id).armorType;
+  return !t || ARMOR_TYPE[t].classes.indexOf(cls) >= 0;
+};
 
 /** Which hand a weapon goes in: the sword in the main hand, the shield in the off hand, the bow in both. */
 export function handOf(id: string): "main" | "off" | "both" | null {
@@ -72,9 +110,25 @@ export interface ItemDef {
   weight: number;
   /** What a merchant asks for it (gold); they pay two fifths. */
   value: number;
-  /** Wearable: the fighter's armour slot; for weapons the hand ("sword" main, "shield" off, "bow" both). */
-  slot?: ArmorSlot | "bow";
+  /** Wearable: its armour or jewellery slot; for weapons the hand ("sword" main, "shield" off, "bow" both). */
+  slot?: ItemSlot;
+  /** Armour: plate, leather or cloth (who may wear it). */
+  armorType?: ArmorType;
+  /** The rig pieces it shows on him (in `finish`); none for a ring, a hood or a hat. */
+  shows?: ArmorSlot[];
   armor?: number;
+  magicResist?: number;
+  /** Move speed, in percent (plate slows him). */
+  move?: number;
+  /** Takes this many points off a headshot's +50% (percent; helmets). */
+  headshot?: number;
+  /** Projectile damage reduction, percent (arrows and bolts). */
+  projectile?: number;
+  /** Attributes it gives (jewellery: at common, one more per rung of rarity). */
+  attr?: Partial<Record<AttributeId, number>>;
+  maxHealth?: number;
+  /** Extra damage on his own headshots, percent. */
+  headshotDamage?: number;
   damage?: number;
   block?: number;
   /** Hit points it gives back when used. */
@@ -83,7 +137,7 @@ export interface ItemDef {
   healOver?: number;
   /** How many fit in one cell (coins). */
   stack?: number;
-  /** Armour made of something other than plate on the same shape (the ranger's leathers). */
+  /** What its rig pieces look like: plate (as built), leather or cloth on the same shapes. */
   finish?: Finish;
   /** A blunt main-hand weapon (the cleric's mace): Blunt Weapon Mastery counts. */
   blunt?: boolean;
@@ -95,28 +149,91 @@ export interface ItemDef {
   magic?: number;
 }
 
-const ARMOR: Array<Omit<ItemDef, "id" | "category" | "value" | "slot"> & { slot: ArmorSlot }> = [
-  { slot: "helm", name: "Great helm", note: "Closed helm with a mail aventail", kind: "Head", w: 2, h: 2, rarity: "common", armor: 32, weight: 2.5 },
-  { slot: "gorget", name: "Gorget", note: "Steel collar over the throat", kind: "Neck", w: 2, h: 1, rarity: "common", armor: 14, weight: 0.8 },
-  { slot: "cuirass", name: "Breastplate", note: "Cuirass, backplate and plackart", kind: "Chest", w: 2, h: 3, rarity: "common", armor: 68, weight: 8 },
-  { slot: "pauldrons", name: "Pauldrons", note: "Domed shoulder plates", kind: "Shoulders", w: 2, h: 2, rarity: "common", armor: 24, weight: 2.2 },
-  { slot: "arms", name: "Arm harness", note: "Rerebraces, couters and vambraces", kind: "Arms", w: 2, h: 2, rarity: "common", armor: 22, weight: 2.5 },
-  { slot: "gauntlets", name: "Gauntlets", note: "Fingered plate gauntlets, leather palms", kind: "Hands", w: 2, h: 2, rarity: "common", armor: 18, weight: 1.1 },
-  { slot: "waist", name: "Fauld & belt", note: "Hip lames, tassets, belt and scabbard", kind: "Waist", w: 2, h: 2, rarity: "common", armor: 16, weight: 2 },
-  { slot: "cuisses", name: "Cuisses", note: "Thigh plates and poleyns", kind: "Thighs", w: 2, h: 2, rarity: "common", armor: 26, weight: 2.6 },
-  { slot: "greaves", name: "Greaves", note: "Closed shin plates", kind: "Shins", w: 2, h: 2, rarity: "common", armor: 22, weight: 2 },
-  { slot: "sabatons", name: "Sabatons", note: "Laminated steel shoes", kind: "Feet", w: 2, h: 2, rarity: "common", armor: 16, weight: 1.4 },
-  { slot: "mail", name: "Mail hauberk", note: "Riveted mail shirt and chausses", kind: "Mail", w: 2, h: 3, rarity: "common", armor: 40, weight: 9 },
-  { slot: "doublet", name: "Arming doublet", note: "Quilted coat and hose, worn under the mail", kind: "Under", w: 2, h: 3, rarity: "common", armor: 10, weight: 2 },
-  { slot: "cape", name: "Cape", note: "Order cape", kind: "Back", w: 2, h: 3, rarity: "common", armor: 4, weight: 1.5 },
-  { slot: "tabard", name: "Tabard", note: "Order tabard", kind: "Over", w: 2, h: 3, rarity: "common", armor: 3, weight: 0.6 },
-  { slot: "sword", name: "Arming sword", note: "Single-handed, double-edged", kind: "Main hand", w: 1, h: 4, rarity: "common", armor: 0, weight: 1.3, damage: 38 },
-  { slot: "shield", name: "Heater shield", note: "Oak, rawhide and the order's sun", kind: "Off hand", w: 2, h: 3, rarity: "common", armor: 0, weight: 3.5, block: 70 },
+/** The weapons kept from the paladin's own kit (their ids are the rig's hand slots). */
+const KIT_WEAPONS: ItemDef[] = [
+  { id: "sword", slot: "sword", name: "Arming sword", note: "Single-handed, double-edged", kind: "Main hand", category: "weapon", w: 1, h: 4, rarity: "common", armor: 0, weight: 1.3, damage: 38, value: 0 },
+  { id: "shield", slot: "shield", name: "Heater shield", note: "Oak, rawhide and the order's sun", kind: "Off hand", category: "weapon", w: 2, h: 3, rarity: "common", armor: 0, weight: 3.5, block: 70, value: 0 },
 ];
 
+type ArmorRow = Omit<ItemDef, "category" | "value" | "rarity" | "kind" | "w" | "h"> & { slot: WearSlot; armorType: ArmorType };
+const KIND: Record<WearSlot, { kind: string; w: number; h: number }> = {
+  head: { kind: "Head", w: 2, h: 2 },
+  chest: { kind: "Chest", w: 2, h: 3 },
+  hands: { kind: "Gloves", w: 2, h: 2 },
+  legs: { kind: "Legs", w: 2, h: 3 },
+  feet: { kind: "Boots", w: 2, h: 2 },
+  cloak: { kind: "Cloak", w: 2, h: 3 },
+};
+
+/**
+ * The armour: for every slot a plate, a leather and a cloth piece (two of each on the head and chest).
+ * Our own numbers in Dark and Darker's shape: plate is the most armour and slows him; cloth gives
+ * magic resistance and nothing in the way. A full set comes to about 305 armour (plate), 181
+ * (leather) or 62 (cloth). Each piece gives an attribute or two.
+ */
+const ARMOR_ROWS: ArmorRow[] = [
+  // Head: the helmets take points off the +50% a headshot does.
+  { id: "great_helm", slot: "head", armorType: "plate", shows: ["helm", "gorget"], name: "Great helm", note: "A closed steel bucket and a gorget under it; you hear your own breath", armor: 50, move: -3, headshot: 25, projectile: 2, attr: { vig: 2 }, weight: 3.3 },
+  { id: "kettle_hat", slot: "head", armorType: "plate", shows: ["helm"], name: "Kettle hat", note: "Steel over the crown; arrows glance off it", armor: 40, magicResist: 5, move: -2, headshot: 18, projectile: 2, attr: { str: 2 }, weight: 2.2 },
+  { id: "leather_cap", slot: "head", armorType: "leather", shows: ["helm"], finish: "leather", name: "Leather cap", note: "Boiled hide moulded over a wooden head", armor: 25, magicResist: 5, move: -1, headshot: 12, projectile: 1, attr: { agi: 2 }, weight: 0.8 },
+  { id: "ranger_hood", slot: "head", armorType: "leather", name: "Ranger's hood", note: "Waxed leather, deep enough to hide a face", armor: 20, magicResist: 10, headshot: 10, projectile: 1, attr: { dex: 2 }, weight: 0.4 },
+  { id: "wizard_hat", slot: "head", armorType: "cloth", name: "Wizard hat", note: "Tall, blue and pointed; the brim has seen weather", armor: 8, magicResist: 20, headshot: 5, attr: { kno: 2 }, weight: 0.3 },
+  { id: "chaperon", slot: "head", armorType: "cloth", name: "Chaperon", note: "A wound hood of red wool, the tail over one shoulder", armor: 12, magicResist: 15, headshot: 6, attr: { wil: 2 }, weight: 0.4 },
+  // Chest.
+  { id: "plate_armour", slot: "chest", armorType: "plate", shows: ["cuirass", "pauldrons", "arms", "mail"], name: "Blackened plate armour", note: "Cuirass, pauldrons and arm harness over a mail shirt", armor: 120, move: -6, projectile: 4, attr: { str: 2 }, weight: 15 },
+  { id: "templar_armour", slot: "chest", armorType: "plate", shows: ["cuirass", "mail", "tabard"], name: "Templar armour", note: "A breastplate over mail and the order's tabard", armor: 105, magicResist: 15, move: -5, projectile: 3, attr: { wil: 2 }, weight: 13 },
+  { id: "brigandine", slot: "chest", armorType: "leather", shows: ["cuirass", "pauldrons", "doublet"], finish: "leather", name: "Brigandine", note: "Steel plates riveted inside a leather coat", armor: 75, magicResist: 5, move: -2, projectile: 2, attr: { vig: 2 }, weight: 6 },
+  { id: "leather_jerkin", slot: "chest", armorType: "leather", shows: ["cuirass", "doublet"], finish: "leather", name: "Leather jerkin", note: "Boiled hide, moulded and laced; it turns a knife, not a mace", armor: 60, magicResist: 10, move: -1, projectile: 2, attr: { agi: 2 }, weight: 3.2 },
+  { id: "gambeson", slot: "chest", armorType: "cloth", shows: ["doublet"], name: "Padded gambeson", note: "Quilted linen, twenty layers deep", armor: 35, magicResist: 15, projectile: 1, attr: { vig: 2 }, weight: 2.4 },
+  { id: "wizard_robe", slot: "chest", armorType: "cloth", shows: ["doublet", "tabard"], finish: "cloth", name: "Scholar's robe", note: "Blue wool, ink on the cuffs, a lining of something that is not quite silk", armor: 15, magicResist: 35, attr: { kno: 3 }, weight: 1.8 },
+  // Gloves.
+  { id: "plate_gauntlets", slot: "hands", armorType: "plate", shows: ["gauntlets"], name: "Plate gauntlets", note: "Fingered steel, leather palms", armor: 30, move: -1, projectile: 1, attr: { str: 2 }, weight: 1.2 },
+  { id: "leather_gloves", slot: "hands", armorType: "leather", shows: ["gauntlets"], finish: "leather", name: "Leather gloves", note: "Thin at the fingers for the string, thick at the back", armor: 18, attr: { dex: 2 }, weight: 0.3 },
+  { id: "embroidered_gloves", slot: "hands", armorType: "cloth", shows: ["gauntlets"], finish: "cloth", name: "Embroidered gloves", note: "Silver thread in a pattern that almost moves", armor: 6, magicResist: 12, attr: { wil: 2 }, weight: 0.2 },
+  // Legs.
+  { id: "plate_legs", slot: "legs", armorType: "plate", shows: ["waist", "cuisses", "greaves"], name: "Plate legs", note: "Fauld and tassets, cuisses, poleyns and greaves", armor: 70, move: -3, projectile: 3, attr: { vig: 2 }, weight: 6.5 },
+  { id: "leather_leggings", slot: "legs", armorType: "leather", shows: ["cuisses", "greaves"], finish: "leather", name: "Leather leggings", note: "Stiff hide over the thighs and shins", armor: 40, move: -1, projectile: 2, attr: { agi: 2 }, weight: 1.6 },
+  { id: "padded_leggings", slot: "legs", armorType: "cloth", shows: ["cuisses", "greaves"], finish: "cloth", name: "Padded leggings", note: "Quilted wool hose", armor: 22, magicResist: 10, attr: { res: 2 }, weight: 1 },
+  // Boots.
+  { id: "plate_boots", slot: "feet", armorType: "plate", shows: ["sabatons"], name: "Plate sabatons", note: "Laminated steel shoes", armor: 30, move: -2, projectile: 1, attr: { vig: 1 }, weight: 1.6 },
+  { id: "leather_boots", slot: "feet", armorType: "leather", shows: ["sabatons"], finish: "leather", name: "Leather boots", note: "Turned leather; quiet on stone", armor: 18, move: 2, attr: { agi: 1 }, weight: 0.6 },
+  { id: "turnshoes", slot: "feet", armorType: "cloth", shows: ["sabatons"], finish: "cloth", name: "Turnshoes", note: "Felt soles stitched inside out; you can run all day", armor: 8, magicResist: 6, move: 3, attr: { res: 2 }, weight: 0.4 },
+  // Cloaks (cloth: anyone).
+  { id: "adventurer_cloak", slot: "cloak", armorType: "cloth", shows: ["cape"], name: "Adventurer's cloak", note: "Red wool, patched twice", armor: 5, magicResist: 5, attr: { vig: 1 }, weight: 1.4 },
+  { id: "ranger_cloak", slot: "cloak", armorType: "cloth", shows: ["cape"], finish: "leather", name: "Ranger's cloak", note: "Green wool that goes grey in the dark", armor: 5, projectile: 2, attr: { agi: 2 }, weight: 1.1 },
+  { id: "wizard_mantle", slot: "cloak", armorType: "cloth", shows: ["cape"], finish: "cloth", name: "Night mantle", note: "Heavy, dark and warm; it smells of candle smoke", armor: 3, magicResist: 15, attr: { wil: 2 }, weight: 1.3 },
+];
+
+type JewelRow = Omit<ItemDef, "category" | "value" | "rarity" | "kind" | "w" | "h" | "weight"> & { slot: "necklace" | "ring"; gem: string };
+/**
+ * The jewellery: a pendant and a ring for each attribute, three necklaces besides. At common a piece
+ * gives +1 (the specials their base number); each rung of rarity adds as much again (`itemOf`).
+ */
+const JEWEL_ROWS: JewelRow[] = [
+  { id: "bear_pendant", slot: "necklace", gem: "#c8553d", name: "Bear pendant", note: "A bear's claw in a silver cap", attr: { str: 1 } },
+  { id: "ox_pendant", slot: "necklace", gem: "#b88a4a", name: "Ox pendant", note: "A horn carved into an ox's head", attr: { vig: 1 } },
+  { id: "fox_pendant", slot: "necklace", gem: "#e07b2a", name: "Fox pendant", note: "Red enamel, a fox mid-leap", attr: { agi: 1 } },
+  { id: "monkey_pendant", slot: "necklace", gem: "#8f6a3a", name: "Monkey pendant", note: "A brass monkey, all fingers", attr: { dex: 1 } },
+  { id: "badger_pendant", slot: "necklace", gem: "#cfd3d8", name: "Badger pendant", note: "Black and white stone; stubborn as its namesake", attr: { wil: 1 } },
+  { id: "owl_pendant", slot: "necklace", gem: "#7a8fd0", name: "Owl pendant", note: "Two moonstones for eyes", attr: { kno: 1 } },
+  { id: "rat_pendant", slot: "necklace", gem: "#8c8c7a", name: "Rat pendant", note: "A lead rat with a ruby in its teeth", attr: { res: 1 } },
+  { id: "amulet_health", slot: "necklace", gem: "#d8344a", name: "Amulet of health", note: "Warm, and it beats a little", maxHealth: 5 },
+  { id: "wolftooth_necklace", slot: "necklace", gem: "#e8e2cf", name: "Wolf-tooth necklace", note: "Teeth on a thong; they find the gap in a helm", headshotDamage: 5 },
+  { id: "frost_amulet", slot: "necklace", gem: "#8fe0ff", name: "Frost amulet", note: "Cold to the touch even by a fire", magicResist: 10 },
+  { id: "ring_courage", slot: "ring", gem: "#c8553d", name: "Ring of courage", note: "Iron, with a lion stamped in it", attr: { str: 1 } },
+  { id: "ring_vitality", slot: "ring", gem: "#5bb35b", name: "Ring of vitality", note: "Green jade, a little warm", attr: { vig: 1 } },
+  { id: "ring_quickness", slot: "ring", gem: "#e0c040", name: "Ring of quickness", note: "A thin gold band that never sits still", attr: { agi: 1 } },
+  { id: "ring_finesse", slot: "ring", gem: "#d07ad0", name: "Ring of finesse", note: "Two twisted wires, silver and copper", attr: { dex: 1 } },
+  { id: "ring_resolve", slot: "ring", gem: "#e8e8f0", name: "Ring of resolve", note: "A pearl in a plain setting", attr: { wil: 1 } },
+  { id: "ring_wisdom", slot: "ring", gem: "#5a8cff", name: "Ring of wisdom", note: "A sapphire cut with an eye", attr: { kno: 1 } },
+  { id: "ring_survival", slot: "ring", gem: "#8a6a4a", name: "Ring of survival", note: "Bone, carved by someone with time on their hands", attr: { res: 1 } },
+];
+/** Each piece's stone colour (its drawn icon). */
+export const JEWEL_GEM: Record<string, { slot: "necklace" | "ring"; gem: string }> = {};
+
 const BASE: Record<Rarity, number> = { common: 40, uncommon: 90, rare: 170, epic: 320, legendary: 600, unique: 1000, artifact: 1800 };
-const priceFor = (a: { rarity: Rarity; armor?: number; damage?: number; block?: number }) =>
-  Math.round((BASE[a.rarity] + (a.armor ?? 0) * 3 + (a.damage ?? 0) * 4 + (a.block ?? 0) * 2) / 5) * 5;
+const priceFor = (a: { rarity: Rarity; armor?: number; damage?: number; block?: number; magicResist?: number }) =>
+  Math.round((BASE[a.rarity] + (a.armor ?? 0) * 3 + (a.magicResist ?? 0) * 3 + (a.damage ?? 0) * 4 + (a.block ?? 0) * 2) / 5) * 5;
 
 const OTHER: ItemDef[] = [
   { id: "coins", name: "Gold coins", note: "Struck with a king nobody remembers", kind: "Coins", category: "coins", w: 1, h: 1, rarity: "common", weight: 0.01, value: 1, stack: 999 },
@@ -189,54 +306,83 @@ for (const r of RARITIES) {
   });
 }
 
-/**
- * Leathers: hardened hide on the plate shapes (lighter, less armour), and a plain green cloak. The
- * ranger starts in them; anyone can wear them. They sit in the same slots as the plate.
- */
-const LEATHERS: Array<Omit<ItemDef, "category" | "value" | "slot" | "finish"> & { slot: ArmorSlot }> = [
-  { id: "leather_jerkin", slot: "cuirass", name: "Leather jerkin", note: "Boiled hide, moulded and laced; it turns a knife, not a mace", kind: "Chest", w: 2, h: 3, rarity: "common", armor: 30, weight: 3.2 },
-  { id: "leather_bracers", slot: "arms", name: "Leather bracers", note: "Hide over the forearms, a guard for the bowstring", kind: "Arms", w: 2, h: 2, rarity: "common", armor: 10, weight: 0.9 },
-  { id: "leather_gloves", slot: "gauntlets", name: "Archer's gloves", note: "Thin at the fingers for the string, thick at the back", kind: "Hands", w: 2, h: 2, rarity: "common", armor: 7, weight: 0.3 },
-  { id: "leather_leggings", slot: "greaves", name: "Hide shin guards", note: "Stiff hide strapped over the shins", kind: "Shins", w: 2, h: 2, rarity: "common", armor: 9, weight: 0.8 },
-  { id: "leather_boots", slot: "sabatons", name: "Soft boots", note: "Turned leather; quiet on stone", kind: "Feet", w: 2, h: 2, rarity: "common", armor: 6, weight: 0.6 },
-  { id: "ranger_cloak", slot: "cape", name: "Ranger's cloak", note: "Green wool that goes grey in the dark", kind: "Back", w: 2, h: 3, rarity: "common", armor: 4, weight: 1.1 },
-];
-
 export const ITEM_DEFS: Record<string, ItemDef> = {};
-for (const a of ARMOR) {
-  ITEM_DEFS[a.slot] = { ...a, id: a.slot, category: a.slot === "sword" || a.slot === "shield" ? "weapon" : "armor", value: priceFor(a) };
+for (const w of KIT_WEAPONS) ITEM_DEFS[w.id] = { ...w, value: priceFor(w) };
+for (const a of ARMOR_ROWS) {
+  const k = KIND[a.slot];
+  const d: ItemDef = { ...a, kind: k.kind, w: k.w, h: k.h, category: "armor", rarity: "common", value: 0 };
+  ITEM_DEFS[a.id] = { ...d, value: priceFor(d) };
 }
-for (const a of LEATHERS) ITEM_DEFS[a.id] = { ...a, category: "armor", value: priceFor(a), finish: "leather" };
-/** The leathers' ids, and the plate piece each one stands in for (icons are drawn from that shape). */
-export const LEATHER_IDS: Array<[string, ArmorSlot]> = LEATHERS.map((a) => [a.id, a.slot]);
-
-/** The wizard's cloth: the doublet, cape and tabard shapes in a scholar's blue. Next to no armour. */
-const CLOTHS: Array<Omit<ItemDef, "category" | "value" | "slot" | "finish"> & { slot: ArmorSlot }> = [
-  { id: "wizard_robe", slot: "doublet", name: "Scholar's robe", note: "Blue wool, ink on the cuffs, a lining of something that is not quite silk", kind: "Under", w: 2, h: 3, rarity: "common", armor: 6, weight: 1.6 },
-  { id: "wizard_surcoat", slot: "tabard", name: "Star-stitched surcoat", note: "The constellations of a sky nobody has seen", kind: "Over", w: 2, h: 3, rarity: "common", armor: 3, weight: 0.5 },
-  { id: "wizard_mantle", slot: "cape", name: "Night mantle", note: "Heavy, dark and warm; it smells of candle smoke", kind: "Back", w: 2, h: 3, rarity: "common", armor: 4, weight: 1.3 },
-];
-for (const a of CLOTHS) ITEM_DEFS[a.id] = { ...a, category: "armor", value: priceFor(a), finish: "cloth" };
-/** The cloths' ids and the slot each sits in (icons are drawn from that shape in cloth). */
-export const CLOTH_IDS: Array<[string, ArmorSlot]> = CLOTHS.map((a) => [a.id, a.slot]);
-
-/** The rogue's shadow leathers: blackened hide on the plate shapes, a charcoal cloak. Quiet and light. */
-const SHADOWS: Array<Omit<ItemDef, "category" | "value" | "slot" | "finish"> & { slot: ArmorSlot }> = [
-  { id: "shadow_jerkin", slot: "cuirass", name: "Shadow jerkin", note: "Blackened hide, laced tight so nothing creaks", kind: "Chest", w: 2, h: 3, rarity: "common", armor: 26, weight: 2.6 },
-  { id: "shadow_gloves", slot: "gauntlets", name: "Thief's gloves", note: "Thin black kid; you can feel a lock's pins through them", kind: "Hands", w: 2, h: 2, rarity: "common", armor: 6, weight: 0.2 },
-  { id: "shadow_boots", slot: "sabatons", name: "Soft-soled boots", note: "Felt under the leather; they make no sound on stone", kind: "Feet", w: 2, h: 2, rarity: "common", armor: 5, weight: 0.5 },
-  { id: "shadow_cloak", slot: "cape", name: "Charcoal cloak", note: "The colour of a corner nobody looks into", kind: "Back", w: 2, h: 3, rarity: "common", armor: 4, weight: 0.9 },
-];
-for (const a of SHADOWS) ITEM_DEFS[a.id] = { ...a, category: "armor", value: priceFor(a), finish: "shadow" };
-/** The shadow leathers' ids and the slot each sits in (icons are drawn from that shape in shadow). */
-export const SHADOW_IDS: Array<[string, ArmorSlot]> = SHADOWS.map((a) => [a.id, a.slot]);
+for (const j of JEWEL_ROWS) {
+  const { gem, ...rest } = j;
+  JEWEL_GEM[j.id] = { slot: j.slot, gem };
+  ITEM_DEFS[j.id] = { ...rest, kind: j.slot === "ring" ? "Ring" : "Necklace", category: "jewelry", w: 1, h: 1, rarity: "common", weight: 0.05, value: 60 };
+}
 for (const o of OTHER) ITEM_DEFS[o.id] = o;
 
-/** The paladin's kit, one def per armour slot (the stats the game reads). */
-export const ITEMS = {} as Record<ArmorSlot, ItemDef>;
-for (const s of ARMOR_SLOTS) ITEMS[s] = ITEM_DEFS[s];
+/** Every armour item, every jewellery item (loot and the merchants pick from these). */
+export const ARMOR_IDS: string[] = ARMOR_ROWS.map((a) => a.id);
+export const JEWEL_IDS: string[] = JEWEL_ROWS.map((j) => j.id);
+/** The armour items of one weight. */
+export const armorOfType = (t: ArmorType): string[] => ARMOR_ROWS.filter((a) => a.armorType === t).map((a) => a.id);
 
 export const def = (id: string): ItemDef => ITEM_DEFS[id] ?? ITEM_DEFS.coins;
+
+/**
+ * Pieces from before the six slots, and what each one is now. Old pieces with no new match (the
+ * gorget, pauldrons, mail and the rest, now part of a whole armour) are sold back: `null`, and
+ * `OLD_VALUE` is what the armourer pays for one.
+ */
+const OLD_IDS: Record<string, string | null> = {
+  helm: "great_helm",
+  cuirass: "plate_armour",
+  gauntlets: "plate_gauntlets",
+  cuisses: "plate_legs",
+  sabatons: "plate_boots",
+  cape: "adventurer_cloak",
+  doublet: "gambeson",
+  gorget: null,
+  pauldrons: null,
+  arms: null,
+  waist: null,
+  greaves: null,
+  mail: null,
+  tabard: null,
+  leather_bracers: null,
+  wizard_surcoat: null,
+  shadow_jerkin: "leather_jerkin",
+  shadow_gloves: "leather_gloves",
+  shadow_boots: "leather_boots",
+  shadow_cloak: "ranger_cloak",
+};
+export const OLD_VALUE = 60;
+/** An item from an older save as it is now: the same piece under its new id, or null (sold back). */
+export function migrateItem(it: ItemInst): ItemInst | null {
+  if (!(it.id in OLD_IDS)) return it;
+  const now = OLD_IDS[it.id];
+  return now ? { ...it, id: now } : null;
+}
+/** A grid from an older save: old pieces renamed (they keep their place if they still fit), the rest dropped; `gold` is what they fetched. */
+export function migrateGrid(g: Grid): { grid: Grid; gold: number } {
+  if (!g.items.some((p) => p.item.id in OLD_IDS)) return { grid: g, gold: 0 };
+  let gold = 0;
+  let out: Grid = { ...g, items: g.items.filter((p) => !(p.item.id in OLD_IDS)) };
+  for (const p of g.items) {
+    if (!(p.item.id in OLD_IDS)) continue;
+    const now = migrateItem(p.item);
+    if (!now) {
+      gold += OLD_VALUE;
+      continue;
+    }
+    if (fitsAt(out, now.id, p.x, p.y)) out = placeItem(out, now, p.x, p.y);
+    else {
+      const next = addItem(out, now);
+      if (next) out = next;
+      else gold += OLD_VALUE;
+    }
+  }
+  return { grid: out, gold };
+}
 
 // ---- Instances and grids ------------------------------------------------------------------------
 
@@ -253,10 +399,10 @@ export interface ItemInst {
   mods?: Array<[ModId, number]>;
 }
 
-/** Weapons and armour roll their own rarity when they drop (and gear rolls modifiers with it). */
+/** Weapons, armour and jewellery roll their own rarity when they drop (and gear rolls modifiers with it). */
 export const rollsRarity = (id: string): boolean => {
   const c = def(id).category;
-  return c === "weapon" || c === "trophy" || c === "armor";
+  return c === "weapon" || c === "trophy" || c === "armor" || c === "jewelry";
 };
 
 /**
@@ -268,11 +414,23 @@ export function itemOf(it: ItemInst): ItemDef {
   if (!it.rarity || it.rarity === d.rarity) return d;
   const k = RARITY_POWER[it.rarity] / RARITY_POWER[d.rarity];
   const p = RARITY_PRICE[it.rarity] / RARITY_PRICE[d.rarity];
+  // Jewellery: its one number again for every rung above its base.
+  const steps = d.category === "jewelry" ? rarityRank(it.rarity) - rarityRank(d.rarity) + 1 : 1;
+  let attr = d.attr;
+  if (attr && steps !== 1) {
+    const a: Partial<Record<AttributeId, number>> = {};
+    for (const key of Object.keys(attr) as AttributeId[]) a[key] = (attr[key] ?? 0) * steps;
+    attr = a;
+  }
   return {
     ...d,
     rarity: it.rarity,
+    attr,
     damage: d.damage !== undefined ? Math.round(d.damage * k) : undefined,
     armor: d.armor ? Math.round(d.armor * k) : d.armor,
+    magicResist: d.magicResist ? Math.round(d.magicResist * (d.category === "jewelry" ? steps : k)) : d.magicResist,
+    maxHealth: d.maxHealth ? d.maxHealth * steps : d.maxHealth,
+    headshotDamage: d.headshotDamage ? d.headshotDamage * steps : d.headshotDamage,
     block: d.block !== undefined ? Math.min(95, Math.round(d.block * k)) : undefined,
     value: Math.max(1, Math.round((d.value * p) / 5) * 5),
   };

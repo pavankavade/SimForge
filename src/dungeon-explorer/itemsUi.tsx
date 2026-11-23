@@ -2,8 +2,9 @@
 // one drag-and-drop controller. Items move by drag (mouse or finger); right-click, double-click or a
 // double-tap does the quick move the screen defines (equip, use, take, stash).
 import React, { useEffect, useRef, useState } from "react";
-import { RARITY, def, fitsAt, itemOf, type GearSlot, type Grid, type ItemInst } from "./items";
-import { modLine } from "./stats";
+import type { ClassId } from "./classes";
+import { ARMOR_TYPE, RARITY, def, fitsAt, itemOf, wearableBy, type GearSlot, type Grid, type ItemInst } from "./items";
+import { ATTRIBUTE_INFO, modLine, type AttributeId } from "./stats";
 
 export type Icons = Record<string, string | undefined>;
 
@@ -47,8 +48,15 @@ export const ItemIcon: React.FC<{ id: string; icons: Icons; w: number; h: number
   );
 };
 
-export const ItemTooltip: React.FC<{ item: ItemInst; hint?: string; x: number; y: number }> = ({ item, hint, x, y }) => {
+/** "Fighter, Cleric" for an armour weight. */
+const whoWears = (t: keyof typeof ARMOR_TYPE): string =>
+  ARMOR_TYPE[t].classes.length === 5 ? "Anyone" : ARMOR_TYPE[t].classes.map((c) => c[0].toUpperCase() + c.slice(1)).join(", ");
+
+/** The tooltip; given `cls`, armour his class can't wear says so in red. */
+export const ItemTooltip: React.FC<{ item: ItemInst; hint?: string; x: number; y: number; cls?: ClassId }> = ({ item, hint, x, y, cls }) => {
   const it = itemOf(item);
+  const blocked = !!cls && !wearableBy(item.id, cls);
+  const pct = (v: number) => `${v > 0 ? "+" : ""}${v}%`;
   const r = RARITY[it.rarity];
   const W = 240;
   const left = x + 18 + W > window.innerWidth ? x - 18 - W : x + 18;
@@ -80,10 +88,21 @@ export const ItemTooltip: React.FC<{ item: ItemInst; hint?: string; x: number; y
         {item.qty ? ` × ${item.qty}` : ""}
       </div>
       <div style={{ fontSize: 11, color: "#9a917f", marginTop: 1 }}>
-        {r.label} · {it.kind}
+        {r.label} · {it.armorType ? `${ARMOR_TYPE[it.armorType].label} · ` : ""}
+        {it.kind}
       </div>
+      {it.armorType ? <div style={{ fontSize: 11, color: blocked ? "#ff7a6a" : "#7f7766", marginTop: 2 }}>{blocked ? `Your class can't wear ${ARMOR_TYPE[it.armorType].label.toLowerCase()}` : `Worn by: ${whoWears(it.armorType)}`}</div> : null}
       <div style={{ height: 1, background: "rgba(214,186,128,0.18)", margin: "8px 0 4px" }} />
       {it.armor ? line("Armor rating", `+${it.armor}`) : null}
+      {it.magicResist ? line("Magic resistance", `+${it.magicResist}`) : null}
+      {it.headshot ? line("Headshot reduction", `${it.headshot}%`) : null}
+      {it.projectile ? line("Projectile reduction", `${it.projectile}%`) : null}
+      {it.move ? line("Move speed", pct(it.move)) : null}
+      {it.maxHealth ? line("Max health", `+${it.maxHealth}`) : null}
+      {it.headshotDamage ? line("Headshot damage", `+${it.headshotDamage}%`) : null}
+      {(Object.keys(it.attr ?? {}) as AttributeId[]).map((k) => (
+        <React.Fragment key={k}>{line(ATTRIBUTE_INFO[k].name, `+${it.attr?.[k]}`)}</React.Fragment>
+      ))}
       {it.damage ? line("Weapon damage", String(it.damage)) : null}
       {it.block ? line("Block", `${it.block}%`) : null}
       {it.heal ? line("Restores", `${it.heal} health`) : null}
@@ -271,7 +290,7 @@ export const DragGhost: React.FC<{ drag: DragState | null; icons: Icons }> = ({ 
 };
 
 /** A grid of items: drop target `grid:<id>`, with a landing preview while something is dragged over it. */
-export const GridView: React.FC<{ id: string; grid: Grid; cell: number; icons: Icons; dnd: ItemDrag; dim?: (item: ItemInst) => boolean }> = ({ id, grid, cell, icons, dnd, dim }) => {
+export const GridView: React.FC<{ id: string; grid: Grid; cell: number; icons: Icons; dnd: ItemDrag; dim?: (item: ItemInst) => boolean; cls?: ClassId }> = ({ id, grid, cell, icons, dnd, dim, cls }) => {
   const pad = 1;
   const drag = dnd.drag;
   const over = drag ? dropTargetAt(drag) : null;
@@ -301,6 +320,8 @@ export const GridView: React.FC<{ id: string; grid: Grid; cell: number; icons: I
         const it = itemOf(p.item);
         const col = RARITY[it.rarity].color;
         const faded = dim ? dim(p.item) : false;
+        // Armour his class can't wear: tinted red, so it reads at a glance.
+        const blocked = !!cls && !wearableBy(p.item.id, cls);
         return (
           <div
             key={p.item.uid}
@@ -312,8 +333,8 @@ export const GridView: React.FC<{ id: string; grid: Grid; cell: number; icons: I
               width: it.w * cell - 2,
               height: it.h * cell - 2,
               boxSizing: "border-box",
-              background: `linear-gradient(180deg, ${col}1e, rgba(20,18,16,0.92))`,
-              border: `1px solid ${col}55`,
+              background: blocked ? "linear-gradient(180deg, rgba(200,50,40,0.28), rgba(40,12,10,0.92))" : `linear-gradient(180deg, ${col}1e, rgba(20,18,16,0.92))`,
+              border: blocked ? "1px solid rgba(230,80,60,0.6)" : `1px solid ${col}55`,
               borderRadius: 2,
               display: "flex",
               alignItems: "center",

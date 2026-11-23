@@ -52,15 +52,15 @@ export type ArmorEquipment = Record<ArmorSlot, boolean>;
 
 /**
  * What a worn piece is made of: the plate it was built as, or hardened leather on the same shape
- * (the ranger's jerkin, bracers, gloves and boots). On the cape and tabard, leather means a plain
+ * (the ranger's jerkin, gloves and boots). On the cape and tabard, leather means a plain
  * forest-green cloak instead of the order's colours. Cloth (the wizard's) dyes the doublet, cape and
- * tabard a scholar's blue: a robe, a night mantle and a surcoat. Shadow (the rogue's) is leather
- * blackened, with a charcoal cloak.
+ * tabard a scholar's blue (a robe, a night mantle and a surcoat) and turns plate shapes into dark
+ * wool (padded leggings, gloves, shoes).
  */
-export type Finish = "plate" | "leather" | "cloth" | "shadow";
+export type Finish = "plate" | "leather" | "cloth";
 export type Finishes = Partial<Record<ArmorSlot, Finish>>;
 /** A key for "what he wears": the pieces on and what each is made of. */
-export const wearKey = (e: ArmorEquipment, f?: Finishes): string => ARMOR_SLOTS.map((s) => (e[s] ? (f?.[s] === "leather" ? 2 : f?.[s] === "cloth" ? 3 : f?.[s] === "shadow" ? 4 : 1) : 0)).join("");
+export const wearKey = (e: ArmorEquipment, f?: Finishes): string => ARMOR_SLOTS.map((s) => (e[s] ? (f?.[s] === "leather" ? 2 : f?.[s] === "cloth" ? 3 : 1) : 0)).join("");
 
 /**
  * Workwear, separate from the armour (the game's inventory only knows the armour): a miner's
@@ -158,6 +158,8 @@ export interface Paladin {
    * `renderer`; the paladin is back as it was afterwards.
    */
   renderIcons: (renderer: THREE.WebGLRenderer, size?: number) => Partial<Record<ArmorSlot, string>>;
+  /** One picture per key of `groups`, each showing all of its pieces together (an item worn as several). */
+  renderGroupIcons: (renderer: THREE.WebGLRenderer, groups: Record<string, ArmorSlot[]>, size?: number) => Record<string, string>;
   dispose: () => void;
 }
 
@@ -332,16 +334,25 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
   const surcoat = materials.tabard.clone();
   surcoat.map = null;
   surcoat.color.setHex(0x2b3f8a);
-  const clothOf = (m: THREE.Material): THREE.Material =>
-    m === materials.human.quiltFit ? robe : m === materials.cape ? mantle : m === materials.tabard ? surcoat : m;
-  const shade = hide.clone();
-  shade.color.setHex(0x161618);
-  const shadeDark = hide.clone();
-  shadeDark.color.setHex(0x0a0a0b);
-  const charcoal = materials.cape.clone();
-  charcoal.map = null;
-  charcoal.color.setHex(0x141519);
+  // Plate shapes in cloth: dark wool, the trim a shade darker.
+  const wool = hide.clone();
+  wool.color.setHex(0x2a3150);
+  wool.roughness = 0.92;
+  const woolDark = wool.clone();
+  woolDark.color.setHex(0x161a2c);
   const steelFit = materials.human.steelFit;
+  const clothOf = (m: THREE.Material): THREE.Material =>
+    m === materials.human.quiltFit
+      ? robe
+      : m === materials.cape
+        ? mantle
+        : m === materials.tabard
+          ? surcoat
+          : m === materials.skinned.steel || m === materials.skinned.mail || m === steelFit
+            ? wool
+            : m === materials.skinned.gold || m === materials.skinned.dark
+              ? woolDark
+              : m;
   const leatherOf = (m: THREE.Material): THREE.Material =>
     m === materials.skinned.steel || m === materials.skinned.mail || m === steelFit
       ? hide
@@ -349,14 +360,6 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
         ? hideDark
         : m === materials.cape || m === materials.tabard
           ? forest
-          : m;
-  const shadowOf = (m: THREE.Material): THREE.Material =>
-    m === materials.skinned.steel || m === materials.skinned.mail || m === steelFit
-      ? shade
-      : m === materials.skinned.gold || m === materials.skinned.dark
-        ? shadeDark
-        : m === materials.cape || m === materials.tabard
-          ? charcoal
           : m;
   const finishObjects = (slot: ArmorSlot): THREE.Object3D[] =>
     slot === "cape" ? [cape.mesh] : slot === "tabard" ? [tabard.mesh] : slot === "sword" || slot === "shield" ? [] : model.meshes[slot] ?? [];
@@ -366,7 +369,7 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
       const mesh = o as THREE.Mesh;
       if (!mesh.material || Array.isArray(mesh.material)) continue;
       const plate = (mesh.userData.plateMat as THREE.Material | undefined) ?? (mesh.userData.plateMat = mesh.material);
-      mesh.material = f === "leather" ? leatherOf(plate) : f === "cloth" ? clothOf(plate) : f === "shadow" ? shadowOf(plate) : plate;
+      mesh.material = f === "leather" ? leatherOf(plate) : f === "cloth" ? clothOf(plate) : plate;
     }
   };
   const workwear: Workwear = { ...NO_WORKWEAR };
@@ -537,6 +540,17 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
       for (const s of SLOTS) everything.push(...model.meshes[s]);
       return renderPieceIcons(renderer, group, ARMOR_SLOTS.slice(), objects, everything, size, syncEquipment);
     },
+    renderGroupIcons(renderer: THREE.WebGLRenderer, groups: Record<string, ArmorSlot[]>, size = 112) {
+      const objects = (slot: ArmorSlot): THREE.Object3D[] =>
+        slot === "cape" ? [cape.mesh] : slot === "tabard" ? [tabard.mesh] : slot === "sword" ? [model.sword] : slot === "shield" ? [model.shield] : model.meshes[slot];
+      const everything: THREE.Object3D[] = [cape.mesh, tabard.mesh, model.sword, model.shield];
+      for (const s of SLOTS) everything.push(...model.meshes[s]);
+      const keys = Object.keys(groups);
+      const out = renderPieceIcons(renderer, group, keys, (k) => ([] as THREE.Object3D[]).concat(...groups[k].map(objects)), everything, size, syncEquipment);
+      const done: Record<string, string> = {};
+      for (const k of keys) if (out[k]) done[k] = out[k] as string;
+      return done;
+    },
     dispose() {
       for (const slot of SLOTS) {
         for (const m of model.meshes[slot]) m.geometry.dispose();
@@ -555,6 +569,8 @@ export async function createPaladin(renderer: THREE.WebGLRenderer, options: Pala
       hide.dispose();
       hideDark.dispose();
       forest.dispose();
+      wool.dispose();
+      woolDark.dispose();
     },
   };
 }

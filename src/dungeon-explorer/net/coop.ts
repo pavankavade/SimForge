@@ -44,6 +44,8 @@ export interface ShotIn {
   vy: number;
   vz: number;
   dmg: number;
+  /** What a headshot multiplies it by (the shooter's headshot damage). */
+  hb?: number;
 }
 export interface HurtIn {
   mob: number;
@@ -52,6 +54,8 @@ export interface HurtIn {
   fz: number;
   bl: boolean;
   how: "blade" | "lunge" | "arrow" | "bolt" | "acid";
+  /** It struck the head. */
+  hd?: boolean;
 }
 export interface DoorIn {
   i: number;
@@ -274,7 +278,7 @@ export function createCoop(run: RunView) {
         const r = sim.hit(h.id, h.dx, h.dz, h.dmg);
         if (m && r) onStruck(m, r);
       }
-      for (const s of shots.splice(0)) sim.shoot(s.x, s.y, s.z, s.vx, s.vy, s.vz, s.dmg);
+      for (const s of shots.splice(0)) sim.shoot(s.x, s.y, s.z, s.vx, s.vy, s.vz, s.dmg, typeof s.hb === "number" ? Math.max(1, Math.min(3, s.hb)) : undefined);
       for (const q of snares.splice(0)) sim.setSnare(q.x, q.y, q.z);
       snaps.length = 0;
       snapT += dt;

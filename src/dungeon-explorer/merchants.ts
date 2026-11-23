@@ -1,9 +1,9 @@
-// The merchants of the market street and what they deal in. The armourer and the weaponsmith sell
-// the fighter's own kit, the cleric's mace, the rogue's dagger and the ranger's and rogue's leathers (a new piece each time), the
-// woodsmith bows and arrows, the alchemist draughts, bandages and food for the belt, the arcanist the
-// wizard's staff and cloth. For now every one of them buys whatever he brings up from the dungeon.
-import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
-import { CLOTH_IDS, LEATHER_IDS, SHADOW_IDS, def, itemOf, type ItemInst } from "./items";
+// The merchants of the market street and what they deal in. The armourer sells plate and leather,
+// the weaponsmith the sword, shield, the cleric's mace and the rogue's dagger (a new piece each time),
+// the woodsmith bows and arrows, the alchemist draughts, bandages and food for the belt, the arcanist
+// the wizard's staff, cloth and the jewellery. For now every one of them buys whatever he brings up
+// from the dungeon.
+import { JEWEL_IDS, armorOfType, def, itemOf, type ItemInst } from "./items";
 
 export type MerchantId = "armourer" | "weaponsmith" | "alchemist" | "mage" | "woodsmith";
 
@@ -24,8 +24,6 @@ export interface Merchant {
   empty: string;
 }
 
-const ARMOUR: ArmorSlot[] = ARMOR_SLOTS.filter((s) => s !== "sword" && s !== "shield");
-
 /** Stall order: the two with stock first, so a cramped hall still has them. */
 export const MERCHANTS: Merchant[] = [
   {
@@ -35,7 +33,7 @@ export const MERCHANTS: Merchant[] = [
     shop: "Holt's Plate & Mail",
     cloth: 0x6b1f1a,
     trim: 0xd9b25a,
-    stock: (ARMOUR as string[]).concat(LEATHER_IDS.map(([id]) => id)).concat(SHADOW_IDS.map(([id]) => id)),
+    stock: armorOfType("plate").concat(armorOfType("leather")),
     greeting: "Plate, mail and padding, all fitted to a man your size.",
     empty: "",
   },
@@ -68,8 +66,8 @@ export const MERCHANTS: Merchant[] = [
     shop: "Wards & Wonders",
     cloth: 0x3a2a66,
     trim: 0x9ad0ff,
-    stock: ["oak_staff"].concat(CLOTH_IDS.map(([id]) => id)),
-    greeting: "Ah. A customer who can feel the ley lines. Staves, robes, and nothing that explodes on the shelf.",
+    stock: ["oak_staff"].concat(armorOfType("cloth"), JEWEL_IDS),
+    greeting: "Ah. A customer who can feel the ley lines. Staves, robes, rings, and nothing that explodes on the shelf.",
     empty: "Nothing I could sell you would survive the trip down. Not yet.",
   },
   {

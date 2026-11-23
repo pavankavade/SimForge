@@ -1,6 +1,6 @@
 // What the paladin keeps in town between dives: which rooms upstairs he rents, and what is in the
 // three chests in each. Saved in the browser like his inventory; the dungeon never touches it.
-import { emptyGrid, type Grid } from "../items";
+import { emptyGrid, migrateGrid, type Grid } from "../items";
 import { CHESTS_PER_ROOM, ROOMS } from "./layout";
 
 export const STASH_W = 10;
@@ -25,7 +25,8 @@ export function loadTown(): TownSave {
       out.rented[r] = !!s.rented?.[r];
       for (let c = 0; c < CHESTS_PER_ROOM; c++) {
         const g = s.stash?.[r]?.[c];
-        if (g && Array.isArray(g.items)) out.stash[r][c] = { w: STASH_W, h: STASH_H, items: g.items };
+        // Pieces from before the six armour slots are renamed (the ones now folded into a whole armour go).
+        if (g && Array.isArray(g.items)) out.stash[r][c] = migrateGrid({ w: STASH_W, h: STASH_H, items: g.items }).grid;
       }
     });
   } catch {

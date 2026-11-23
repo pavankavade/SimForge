@@ -30,8 +30,8 @@ import { rollChest, rollMobLoot, type Container } from "./loot";
 import { LootScreen } from "./LootScreen";
 import { renderGearIcons } from "./gearIcons";
 import { STAFF_TIP_Z, dressGear, gearKey, heldBy, paladinGearKey } from "./mace";
-import { BELT_SLOTS, addArrows, arrowCount, equipFromBag, grantClassKit, heldOf, loadBow, shootLoaded, loadInventory, normalizeInventory, saveInventory, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
-import { addItem, def, emptyGrid, newItem, removeItem, type Grid, type ItemInst } from "./items";
+import { BELT_SLOTS, addArrows, arrowCount, equipFromBag, fitClass, grantClassKit, heldOf, loadBow, shootLoaded, loadInventory, normalizeInventory, saveInventory, spendBelt, unequipToBag, wornOf, type PlayerInv } from "./playerInv";
+import { addItem, def, emptyGrid, migrateGrid, newItem, removeItem, wearableBy, type GearSlot, type Grid, type ItemInst } from "./items";
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
 import { ShopScreen } from "./ShopScreen";
@@ -42,7 +42,7 @@ import { createCoop, type Coop } from "./net/coop";
 import { ChatBox, InviteCards, JoinRunCard, PartyScreen, SpectateBar } from "./Social";
 import { QuestScreen } from "./QuestScreen";
 import { abandon as abandonQuest, accept as acceptQuest, loadQuests, record as recordQuest, saveQuests, turnIn as turnInQuest, type QuestEvent, type QuestState } from "./quests";
-import { computeStats, type Stats } from "./stats";
+import { HEADSHOT_BONUS, computeStats, headshotMultiplier, type Stats } from "./stats";
 import { ABILITY_KEYS, hasWheel, loadLoadout, saveLoadout, skillById, type AbilitySlots, type Loadout, type SkillId } from "./skills";
 import { createHolyFx, type BoltView, type BurstKind, type HolyFx } from "./holyFx";
 import { SpellBar, SpellButtons, SpellWheel, wheelSlice, type SpellHud } from "./spellHud";
@@ -80,7 +80,6 @@ import {
   createPaladinSfx,
   setClothRate,
   type ArmorEquipment,
-  type ArmorSlot,
   type CombatTarget,
   type CombatWorld,
   type HumanSpec,
@@ -1009,7 +1008,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
 
   // The monsters' bodies: pools built once (see mobBodies.ts), lent to the nearest on every floor.
   // A blow reaches the fighter: a skeleton's sword, a slime's lunge, an arrow, a bolt, or acid.
-  const hurtPlayerRef = useRef<(m: MobAgent, hit: { damage: number; fromX: number; fromZ: number; blockable: boolean; how: string; bounce?: () => void }) => void>(() => {});
+  const hurtPlayerRef = useRef<(m: MobAgent, hit: { damage: number; fromX: number; fromZ: number; blockable: boolean; how: string; head?: boolean; bounce?: () => void }) => void>(() => {});
   hurtPlayerRef.current = (m, hit) => {
     const w = worldRef.current;
     const pal = paladinRef.current;
@@ -1029,11 +1028,19 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (pal) pal.shake.value = Math.min(1, pal.shake.value + 0.25);
       return;
     }
-    // Acid eats through boots and plate alike; a bolt is magic (magic resistance takes some off);
-    // everything else is softened by armour.
+    // Acid eats through boots and plate alike; a bolt is magic (magical damage reduction takes some
+    // off); everything else is softened by physical damage reduction. Arrows and bolts lose their
+    // projectile reduction on top, and one in the head does half again, less his helm's headshot
+    // reduction.
     const st = statsRef.current;
     const armour = hit.how === "acid" ? 0 : hit.how === "bolt" ? st.magicalReduction : st.physicalReduction;
-    let dmg = hit.damage * (hit.how === "acid" ? 1 : 0.9 + w.rand() * 0.2) * (1 - armour);
+    const missile = hit.how === "arrow" || hit.how === "bolt";
+    let dmg =
+      hit.damage *
+      (hit.how === "acid" ? 1 : 0.9 + w.rand() * 0.2) *
+      (1 - armour) *
+      (missile ? 1 - st.projectileReduction : 1) *
+      (hit.head ? headshotMultiplier(st.headshotReduction) : 1);
     // Protection's ward of light takes what it can; a blow also ends a rest, and hiding.
     const sp = spellRef.current;
     sp.rest.on = false;
@@ -2229,7 +2236,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         );
         // Blows on the others are theirs to take (their shields and armour count in their games).
         for (const e of sim.events) {
-          if (e.type === "hit" && e.who > 0) coop?.sendHurt(ids[e.who - 1], { mob: e.mob.id, dmg: e.damage, fx: e.fromX, fz: e.fromZ, bl: e.blockable, how: e.how });
+          if (e.type === "hit" && e.who > 0) coop?.sendHurt(ids[e.who - 1], { mob: e.mob.id, dmg: e.damage, fx: e.fromX, fz: e.fromZ, bl: e.blockable, how: e.how, hd: e.head });
         }
         handleMobEvents(coop ? sim.events.filter((e) => e.type !== "hit" || e.who === 0) : sim.events, px, pz);
       }
@@ -2252,7 +2259,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     if (coop) {
       for (const h of coop.takeHurts()) {
         const m = sim.mobs.find((o) => o.id === h.mob) ?? sim.mobs[0];
-        if (m) hurtPlayerRef.current(m, { damage: h.dmg, fromX: h.fx, fromZ: h.fz, blockable: h.bl, how: h.how });
+        if (m) hurtPlayerRef.current(m, { damage: h.dmg, fromX: h.fx, fromZ: h.fz, blockable: h.bl, how: h.how, head: !!h.hd });
       }
     }
     dropToGround(world.walker.yaw + Math.PI, px, world.playerFloor * CELL_M, pz);
@@ -2925,10 +2932,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             vy: (dy / dist) * sp,
             vz: (dz / dist) * sp,
             dmg: bow.damage * (0.35 + 0.65 * power) * (spellRef.current.bless > 0 ? 1 + SPELL.blessDamage : 1),
+            // A headshot: half again, plus his headshot damage.
+            hb: 1 + HEADSHOT_BONUS + statsRef.current.headshotDamage,
           };
           // In a party the arrow flies on the authority's floor (and comes back in its snapshots).
           if (coop && !coop.leads()) coop.sendShot(shot);
-          else sim.shoot(shot.x, shot.y, shot.z, shot.vx, shot.vy, shot.vz, shot.dmg);
+          else sim.shoot(shot.x, shot.y, shot.z, shot.vx, shot.vy, shot.vz, shot.dmg, shot.hb);
           monsterSfxRef.current?.twang();
           bow.onShot();
           // A shot gives a hidden rogue away.
@@ -3675,16 +3684,20 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   // His class (only the fighter is playable for now), picked on the class screen the game opens on.
   const [heroClass, setHeroClass] = useState<ClassId>(() => (profile.cls && classById(profile.cls).available ? profile.cls : "fighter"));
   const className = classById(heroClass).name;
+  const heroClassRef = useRef(heroClass);
+  heroClassRef.current = heroClass;
   // What he carries: gold, the pieces he wears and the bag (playerInv.ts); the body shows what is worn.
   // A run that was lost while he was away (the dungeon closed, or he had fallen) puts him back to
   // what he carried in, as a death would.
-  const [inv, setInv] = useState<PlayerInv>(() => (startRun?.kind === "lost" ? startRun.runStart : loadInventory(initialEquipment())));
+  const [inv, setInv] = useState<PlayerInv>(() => (startRun?.kind === "lost" ? normalizeInventory(startRun.runStart) : loadInventory(initialEquipment())));
   useEffect(() => saveInventory(inv), [inv]);
+  // Nothing on him his class can't wear (plate comes off a rogue or a wizard, into the bag).
+  useEffect(() => setInv((v) => fitClass(v, heroClass)), [heroClass]);
   // What he carried when this floor's run began: dying (or abandoning the floor) puts him back to
   // it, so only what he escapes with through a portal is kept.
   const invRef = useRef(inv);
   invRef.current = inv;
-  const runStartRef = useRef<PlayerInv>(resumeRun?.runStart ?? inv);
+  const runStartRef = useRef<PlayerInv>(resumeRun?.runStart ? normalizeInventory(resumeRun.runStart) : inv);
   const escapeQueueRef = useRef(false);
   // The controls hint goes a few seconds after the mouse is captured (and comes back when freed).
   const [hintHidden, setHintHidden] = useState(false);
@@ -3776,7 +3789,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         profile.name = c.name || profile.name;
         saveProfile(profile);
         setInv(normalizeInventory(c.inventory));
-        setTownSave((t) => ({ rented: t.rented.map((_, i) => !!c.town.rented?.[i]), stash: t.stash.map((row, r) => row.map((g, k) => c.town.stash?.[r]?.[k] ?? g)) }));
+        setTownSave((t) => ({ rented: t.rented.map((_, i) => !!c.town.rented?.[i]), stash: t.stash.map((row, r) => row.map((g, k) => (c.town.stash?.[r]?.[k] ? migrateGrid(c.town.stash[r][k]).grid : g))) }));
         setSpec((sp) => ({ ...sp, name: profile.name }));
         if (c.cls && classById(c.cls).available) setHeroClass(c.cls);
       }
@@ -4442,12 +4455,12 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         setChatOpen(true);
         return;
       }
-      // H lifts the helm off, so the face under it shows in third person.
+      // H takes the headgear off, so the face under it shows in third person (and puts it back on).
       if (e.code === "KeyH") {
         setInv((v) => {
-          if (v.equipped.helm) return unequipToBag(v, "helm") ?? v;
-          const h = v.bag.items.find((q) => q.item.id === "helm");
-          return h ? (equipFromBag(v, h.item.uid) ?? v) : v;
+          if (v.equipped.head) return unequipToBag(v, "head") ?? v;
+          const h = v.bag.items.find((q) => def(q.item.id).slot === "head" && wearableBy(q.item.id, heroClassRef.current));
+          return h ? (equipFromBag(v, h.item.uid, "head", heroClassRef.current) ?? v) : v;
         });
       }
       if (e.code === "KeyV") setFirstPerson((v) => !v);
@@ -4508,14 +4521,14 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     const had = new Set<string>();
     for (const q of start.bag.items) had.add(q.item.uid);
     for (const b of start.belt || []) if (b) had.add(b.uid);
-    for (const k of Object.keys(start.equipped) as ArmorSlot[]) {
+    for (const k of Object.keys(start.equipped) as GearSlot[]) {
       const it = start.equipped[k];
       if (it) had.add(it.uid);
     }
     let items = 0;
     for (const q of inv.bag.items) if (!had.has(q.item.uid)) items++;
     for (const b of inv.belt || []) if (b && !had.has(b.uid)) items++;
-    for (const k of Object.keys(inv.equipped) as ArmorSlot[]) {
+    for (const k of Object.keys(inv.equipped) as GearSlot[]) {
       const it = inv.equipped[k];
       if (it && !had.has(it.uid)) items++;
     }
@@ -4775,6 +4788,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             <InventoryScreen
               name={spec.name}
               heroClass={className}
+              cls={heroClass}
               stats={stats}
               base={classById(heroClass).attributes}
               inv={inv}
@@ -4863,7 +4877,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onPick={(id) => {
             setHeroClass(id);
             // A class played for the first time brings its own kit (the ranger's bow and arrows).
-            setInv((v) => grantClassKit(v, id));
+            setInv((v) => fitClass(grantClassKit(v, id), id));
             profile.cls = id;
             saveProfile(profile);
             // From the class screen to the lobby's table (or straight back to the game, if he was in it).
@@ -4880,6 +4894,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         <InventoryScreen
           name={spec.name}
           heroClass={className}
+          cls={heroClass}
           stats={stats}
           base={classById(heroClass).attributes}
           inv={inv}

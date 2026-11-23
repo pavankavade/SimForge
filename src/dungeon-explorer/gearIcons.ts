@@ -1,32 +1,28 @@
-// Inventory pictures of the armour, drawn from his own body: every plate piece, then the same shapes
-// in leather for the leathers, in cloth for the wizard's cloth and in shadow for the rogue's
-// (items.ts LEATHER_IDS, CLOTH_IDS, SHADOW_IDS).
-// He is put back as he was afterwards.
+// Inventory pictures of the armour, drawn from his own body: every armour item is the rig pieces it
+// shows (items.ts `shows`), together, in its finish (plate, leather or cloth). The kit's sword and
+// shield are rendered too. Items that show nothing on him (hoods, hats, jewellery) are drawn
+// instead (icons.ts). He is put back as he was afterwards.
 import type * as THREE from "three";
 import type { ArmorSlot, Finish, Paladin } from "../artifacts/characters/paladin";
-import { CLOTH_IDS, LEATHER_IDS, SHADOW_IDS } from "./items";
+import { ARMOR_IDS, def } from "./items";
 
 export function renderGearIcons(p: Paladin, gl: THREE.WebGLRenderer, size = 112): Record<string, string> {
   const before = { ...p.finish };
-  const sets: Array<[Finish, Array<[string, ArmorSlot]>]> = [
-    ["leather", LEATHER_IDS],
-    ["cloth", CLOTH_IDS],
-    ["shadow", SHADOW_IDS],
-  ];
-  const slots = LEATHER_IDS.concat(CLOTH_IDS, SHADOW_IDS).map(([, s]) => s);
-  for (const s of slots) p.setFinish(s, "plate");
   const out: Record<string, string> = {};
-  const plate = p.renderIcons(gl, size);
-  for (const k of Object.keys(plate)) out[k] = plate[k as keyof typeof plate] as string;
-  for (const [finish, ids] of sets) {
-    for (const [, slot] of ids) p.setFinish(slot, finish);
-    const pics = p.renderIcons(gl, size);
-    for (const [id, slot] of ids) {
-      const url = pics[slot];
-      if (url) out[id] = url;
+  const finishes: Finish[] = ["plate", "leather", "cloth"];
+  const all = ARMOR_IDS.filter((id) => (def(id).shows ?? []).length);
+  for (const finish of finishes) {
+    const groups: Record<string, ArmorSlot[]> = {};
+    for (const id of all) if ((def(id).finish ?? "plate") === finish) groups[id] = def(id).shows as ArmorSlot[];
+    if (finish === "plate") {
+      groups.sword = ["sword"];
+      groups.shield = ["shield"];
     }
-    for (const s of slots) p.setFinish(s, "plate");
+    const pieces = Object.keys(groups).reduce<ArmorSlot[]>((a, k) => a.concat(groups[k]), []);
+    for (const s of pieces) p.setFinish(s, finish);
+    const pics = p.renderGroupIcons(gl, groups, size);
+    for (const k of Object.keys(pics)) out[k] = pics[k];
   }
-  for (const s of slots) p.setFinish(s, before[s] ?? "plate");
+  for (const s of Object.keys(p.finish) as ArmorSlot[]) p.setFinish(s, before[s] ?? "plate");
   return out;
 }

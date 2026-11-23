@@ -2,8 +2,7 @@
 // draught, a piece of the fighter's kit or a trophy weapon; deeper rooms and treasuries roll richer,
 // and every weapon in one rolls its own rarity. A fallen monster leaves its mana crystal and two or
 // three things from its kind's table (monsters/kinds.ts).
-import { ARMOR_SLOTS, type ArmorSlot } from "../artifacts/characters/paladin";
-import { addItem, emptyGrid, newItem, rollsRarity, type Grid, type Rarity } from "./items";
+import { ARMOR_IDS, JEWEL_IDS, addItem, emptyGrid, newItem, rollsRarity, type Grid, type Rarity } from "./items";
 import type { MobAgent } from "./mobSim";
 import { rollDrops, rollWeaponRarity } from "./monsters/kinds";
 import { rollMods } from "./stats";
@@ -39,7 +38,6 @@ const VALUABLES: Array<[string, number]> = [
   ["bust", 0.6],
 ];
 const TROPHIES = ["saber", "mace", "warhammer", "estoc"];
-const WEARABLE: ArmorSlot[] = ARMOR_SLOTS.filter((s) => s !== "sword" && s !== "shield");
 
 function weighted<T>(rand: () => number, list: Array<[T, number]>, bias = 0): T {
   // Bias > 0 tilts toward the end of the list (the rarer things).
@@ -76,7 +74,8 @@ export function rollChest(rand: () => number, tier: number): Grid {
   if (rand() < 0.4) g = put(g, "potion");
   if (rand() < 0.3) g = put(g, "apple");
   if (rand() < 0.3) g = put(g, "bandage");
-  if (rand() < 0.16 + tier * 0.1) g = putWeapon(g, rand, WEARABLE[Math.floor(rand() * WEARABLE.length)], tier);
+  if (rand() < 0.16 + tier * 0.1) g = putWeapon(g, rand, ARMOR_IDS[Math.floor(rand() * ARMOR_IDS.length)], tier);
+  if (rand() < 0.06 + tier * 0.06) g = putWeapon(g, rand, JEWEL_IDS[Math.floor(rand() * JEWEL_IDS.length)], tier);
   if (rand() < 0.1 + tier * 0.07) g = putWeapon(g, rand, TROPHIES[Math.floor(rand() * TROPHIES.length)], tier);
   if (rand() < 0.04 + tier * 0.04) g = putWeapon(g, rand, rand() < 0.6 ? "sword" : "shield", tier);
   return g;

@@ -72,7 +72,7 @@ const PERKS: Partial<Record<ClassId, Perk[]>> = {
     { id: "ranged_mastery", name: "Ranged Weapons Expert", note: "+12% damage with bows." },
     { id: "nimble_fingers", name: "Nimble Fingers", note: "Reload 35% faster." },
     { id: "steady_aim", name: "Steady Aim", note: "Draw the bow 25% faster." },
-    { id: "light_step", name: "Light Step", note: "+6% move speed while you wear no plate or mail." },
+    { id: "light_step", name: "Light Step", note: "+6% move speed while you wear no plate." },
   ],
   cleric: [
     { id: "advanced_healer", name: "Advanced Healer", note: "Healing spells heal 25% more." },

@@ -3,7 +3,7 @@
 // levels; a character grows by what he wears. The magic stats (Will, Knowledge) are already here,
 // so spells only need to read them: magical power, magic resistance, casting speed and memory.
 // The curves are our own numbers (AGENTS.md §16).
-import { WEAR_SLOTS, def, handOf, itemOf, rarityRank, type GearSlot, type ItemInst, type Rarity } from "./items";
+import { WORN_SLOTS, def, handOf, itemOf, rarityRank, type GearSlot, type ItemInst, type Rarity } from "./items";
 
 export const ATTRIBUTES = ["str", "vig", "agi", "dex", "wil", "kno", "res"] as const;
 export type AttributeId = (typeof ATTRIBUTES)[number];
@@ -48,27 +48,57 @@ const COOLDOWN = curve([[0, -0.2], [15, 0], [35, 0.15], [60, 0.3], [100, 0.5]]);
 
 /** Damage left after a reduction rating (armour or magic resistance): the same curve everywhere. */
 export const reductionOf = (rating: number): number => Math.max(-0.5, Math.min(0.85, rating / (Math.abs(rating) + 250)));
+/**
+ * The most any damage reduction reaches (physical, magical, projectile), Dark and Darker style:
+ * the rating's curve plus flat "% damage reduction" from gear, never past this.
+ */
+export const REDUCTION_CAP = 0.65;
+/** A headshot does half again; a helmet's headshot reduction takes points off that half. */
+export const HEADSHOT_BONUS = 0.5;
+/** A blow landing on the head: the multiplier after his headshot reduction (never below 1). */
+export const headshotMultiplier = (reduction: number): number => 1 + Math.max(0, HEADSHOT_BONUS - reduction);
 
 // ---- Gear modifiers --------------------------------------------------------------------------
 
-export type ModId = AttributeId | "physicalPower" | "magicalPower" | "weaponDamage" | "maxHealth" | "armorRating" | "magicResist" | "moveSpeed" | "actionSpeed";
+export type ModId =
+  | AttributeId
+  | "physicalPower"
+  | "magicalPower"
+  | "weaponDamage"
+  | "maxHealth"
+  | "armorRating"
+  | "magicResist"
+  | "moveSpeed"
+  | "actionSpeed"
+  | "physicalReduction"
+  | "magicalReduction"
+  | "projectileReduction"
+  | "headshotReduction"
+  | "headshotDamage";
 
-export const MOD_INFO: Record<ModId, { label: string; pct?: boolean; range: [number, number]; on: Array<"weapon" | "armor"> }> = {
-  str: { label: "Strength", range: [1, 3], on: ["weapon", "armor"] },
-  vig: { label: "Vigor", range: [1, 3], on: ["weapon", "armor"] },
-  agi: { label: "Agility", range: [1, 3], on: ["weapon", "armor"] },
-  dex: { label: "Dexterity", range: [1, 3], on: ["weapon", "armor"] },
-  wil: { label: "Will", range: [1, 3], on: ["weapon", "armor"] },
-  kno: { label: "Knowledge", range: [1, 3], on: ["weapon", "armor"] },
-  res: { label: "Resourcefulness", range: [1, 3], on: ["weapon", "armor"] },
-  physicalPower: { label: "Physical Power", range: [2, 5], on: ["weapon", "armor"] },
-  magicalPower: { label: "Magical Power", range: [2, 5], on: ["weapon", "armor"] },
+/** What gear a modifier rolls on: weapons, armour (`head`: helmets only) and jewellery. */
+type ModOn = "weapon" | "armor" | "head" | "jewelry";
+export const MOD_INFO: Record<ModId, { label: string; pct?: boolean; range: [number, number]; on: ModOn[] }> = {
+  str: { label: "Strength", range: [1, 3], on: ["weapon", "armor", "jewelry"] },
+  vig: { label: "Vigor", range: [1, 3], on: ["weapon", "armor", "jewelry"] },
+  agi: { label: "Agility", range: [1, 3], on: ["weapon", "armor", "jewelry"] },
+  dex: { label: "Dexterity", range: [1, 3], on: ["weapon", "armor", "jewelry"] },
+  wil: { label: "Will", range: [1, 3], on: ["weapon", "armor", "jewelry"] },
+  kno: { label: "Knowledge", range: [1, 3], on: ["weapon", "armor", "jewelry"] },
+  res: { label: "Resourcefulness", range: [1, 3], on: ["weapon", "armor", "jewelry"] },
+  physicalPower: { label: "Physical Power", range: [2, 5], on: ["weapon", "armor", "jewelry"] },
+  magicalPower: { label: "Magical Power", range: [2, 5], on: ["weapon", "armor", "jewelry"] },
   weaponDamage: { label: "Weapon Damage", range: [1, 4], on: ["weapon"] },
-  maxHealth: { label: "Max Health", range: [3, 10], on: ["armor"] },
+  maxHealth: { label: "Max Health", range: [3, 10], on: ["armor", "jewelry"] },
   armorRating: { label: "Armor Rating", range: [5, 18], on: ["armor"] },
-  magicResist: { label: "Magic Resistance", range: [5, 18], on: ["armor", "weapon"] },
+  magicResist: { label: "Magic Resistance", range: [5, 18], on: ["armor", "weapon", "jewelry"] },
   moveSpeed: { label: "Move Speed", pct: true, range: [1, 4], on: ["armor"] },
-  actionSpeed: { label: "Action Speed", pct: true, range: [1, 4], on: ["weapon", "armor"] },
+  actionSpeed: { label: "Action Speed", pct: true, range: [1, 4], on: ["weapon", "armor", "jewelry"] },
+  physicalReduction: { label: "Physical Damage Reduction", pct: true, range: [1, 3], on: ["armor", "jewelry"] },
+  magicalReduction: { label: "Magical Damage Reduction", pct: true, range: [1, 3], on: ["armor", "jewelry"] },
+  projectileReduction: { label: "Projectile Damage Reduction", pct: true, range: [1, 4], on: ["armor", "jewelry"] },
+  headshotReduction: { label: "Headshot Damage Reduction", pct: true, range: [2, 6], on: ["head"] },
+  headshotDamage: { label: "Headshot Damage", pct: true, range: [2, 6], on: ["weapon", "jewelry"] },
 };
 const MOD_IDS = Object.keys(MOD_INFO) as ModId[];
 
@@ -78,7 +108,7 @@ export const MOD_COUNT: Record<Rarity, number> = { common: 0, uncommon: 1, rare:
 /** Gear that can carry modifiers: what goes in a slot. */
 export const takesMods = (id: string): boolean => {
   const d = def(id);
-  return !!d.slot && (d.category === "armor" || d.category === "weapon");
+  return !!d.slot && (d.category === "armor" || d.category === "weapon" || d.category === "jewelry");
 };
 
 /**
@@ -87,8 +117,9 @@ export const takesMods = (id: string): boolean => {
  */
 export function rollMods(rand: () => number, id: string, rarity: Rarity): Array<[ModId, number]> {
   if (!takesMods(id)) return [];
-  const kind = def(id).category === "weapon" ? "weapon" : "armor";
-  const pool = MOD_IDS.filter((m) => MOD_INFO[m].on.indexOf(kind) >= 0);
+  const d = def(id);
+  const kinds: ModOn[] = d.category === "weapon" ? ["weapon"] : d.category === "jewelry" ? ["jewelry"] : d.slot === "head" ? ["armor", "head"] : ["armor"];
+  const pool = MOD_IDS.filter((m) => MOD_INFO[m].on.some((k) => kinds.indexOf(k) >= 0));
   const out: Array<[ModId, number]> = [];
   const lift = 1 + rarityRank(rarity) * 0.12;
   for (let i = 0; i < MOD_COUNT[rarity] && pool.length; i++) {
@@ -112,11 +143,18 @@ export interface Stats {
   physicalBonus: number;
   magicalPower: number;
   magicalBonus: number;
-  /** Ratings and the share of each kind of damage they take off. */
+  /**
+   * Ratings and the share of each kind of damage they take off (PDR and MDR: the rating's curve
+   * plus gear's flat percent, capped). Projectile reduction comes off arrows and bolts on top.
+   */
   armorRating: number;
   physicalReduction: number;
   magicResist: number;
   magicalReduction: number;
+  projectileReduction: number;
+  /** Points off a headshot's +50% (helmets), and extra damage on his own headshots (fractions). */
+  headshotReduction: number;
+  headshotDamage: number;
   /** The weapons in hand: one cut of the sword, a full-draw arrow (before power). */
   swordDamage: number;
   bowDamage: number;
@@ -142,10 +180,9 @@ export interface Stats {
   ambushBonus: number;
 }
 
-/** Everything that counts: the armour he wears and the weapon set `set` (only weapons in hand count). */
+/** Everything that counts: the armour and jewellery he wears and the weapon set `set` (only weapons in hand count). */
 const gearOf = (equipped: Partial<Record<GearSlot, ItemInst>>, set: 1 | 2): ItemInst[] =>
-  (WEAR_SLOTS as GearSlot[])
-    .concat(set === 1 ? ["main1", "off1"] : ["main2", "off2"])
+  WORN_SLOTS.concat(set === 1 ? ["main1", "off1"] : ["main2", "off2"])
     .map((s) => equipped[s])
     .filter((x): x is ItemInst => !!x);
 
@@ -157,10 +194,24 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
   const has = (p: string) => perks.indexOf(p) >= 0;
   const add = {} as Record<ModId, number>;
   for (const m of MOD_IDS) add[m] = 0;
+  // What the pieces give by themselves (armour, resistance, speed, attributes), then their modifiers.
   let armor = 0;
+  let resist = 0;
+  let move = 0;
+  let projectile = 0;
+  let headshot = 0;
+  let plate = false;
   for (const it of gearOf(equipped, set)) {
     const d = itemOf(it);
     armor += d.armor ?? 0;
+    resist += d.magicResist ?? 0;
+    move += d.move ?? 0;
+    projectile += d.projectile ?? 0;
+    headshot += d.headshot ?? 0;
+    add.maxHealth += d.maxHealth ?? 0;
+    add.headshotDamage += d.headshotDamage ?? 0;
+    if (d.armorType === "plate") plate = true;
+    for (const k of Object.keys(d.attr ?? {}) as AttributeId[]) add[k] += d.attr?.[k] ?? 0;
     for (const [m, v] of it.mods ?? []) add[m] += v;
   }
   const a = {} as Attributes;
@@ -170,18 +221,13 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
   // A staff in hand adds to his magical power.
   const magicalPower = a.wil + add.magicalPower + (mainItem ? def(mainItem.id).magic ?? 0 : 0);
   const armorRating = armor + add.armorRating + (has("defense_expert") ? 15 : 0);
-  const magicResist = MAGIC_RESIST(a.wil) + add.magicResist + (has("protection_evil") ? 25 : 0);
+  const magicResist = MAGIC_RESIST(a.wil) + resist + add.magicResist + (has("protection_evil") ? 25 : 0);
   const main = equipped[set === 1 ? "main1" : "main2"];
   const sword = main && handOf(main.id) === "main" ? itemOf(main).damage ?? 30 : 6;
   const bow = main && handOf(main.id) === "both" ? itemOf(main).damage ?? 30 : 0;
   const blunt = !!main && def(main.id).blunt === true && has("blunt_mastery");
   const physicalBonus = PHYS_BONUS(physicalPower);
   // Light Step counts while nothing of plate is worn (leathers and cloth are fine).
-  const plate = (WEAR_SLOTS as GearSlot[]).some((s) => {
-    const it = equipped[s];
-    const d = it ? itemOf(it) : null;
-    return !!d && (d.armor ?? 0) >= 14 && d.finish !== "leather" && s !== "doublet" && s !== "cape" && s !== "tabard";
-  });
   const moveExtra = (has("swift") ? 0.04 : 0) + (has("light_step") && !plate ? 0.06 : 0) + (has("fleet_foot") ? 0.06 : 0);
   // A quick weapon in hand (the dagger) swings faster.
   const quick = mainItem ? def(mainItem.id).quick ?? 0 : 0;
@@ -193,12 +239,15 @@ export function computeStats(base: Attributes, equipped: Partial<Record<GearSlot
     magicalPower,
     magicalBonus: MAG_BONUS(magicalPower),
     armorRating,
-    physicalReduction: reductionOf(armorRating),
+    physicalReduction: Math.min(REDUCTION_CAP, reductionOf(armorRating) + add.physicalReduction / 100),
     magicResist,
-    magicalReduction: reductionOf(magicResist),
+    magicalReduction: Math.min(REDUCTION_CAP, reductionOf(magicResist) + add.magicalReduction / 100),
+    projectileReduction: Math.min(REDUCTION_CAP, (projectile + add.projectileReduction) / 100),
+    headshotReduction: Math.min(HEADSHOT_BONUS, (headshot + add.headshotReduction) / 100),
+    headshotDamage: add.headshotDamage / 100,
     swordDamage: (sword + add.weaponDamage) * (1 + physicalBonus) * (has("weapon_mastery") ? 1.1 : 1) * (blunt ? 1.1 : 1),
     bowDamage: bow ? (bow + add.weaponDamage) * (1 + physicalBonus) * (has("ranged_mastery") ? 1.12 : 1) : 0,
-    moveSpeed: MOVE(a.agi) + add.moveSpeed / 100 + moveExtra,
+    moveSpeed: MOVE(a.agi) + (move + add.moveSpeed) / 100 + moveExtra,
     actionSpeed: ACTION(0.25 * a.agi + 0.75 * a.dex) + add.actionSpeed / 100 + quick,
     interactionSpeed: INTERACT(0.25 * a.dex + 0.75 * a.res) + (has("light_fingers") ? 0.3 : 0),
     castingSpeed: CAST(a.kno) + (has("quick_chant") ? 0.2 : 0),
@@ -222,8 +271,13 @@ export function statLines(s: Stats): Array<[string, string]> {
     ["Max Health", String(s.maxHealth)],
     ["Physical Power", `${s.physicalPower} (${pct(s.physicalBonus)})`],
     ["Magical Power", `${s.magicalPower} (${pct(s.magicalBonus)})`],
-    ["Armor Rating", `${s.armorRating} (${Math.round(s.physicalReduction * 100)}% phys.)`],
-    ["Magic Resistance", `${Math.round(s.magicResist)} (${Math.round(s.magicalReduction * 100)}% mag.)`],
+    ["Armor Rating", String(s.armorRating)],
+    ["Physical Damage Reduction", `${Math.round(s.physicalReduction * 100)}%`],
+    ["Magic Resistance", String(Math.round(s.magicResist))],
+    ["Magical Damage Reduction", `${Math.round(s.magicalReduction * 100)}%`],
+    ["Projectile Damage Reduction", `${Math.round(s.projectileReduction * 100)}%`],
+    ["Headshot Damage Reduction", `${Math.round(s.headshotReduction * 100)}%`],
+    ["Headshot Damage", `+${Math.round((HEADSHOT_BONUS + s.headshotDamage) * 100)}%`],
     ["Sword Damage", s.swordDamage.toFixed(0)],
     ["Bow Damage", s.bowDamage ? s.bowDamage.toFixed(0) : "-"],
     ["Move Speed", pct(s.moveSpeed)],

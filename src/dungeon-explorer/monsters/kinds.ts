@@ -349,7 +349,8 @@ const TABLES: Record<MobKindId, Array<[string, number]>> = {
 };
 
 const PURSE: Record<Rarity, number> = { common: 8, uncommon: 18, rare: 36, epic: 90, legendary: 180, unique: 320, artifact: 600 };
-const BOSS_WEARS: ArmorSlot[] = ["cuirass", "pauldrons", "gauntlets", "waist", "greaves", "sabatons"];
+/** What a skeleton mini-boss's plate drops as. */
+const BOSS_WEARS = ["plate_armour", "plate_gauntlets", "plate_legs", "plate_boots", "great_helm"];
 
 /** What a monster of `kind` and `rarity` leaves: its crystal (usually), then two or three things. */
 export function rollDrops(rand: () => number, kind: MobKind, rarity: Rarity): Drop[] {
