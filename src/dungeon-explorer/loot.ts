@@ -25,6 +25,8 @@ export interface Container {
   grid: Grid;
   /** Searched at least once. */
   seen: boolean;
+  /** A chest that is a mimic (the crypt hallway's): the first search is a bite, not a look inside. */
+  mimic?: boolean;
 }
 
 const VALUABLES: Array<[string, number]> = [

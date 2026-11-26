@@ -19,6 +19,17 @@ export interface MonsterSfx {
   thud: () => void;
   /** A swinging blade sweeping past. */
   swish: () => void;
+  /** The hallway traps (traps.ts): a boulder's rumble as it rolls (`seconds` long) and its smash,
+   * a crusher's chains before and its slam, burners hissing (the fuse) then roaring, a mimic's
+   * growl and its bite. */
+  rumble: (seconds: number) => void;
+  smash: () => void;
+  rattle: () => void;
+  slam: () => void;
+  fuse: () => void;
+  roar: (seconds: number) => void;
+  growl: () => void;
+  chomp: () => void;
   /** The player's sound volume (0..1, the Esc menu) over this set's own level. */
   setVolume: (v: number) => void;
   dispose: () => void;
@@ -150,6 +161,50 @@ export function createMonsterSfx(volume = 0.45): MonsterSfx {
       // Air torn by a heavy blade: a band of noise sweeping up then down, and a faint ring.
       hiss("bandpass", 500, 1800, 2.5, 0.16, 0.12, 0.18);
       tone(1900, 1700, 0.015, 0.05, 0.3, "sine");
+    },
+    rumble(seconds) {
+      // Stone on stone: a deep, grinding roll that swells, with grit on top.
+      const n = Math.max(1, Math.round(seconds / 0.25));
+      for (let i = 0; i < n; i++) {
+        hiss("lowpass", 160, 70, 1.2, 0.3, 0.12, 0.3, i * 0.25);
+        hiss("bandpass", 900, 500, 3, 0.05, 0.05, 0.18, i * 0.25 + 0.1);
+      }
+      tone(48, 40, 0.18, 0.2, seconds, "sine");
+    },
+    smash() {
+      hiss("lowpass", 1400, 90, 0.8, 0.5, 0.004, 0.7);
+      tone(70, 32, 0.4, 0.004, 0.6, "sine");
+      for (let i = 0; i < 7; i++) hiss("bandpass", 2200 - i * 180, 800, 4, 0.14, 0.002, 0.08, 0.08 + i * 0.07);
+    },
+    rattle() {
+      for (let i = 0; i < 6; i++) {
+        hiss("bandpass", 3200, 2400, 7, 0.07, 0.002, 0.04, i * 0.07);
+        tone(1300 + (i % 2) * 300, 1100, 0.02, 0.002, 0.05, "square", i * 0.07);
+      }
+    },
+    slam() {
+      hiss("lowpass", 900, 60, 0.7, 0.55, 0.003, 0.45);
+      tone(60, 28, 0.45, 0.003, 0.5, "sine");
+      hiss("bandpass", 2000, 600, 2, 0.12, 0.003, 0.2, 0.02);
+    },
+    fuse() {
+      // Oil under pressure: a rising hiss and a valve's tick.
+      hiss("highpass", 2500, 5500, 0.8, 0.12, 0.6, 0.25);
+      tone(1500, 1400, 0.04, 0.002, 0.04, "square");
+    },
+    roar(seconds) {
+      const n = Math.max(1, Math.round(seconds / 0.3));
+      hiss("bandpass", 700, 1100, 0.8, 0.32, 0.05, 0.3);
+      for (let i = 0; i < n; i++) hiss("lowpass", 1400, 500, 0.6, 0.22, 0.08, 0.32, 0.15 + i * 0.3);
+    },
+    growl() {
+      tone(90, 70, 0.2, 0.05, 0.5, "sawtooth");
+      hiss("lowpass", 400, 200, 2, 0.12, 0.05, 0.5);
+    },
+    chomp() {
+      hiss("bandpass", 1800, 600, 3, 0.35, 0.002, 0.08);
+      tone(200, 90, 0.2, 0.002, 0.12, "square");
+      hiss("lowpass", 600, 150, 1.5, 0.2, 0.004, 0.15, 0.05);
     },
     setVolume(v) {
       user = Math.max(0, Math.min(1, v));

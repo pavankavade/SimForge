@@ -1,6 +1,8 @@
 // The furnishings of the floor in 3D: every Piece of the room plan (rooms.ts) built from CC0 Patch
 // models (assets/models/rooms and /market) and a few procedural parts (weapon racks, plinths, a
 // dais). Chests keep their lid on a hinge so they can open when searched. Far pieces are hidden.
+// Some chests are mimics (the crypt hallway's): eyes that glint in the gap under the lid now and
+// then, teeth peeking along its edge, and a lunge with the lid snapping when he goes to search it.
 import * as THREE from "three";
 import type { DungeonData } from "./dungeon/generator";
 import { PIECES, type Piece } from "./dungeon/rooms";
@@ -14,12 +16,37 @@ export interface ChestView {
   /** 0 shut .. 1 open (eased by the view). */
   open: number;
   target: number;
+  /** A mimic (`makeMimic`), whether it has bitten yet, and how long ago it began its bite (s; -1 none). */
+  mimic: boolean;
+  spent: boolean;
+  bite: number;
 }
 
 export interface FloorDressing {
   chests: ChestView[];
+  /** Chest `i` is a mimic: it gets its eyes and teeth. */
+  makeMimic: (i: number) => void;
+  /** Chest `i` bites (lunges, lid snapping); after that its eyes go dark and it opens like any chest. */
+  bite: (i: number) => void;
   update: (dt: number, player: THREE.Vector3) => void;
   dispose: () => void;
+}
+
+/** `obj`'s bounds in `root`'s own frame (meshes under it, as they stand now). */
+function boundsIn(root: THREE.Object3D, obj: THREE.Object3D): THREE.Box3 {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const out = new THREE.Box3();
+  const b = new THREE.Box3();
+  const m = new THREE.Matrix4();
+  obj.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.geometry) return;
+    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+    b.copy(mesh.geometry.boundingBox as THREE.Box3).applyMatrix4(m.multiplyMatrices(inv, mesh.matrixWorld));
+    out.union(b);
+  });
+  return out;
 }
 
 const R = (set: string, name: string) => `${set}/${name}`;
@@ -67,6 +94,55 @@ export function buildDressing(scene: THREE.Scene, d: DungeonData, pieces: Piece[
   const chests: ChestView[] = [];
   const groups: Array<{ g: THREE.Group; at: THREE.Vector3 }> = [];
   const lids = new Map<ChestView, THREE.Object3D>();
+  /** Each chest's group and model (once loaded), and a mimic's eyes. */
+  const chestGroups = new Map<ChestView, THREE.Group>();
+  const chestModels = new Map<ChestView, THREE.Object3D>();
+  const mimicEyes = new Map<ChestView, { eyes: THREE.Object3D[]; mat: THREE.MeshBasicMaterial }>();
+  const bone = new THREE.MeshStandardMaterial({ color: 0xeee4cc, roughness: 0.4, emissive: 0x2a2620 });
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  const toothGeo = new THREE.ConeGeometry(0.022, 0.075, 5);
+  const eyeGeo = new THREE.SphereGeometry(0.03, 10, 8);
+  const pupilGeo = new THREE.BoxGeometry(0.01, 0.042, 0.01);
+  owned.push(bone, pupilMat, toothGeo, eyeGeo, pupilGeo);
+  /** Give a mimic its eyes and teeth, once its model is in. */
+  const dressMimic = (view: ChestView) => {
+    const o = chestModels.get(view);
+    const pivot = lids.get(view);
+    if (!view.mimic || !o || !pivot || mimicEyes.has(view)) return;
+    const body = boundsIn(o, o);
+    const lid = boundsIn(o, pivot);
+    const cx = (body.min.x + body.max.x) / 2;
+    const w = body.max.x - body.min.x;
+    const lip = lid.min.y;
+    const front = body.max.z;
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffd23a });
+    owned.push(mat);
+    const eyes: THREE.Object3D[] = [];
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(eyeGeo, mat);
+      eye.position.set(cx + side * w * 0.17, lip - 0.03, front - 0.01);
+      eye.scale.set(1, 0.7, 0.5);
+      const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+      pupil.position.set(0, 0, 0.026);
+      eye.add(pupil);
+      o.add(eye);
+      eyes.push(eye);
+    }
+    mimicEyes.set(view, { eyes, mat });
+    // Teeth: a lower row on the rim, an upper row on the lid (so they open with it).
+    const n = 7;
+    for (let k = 0; k < n; k++) {
+      const x = cx - w * 0.38 + (k * w * 0.76) / (n - 1);
+      const low = new THREE.Mesh(toothGeo, bone);
+      low.position.set(x, lip + 0.02, front - 0.03);
+      o.add(low);
+      const up = new THREE.Mesh(toothGeo, bone);
+      up.rotation.x = Math.PI;
+      up.position.set(x + w * 0.05, lip - 0.005, front - 0.025);
+      o.add(up);
+      pivot.attach(up);
+    }
+  };
 
   for (const p of pieces) {
     const g = new THREE.Group();
@@ -139,12 +215,18 @@ export function buildDressing(scene: THREE.Scene, d: DungeonData, pieces: Piece[
           front: g.localToWorld(new THREE.Vector3(0, 0, 0.95)),
           open: 0,
           target: 0,
+          mimic: false,
+          spent: false,
+          bite: -1,
         };
         chests.push(view);
+        chestGroups.set(view, g);
         M(R("rooms", "treasure_chest"), [0, 0, 0]).then((o) => {
           if (!o) return;
           const pivot = hingeLid(o);
           if (pivot) lids.set(view, pivot);
+          chestModels.set(view, o);
+          dressMimic(view);
         });
         break;
       }
@@ -214,17 +296,61 @@ export function buildDressing(scene: THREE.Scene, d: DungeonData, pieces: Piece[
   void loadModel(R("rooms", "treasure_chest"));
 
   const playerAt = new THREE.Vector3();
+  let clock = 0;
   return {
     chests,
+    makeMimic(i) {
+      const c = chests[i];
+      if (!c) return;
+      c.mimic = true;
+      dressMimic(c);
+    },
+    bite(i) {
+      const c = chests[i];
+      if (c) c.bite = 0;
+    },
     update(dt, player) {
       playerAt.copy(player);
+      clock += dt;
       // Far pieces are not drawn (they are behind walls anyway).
       for (const { g, at } of groups) g.visible = Math.abs(at.x - player.x) + Math.abs(at.z - player.z) < 34;
-      for (const c of chests) {
+      chests.forEach((c, i) => {
         c.open += (c.target - c.open) * (1 - Math.exp(-dt * 6));
+        let open = c.open;
+        const g = chestGroups.get(c);
+        if (c.bite >= 0) {
+          // The lunge: the lid snaps up, holds a moment, and slams; the chest hops at him.
+          c.bite += dt;
+          const u = c.bite;
+          open = u < 0.09 ? (u / 0.09) * 1.15 : u < 0.2 ? 1.15 : u < 0.28 ? 1.15 * (1 - (u - 0.2) / 0.08) : c.open;
+          if (g) {
+            const hop = u < 0.32 ? Math.sin((Math.PI * u) / 0.32) : 0;
+            g.position.y = c.centre.y - 0.3 + 0.2 * hop;
+            g.position.x = c.centre.x + (c.front.x - c.centre.x) * 0.25 * hop;
+            g.position.z = c.centre.z + (c.front.z - c.centre.z) * 0.25 * hop;
+          }
+          if (u > 0.6) {
+            c.bite = -1;
+            c.spent = true;
+            if (g) g.position.set(c.centre.x, c.centre.y - 0.3, c.centre.z);
+          }
+        }
         const lid = lids.get(c);
-        if (lid) lid.rotation.x = -1.75 * c.open;
-      }
+        if (lid) lid.rotation.x = -1.75 * open;
+        // A mimic's eyes: dim, then now and then a glint and a blink; wide on the bite; dark once spent.
+        const m = mimicEyes.get(c);
+        if (m) {
+          const t = (clock + i * 1.37) % 5.2;
+          const glint = t < 0.7 ? Math.sin((Math.PI * t) / 0.7) : 0;
+          const k = c.bite >= 0 ? 1.4 : c.spent ? 0 : 0.35 + 0.9 * glint;
+          m.mat.color.setRGB(1 * k, 0.82 * k, 0.23 * k);
+          const blink = t > 3.1 && t < 3.22 ? 0.15 : 1;
+          for (const e of m.eyes) {
+            e.visible = !c.spent || c.bite >= 0;
+            e.scale.y = 0.7 * blink;
+          }
+        }
+      });
     },
     dispose() {
       alive = false;

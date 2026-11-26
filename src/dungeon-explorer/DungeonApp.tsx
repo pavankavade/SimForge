@@ -205,6 +205,9 @@ async function enterLandscapeMode(): Promise<void> {
 const QUICK_SHOT_S = 6;
 /** The fighter's Sprint: how long, and how much faster. */
 const SPRINT_S = 6;
+/** A mimic's bite (before his armour), and who it is to the blow's sums and his death line. */
+const MIMIC_BITE = 32;
+const MIMIC_AGENT = { name: "Mimic", scale: 1 } as unknown as MobAgent;
 /** Below this share of his health the screen's edges throb red. */
 const LOW_HP = 0.3;
 const SPRINT_MOVE = 0.25;
@@ -473,6 +476,8 @@ interface DungeonSceneProps {
   containersRef: React.RefObject<Map<string, Container>>;
   /** A door to open or close (set by E), and hit points to give back (a draught, an apple). */
   doorQueueRef: React.RefObject<number>;
+  /** He went to search a chest that is a mimic (its container id): it bites instead. */
+  mimicQueueRef: React.MutableRefObject<string | null>;
   healQueueRef: React.RefObject<number>;
   minimapCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   touchMoveRef: React.RefObject<{ forward: number; strafe: number }>;
@@ -649,6 +654,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   onPlayerHurt,
   containersRef,
   doorQueueRef,
+  mimicQueueRef,
   healQueueRef,
   minimapCanvasRef,
   touchMoveRef,
@@ -700,6 +706,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   const doorsRef = useRef<Doors | null>(null);
   const portalsRef = useRef<Portals | null>(null);
   const trapsRef = useRef<Traps | null>(null);
+  /** A mimic's bite on its way: when the teeth meet (world time) and where the chest is. */
+  const mimicBiteRef = useRef<{ at: number; x: number; z: number } | null>(null);
   const townRef = useRef<TownView | null>(null);
   const clockRunningRef = useRef(clockRunning);
   clockRunningRef.current = clockRunning;
@@ -1133,6 +1141,17 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const w = worldRef.current;
     const pal = paladinRef.current;
     if (!w || w.dead) return;
+    // Only a push (a crusher's block is down across the way): solid stone, not a wound.
+    if (hit.damage <= 0) {
+      if (hit.push) {
+        w.walker.x = hit.push.x / CELL_M;
+        w.walker.z = hit.push.z / CELL_M;
+        const v = w.walker as unknown as { vx?: number; vz?: number };
+        if (typeof v.vx === "number") v.vx = 0;
+        if (typeof v.vz === "number") v.vz = 0;
+      }
+      return;
+    }
     const dmg = hit.damage * (0.9 + w.rand() * 0.2) * (1 - statsRef.current.physicalReduction);
     w.hp = Math.max(0, w.hp - dmg);
     sfxRef.current?.hit();
@@ -1687,12 +1706,19 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       // The same chests on every life of this floor (dying is not a reroll).
       let ls = (Math.imul(seed, 2654435761) + 17) >>> 0;
       const lootRand = () => (ls = (Math.imul(ls, 1664525) + 1013904223) >>> 0) / 4294967296;
-      chestIdsRef.current = dressingRef.current.chests.map((c, i) => {
+      // About one chest in five is a mimic (one in three in a treasury): it bites the first time
+      // he goes to search it, and holds richer loot for the trouble. The same ones every life.
+      let mr = (Math.imul(seed ^ 0x5bd1e995, 2246822519) + 99) >>> 0;
+      const mimicRand = () => (mr = (Math.imul(mr, 1664525) + 1013904223) >>> 0) / 4294967296;
+      const dressing = dressingRef.current;
+      chestIdsRef.current = dressing.chests.map((c, i) => {
         const room = c.piece.room >= 0 ? dungeon.rooms[c.piece.room] : null;
         const treasury = room ? plan.modules[room.id] === "treasury" : false;
         const tier = treasury ? 3 : room ? Math.round(room.difficulty * 2.4) : 1;
+        const mimic = mimicRand() < (treasury ? 0.33 : 0.2);
         const id = `chest-${i}`;
-        containers.set(id, { id, kind: "chest", name: treasury ? "Treasure chest" : "Chest", x: c.centre.x, z: c.centre.z, grid: rollChest(lootRand, tier), seen: false });
+        containers.set(id, { id, kind: "chest", name: treasury ? "Treasure chest" : "Chest", x: c.centre.x, z: c.centre.z, grid: rollChest(lootRand, mimic ? tier + 1 : tier), seen: false, mimic });
+        if (mimic) dressing.makeMimic(i);
         return id;
       });
       interactKeyRef.current = "";
@@ -2257,12 +2283,35 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     // The corridor traps (traps.ts): they keep moving when he is down; only the living are caught.
     const traps = fl ? trapsRef.current : null;
     if (traps) {
+      // A teammate's wire or burners went off on his screen: here too.
+      if (coop) for (const q of coop.takeTraps()) traps.trigger(q.i, q.dir);
+      const ms = monsterSfxRef.current;
       const hits = traps.update(
         dt,
         // A party sees the same blades and logs: their clock is the run's.
         coop ? (mp.serverNow() - coop.run.startAt) / 1000 + 600 : world.time,
         { x: walker.x * CELL_M, z: walker.z * CELL_M, prevX: x0 * CELL_M, prevZ: z0 * CELL_M, air: world.playerJumpY, alive: !world.dead && !world.escaped },
-        monsterSfxRef.current,
+        ms,
+        {
+          mobs: sim.mobs,
+          // The boulder, crusher and fire catch monsters too (where this screen runs them).
+          hitMob:
+            !coop || coop.leads()
+              ? (id, dirX, dirZ, damage) => {
+                  const m = sim.mobs.find((o) => o.id === id);
+                  const r = sim.hit(id, dirX, dirZ, damage);
+                  if (!m || !r || r === "blocked") return;
+                  if (m.family === "slime") ms?.squelch(m.scale * (r === "killed" ? 1.6 : 1));
+                  else if (r === "killed") ms?.collapse();
+                  else ms?.boneHit();
+                }
+              : null,
+          shake: (amount) => {
+            const pal = paladinRef.current;
+            if (pal) pal.shake.value = Math.min(1, pal.shake.value + amount);
+          },
+          onTrigger: coop ? (i, dir) => coop.sendTrap(i, dir) : undefined,
+        },
       );
       for (const h of hits) hurtByTrap(h);
     }
@@ -3112,6 +3161,30 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (dr && coop) coop.sendDoor({ i: di, open: dr.target > 0.5, x: px, z: pz });
       doorQueueRef.current = -1;
     }
+    // A mimic: he reached for the lid and it lunges; the teeth meet a moment later (a shield raised
+    // toward it takes the bite). Spent, it opens like any chest.
+    if (mimicQueueRef.current) {
+      const id = mimicQueueRef.current;
+      mimicQueueRef.current = null;
+      const box = containersRef.current.get(id);
+      const i = chestIdsRef.current.indexOf(id);
+      if (box && box.mimic && i >= 0 && !world.dead) {
+        box.mimic = false;
+        dressingRef.current?.bite(i);
+        monsterSfxRef.current?.growl();
+        mimicBiteRef.current = { at: world.time + 0.2, x: box.x, z: box.z };
+        bowRef.current.onHint("It was a mimic!");
+      }
+    }
+    const bite = mimicBiteRef.current;
+    if (bite && world.time >= bite.at) {
+      mimicBiteRef.current = null;
+      monsterSfxRef.current?.chomp();
+      const pal = paladinRef.current;
+      if (pal) pal.shake.value = Math.min(1, pal.shake.value + 0.4);
+      if (!world.dead && Math.hypot(bite.x - px, bite.z - pz) < 2.6) hurtPlayerRef.current(MIMIC_AGENT, { damage: MIMIC_BITE, fromX: bite.x, fromZ: bite.z, blockable: true, how: "blade" });
+    }
+
     // A teammate worked a door.
     if (coop && doorsRef.current) {
       for (const d of coop.takeDoors()) {
@@ -3582,12 +3655,41 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
             ctx.fillRect(ox + c.piece.x * scale - sz / 2, oy + c.piece.z * scale - sz / 2, sz, sz);
           });
           // Traps: a spike plate as a red crossed square; across the corridor, a log as an orange
-          // bar, a blade as a pale bar with its hub, a channel as a green (lava: orange) band.
+          // bar, a blade as a pale bar with its hub, a channel as a green (lava: orange) band; a
+          // boulder's wire as a pale line across with its run marked along the corridor; a crusher
+          // as a grey block; burners as a red-orange band.
           const lavaFloor = theme === "molten";
           for (const t of trapsRef.current?.plans ?? []) {
             const cx = ox + t.gx * scale;
             const cz = oy + t.gz * scale;
             const h = Math.max(2.5, scale * 0.42);
+            if (t.kind === "boulder" || t.kind === "crusher" || t.kind === "flames") {
+              const across = (t.span * scale) / 2;
+              const ax = t.along === "x";
+              if (t.kind === "boulder") {
+                const run = (t.length * scale) / 2;
+                ctx.strokeStyle = "rgba(190,170,140,0.45)";
+                ctx.lineWidth = Math.max(1.5, scale * 0.2);
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.moveTo(ax ? cx - run : cx, ax ? cz : cz - run);
+                ctx.lineTo(ax ? cx + run : cx, ax ? cz : cz + run);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.strokeStyle = "#e8e2d0";
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(ax ? cx : cx - across, ax ? cz - across : cz);
+                ctx.lineTo(ax ? cx : cx + across, ax ? cz + across : cz);
+                ctx.stroke();
+                continue;
+              }
+              const deep = t.kind === "crusher" ? Math.max(1.5, scale * 0.37) : Math.max(1.5, ((t.length * scale) / 2) * 0.8);
+              const [hx, hz] = ax ? [deep, across] : [across, deep];
+              ctx.fillStyle = t.kind === "crusher" ? "rgba(170,165,155,0.9)" : "rgba(255,90,30,0.8)";
+              ctx.fillRect(cx - hx, cz - hz, hx * 2, hz * 2);
+              continue;
+            }
             if (t.kind === "spikes") {
               ctx.strokeStyle = "#ff6a4a";
               ctx.lineWidth = 1.5;
@@ -4035,6 +4137,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [, setLootVersion] = useState(0);
   const containersRef = useRef(new Map<string, Container>());
   const doorQueueRef = useRef(-1);
+  const mimicQueueRef = useRef<string | null>(null);
   const healQueueRef = useRef(0);
   const interactRef = useRef<Interact | null>(null);
   interactRef.current = hud.interact;
@@ -4421,6 +4524,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       } else {
         const box = containersRef.current.get(it.key);
         if (!box) return;
+        // A mimic bites instead of opening (the scene plays it); the next search opens it.
+        if (box.mimic) {
+          mimicQueueRef.current = it.key;
+          return;
+        }
         box.seen = true;
         setStashAt(null);
         setLootId(it.key);
@@ -4797,6 +4905,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onPlayerHurt={handlePlayerHurt}
           containersRef={containersRef}
           doorQueueRef={doorQueueRef}
+          mimicQueueRef={mimicQueueRef}
           healQueueRef={healQueueRef}
           minimapCanvasRef={minimapRef}
           touchMoveRef={touchMoveRef}

@@ -105,6 +105,8 @@ export function createCoop(run: RunView) {
   /** Blows on him, stamped when they came in (performance.now()). */
   const hurts: Array<HurtIn & { at: number }> = [];
   const doors: DoorIn[] = [];
+  /** Traps a teammate set off (traps.ts: a boulder's wire, burners), by index on the shared floor. */
+  const trapsIn: Array<{ i: number; dir: number }> = [];
   /** Healing a teammate's spell sent him, and spell lights the others cast (for show). */
   const heals: Array<{ amount: number; at: number }> = [];
   const spellFx: SpellFxIn[] = [];
@@ -169,6 +171,10 @@ export function createCoop(run: RunView) {
           return;
         case "door":
           doors.push(m as unknown as DoorIn);
+          return;
+        case "trap":
+          if (from !== me()) trapsIn.push({ i: Math.max(0, Math.floor(Number(m.i) || 0)), dir: Number(m.dir) < 0 ? -1 : 1 });
+          if (trapsIn.length > 16) trapsIn.shift();
           return;
         case "pile":
           pileSink?.(m as unknown as PileIn);
@@ -332,6 +338,11 @@ export function createCoop(run: RunView) {
       mp.game({ k: "door", ...d });
     },
     takeDoors: () => doors.splice(0),
+    /** He set off a trap (traps.ts `trigger`): the others' copies go off too. */
+    sendTrap(i: number, dir: number) {
+      mp.game({ k: "trap", i, dir });
+    },
+    takeTraps: () => trapsIn.splice(0),
     /** A sack he dropped, filled or picked from: the others see it as it now is. */
     sendPile(p: PileIn) {
       mp.game({ k: "pile", ...p });
