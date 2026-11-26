@@ -1,8 +1,9 @@
 // A door in every doorway arch: Poly Haven's castle door (CC0) at its own size, frame and both
 // leaves, set in a thin wall of dressed stone that fills the rest of the arch. The wall stands only
 // in the door's plane, so the passage is its full width on either side. Doors start shut: E opens
-// or closes the one in front of the paladin, and it swings away from whoever opens it. A shut door
-// (and the stone round it) stops him and the camera; the men open doors when they come up to one.
+// works the one in front of the paladin: opening it is a two-second push (the leaves creak ajar
+// meanwhile), closing it is at once. It swings away from whoever opens it. A shut door (and the
+// stone round it) stops him, the monsters (who cannot open doors) and the camera.
 // The rare wide openings (halls) have no door.
 import * as THREE from "three";
 import type { DungeonArch, DungeonData, DungeonProp } from "./dungeon/generator";
@@ -55,18 +56,24 @@ export interface Doors {
   doors: Door[];
   /** The door the paladin can work from here (facing it, close enough), or -1. */
   reachable: (x: number, z: number, facing: number) => number;
-  toggle: (i: number, from: { x: number; z: number }) => void;
+  /** Swing door `i` open, away from `from`. */
+  open: (i: number, from: { x: number; z: number }) => void;
+  /** Shut door `i` (at once). */
+  close: (i: number) => void;
+  /** Being pushed open from `from`: `k` 0..1 of the way through the push, the leaves only ajar. */
+  ajar: (i: number, from: { x: number; z: number }, k: number) => void;
+  /** Door `i` is shut, closing or not yet open far enough to walk through. */
+  blocking: (i: number) => boolean;
   /** Keep a walker of `radius` m out of shut doors; `prev` is where it was before this step. */
   block: (p: { x: number; z: number }, prev: { x: number; z: number }, radius: number) => void;
   solidAt: (x: number, y: number, z: number) => boolean;
-  /** The men open the doors they come up to. */
-  update: (dt: number, men: Array<{ x: number; z: number }>) => void;
+  update: (dt: number) => void;
   dispose: () => void;
 }
 
 /**
  * The stone either side of each door as collision circles (dungeon props, grid cells), so the
- * paladin and the men walk through the frame and not the wall. Add before the walker is made.
+ * paladin and the monsters walk through the frame and not the wall. Add before the walker is made.
  */
 export function doorwayProps(d: DungeonData, cellM: number): DungeonProp[] {
   const out: DungeonProp[] = [];
@@ -188,11 +195,8 @@ export function createDoors(scene: THREE.Scene, d: DungeonData, cellM: number, s
     return { along: dx * dr.ax + dz * dr.az, across: dx * dr.nx + dz * dr.nz };
   };
   const shut = (dr: Door) => dr.open < 0.55;
-
-  const open = (dr: Door, from: { x: number; z: number }) => {
-    const side = local(dr, from.x, from.z).across;
-    dr.swing = side >= 0 ? -1 : 1;
-    dr.target = 1;
+  const swingFrom = (dr: Door, from: { x: number; z: number }) => {
+    dr.swing = local(dr, from.x, from.z).across >= 0 ? -1 : 1;
   };
 
   return {
@@ -214,11 +218,25 @@ export function createDoors(scene: THREE.Scene, d: DungeonData, cellM: number, s
       }
       return best;
     },
-    toggle(i, from) {
+    open(i, from) {
       const dr = doors[i];
       if (!dr) return;
-      if (dr.target > 0.5) dr.target = 0;
-      else open(dr, from);
+      swingFrom(dr, from);
+      dr.target = 1;
+    },
+    close(i) {
+      if (doors[i]) doors[i].target = 0;
+    },
+    ajar(i, from, k) {
+      const dr = doors[i];
+      if (!dr) return;
+      if (dr.open < 0.02) swingFrom(dr, from);
+      // A crack that widens as he leans on it (well short of passable).
+      dr.target = 0.14 * Math.min(1, Math.max(0, k));
+    },
+    blocking(i) {
+      const dr = doors[i];
+      return !!dr && (dr.target < 0.5 || shut(dr));
     },
     block(p, prev, radius) {
       for (const dr of doors) {
@@ -242,17 +260,8 @@ export function createDoors(scene: THREE.Scene, d: DungeonData, cellM: number, s
       }
       return false;
     },
-    update(dt, men) {
+    update(dt) {
       for (const dr of doors) {
-        if (dr.target < 0.5) {
-          for (const m of men) {
-            const l = local(dr, m.x, m.z);
-            if (Math.abs(l.along) < HOLE_HALF + 0.6 && Math.abs(l.across) < 1.5) {
-              open(dr, m);
-              break;
-            }
-          }
-        }
         dr.open += (dr.target - dr.open) * (1 - Math.exp(-dt * 3.2));
         const [l, r] = pivots[dr.id];
         const ang = dr.open * 1.55 * dr.swing;

@@ -10,7 +10,7 @@
 // The market (entrance) is safe ground. Hits on the fighter come out as `events` for the app.
 import { ARMOR_SLOTS, type ArmorEquipment, type ArmorSlot } from "../artifacts/characters/paladin";
 import { floorAt } from "./dungeon/floors";
-import type { DungeonData } from "./dungeon/generator";
+import type { DungeonArch, DungeonData } from "./dungeon/generator";
 import { CELL_M } from "./dungeon/view";
 import { createAgentCollider } from "./dungeon/walker";
 import { bumpRarity, type Rarity } from "./items";
@@ -68,6 +68,8 @@ export interface MobAgent {
   vz: number;
   path: Array<[number, number]>;
   repath: number;
+  /** Its path ends at a shut door (it cannot open doors): it waits there. */
+  gated: boolean;
   waitTimer: number;
   /** Seconds left staggering from a blow, and the knock-back velocity (cells/s). */
   stun: number;
@@ -334,9 +336,110 @@ export interface PlayerView {
   hidden?: boolean;
 }
 
-export function createMobSimulation(d: DungeonData, playerStartX: number, playerStartZ: number, solid: (x: number, y: number, z: number) => boolean) {
+/** The floor's doors as the monsters know them (doorView): they cannot open one, and a shut one stops them. */
+export interface MobDoors {
+  /** The doorway of every door, in door order. */
+  arches: DungeonArch[];
+  /** Door `i` is shut (or not open far enough to pass). */
+  blocking: (i: number) => boolean;
+  /** Keep a walker of `radius` m out of shut doors (metres); `prev` is where it was before this step. */
+  block: (p: { x: number; z: number }, prev: { x: number; z: number }, radius: number) => void;
+}
+
+/** How far either side of a door (cells) a monster lines up before going through it. */
+const DOOR_APPROACH = 0.7;
+
+export function createMobSimulation(
+  d: DungeonData,
+  playerStartX: number,
+  playerStartZ: number,
+  solid: (x: number, y: number, z: number) => boolean,
+  doors?: MobDoors
+) {
   const rng = mulberry32((d.seed ^ 0x7f4a7c15) >>> 0);
   const collider = createAgentCollider(d, 0.24);
+
+  // Which door each doorway cell belongs to. A grid path through a wide doorway may use a side
+  // cell, behind the stone beside the door: routes go through the door's middle instead.
+  const gates = doors?.arches ?? [];
+  const gateOf = new Int16Array(d.W * d.H).fill(-1);
+  gates.forEach((a, gi) => {
+    for (let j = 0; j < a.len; j++) {
+      const x = Math.round(a.x - (a.px * (a.len - 1)) / 2 + a.px * j);
+      const z = Math.round(a.y - (a.py * (a.len - 1)) / 2 + a.py * j);
+      if (x >= 0 && z >= 0 && x < d.W && z < d.H) gateOf[z * d.W + x] = gi;
+    }
+  });
+  const gateShut = (gi: number) => !!doors?.blocking(gi);
+  /** Does the line between two cell points pass through a shut door? */
+  const throughShut = (ax: number, az: number, bx: number, bz: number): boolean => {
+    for (let gi = 0; gi < gates.length; gi++) {
+      if (!gateShut(gi)) continue;
+      const a = gates[gi];
+      const ox = a.x + 0.5;
+      const oz = a.y + 0.5;
+      const sa = (ax - ox) * a.py + (az - oz) * a.px;
+      const sb = (bx - ox) * a.py + (bz - oz) * a.px;
+      if (sa * sb > 0 || sa === sb) continue;
+      const t = sa / (sa - sb);
+      const along = (ax + (bx - ax) * t - ox) * a.px + (az + (bz - az) * t - oz) * a.py;
+      if (Math.abs(along) < a.len / 2 + 0.1) return true;
+    }
+    return false;
+  };
+  /** Keep a monster (moving from prev to P, cells) out of shut doors. */
+  const blockDoors = (P: { x: number; y: number }, prevX: number, prevZ: number, radiusM: number) => {
+    if (!doors) return;
+    const at = { x: (P.x - d.W / 2) * CELL_M, z: (P.y - d.H / 2) * CELL_M };
+    doors.block(at, { x: (prevX - d.W / 2) * CELL_M, z: (prevZ - d.H / 2) * CELL_M }, radiusM);
+    P.x = at.x / CELL_M + d.W / 2;
+    P.y = at.z / CELL_M + d.H / 2;
+  };
+  /**
+   * A walking route (cells) from where `m` stands to (tx, tz): the grid path, threaded through the
+   * middle of every door on it (lined up on one side, out the other), and cut short in front of
+   * the first shut door.
+   */
+  const route = (m: MobAgent, tx: number, tz: number, maxExpand?: number): Array<[number, number]> => {
+    const cells = findPath(d, m.cx, m.cz, tx, tz, maxExpand);
+    m.gated = false;
+    if (!cells.length || !gates.length) return cells;
+    const list: Array<[number, number]> = [[Math.floor(m.cx) + 0.5, Math.floor(m.cz) + 0.5], ...cells];
+    const gateAt = (p: [number, number]) => gateOf[Math.floor(p[1]) * d.W + Math.floor(p[0])];
+    const out: Array<[number, number]> = [];
+    for (let k = 0; k < list.length; ) {
+      const gi = gateAt(list[k]);
+      if (gi < 0) {
+        if (k > 0) out.push(list[k]);
+        k++;
+        continue;
+      }
+      let e = k;
+      while (e + 1 < list.length && gateAt(list[e + 1]) === gi) e++;
+      const a = gates[gi];
+      const ox = a.x + 0.5;
+      const oz = a.y + 0.5;
+      const nx = a.py;
+      const nz = a.px;
+      const from: [number, number] = k > 0 ? list[k - 1] : [m.cx, m.cz];
+      const to = e + 1 < list.length ? list[e + 1] : null;
+      // Which way through (+1: along +n).
+      const s = Math.sign(to ? (to[0] - from[0]) * nx + (to[1] - from[1]) * nz : (ox - from[0]) * nx + (oz - from[1]) * nz) || 1;
+      // Where the monster is now relative to this door: across it (toward the far side) and along it.
+      const across = ((m.cx - ox) * nx + (m.cz - oz) * nz) * s;
+      const along = Math.abs((m.cx - ox) * a.px + (m.cz - oz) * a.py);
+      const lined = along < 0.4 && across > -DOOR_APPROACH - 0.1 && across < DOOR_APPROACH + 0.1;
+      if (!lined) out.push([ox - s * nx * DOOR_APPROACH, oz - s * nz * DOOR_APPROACH]);
+      if (gateShut(gi)) {
+        m.gated = true;
+        return out;
+      }
+      if (!lined || across < -0.05) out.push([ox, oz]);
+      if (to) out.push([ox + s * nx * DOOR_APPROACH, oz + s * nz * DOOR_APPROACH]);
+      k = e + 1;
+    }
+    return out;
+  };
   const pCellX = playerStartX / CELL_M + d.W / 2;
   const pCellZ = playerStartZ / CELL_M + d.H / 2;
 
@@ -400,6 +503,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
       vz: 0,
       path: [],
       repath: 0,
+      gated: false,
       waitTimer: rng() * 2,
       stun: 0,
       kx: 0,
@@ -448,7 +552,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
     const pool = roomCells[targetRoom]?.length ? roomCells[targetRoom] : allWalkable;
     if (!pool.length) return [];
     const [tx, tz] = pool[Math.floor(rng() * pool.length)];
-    return findPath(d, m.cx, m.cz, tx, tz);
+    return route(m, tx, tz);
   };
 
   for (const m of mobs) m.path = pickTargetPath(m);
@@ -461,7 +565,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
       const z = Math.floor(az + ((bz - az) * k) / n);
       if (x < 0 || z < 0 || x >= d.W || z >= d.H || !d.walkable[z * d.W + x]) return false;
     }
-    return true;
+    return !throughShut(ax, az, bx, bz);
   };
   /** It turns hostile and calls out: the calm monsters of its room near it join in. */
   const alertRoom = (m: MobAgent) => {
@@ -532,6 +636,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
     P.x = m.cx + (vx / vLen) * stepDist;
     P.y = m.cz + (vz / vLen) * stepDist;
     collider.collide(P);
+    blockDoors(P, m.cx, m.cz, m.radius);
     const moved = Math.hypot(P.x - m.cx, P.y - m.cz);
     if (dt > 0) {
       m.vx = ((P.x - m.cx) * CELL_M) / dt;
@@ -829,6 +934,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
         P.x = m.cx + m.kx * dt;
         P.y = m.cz + m.kz * dt;
         collider.collide(P);
+        blockDoors(P, m.cx, m.cz, m.radius);
         m.vx = ((P.x - m.cx) * CELL_M) / Math.max(dt, 1e-4);
         m.vz = ((P.y - m.cz) * CELL_M) / Math.max(dt, 1e-4);
         m.cx = P.x;
@@ -894,11 +1000,19 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
       if (m.hostile && !unseen) {
         const chase = (paceK: number) => {
           m.repath -= dt;
-          if (m.repath <= 0 || !m.path.length) {
-            m.path = findPath(d, m.cx, m.cz, pCx, pCz, 900);
+          if (m.repath <= 0 || (!m.path.length && !m.gated)) {
+            m.path = route(m, pCx, pCz, 900);
             m.repath = 0.45;
           }
-          const [tx, tz] = m.path.length > 1 ? m.path[0] : [pCx, pCz];
+          // A shut door in the way: up to it, then it waits there, glaring.
+          if (m.gated && m.path.length && Math.hypot(m.path[0][0] - m.cx, m.path[0][1] - m.cz) < 0.3) m.path.shift();
+          if (m.gated && !m.path.length) {
+            m.vx = m.vz = 0;
+            turnTo(m, facePlayer, 6, dt);
+            hopPace(m, dt, false);
+            return;
+          }
+          const [tx, tz] = m.path.length > 1 || m.gated ? m.path[0] : [pCx, pCz];
           if (m.path.length > 1 && Math.hypot(tx - m.cx, tz - m.cz) < 0.3) m.path.shift();
           const speed = ((m.blockT > 0 ? 0.35 : 1) * CHASE_MS * m.stats.speed * paceK * hopPace(m, dt, true)) / CELL_M;
           moveToward(m, i, tx, tz, speed, dt);
@@ -946,7 +1060,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
           const fz = Math.cos(m.yaw);
           const pace = (m.lungeT > LUNGE_S * 0.35 ? 2.4 : 0.4) * m.scale ** 0.5;
           moveToward(m, i, m.cx + fx, m.cz + fz, pace / CELL_M, dt);
-          if (before > LUNGE_S * 0.45 && m.lungeT <= LUNGE_S * 0.45 && distM < m.kind.reach + m.radius + 0.45) {
+          if (before > LUNGE_S * 0.45 && m.lungeT <= LUNGE_S * 0.45 && distM < m.kind.reach + m.radius + 0.45 && !throughShut(m.cx, m.cz, pCx, pCz)) {
             events.push({ type: "hit", mob: m, damage: m.stats.damage, fromX: m.wx, fromZ: m.wz, blockable: true, how: "lunge", who: m.target });
           }
           if (m.lungeT <= 0) m.lungeT = 0;
@@ -954,7 +1068,7 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
           continue;
         }
         const reach = m.kind.reach + (m.family === "slime" ? m.radius : 0);
-        if (distM > reach) chase(1);
+        if (distM > reach || throughShut(m.cx, m.cz, pCx, pCz)) chase(1);
         else {
           m.vx = m.vz = 0;
           turnTo(m, facePlayer, 9, dt);

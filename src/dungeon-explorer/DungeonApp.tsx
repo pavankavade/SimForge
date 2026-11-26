@@ -173,6 +173,8 @@ const JUMP_V = 3.5;
 const GRAVITY = 15.5;
 /** Seconds after landing before he can jump again. */
 const JUMP_REST = 0.32;
+/** Pushing a shut door open takes this long (seconds, before interaction speed); shutting one is at once. */
+const DOOR_PUSH_S = 2;
 
 function responsiveFov(baseVfov: number, width: number, height: number): number {
   const aspect = Math.max(0.35, width / Math.max(1, height));
@@ -445,6 +447,8 @@ interface DungeonSceneProps {
   onSpellState: (s: SpellHud) => void;
   /** The aiming mark in the middle of the screen (shown with the bow in hand; tightens on the draw). */
   crosshairRef: React.RefObject<HTMLDivElement | null>;
+  /** The fill of the bar under the prompt while he pushes a door open. */
+  doorBarRef: React.RefObject<HTMLDivElement | null>;
   /** This dive so far: monsters he finished and the damage he dealt (the end-of-run summary). */
   tallyRef: React.MutableRefObject<RunTally>;
   /** The inventory or character screen is open: the paladin stands still and turns to a showcase camera. */
@@ -636,6 +640,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   restAskRef,
   onSpellState,
   crosshairRef,
+  doorBarRef,
   tallyRef,
   customizing,
   playing,
@@ -704,6 +709,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   // The floor's furnishings and doors, the room plan, and what E would do (as last told to the HUD).
   const dressingRef = useRef<FloorDressing | null>(null);
   const doorsRef = useRef<Doors | null>(null);
+  /** A door he is pushing open: which, seconds in, seconds it takes, and where he stood. */
+  const doorPushRef = useRef<{ door: number; t: number; need: number; x: number; z: number } | null>(null);
   const portalsRef = useRef<Portals | null>(null);
   const trapsRef = useRef<Traps | null>(null);
   /** A mimic's bite on its way: when the teeth meet (world time) and where the chest is. */
@@ -1699,7 +1706,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       dressingRef.current?.dispose();
       doorsRef.current?.dispose();
       dressingRef.current = buildDressing(scene, dungeon, plan.pieces, CELL_M);
-      doorsRef.current = createDoors(scene, dungeon, CELL_M, view.materials.dressed);
+      const floorDoors = createDoors(scene, dungeon, CELL_M, view.materials.dressed);
+      doorsRef.current = floorDoors;
       // What every chest holds (deeper rooms and treasuries roll richer); the last floor's are gone.
       const containers = containersRef.current;
       containers.clear();
@@ -1737,7 +1745,15 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         if (y > (level.heights[c] || 2.8) * CELL_M) return true;
         return y < floorAt(dungeon, gx, gz) * CELL_M - 0.03;
       };
-      const sim = createMobSimulation(dungeon, walker.x * CELL_M, walker.z * CELL_M, solidAt);
+      doorPushRef.current = null;
+      // The monsters cannot open doors: a shut one stops them, their eyes and their arrows.
+      const sim = createMobSimulation(
+        dungeon,
+        walker.x * CELL_M,
+        walker.z * CELL_M,
+        (x, y, z) => solidAt(x, y, z) || floorDoors.solidAt(x, y, z),
+        { arches: floorDoors.doors.map((dr) => dr.arch), blocking: floorDoors.blocking, block: floorDoors.block }
+      );
       coopRef.current?.built(sim);
       // A teammate's sacks: dropped, added to or picked from, they lie here as they do there.
       coopRef.current?.onPile((p) => {
@@ -3153,13 +3169,49 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       }
     }
 
-    // E: a door to work, a draught to drink.
+    // A door: an open one shuts at once; a shut one takes a two-second push (the key again, moving
+    // off or turning away lets go of it). Interaction speed makes the push quicker.
+    const doorsHere = doorsRef.current;
     if (doorQueueRef.current >= 0) {
       const di = doorQueueRef.current;
-      doorsRef.current?.toggle(di, { x: px, z: pz });
-      const dr = doorsRef.current?.doors[di];
-      if (dr && coop) coop.sendDoor({ i: di, open: dr.target > 0.5, x: px, z: pz });
       doorQueueRef.current = -1;
+      const dr = doorsHere?.doors[di];
+      const push = doorPushRef.current;
+      if (dr && doorsHere) {
+        if (push && push.door === di) {
+          doorsHere.close(di);
+          doorPushRef.current = null;
+        } else if (dr.target > 0.5) {
+          doorsHere.close(di);
+          if (coop) coop.sendDoor({ i: di, open: false, x: px, z: pz });
+        } else {
+          if (push) doorsHere.close(push.door);
+          doorPushRef.current = { door: di, t: 0, need: DOOR_PUSH_S / (1 + Math.max(-0.5, statsRef.current.interactionSpeed)), x: px, z: pz };
+        }
+      }
+    }
+    {
+      const push = doorPushRef.current;
+      if (push && doorsHere) {
+        const from = { x: push.x, z: push.z };
+        const off = Math.hypot(px - push.x, pz - push.z) > 0.3 || world.dead || doorsHere.reachable(px, pz, walker.yaw + Math.PI) !== push.door;
+        if (off) {
+          doorsHere.close(push.door);
+          doorPushRef.current = null;
+        } else if (doorsHere.doors[push.door].target > 0.5) {
+          // A teammate got it open first.
+          doorPushRef.current = null;
+        } else {
+          push.t += dt;
+          if (push.t >= push.need) {
+            doorsHere.open(push.door, from);
+            if (coop) coop.sendDoor({ i: push.door, open: true, x: push.x, z: push.z });
+            doorPushRef.current = null;
+          } else doorsHere.ajar(push.door, from, push.t / push.need);
+        }
+      }
+      const bar = doorBarRef.current;
+      if (bar) bar.style.width = doorPushRef.current ? `${Math.min(100, (doorPushRef.current.t / doorPushRef.current.need) * 100)}%` : "0%";
     }
     // A mimic: he reached for the lid and it lunges; the teeth meet a moment later (a shield raised
     // toward it takes the bite). Spent, it opens like any chest.
@@ -3189,7 +3241,12 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     if (coop && doorsRef.current) {
       for (const d of coop.takeDoors()) {
         const dr = doorsRef.current.doors[d.i];
-        if (dr && dr.target > 0.5 !== d.open) doorsRef.current.toggle(d.i, { x: d.x, z: d.z });
+        if (dr && dr.target > 0.5 !== d.open) {
+          if (d.open) doorsRef.current.open(d.i, { x: d.x, z: d.z });
+          else doorsRef.current.close(d.i);
+          // Shut in his face: whatever push he had on it is over.
+          if (!d.open && doorPushRef.current?.door === d.i) doorPushRef.current = null;
+        }
       }
     }
     if (roomDoorQueueRef.current >= 0) {
@@ -3230,9 +3287,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const market = marketRef.current;
     const doorsNow = doorsRef.current;
     const dressing = dressingRef.current;
-    const men: Array<{ x: number; z: number }> = [];
-    for (const m of sim.mobs) if (!m.dead) men.push({ x: m.wx, z: m.wz });
-    doorsNow?.update(dt, men);
+    doorsNow?.update(dt);
     portalsRef.current?.update(world.time, world.runT);
     if (dressing) {
       dressing.chests.forEach((c, i) => {
@@ -3323,7 +3378,11 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         const di = doorsNow.reachable(px, pz, facingNow);
         if (di >= 0) {
           const dr = doorsNow.doors[di];
-          consider({ kind: "door", key: String(di), verb: dr.target > 0.5 ? "Close" : "Open", label: "door" }, Math.hypot(dr.centre.x - px, dr.centre.z - pz) + 0.5);
+          const pushing = doorPushRef.current?.door === di;
+          consider(
+            { kind: "door", key: String(di), verb: pushing ? "Opening" : dr.target > 0.5 ? "Close" : "Open", label: "door" },
+            Math.hypot(dr.centre.x - px, dr.centre.z - pz) + 0.5
+          );
         }
       }
     }
@@ -3851,6 +3910,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const attackHeldRef = useRef(false);
   const groundQueueRef = useRef<ItemInst[]>([]);
   const crosshairRef = useRef<HTMLDivElement | null>(null);
+  const doorBarRef = useRef<HTMLDivElement | null>(null);
   const runTallyRef = useRef<RunTally>({ kills: 0, dealt: 0 });
   const touchBlockRef = useRef(false);
   const stickPointerRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
@@ -4887,6 +4947,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           restAskRef={restAskRef}
           onSpellState={setSpellHud}
           crosshairRef={crosshairRef}
+          doorBarRef={doorBarRef}
           tallyRef={runTallyRef}
           customizing={showcasing}
           playing={screen === "play"}
@@ -5814,6 +5875,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           <span style={{ fontSize: 13, color: "#e8dcc0" }}>
             {hud.interact.verb} <b style={{ color: "#f3e6c4", fontFamily: "Georgia, 'Times New Roman', serif" }}>{hud.interact.label}</b>
           </span>
+          {hud.interact.kind === "door" && hud.interact.verb === "Opening" ? (
+            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 3, background: "rgba(255,255,255,0.08)" }}>
+              <div ref={doorBarRef} style={{ height: "100%", width: "0%", background: "#f2d27a" }} />
+            </div>
+          ) : null}
           {hud.interact.kind === "player" ? (
             isTouchUI ? (
               <button type="button" onClick={() => hud.interact && trade.ask(hud.interact.key)} style={{ ...btnStyle, fontWeight: 800, padding: "6px 12px", fontSize: 12 }}>
