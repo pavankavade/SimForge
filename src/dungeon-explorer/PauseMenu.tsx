@@ -2,7 +2,7 @@
 // the dungeon options and the graphics setting. The world keeps running behind it; only the
 // paladin stops listening.
 import React from "react";
-import { FRAME_CAPS, QUALITIES, QUALITY_LABEL, type FrameCap, type Quality } from "./graphics";
+import { FRAME_CAPS, LOOK_SENS_RANGE, QUALITIES, QUALITY_LABEL, type FrameCap, type Quality } from "./graphics";
 
 export interface PauseMenuProps {
   dungeonName: string;
@@ -38,6 +38,13 @@ export interface PauseMenuProps {
   /** Draw calls, triangles, lights and frame time under the FPS counter. */
   showPerf: boolean;
   onPerf: () => void;
+  /** Controls and sound: look speed (times the usual), inverted look, volume (0..1). */
+  lookSens: number;
+  onLookSens: (v: number) => void;
+  invertY: boolean;
+  onInvertY: () => void;
+  volume: number;
+  onVolume: (v: number) => void;
   backHref?: string;
 }
 
@@ -84,6 +91,28 @@ function Choices<T extends string | number>(p: { label: string; options: readonl
 }
 
 const GOLD = "#ffd84d";
+
+/** A labelled slider with its value on the right. */
+function Slider(p: { label: string; min: number; max: number; step: number; value: number; show: (v: number) => string; onChange: (v: number) => void }) {
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: "#d8ccb0", margin: "6px 0" }}>
+      <span style={{ width: 92, flexShrink: 0 }}>{p.label}</span>
+      <input
+        type="range"
+        min={p.min}
+        max={p.max}
+        step={p.step}
+        value={p.value}
+        onChange={(e) => p.onChange(Number(e.target.value))}
+        // Arrow keys would otherwise both move the slider and walk him once the menu closes.
+        onKeyDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.currentTarget.blur()}
+        style={{ flex: 1, accentColor: GOLD, cursor: "pointer" }}
+      />
+      <span style={{ width: 40, textAlign: "right", color: GOLD, fontVariantNumeric: "tabular-nums" }}>{p.show(p.value)}</span>
+    </label>
+  );
+}
 
 const Big: React.FC<{ onClick: () => void; hint?: string; accent?: boolean; children: React.ReactNode }> = ({ onClick, hint, accent, children }) => (
   <button
@@ -203,6 +232,21 @@ export const PauseMenu: React.FC<PauseMenuProps> = (p) => (
         {p.inTown
           ? "Theme and room count shape your next dive. Step onto the teleporter in the gate hall to go down."
           : "A new floor, theme or room count (or going back to town) abandons this run: what you found here is lost. Escape through a portal to keep it."}
+      </div>
+
+      <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", margin: "16px 0 6px" }}>CONTROLS &amp; SOUND</div>
+      <Slider
+        label={p.touch ? "Look speed" : "Mouse speed"}
+        min={LOOK_SENS_RANGE[0]}
+        max={LOOK_SENS_RANGE[1]}
+        step={0.05}
+        value={p.lookSens}
+        show={(v) => `${v.toFixed(2)}×`}
+        onChange={p.onLookSens}
+      />
+      <Slider label="Volume" min={0} max={1} step={0.05} value={p.volume} show={(v) => `${Math.round(v * 100)}%`} onChange={p.onVolume} />
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+        <Small onClick={p.onInvertY}>Invert look up / down: {p.invertY ? "on" : "off"}</Small>
       </div>
 
       <div style={{ fontSize: 11, letterSpacing: "0.14em", color: "#8f8676", margin: "16px 0 8px" }}>GRAPHICS</div>

@@ -19,6 +19,8 @@ export interface MonsterSfx {
   thud: () => void;
   /** A swinging blade sweeping past. */
   swish: () => void;
+  /** The player's sound volume (0..1, the Esc menu) over this set's own level. */
+  setVolume: (v: number) => void;
   dispose: () => void;
 }
 
@@ -26,6 +28,7 @@ export function createMonsterSfx(volume = 0.45): MonsterSfx {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
   let noise: AudioBuffer | null = null;
+  let user = 1;
 
   const unlock = () => {
     if (!ctx) {
@@ -33,7 +36,7 @@ export function createMonsterSfx(volume = 0.45): MonsterSfx {
       if (!Ctor) return;
       ctx = new Ctor();
       master = ctx.createGain();
-      master.gain.value = volume;
+      master.gain.value = volume * user;
       master.connect(ctx.destination);
       noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const data = noise.getChannelData(0);
@@ -147,6 +150,10 @@ export function createMonsterSfx(volume = 0.45): MonsterSfx {
       // Air torn by a heavy blade: a band of noise sweeping up then down, and a faint ring.
       hiss("bandpass", 500, 1800, 2.5, 0.16, 0.12, 0.18);
       tone(1900, 1700, 0.015, 0.05, 0.3, "sine");
+    },
+    setVolume(v) {
+      user = Math.max(0, Math.min(1, v));
+      if (master) master.gain.value = volume * user;
     },
     dispose() {
       void ctx?.close();

@@ -2,7 +2,8 @@
 // picture (two lamp shadows are six extra scene renders each, the stone's parallax relief marches a
 // height map per pixel, every room has a fill light, and the frame goes through a half-float
 // target, bloom and a composite), so touch devices start on Low. Kept per browser, with the frame
-// cap, automatic resolution and the FPS counter.
+// cap, automatic resolution, the FPS counter, and the controls and sound settings (look speed,
+// inverted look, volume).
 import type { ViewQuality } from "./dungeon/view";
 
 const KEY = "simforge.explorer.graphics.v1";
@@ -44,10 +45,19 @@ export interface Graphics {
   autoRes: boolean;
   /** Draw calls, triangles, lights and frame time under the FPS counter (also `?perf` on the URL). */
   showPerf: boolean;
+  /** Controls and sound (the Esc menu too): look speed (times the usual), mouse up looks down,
+   * and the sound volume (0..1). */
+  lookSens: number;
+  invertY: boolean;
+  volume: number;
 }
 
+export const LOOK_SENS_RANGE: [number, number] = [0.3, 3];
+
+const num = (v: unknown, lo: number, hi: number, fallback: number) => (typeof v === "number" && isFinite(v) ? Math.max(lo, Math.min(hi, v)) : fallback);
+
 export function loadGraphics(touch: boolean): Graphics {
-  const fallback: Graphics = { quality: touch ? "low" : "high", showFps: true, frameCap: 100, autoRes: true, showPerf: false };
+  const fallback: Graphics = { quality: touch ? "low" : "high", showFps: true, frameCap: 100, autoRes: true, showPerf: false, lookSens: 1, invertY: false, volume: 1 };
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return fallback;
@@ -58,6 +68,9 @@ export function loadGraphics(touch: boolean): Graphics {
       frameCap: g.frameCap && FRAME_CAPS.indexOf(g.frameCap) !== -1 ? g.frameCap : fallback.frameCap,
       autoRes: typeof g.autoRes === "boolean" ? g.autoRes : fallback.autoRes,
       showPerf: typeof g.showPerf === "boolean" ? g.showPerf : fallback.showPerf,
+      lookSens: num(g.lookSens, LOOK_SENS_RANGE[0], LOOK_SENS_RANGE[1], fallback.lookSens),
+      invertY: typeof g.invertY === "boolean" ? g.invertY : fallback.invertY,
+      volume: num(g.volume, 0, 1, fallback.volume),
     };
   } catch {
     return fallback;

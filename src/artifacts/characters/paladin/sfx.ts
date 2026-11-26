@@ -7,6 +7,8 @@ export interface PaladinSfx {
   clang: () => void;
   hit: () => void;
   step: (running: number) => void;
+  /** A volume setting (0..1, the game's Esc menu) over this set's own level. */
+  setVolume: (v: number) => void;
   dispose: () => void;
 }
 
@@ -14,6 +16,7 @@ export function createPaladinSfx(volume = 0.5): PaladinSfx {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
   let noise: AudioBuffer | null = null;
+  let user = 1;
 
   const unlock = () => {
     if (!ctx) {
@@ -21,7 +24,7 @@ export function createPaladinSfx(volume = 0.5): PaladinSfx {
       if (!Ctor) return;
       ctx = new Ctor();
       master = ctx.createGain();
-      master.gain.value = volume;
+      master.gain.value = volume * user;
       master.connect(ctx.destination);
       noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const data = noise.getChannelData(0);
@@ -99,6 +102,10 @@ export function createPaladinSfx(volume = 0.5): PaladinSfx {
       burst("lowpass", 260 + running * 120, 90, 0.9, 0.16 + running * 0.14, 0.004, 0.09);
       // Plates settling.
       burst("bandpass", 3400, 2600, 6, 0.035 + running * 0.03, 0.003, 0.05);
+    },
+    setVolume(v) {
+      user = Math.max(0, Math.min(1, v));
+      if (master) master.gain.value = volume * user;
     },
     dispose() {
       if (ctx) void ctx.close();

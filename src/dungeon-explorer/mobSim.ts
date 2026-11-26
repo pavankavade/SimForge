@@ -111,6 +111,8 @@ export interface Projectile {
   from: number;
   /** His arrows: what a headshot multiplies the damage by. */
   headBonus?: number;
+  /** His arrows: loosed by a party member (net/coop.ts), not by the player at this screen. */
+  theirs?: boolean;
   /** Seconds left; an arrow stuck in a wall stays a while. */
   life: number;
   stuck: boolean;
@@ -160,7 +162,9 @@ export type MobEvent =
   | { type: "loose"; mob: MobAgent; projectile: "arrow" | "bolt" }
   | { type: "impact"; projectile: Projectile; wall: boolean }
   | { type: "split"; mob: MobAgent }
-  | { type: "struck"; mob: MobAgent; result: "blocked" | "hit" | "killed"; head: boolean }
+  /** His arrow or snare caught a monster: what it took off (`dealt`), and whether it was this
+   * player's own (`mine`; in a party the leader's floor also flies the others' arrows). */
+  | { type: "struck"; mob: MobAgent; result: "blocked" | "hit" | "killed"; head: boolean; dealt: number; mine: boolean }
   | { type: "hop"; mob: MobAgent }
   | { type: "snared"; mob: MobAgent; snare: Snare };
 
@@ -646,8 +650,9 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
               const sp = Math.hypot(p.vx, p.vz) || 1;
               // A skeleton's skull (the top eighth of it) takes half again.
               const head = m.family === "skeleton" && p.y > m.wy + m.height * 0.86;
+              const before = m.hp;
               const result = hit(m.id, p.vx / sp, p.vz / sp, p.damage * (head ? p.headBonus ?? HEAD_BONUS : 1));
-              if (result) events.push({ type: "struck", mob: m, result, head });
+              if (result) events.push({ type: "struck", mob: m, result, head, dealt: before - m.hp, mine: !p.theirs });
               // It stays in him where it went in (a shield turns it aside).
               if (result === "hit") {
                 const c = Math.cos(m.yaw);
@@ -747,8 +752,9 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
       q.caught = m.id;
       q.caughtT = 0;
       m.blockT = 0;
+      const before = m.hp;
       const result = hit(m.id, 0, 0, SNARE_BITE);
-      if (result) events.push({ type: "struck", mob: m, result, head: false });
+      if (result) events.push({ type: "struck", mob: m, result, head: false, dealt: before - m.hp, mine: true });
       events.push({ type: "snared", mob: m, snare: q });
       if (!m.dead) {
         m.stun = m.kind.boss ? 1.2 : SNARE_HOLD_S;
@@ -1059,10 +1065,11 @@ export function createMobSimulation(d: DungeonData, playerStartX: number, player
 
   /**
    * The fighter looses an arrow from (x, y, z) with velocity (vx, vy, vz), metres and m/s;
-   * `headBonus` multiplies a headshot (his headshot damage on top of the usual half again).
+   * `headBonus` multiplies a headshot (his headshot damage on top of the usual half again);
+   * `theirs` marks a party member's arrow flown on the leader's floor.
    */
-  const shoot = (x: number, y: number, z: number, vx: number, vy: number, vz: number, damage: number, headBonus = HEAD_BONUS) => {
-    projectiles.push({ id: nextShot++, kind: "arrow", x, y, z, vx, vy, vz, damage, from: 0, life: 4, stuck: false, dead: false, headBonus });
+  const shoot = (x: number, y: number, z: number, vx: number, vy: number, vz: number, damage: number, headBonus = HEAD_BONUS, theirs = false) => {
+    projectiles.push({ id: nextShot++, kind: "arrow", x, y, z, vx, vy, vz, damage, from: 0, life: 4, stuck: false, dead: false, headBonus, theirs });
   };
 
   /**

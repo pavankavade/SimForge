@@ -58,6 +58,8 @@ export interface SpellSfx {
   /** The charge-up hum while a spell is cast (one at a time), and its end. */
   charge: (gain?: number) => void;
   stopCharge: () => void;
+  /** The player's sound volume (0..1, the Esc menu) over this set's own level. */
+  setVolume: (v: number) => void;
   dispose: () => void;
 }
 
@@ -66,6 +68,7 @@ export function createSpellSfx(volume = 0.6): SpellSfx {
   let master: GainNode | null = null;
   const buffers = new Map<SpellSound, AudioBuffer>();
   let charging: { src: AudioBufferSourceNode; g: GainNode } | null = null;
+  let user = 1;
 
   const load = (c: AudioContext) => {
     for (const name of SOUNDS) {
@@ -99,7 +102,7 @@ export function createSpellSfx(volume = 0.6): SpellSfx {
         if (!AC) return;
         ctx = new AC();
         master = ctx.createGain();
-        master.gain.value = volume;
+        master.gain.value = volume * user;
         master.connect(ctx.destination);
         load(ctx);
       }
@@ -121,6 +124,10 @@ export function createSpellSfx(volume = 0.6): SpellSfx {
       g.gain.setValueAtTime(g.gain.value, t);
       g.gain.linearRampToValueAtTime(0, t + 0.08);
       src.stop(t + 0.1);
+    },
+    setVolume(v) {
+      user = Math.max(0, Math.min(1, v));
+      if (master) master.gain.value = volume * user;
     },
     dispose() {
       charging = null;

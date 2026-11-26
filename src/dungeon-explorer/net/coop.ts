@@ -278,7 +278,7 @@ export function createCoop(run: RunView) {
         const r = sim.hit(h.id, h.dx, h.dz, h.dmg);
         if (m && r) onStruck(m, r);
       }
-      for (const s of shots.splice(0)) sim.shoot(s.x, s.y, s.z, s.vx, s.vy, s.vz, s.dmg, typeof s.hb === "number" ? Math.max(1, Math.min(3, s.hb)) : undefined);
+      for (const s of shots.splice(0)) sim.shoot(s.x, s.y, s.z, s.vx, s.vy, s.vz, s.dmg, typeof s.hb === "number" ? Math.max(1, Math.min(3, s.hb)) : undefined, true);
       for (const q of snares.splice(0)) sim.setSnare(q.x, q.y, q.z);
       snaps.length = 0;
       snapT += dt;

@@ -35,7 +35,8 @@ import { addItem, def, emptyGrid, migrateGrid, newItem, removeItem, wearableBy, 
 import { itemIcons } from "./icons";
 import { loadModel } from "./props3d";
 import { ShopScreen } from "./ShopScreen";
-import { createMobSimulation, type MobAgent, type MobEvent, type PlayerView } from "./mobSim";
+import { armorReduction, createMobSimulation, type MobAgent, type MobEvent, type PlayerView } from "./mobSim";
+import { createCombatFx, type CombatFx } from "./combatFx";
 import { mp, useMp, type Pose, type RunView } from "./net/mp";
 import { createRemotes, type Remotes } from "./net/remotes";
 import { createCoop, type Coop } from "./net/coop";
@@ -204,6 +205,8 @@ async function enterLandscapeMode(): Promise<void> {
 const QUICK_SHOT_S = 6;
 /** The fighter's Sprint: how long, and how much faster. */
 const SPRINT_S = 6;
+/** Below this share of his health the screen's edges throb red. */
+const LOW_HP = 0.3;
 const SPRINT_MOVE = 0.25;
 /** Smite: how long it waits for a blow, and the holy fire it adds (before magical power). */
 const SMITE_S = 10;
@@ -333,6 +336,22 @@ interface WorldState {
   regen: { left: number; rate: number };
 }
 
+/** A dive's tally for the summary when it ends (death or the gate). */
+interface RunTally {
+  kills: number;
+  dealt: number;
+}
+
+/** What `dmg` would take off `m` through its armour (a party member's guess at the leader's sum). */
+const guessDealt = (m: MobAgent | null | undefined, dmg: number, soft = false) => (m ? Math.min(m.hp, soft ? dmg : dmg * (1 - armorReduction(m.stats.armor))) : 0);
+
+/** "4:12 below, 6 kills, 412 damage dealt": a dive's summary. */
+function tallyLine(t: RunTally, seconds: number): string {
+  const sec = Math.max(0, Math.round(seconds));
+  const time = `${Math.floor(sec / 60)}:${(sec % 60 < 10 ? "0" : "") + (sec % 60)} below`;
+  return `${time}, ${t.kills} kill${t.kills === 1 ? "" : "s"}, ${Math.round(t.dealt)} damage dealt`;
+}
+
 interface HudInfo {
   name: string;
   rooms: number;
@@ -423,6 +442,8 @@ interface DungeonSceneProps {
   onSpellState: (s: SpellHud) => void;
   /** The aiming mark in the middle of the screen (shown with the bow in hand; tightens on the draw). */
   crosshairRef: React.RefObject<HTMLDivElement | null>;
+  /** This dive so far: monsters he finished and the damage he dealt (the end-of-run summary). */
+  tallyRef: React.MutableRefObject<RunTally>;
   /** The inventory or character screen is open: the paladin stands still and turns to a showcase camera. */
   customizing: boolean;
   /** The game has the controls (no menu or screen open). */
@@ -478,6 +499,10 @@ interface DungeonSceneProps {
   frameCap: FrameCap;
   autoRes: boolean;
   perf: boolean;
+  /** Controls and sound (Esc menu): look speed (times the usual), inverted look, volume 0..1. */
+  lookSens: number;
+  invertY: boolean;
+  volume: number;
   /** A run left open last time, to pick up on its floor (runSave.ts). */
   resume: RunSnapshot | null;
   /** In town or below; where he appears in town (the tavern at the start, the dais back from a dive). */
@@ -502,6 +527,8 @@ interface DungeonSceneProps {
   onPileNews: React.Dispatch<React.SetStateAction<number>>;
   spectateRef: React.RefObject<string | null>;
   remoteLayerRef: React.RefObject<HTMLDivElement | null>;
+  /** Where the damage numbers and hit arrows go (combatFx.ts). */
+  combatLayerRef: React.RefObject<HTMLDivElement | null>;
   /** Something a quest may count (a monster fallen near him, an escape), and the arena's news. */
   onQuestEvent: (e: QuestEvent) => void;
   onArenaEvent: (e: ArenaEvent) => void;
@@ -604,6 +631,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   restAskRef,
   onSpellState,
   crosshairRef,
+  tallyRef,
   customizing,
   playing,
   freeMove,
@@ -648,11 +676,15 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   frameCap,
   autoRes,
   perf,
+  lookSens,
+  invertY,
+  volume,
   resume,
   coopRef,
   onPileNews,
   spectateRef,
   remoteLayerRef,
+  combatLayerRef,
   onQuestEvent,
   onArenaEvent,
 }) => {
@@ -722,6 +754,34 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     sent: "",
   });
   const holyFxRef = useRef<HolyFx | null>(null);
+  /** Damage numbers over monsters and the arrows that point to whoever hurt him (combatFx.ts). */
+  const combatFxRef = useRef<CombatFx | null>(null);
+  useEffect(() => {
+    const fx = createCombatFx(combatLayerRef.current ?? document.body);
+    combatFxRef.current = fx;
+    return () => {
+      fx.dispose();
+      combatFxRef.current = null;
+    };
+  }, [combatLayerRef]);
+  /**
+   * What one of his blows, arrows or spells did to monster `m` (its health was `before`): a number
+   * rises off it. In a party the leader's floor strikes it, so this copy shows `est` instead.
+   */
+  const showDealt = useCallback((m: MobAgent | null | undefined, before: number, r: "blocked" | "hit" | "killed" | null, o: { head?: boolean; soft?: boolean; est?: number } = {}) => {
+    const fx = combatFxRef.current;
+    if (!m || !r) return;
+    const y = m.wy + m.height * 0.92;
+    if (r === "blocked") {
+      fx?.number(m.wx, y, m.wz, 0, "blocked");
+      return;
+    }
+    const amount = o.est ?? Math.max(0, before - m.hp);
+    const tally = tallyRef.current;
+    tally.dealt += amount;
+    if (r === "killed") tally.kills++;
+    fx?.number(m.wx, y, m.wz, amount, r === "killed" ? "kill" : o.head ? "head" : o.soft ? "poison" : "hit");
+  }, [tallyRef]);
   /** The rogue's: the moment after he strikes out of hiding, and the monsters his blade poisoned. */
   const rogueRef = useRef({ ambush: 0, poisons: [] as Array<{ id: number; t: number; tick: number }> });
   /** The spells' sounds (AI-generated takes, spellSfx.ts). */
@@ -870,6 +930,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   autoResRef.current = autoRes;
   const perfRef = useRef(perf);
   perfRef.current = perf;
+  const lookRef = useRef({ sens: lookSens, invertY });
+  lookRef.current = { sens: lookSens, invertY };
   const setDpr = useThree((s) => s.setDpr);
   const lastFrameRef = useRef(0);
   const paceRef = useRef({ prevTick: 0, budget: 0 });
@@ -1052,6 +1114,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       if (took > 0) holyFxRef.current?.burst("smite", px, w.playerFloor * CELL_M + 1.1, pz);
     }
     w.hp = Math.max(0, w.hp - dmg);
+    if (hit.how !== "acid" && (hit.fromX !== 0 || hit.fromZ !== 0)) combatFxRef.current?.hurtFrom(hit.fromX, hit.fromZ);
     if (hit.how === "acid") monsterSfxRef.current?.sizzle();
     else if (hit.how === "bolt") monsterSfxRef.current?.burst();
     else if (hit.how === "lunge") monsterSfxRef.current?.squelch(m.scale);
@@ -1061,8 +1124,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     if (w.hp <= 0) {
       w.dead = true;
       w.deadT = 0;
-    }
-    onHudUpdate({ hp: w.hp, maxHp: w.maxHp, dead: w.dead });
+      onHudUpdate({ hp: w.hp, maxHp: w.maxHp, dead: true, deathCause: hit.how === "acid" ? "Dissolved in acid" : `Slain by ${/^[aeiou]/i.test(m.name) ? "an" : "a"} ${m.name}` });
+    } else onHudUpdate({ hp: w.hp, maxHp: w.maxHp, dead: false });
     onPlayerHurt();
   };
   // A trap caught him: armour softens it (no shield blocks spikes from below), a log throws him back.
@@ -1226,12 +1289,20 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         paladin.dispose();
       }
       sfx.dispose();
+      msfx.dispose();
       spsfx.dispose();
       paladinRef.current = null;
       sfxRef.current = null;
+      monsterSfxRef.current = null;
       spellSfxRef.current = null;
     };
   }, [gl, scene]);
+  // The Esc menu's volume, over every set of sounds.
+  useEffect(() => {
+    sfxRef.current?.setVolume(volume);
+    monsterSfxRef.current?.setVolume(volume);
+    spellSfxRef.current?.setVolume(volume);
+  }, [volume, gl, scene]);
 
   // Input listeners (WASD/Arrows + Shift + Space + Mouse/Touch drag look + Wheel zoom + attack/block).
   useEffect(() => {
@@ -1383,6 +1454,9 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         return;
       }
       if (!playingRef.current && !freeMoveRef.current) return;
+      // The Esc menu's look speed and inverted look.
+      sens *= lookRef.current.sens;
+      if (lookRef.current.invertY) dy = -dy;
       // Hold C in third person to orbit the camera around the paladin without turning him.
       if (!firstPerson && keysRef.current.has("KeyC")) freeLookRef.current -= dx * sens;
       else world.walker.yaw -= dx * sens;
@@ -1705,10 +1779,15 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           // In a party the authority's floor takes the blow (net/coop.ts); this copy only sounds it.
           const co = coopRef.current;
           let r: ReturnType<typeof sim.hit>;
+          const before = m?.hp ?? 0;
           if (co && !co.leads()) {
             co.sendHit(id, dirX, dirZ, dmg);
             r = !m || m.dead ? null : m.blockT > 0 && m.equipment.shield ? "blocked" : "hit";
-          } else r = sim.hit(id, dirX, dirZ, dmg);
+            showDealt(m, before, r, { est: guessDealt(m, dmg) });
+          } else {
+            r = sim.hit(id, dirX, dirZ, dmg);
+            showDealt(m, before, r);
+          }
           const ms = monsterSfxRef.current;
           if (r === "blocked") {
             sfxRef.current?.clang();
@@ -1831,7 +1910,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef, warmShaders, coopRef, onPileNews]);
+  }, [place, seed, roomCount, theme, life, onHudUpdate, scene, containersRef, warmShaders, coopRef, onPileNews, showDealt]);
 
   // What he drops on the ground lies in a sack at his feet (a container to search with E): pieces
   // dropped close together share one sack; an emptied sack is gone.
@@ -1949,6 +2028,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
       }
       else if (e.type === "struck") {
         // His arrow found a monster: a shield takes it, bone cracks, jelly squelches.
+        if (e.mine) showDealt(e.mob, e.mob.hp + e.dealt, e.result, { head: e.head });
         if (e.result === "blocked") sfxRef.current?.clang();
         else if (e.mob.family === "slime") ms?.squelch(e.mob.scale * (e.result === "killed" ? 1.6 : 1));
         else {
@@ -2502,8 +2582,15 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         }
         if (q.tick > 0) continue;
         q.tick += 1;
-        if (coop && !coop.leads()) coop.sendHit(m.id, 0, 0, POISON_DPS);
-        else if (sim.hit(m.id, 0, 0, POISON_DPS, true) === "killed" && m.family === "skeleton") monsterSfxRef.current?.collapse();
+        const before = m.hp;
+        if (coop && !coop.leads()) {
+          coop.sendHit(m.id, 0, 0, POISON_DPS);
+          showDealt(m, before, "hit", { soft: true, est: guessDealt(m, POISON_DPS, true) });
+        } else {
+          const r = sim.hit(m.id, 0, 0, POISON_DPS, true);
+          showDealt(m, before, r, { soft: true });
+          if (r === "killed" && m.family === "skeleton") monsterSfxRef.current?.collapse();
+        }
         holyFxRef.current?.burst("poison", m.wx, m.wy + m.height * 0.6, m.wz);
       }
       const hudOf = (id: SkillId | null): SkillHud => {
@@ -2542,9 +2629,13 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         const dirX = (m.wx - fromX) / far;
         const dirZ = (m.wz - fromZ) / far;
         let r: ReturnType<typeof sim.hit> = "hit";
-        if (coop && !coop.leads()) coop.sendHit(m.id, dirX, dirZ, dmg);
-        else {
+        const before = m.hp;
+        if (coop && !coop.leads()) {
+          coop.sendHit(m.id, dirX, dirZ, dmg);
+          showDealt(m, before, r, { est: guessDealt(m, dmg) });
+        } else {
           r = sim.hit(m.id, dirX, dirZ, dmg);
+          showDealt(m, before, r);
           if (how === "ice" && r === "hit") {
             m.stun = Math.max(m.stun, SPELL.iceFreezeS);
             m.kx = m.kz = 0;
@@ -2673,8 +2764,14 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
                 const dmg = SPELL.lightDamage * (1 + st.magicalBonus) * (undead ? SPELL.undeadTimes * (1 + st.undeadBonus) : 1);
                 const far = Math.hypot(m.wx - px, m.wz - pz) || 1;
                 let r: ReturnType<typeof sim.hit> = "hit";
-                if (coop && !coop.leads()) coop.sendHit(m.id, (m.wx - px) / far, (m.wz - pz) / far, dmg);
-                else r = sim.hit(m.id, (m.wx - px) / far, (m.wz - pz) / far, dmg);
+                const before = m.hp;
+                if (coop && !coop.leads()) {
+                  coop.sendHit(m.id, (m.wx - px) / far, (m.wz - pz) / far, dmg);
+                  showDealt(m, before, r, { est: guessDealt(m, dmg) });
+                } else {
+                  r = sim.hit(m.id, (m.wx - px) / far, (m.wz - pz) / far, dmg);
+                  showDealt(m, before, r);
+                }
                 if (m.family === "slime") ms?.squelch(m.scale);
                 else ms?.boneHit();
                 if (r === "killed" && undead) ms?.collapse();
@@ -3337,6 +3434,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
     const eyeX = watching ? watching.x : px;
     const eyeZ = watching ? watching.z : pz;
     bodiesRef.current?.update(dt, world.time, sim, { x: eyeX, y: watching ? watching.y : py, z: eyeZ }, persp, size, platesRef.current);
+    combatFxRef.current?.update(dt, persp, size, { x: eyeX, z: eyeZ });
 
     // Update nearest shadow lamps + render multi-pass crypt frame.
     if (fl) view.updateLights(dt, eyeX / CELL_M, eyeZ / CELL_M, fl.lamps, fl.dungeon);
@@ -3651,6 +3749,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const attackHeldRef = useRef(false);
   const groundQueueRef = useRef<ItemInst[]>([]);
   const crosshairRef = useRef<HTMLDivElement | null>(null);
+  const runTallyRef = useRef<RunTally>({ kills: 0, dealt: 0 });
   const touchBlockRef = useRef(false);
   const stickPointerRef = useRef<{ id: number; cx: number; cy: number } | null>(null);
   // The player: a random adventurer's name and an id his saves are kept under (profile.ts).
@@ -3721,6 +3820,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const spectateRef = useRef<string | null>(null);
   const [watchPick, setWatchPick] = useState(0);
   const remoteLayerRef = useRef<HTMLDivElement | null>(null);
+  const combatLayerRef = useRef<HTMLDivElement | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   // The guild's quests (quests.ts): taken at the representative's desk, counted as he plays.
   const [quests, setQuests] = useState<QuestState>(loadQuests);
@@ -3759,6 +3859,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     resumedRef.current = resumed;
     if (resumed) return;
     runStartRef.current = invRef.current;
+    runTallyRef.current = { kills: 0, dealt: 0 };
     // A party's dive: the others learn he is down (and it is not kept to pick up alone later).
     if (coopRef.current) {
       mp.runStatus("in");
@@ -3823,7 +3924,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => {
     if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), 3600);
+    // Long lines (a dive's summary) stay longer.
+    const t = window.setTimeout(() => setToast(null), toast.length > 70 ? 6500 : 3600);
     return () => window.clearTimeout(t);
   }, [toast]);
   const [flashKey, setFlashKey] = useState(0);
@@ -4501,6 +4603,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     panel.side === "right"
       ? { left: 0, top: 0, width: viewport.w - panel.size, height: viewport.h }
       : { left: 0, top: 0, width: viewport.w, height: viewport.h - panel.size };
+  // The class screen's hero stands under its title (ClassSelect), not behind it.
+  const classTitleH = panel.side === "right" ? 104 : 86;
+  const classFrame: FrameRect = { ...panelFrame, top: panelFrame.top + classTitleH, height: Math.max(40, panelFrame.height - classTitleH) };
   const nextSeed = () => setSeed((s) => ((s * 1664525 + 1013904223) >>> 0) % 99999);
   // Below, these leave the floor mid-run (abandoned); in town they only set up the next dive.
   const leaveFloor = (go: () => void) => {
@@ -4545,7 +4650,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     if (!escapedNow) return;
     handleQuestEvent({ type: "escape", party: !!coopRef.current && coopRef.current.run.members.length > 1 });
     const g = runGainRef.current;
-    setToast(g.gold > 0 || g.items > 0 ? `Back through the gate. You keep ${haul(g)} from the dungeon.` : "Back through the gate, empty-handed.");
+    const t = tallyLine(runTallyRef.current, RUN_SECONDS - hudRef.current.runLeft);
+    setToast((g.gold > 0 || g.items > 0 ? `Back through the gate. You keep ${haul(g)} from the dungeon.` : "Back through the gate, empty-handed.") + ` ${t}.`);
     goToTown("gate");
   }, [escapedNow, goToTown, handleQuestEvent]);
   const runElapsed = RUN_SECONDS - hud.runLeft;
@@ -4673,6 +4779,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           restAskRef={restAskRef}
           onSpellState={setSpellHud}
           crosshairRef={crosshairRef}
+          tallyRef={runTallyRef}
           customizing={showcasing}
           playing={screen === "play"}
           freeMove={screen === "inventory"}
@@ -4680,7 +4787,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           kit={equipment}
           portraitViewRef={portraitViewRef}
           showcaseRef={showcaseRef}
-          frame={customizing || screen === "class" ? panelFrame : inventoryFrame}
+          frame={customizing ? panelFrame : screen === "class" ? classFrame : inventoryFrame}
           onCharacterBusy={handleCharacterBusy}
           iconsWanted={iconsWanted}
           onIcons={setIcons}
@@ -4709,6 +4816,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           frameCap={graphics.frameCap}
           autoRes={graphics.autoRes}
           perf={perfMode}
+          lookSens={graphics.lookSens}
+          invertY={graphics.invertY}
+          volume={graphics.volume}
           resume={resumeRun}
           place={place}
           arrival={arrival}
@@ -4723,6 +4833,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onPileNews={setLootVersion}
           spectateRef={spectateRef}
           remoteLayerRef={remoteLayerRef}
+          combatLayerRef={combatLayerRef}
           onQuestEvent={handleQuestEvent}
           onArenaEvent={handleArenaEvent}
         />
@@ -4735,7 +4846,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           kit={tableKit}
           fullKit={equipment}
           mode={screen === "class" ? "class" : "table"}
-          classFrame={panelFrame}
+          classFrame={classFrame}
           guests={lobbyGuests}
           portraitRect={screen === "lobby" && lobbyTab === "stash" && !lobbySub && !gearCompact ? lobbyPortrait : null}
           portraitView={portraitViewRef.current}
@@ -4992,6 +5103,12 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           onAutoRes={() => setGraphics((g) => ({ ...g, autoRes: !g.autoRes }))}
           showPerf={perfMode}
           onPerf={() => setGraphics((g) => ({ ...g, showPerf: !perfMode }))}
+          lookSens={graphics.lookSens}
+          onLookSens={(v) => setGraphics((g) => ({ ...g, lookSens: v }))}
+          invertY={graphics.invertY}
+          onInvertY={() => setGraphics((g) => ({ ...g, invertY: !g.invertY }))}
+          volume={graphics.volume}
+          onVolume={(v) => setGraphics((g) => ({ ...g, volume: v }))}
           backHref={backHref}
         />
       ) : null}
@@ -5680,6 +5797,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       {/* The other players' names (net/remotes.ts positions them every frame). */}
       <div ref={remoteLayerRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9, display: showGameHud ? "block" : "none" }} />
 
+      {/* Damage numbers over monsters and the arrows toward whoever hurt him (combatFx.ts). */}
+      <div ref={combatLayerRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 10, display: showGameHud ? "block" : "none" }} />
+
       {/* Multiplayer: the chat, an invite to answer, the party finder (P). */}
       {screen === "play" || chatOpen ? (
         <ChatBox
@@ -5886,6 +6006,21 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         </div>
       ) : null}
 
+      {/* Close to death (under a third of his health): the edges of the view throb red. */}
+      {showGameHud && !hud.dead && !hud.loading && hud.maxHp > 0 && hud.hp > 0 && hud.hp / hud.maxHp < LOW_HP ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 12,
+            background: `radial-gradient(ellipse at center, transparent ${hud.hp / hud.maxHp < LOW_HP / 2 ? 38 : 50}%, rgba(120,0,0,0.5) 100%)`,
+            animation: `simforgeLowHp ${hud.hp / hud.maxHp < LOW_HP / 2 ? 0.7 : 1.1}s ease-in-out infinite`,
+          }}
+        />
+      ) : null}
+      <style>{"@keyframes simforgeLowHp { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }"}</style>
+
       {/* A wound: the edges of the view flash red. */}
       {hurtKey > 0 && !hud.dead ? (
         <div
@@ -5902,8 +6037,9 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       ) : null}
       <style>{"@keyframes simforgeHurt { from { opacity: 1; } to { opacity: 0; } }"}</style>
 
-      {/* Fallen: in a party with a teammate still fighting, the camera follows him; else the end. */}
-      {hud.dead && watchId ? (
+      {/* Fallen: in a party with a teammate still fighting, the camera follows him; else the end.
+          (Not over the lobby: he has left the dungeon, but the town is not rebuilt until he goes in.) */}
+      {hud.dead && watchId && !inLobby ? (
         <SpectateBar
           name={mp.nameOf(watchId)}
           count={watchable.length}
@@ -5916,7 +6052,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           compact={mobileMode}
           lost={runGain.gold > 0 || runGain.items > 0 ? `Lost with you: ${haul(runGain)} found on this floor.` : "You had found nothing yet."}
         />
-      ) : hud.dead ? (
+      ) : hud.dead && !inLobby ? (
         <div
           style={{
             position: "fixed",
@@ -5939,6 +6075,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             {hud.deathCause ? (
               <div style={{ color: "#f0b0a0" }}>{hud.deathCause}.</div>
             ) : null}
+            {place === "dungeon" ? <div style={{ color: "#bfb39a", fontSize: 13, margin: "4px 0 6px" }}>{tallyLine(runTallyRef.current, runElapsed)}.</div> : null}
             {runGain.gold > 0 || runGain.items > 0
               ? `Lost with you: ${haul(runGain)} found on this floor.`
               : "You had found nothing yet."}
