@@ -23,6 +23,7 @@ import { PRESETS, frameStats, loadGraphics, maxDpr, saveGraphics, type FrameCap,
 import { FPS_HEIGHT, FpsCounter } from "./FpsCounter";
 import { beginRun, endRun, loadTownSpot, markRunDead, runAtStart, saveTownSpot, updateRun, type RunSnapshot } from "./runSave";
 import { MERCHANTS, css } from "./merchants";
+import { beginMap, blitLayer, drawChest, drawDoor, drawDot, drawLabel, drawPlayer, drawPortal, drawStall, dungeonLayer, dungeonSpan, endMap } from "./minimap";
 import { MODULES, pieceProps, planFloor, type FloorPlan } from "./dungeon/rooms";
 import { buildDressing, type FloorDressing } from "./roomView";
 import { createDoors, doorwayProps, type Doors } from "./doorView";
@@ -484,6 +485,8 @@ interface DungeonSceneProps {
   mimicQueueRef: React.MutableRefObject<string | null>;
   healQueueRef: React.RefObject<number>;
   minimapCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+  /** The big map (M), drawn only while it is open. */
+  bigMapCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   touchMoveRef: React.RefObject<{ forward: number; strafe: number }>;
   touchSprintRef: React.RefObject<boolean>;
   jumpQueueRef: React.RefObject<boolean>;
@@ -662,6 +665,7 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
   mimicQueueRef,
   healQueueRef,
   minimapCanvasRef,
+  bigMapCanvasRef,
   touchMoveRef,
   touchSprintRef,
   jumpQueueRef,
@@ -3643,75 +3647,48 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
         portalsOpen: portalsNow ? portalsNow.plans.filter((_, i) => portalsNow.isOpen(i, world.runT)).length : 0,
       });
 
-      const canvas = minimapCanvasRef.current;
-      const mapCtx = canvas && town ? canvas.getContext("2d") : null;
-      if (canvas && mapCtx && town) {
-        town.drawMap(mapCtx, canvas.width, canvas.height, px, pz, world.playerFloor * CELL_M, world.time);
-        // The other players on this storey (blue), at the town map's scale (34 m across).
-        const k = Math.min(canvas.width, canvas.height) / 34;
-        mapCtx.fillStyle = "#6fb8ff";
-        for (const o of remotesRef.current?.views() ?? []) {
-          if (Math.abs(o.y - o.air - world.playerFloor * CELL_M) > 1.5) continue;
-          mapCtx.beginPath();
-          mapCtx.arc(canvas.width / 2 + (o.x - px) * k, canvas.height / 2 + (o.z - pz) * k, Math.max(3, k * 0.4), 0, Math.PI * 2);
-          mapCtx.fill();
+      // The minimap follows him; the big map (M) shows the whole floor. Both redraw from the cached plan.
+      const facingMap = walker.yaw + Math.PI;
+      const maps: Array<[HTMLCanvasElement | null, boolean]> = [
+        [minimapCanvasRef.current, false],
+        [bigMapCanvasRef.current, true],
+      ];
+      for (const [canvas, full] of maps) {
+        if (!canvas) continue;
+        const mapCtx = canvas.getContext("2d");
+        if (!mapCtx) continue;
+        if (town) {
+          // The other players on this storey (blue).
+          const others = (remotesRef.current?.views() ?? []).filter((o) => Math.abs(o.y - o.air - world.playerFloor * CELL_M) <= 1.5);
+          town.drawMap(mapCtx, canvas.width, canvas.height, px, pz, world.playerFloor * CELL_M, world.time, facingMap, others, full);
+          continue;
         }
-      }
-      const dungeon = fl?.dungeon;
-      if (canvas && dungeon) {
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          const cw = canvas.width;
-          const ch = canvas.height;
-          ctx.clearRect(0, 0, cw, ch);
-          const scale = Math.min((cw - 12) / dungeon.W, (ch - 12) / dungeon.H);
-          const ox = (cw - dungeon.W * scale) / 2;
-          const oy = (ch - dungeon.H * scale) / 2;
-          for (let z = 0; z < dungeon.H; z++) {
-            for (let x = 0; x < dungeon.W; x++) {
-              const g = dungeon.grid[z * dungeon.W + x];
-              if (g === FLOOR) {
-                ctx.fillStyle = dungeon.roomId[z * dungeon.W + x] >= 0 ? "rgba(180,192,200,0.42)" : "rgba(130,140,148,0.34)";
-                ctx.fillRect(ox + x * scale, oy + z * scale, Math.ceil(scale), Math.ceil(scale));
-              }
-            }
+        const dungeon = fl?.dungeon;
+        if (!dungeon) continue;
+        {
+          const ctx = mapCtx;
+          // Map units are cells, with (0, 0) at the level's corner.
+          const wx = walker.x + dungeon.W / 2;
+          const wz = walker.z + dungeon.H / 2;
+          const v = full
+            ? beginMap(ctx, canvas.width, canvas.height, dungeon.W / 2, dungeon.H / 2, Math.max(dungeon.W, dungeon.H) + 2)
+            : beginMap(ctx, canvas.width, canvas.height, wx, wz, dungeonSpan(canvas.clientWidth || canvas.width));
+          const scale = v.k;
+          const plan = dungeonLayer(dungeon);
+          blitLayer(v, plan.layer, plan.ppu);
+          // Doors (shut: a solid bar across the way), the merchants' stalls, chests not yet searched.
+          for (const dr of doorsRef.current?.doors ?? []) {
+            const a = dr.arch;
+            drawDoor(v, a.x + 0.5, a.y + 0.5, a.px, a.py, a.len, dr.target > 0.5);
           }
-          // The men: green calm, red hostile, grey fallen.
-          for (const m of sim.mobs) {
-            ctx.fillStyle = m.dead ? "#59595c" : m.hostile ? "#ff5a4a" : "#6ce88a";
-            ctx.beginPath();
-            ctx.arc(ox + m.cx * scale, oy + m.cz * scale, Math.max(2, scale * 0.35), 0, Math.PI * 2);
-            ctx.fill();
-          }
-          // The merchants' stalls, in their awning colours.
           for (const st of marketRef.current?.stalls ?? []) {
             const m = MERCHANTS.find((q) => q.id === st.merchant);
             const c = stallPoint(st.plan, 0, 0.55);
-            const sz = Math.max(4, scale * 0.9);
-            ctx.fillStyle = css(m?.cloth ?? 0x888888);
-            ctx.strokeStyle = "#e6c48a";
-            ctx.lineWidth = 1;
-            ctx.fillRect(ox + c.x * scale - sz / 2, oy + c.z * scale - sz / 2, sz, sz);
-            ctx.strokeRect(ox + c.x * scale - sz / 2, oy + c.z * scale - sz / 2, sz, sz);
-          }
-          // Doors (shut: a solid bar across the way) and chests not yet searched.
-          for (const dr of doorsRef.current?.doors ?? []) {
-            const a = dr.arch;
-            const cx = ox + (a.x + 0.5) * scale;
-            const cz = oy + (a.y + 0.5) * scale;
-            const l = (a.len * scale) / 2;
-            ctx.strokeStyle = dr.target > 0.5 ? "rgba(176,122,58,0.35)" : "#c08a48";
-            ctx.lineWidth = Math.max(2, scale * 0.35);
-            ctx.beginPath();
-            ctx.moveTo(cx - a.px * l, cz - a.py * l);
-            ctx.lineTo(cx + a.px * l, cz + a.py * l);
-            ctx.stroke();
+            drawStall(v, c.x, c.z, css(m?.cloth ?? 0x888888));
           }
           (dressingRef.current?.chests ?? []).forEach((c, i) => {
             if (containersRef.current.get(chestIdsRef.current[i])?.seen) return;
-            ctx.fillStyle = "#ffcf5a";
-            const sz = Math.max(3, scale * 0.45);
-            ctx.fillRect(ox + c.piece.x * scale - sz / 2, oy + c.piece.z * scale - sz / 2, sz, sz);
+            drawChest(v, c.piece.x, c.piece.z);
           });
           // Traps: a spike plate as a red crossed square; across the corridor, a log as an orange
           // bar, a blade as a pale bar with its hub, a channel as a green (lava: orange) band; a
@@ -3719,8 +3696,8 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
           // as a grey block; burners as a red-orange band.
           const lavaFloor = theme === "molten";
           for (const t of trapsRef.current?.plans ?? []) {
-            const cx = ox + t.gx * scale;
-            const cz = oy + t.gz * scale;
+            const cx = v.X(t.gx);
+            const cz = v.Z(t.gz);
             const h = Math.max(2.5, scale * 0.42);
             if (t.kind === "boulder" || t.kind === "crusher" || t.kind === "flames") {
               const across = (t.span * scale) / 2;
@@ -3783,31 +3760,30 @@ const DungeonScene: React.FC<DungeonSceneProps> = ({
               ctx.fill();
             }
           }
-          // Open portals: a violet ring that pulses.
+          // Open portals.
           const portalsMap = portalsRef.current;
           portalsMap?.plans.forEach((pl, i) => {
-            if (!portalsMap.isOpen(i, world.runT)) return;
-            const r = Math.max(4, scale * 0.9) * (1 + 0.18 * Math.sin(world.time * 5));
-            ctx.fillStyle = "rgba(160,110,255,0.35)";
-            ctx.strokeStyle = "#c9a8ff";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(ox + pl.gx * scale, oy + pl.gz * scale, r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+            if (portalsMap.isOpen(i, world.runT)) drawPortal(v, pl.gx, pl.gz, Math.max(4, scale * 0.9), world.time);
           });
-          // The party (blue dots, grey once down).
+          // Monsters: green calm, red hostile (pulsing), grey fallen.
+          sim.mobs.forEach((m, i) => {
+            if (m.dead) drawDot(v, m.cx, m.cz, "#59595c", { r: Math.max(1.8, scale * 0.25) });
+            else if (m.hostile) drawDot(v, m.cx, m.cz, "#ff5a4a", { pulse: world.time * 1.4 + i * 0.37 });
+            else drawDot(v, m.cx, m.cz, "#6ce88a");
+          });
+          // The party (blue, grey once down).
           for (const o of remotesRef.current?.views() ?? []) {
-            ctx.fillStyle = o.dead ? "#59595c" : "#6fb8ff";
-            ctx.beginPath();
-            ctx.arc(ox + (o.x / CELL_M + dungeon.W / 2) * scale, oy + (o.z / CELL_M + dungeon.H / 2) * scale, Math.max(3, scale * 0.45), 0, Math.PI * 2);
-            ctx.fill();
+            drawDot(v, o.x / CELL_M + dungeon.W / 2, o.z / CELL_M + dungeon.H / 2, o.dead ? "#59595c" : "#6fb8ff", { r: Math.max(2.8, scale * 0.42) });
           }
-          // Player Paladin (gold dot)
-          ctx.fillStyle = "#ffd84d";
-          ctx.beginPath();
-          ctx.arc(ox + (walker.x + dungeon.W / 2) * scale, oy + (walker.z + dungeon.H / 2) * scale, Math.max(3, scale * 0.5), 0, Math.PI * 2);
-          ctx.fill();
+          // Room names on the big map.
+          if (full && planRef.current) {
+            for (const room of dungeon.rooms) {
+              const mod = MODULES[planRef.current.modules[room.id]];
+              drawLabel(v, (room.x0 + room.x1 + 1) / 2, room.y0 + 1.1, mod ? mod.name : room.type);
+            }
+          }
+          drawPlayer(v, wx, wz, facingMap);
+          endMap(v, full ? 0.45 : 0.85);
         }
       }
     }
@@ -3903,6 +3879,13 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     if ((hud.dead || hud.escaped) && document.pointerLockElement) document.exitPointerLock?.();
   }, [hud.dead, hud.escaped]);
   const minimapRef = useRef<HTMLCanvasElement | null>(null);
+  const bigMapRef = useRef<HTMLCanvasElement | null>(null);
+  // The big map over the game (M, or clicking the minimap).
+  const [bigMap, setBigMap] = useState(false);
+  const bigMapRefState = useRef(false);
+  bigMapRefState.current = bigMap;
+  const wasLockedBeforeMapRef = useRef(false);
+  const exitingForMapRef = useRef(false);
   const touchMoveRef = useRef<{ forward: number; strafe: number }>({ forward: 0, strafe: 0 });
   const touchSprintRef = useRef(false);
   const jumpQueueRef = useRef(false);
@@ -3971,7 +3954,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     return () => window.clearTimeout(t);
   }, [hud.pointerLocked]);
   // In town or below, where he comes up in town, and each arrival there (it places him again).
-  const [place, setPlace] = useState<Place>(resumeRun ? "dungeon" : "town");
+  const [place, setPlace] = useState<Place>(resumeRun || params.get("place") === "dungeon" ? "dungeon" : "town");
   const placeRef = useRef(place);
   placeRef.current = place;
   // Multiplayer (net/mp.ts): the hub's store, a party's dive under way (net/coop.ts), whom he
@@ -4289,6 +4272,11 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
   const handleCharacterBusy = useCallback((b: boolean) => setCharacterBusy(b), []);
   const openScreen = useCallback((next: Screen) => {
     if (next === screenRef.current) return;
+    if (next !== "play" && bigMapRefState.current) {
+      bigMapRefState.current = false;
+      wasLockedBeforeMapRef.current = false;
+      setBigMap(false);
+    }
     if (next === "character") {
       showcaseRef.current.zoom = SHOW_ZOOM.face;
       showcaseRef.current.lift = 0;
@@ -4303,6 +4291,36 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     if (next !== "play" && document.pointerLockElement) document.exitPointerLock?.();
   }, []);
   const isTouchUIRef = useRef(false);
+  const openBigMap = useCallback(() => {
+    if (screenRef.current !== "play" || inLobbyRef.current || runOverRef.current || hudRef.current.loading) return;
+    wasLockedBeforeMapRef.current = !!document.pointerLockElement;
+    bigMapRefState.current = true;
+    setBigMap(true);
+    if (document.pointerLockElement) {
+      exitingForMapRef.current = true;
+      document.exitPointerLock?.();
+    }
+  }, []);
+  const closeBigMap = useCallback((relock = true) => {
+    const wasLocked = wasLockedBeforeMapRef.current;
+    wasLockedBeforeMapRef.current = false;
+    bigMapRefState.current = false;
+    setBigMap(false);
+    if (relock && wasLocked && !isTouchUIRef.current && screenRef.current === "play" && !runOverRef.current) {
+      const canvas = document.querySelector("canvas");
+      if (canvas && !document.pointerLockElement) {
+        try {
+          const r = canvas.requestPointerLock?.() as unknown as Promise<void> | undefined;
+          r?.catch?.(() => {});
+        } catch {
+          // Click the view to capture it instead.
+        }
+      }
+    }
+  }, []);
+  useEffect(() => {
+    if ((hud.dead || hud.escaped) && bigMapRefState.current) closeBigMap(false);
+  }, [hud.dead, hud.escaped, closeBigMap]);
   const resume = useCallback(() => {
     openScreen("play");
     // Take the mouse back straight away on desktop (the browser may refuse just after an Esc).
@@ -4614,15 +4632,22 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
     let locked = !!document.pointerLockElement;
     const onChange = () => {
       const now = !!document.pointerLockElement;
-      if (locked && !now && screenRef.current === "play" && !runOverRef.current) {
-        lockLostAtRef.current = performance.now();
-        openScreen("menu");
+      if (locked && !now) {
+        if (exitingForMapRef.current) {
+          exitingForMapRef.current = false;
+        } else if (bigMapRefState.current) {
+          lockLostAtRef.current = performance.now();
+          closeBigMap(false);
+        } else if (screenRef.current === "play" && !runOverRef.current) {
+          lockLostAtRef.current = performance.now();
+          openScreen("menu");
+        }
       }
       locked = now;
     };
     document.addEventListener("pointerlockchange", onChange);
     return () => document.removeEventListener("pointerlockchange", onChange);
-  }, [openScreen]);
+  }, [openScreen, closeBigMap]);
 
   const handleTouchDetected = useCallback(() => {
     setIsTouchUI(true);
@@ -4679,10 +4704,14 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
         return;
       }
       if (e.repeat) return;
-      // Esc: the game opens the menu; the menu and the inventory close; the character screen goes back to the menu.
+      // Esc: close the big map first, else open the menu or close the active panel.
       if (e.code === "Escape") {
         // The same press that just released the mouse (and opened the menu) is not a second one.
         if (performance.now() - lockLostAtRef.current < 300) return;
+        if (bigMapRefState.current) {
+          closeBigMap(false);
+          return;
+        }
         const cur = screenRef.current;
         if (cur === "play" || cur === "character") openScreen("menu");
         else if (cur === "menu" || cur === "shop" || cur === "loot" || cur === "party" || cur === "quests") resume();
@@ -4722,6 +4751,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       // Enter: say something.
       if (e.code === "Enter" && mp.state.status !== "off") {
         e.preventDefault();
+        if (bigMapRefState.current) closeBigMap(false);
         setChatOpen(true);
         return;
       }
@@ -4739,17 +4769,23 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
       if (e.code === "Digit2") toggleDraw(2);
       if (e.code === "Digit3") applyBeltSlot(0);
       if (e.code === "Digit4") applyBeltSlot(1);
-      if (e.code === "KeyM") setShowMap((v) => !v);
+      if (e.code === "KeyM") {
+        if (bigMapRefState.current) closeBigMap(true);
+        else openBigMap();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [openScreen, resume, interactNow, toggleDraw, applyBeltSlot]);
+  }, [openScreen, resume, interactNow, toggleDraw, applyBeltSlot, openBigMap, closeBigMap]);
 
   const isPortrait = viewport.h > viewport.w;
   const isCompact = viewport.w < 760 || viewport.h < 520;
   const mobileMode = isTouchUI || isCompact;
   // A phone held sideways is short: a smaller minimap keeps clear of the touch buttons under it.
   const mapPixels = isPortrait ? 94 : mobileMode ? (viewport.h < 400 ? 96 : 112) : 156;
+  // The minimap canvases are sized in device pixels so their lines stay sharp on high-DPI screens.
+  const mapDpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+  const bigMapPixels = Math.max(200, Math.floor(Math.min(viewport.w * 0.92, viewport.h - 110)));
   // Character screen: panel on the right and the paladin on the left; on narrow portrait screens
   // the panel takes the bottom half instead.
   const panel: PanelLayout =
@@ -4969,6 +5005,7 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           mimicQueueRef={mimicQueueRef}
           healQueueRef={healQueueRef}
           minimapCanvasRef={minimapRef}
+          bigMapCanvasRef={bigMapRef}
           touchMoveRef={touchMoveRef}
           touchSprintRef={touchSprintRef}
           jumpQueueRef={jumpQueueRef}
@@ -5557,8 +5594,8 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
           }}
         >
           {hud.pointerLocked
-            ? "Q / E Abilities" + (spells.length ? ` (hold for the spell wheel) · X ${meditates(spells) ? "Meditate" : "Pray"}` : "") + " · 1 / 2 Weapon sets · R Reload bow · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · F Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"
-            : "Click to capture the mouse · Q / E Abilities" + (spells.length ? ` (hold for the spell wheel) · X ${meditates(spells) ? "Meditate" : "Pray"}` : "") + " · 1 / 2 Weapon sets · R Reload bow · 3 / 4 Belt · Z Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · F Use · H Helm · Tab Inventory · Enter Chat · P Party · Esc Menu"}
+            ? "Q / E Abilities" + (spells.length ? ` (hold for the spell wheel) · X ${meditates(spells) ? "Meditate" : "Pray"}` : "") + " · 1 / 2 Weapon sets · R Reload bow · 3 / 4 Belt · LMB Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · C Orbit · F Use · H Helm · Tab Inventory · M Map · Enter Chat · P Party · Esc Menu"
+            : "Click to capture the mouse · Q / E Abilities" + (spells.length ? ` (hold for the spell wheel) · X ${meditates(spells) ? "Meditate" : "Pray"}` : "") + " · 1 / 2 Weapon sets · R Reload bow · 3 / 4 Belt · Z Swing (hold to draw the bow) · RMB Shield · WASD Move · Shift Run · Space Jump · V Camera · F Use · H Helm · Tab Inventory · M Map · Enter Chat · P Party · Esc Menu"}
         </div>
       ) : null}
 
@@ -6345,16 +6382,19 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
             top: mobileMode ? `calc(max(10px, env(safe-area-inset-top)) + ${graphics.showFps || perfMode ? FPS_HEIGHT : 0}px)` : undefined,
             bottom: mobileMode ? undefined : 14,
             background: "rgba(8, 10, 14, 0.78)",
-            border: "1px solid rgba(255,255,255,0.14)",
+            border: "1px solid rgba(230,196,138,0.28)",
             borderRadius: 10,
             padding: mobileMode ? 5 : 8,
-            pointerEvents: "none",
+            pointerEvents: "auto",
+            cursor: "pointer",
           }}
+          title={isTouchUI ? "Tap to open map" : "Click or press M to open map"}
+          onClick={openBigMap}
         >
           <canvas
             ref={minimapRef}
-            width={mapPixels}
-            height={mapPixels}
+            width={Math.round(mapPixels * mapDpr)}
+            height={Math.round(mapPixels * mapDpr)}
             style={{ width: mapPixels, height: mapPixels, display: "block" }}
           />
           <div style={{ fontSize: 10, color: "#9fb0bf", textAlign: "center", marginTop: 2 }}>
@@ -6373,6 +6413,56 @@ export const DungeonApp: React.FC<DungeonAppProps> = ({ backHref }) => {
                 &nbsp;<span style={{ color: "#c9a8ff" }}>◯</span> Portal
               </>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {/* The big map (M, or clicking the minimap): the whole floor, its rooms named. Click/tap or press M/Esc to close. */}
+      {bigMap && showGameHud ? (
+        <div
+          onClick={() => closeBigMap(true)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 30,
+            background: "radial-gradient(ellipse at center, rgba(6,7,10,0.55), rgba(6,7,10,0.85))",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            fontFamily: "system-ui, sans-serif",
+          }}
+        >
+          <div style={{ color: "#f1e3c2", font: "600 16px Georgia, 'Times New Roman', serif", letterSpacing: 3, textTransform: "uppercase", textShadow: "0 2px 6px #000" }}>
+            {place === "town" ? "The Guild" : "Floor map"}
+            <span style={{ color: "#9fb0bf", letterSpacing: 1, textTransform: "none", fontFamily: "system-ui, sans-serif", fontSize: 12, fontWeight: 400 }}> · {hud.roomLabel}</span>
+          </div>
+          <canvas
+            ref={bigMapRef}
+            width={Math.round(bigMapPixels * mapDpr)}
+            height={Math.round(bigMapPixels * mapDpr)}
+            style={{ width: bigMapPixels, height: bigMapPixels, display: "block", borderRadius: 12, boxShadow: "0 12px 48px rgba(0,0,0,0.65)" }}
+          />
+          <div style={{ fontSize: 11, color: "#9fb0bf", textShadow: "0 1px 3px #000" }}>
+            <span style={{ color: "#ffd84d" }}>▲</span> You &nbsp; <span style={{ color: "#6fb8ff" }}>●</span> Party &nbsp;{" "}
+            {place === "town" ? (
+              <>
+                <span style={{ color: "#6ce88a" }}>●</span> Folk &nbsp; <span style={{ color: "#c9a8ff" }}>◯</span> Teleporter
+              </>
+            ) : (
+              <>
+                <span style={{ color: "#6ce88a" }}>●</span> Monsters &nbsp; <span style={{ color: "#ff5a4a" }}>●</span> Hostile &nbsp; <span style={{ color: "#ffcf5a" }}>■</span> Chest &nbsp;{" "}
+                <span style={{ color: "#c08a48" }}>▬</span> Door
+                {hud.portalsOpen ? (
+                  <>
+                    {" "}
+                    &nbsp;<span style={{ color: "#c9a8ff" }}>◯</span> Portal
+                  </>
+                ) : null}
+              </>
+            )}
+            &nbsp; · &nbsp;{isTouchUI ? "Tap to close" : "Click, M or Esc to close"}
           </div>
         </div>
       ) : null}

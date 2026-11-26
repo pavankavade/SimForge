@@ -212,7 +212,7 @@ export const PauseMenu: React.FC<PauseMenuProps> = (p) => (
         {p.inTown ? null : <Small onClick={p.onNewSeed}>New floor</Small>}
         <Small onClick={p.onTheme}>Theme: {p.themeLabel}</Small>
         <Small onClick={p.onCamera}>{p.firstPerson ? "Third person" : "First person"}{p.touch ? "" : " (V)"}</Small>
-        <Small onClick={p.onMap}>{p.showMap ? "Hide map" : "Show map"}{p.touch ? "" : " (M)"}</Small>
+        <Small onClick={p.onMap}>{p.showMap ? "Hide minimap" : "Show minimap"}</Small>
         <label style={{ fontSize: 12, color: "#d8ccb0", display: "flex", alignItems: "center", gap: 5 }}>
           Rooms
           <select

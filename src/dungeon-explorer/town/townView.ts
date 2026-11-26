@@ -17,6 +17,7 @@ import { MERCHANTS, css } from "../merchants";
 import { placeModel } from "../props3d";
 import { hingeLid } from "../roomView";
 import * as L from "./layout";
+import { beginMap, blitLayer, drawChest, drawDot, drawLabel, drawPlayer, drawPortal, drawStall, endMap, paintTown, type TownPlan } from "../minimap";
 
 export interface Town {
   group: THREE.Group;
@@ -41,7 +42,21 @@ export interface Town {
   zone: () => "in" | "out";
   update: (dt: number, time: number, player: THREE.Vector3) => void;
   /** The minimap: the storey he is on, round where he stands. */
-  drawMap: (ctx: CanvasRenderingContext2D, cw: number, ch: number, px: number, pz: number, py: number, time: number) => void;
+  drawMap: (
+    ctx: CanvasRenderingContext2D,
+    cw: number,
+    ch: number,
+    px: number,
+    pz: number,
+    py: number,
+    time: number,
+    /** Which way he faces (0 = +z). */
+    facing: number,
+    /** Other players on this storey (m). */
+    others: Array<{ x: number; z: number }>,
+    /** The big map: the whole storey, with its places named. */
+    full?: boolean,
+  ) => void;
   dispose: () => void;
 }
 
@@ -1399,6 +1414,38 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
     p.update(dt, { moveX: 0, moveZ: speed, aimPitch: 0, turnRate: turn, air: 0, block: false, attack: false, firstPerson: false, relaxed: true, arms }, 0);
   };
 
+  // The minimap's plan of each storey, painted on first use: planks in the tavern, flags elsewhere,
+  // sand in the arena ring.
+  let mapGround: ReturnType<typeof paintTown> | null = null;
+  let mapUpper: ReturnType<typeof paintTown> | null = null;
+  const townPlan = (upper: boolean) => {
+    const lo = upper ? L.UPPER_Y : 0;
+    const tavern = (r: { x1: number; z0: number }) => r.x1 <= L.TAVERN.x1 + 0.01 && r.z0 >= L.TAVERN.z0 - 0.01;
+    const plan: TownPlan = { bounds: { x0: 0, x1: 0, z0: 0, z1: 0 }, floors: [], discs: [], solids: [] };
+    for (const r of L.REGIONS) {
+      if (r.kind === "disc") {
+        if (!upper) plan.discs.push({ x: r.x, z: r.z, r: r.r });
+      } else if (r.kind === "rampZ") {
+        plan.floors.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1, surface: "stair" });
+      } else if (r.y > 2 === upper) {
+        plan.floors.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1, surface: tavern(r) ? "wood" : "stone" });
+      }
+    }
+    if (!upper) plan.floors.push({ ...L.RING, surface: "sand" });
+    for (const s of L.SOLIDS) {
+      if (s.walk && s.y1 > lo + 0.3 && s.y0 < lo + 1.7) plan.solids.push(s);
+    }
+    const all = (plan.floors as Array<{ x0: number; x1: number; z0: number; z1: number }>).concat(
+      plan.discs.map((d) => ({ x0: d.x - d.r, x1: d.x + d.r, z0: d.z - d.r, z1: d.z + d.r })),
+    );
+    plan.bounds = {
+      x0: Math.min(...all.map((r) => r.x0)) - 2,
+      x1: Math.max(...all.map((r) => r.x1)) + 2,
+      z0: Math.min(...all.map((r) => r.z0)) - 2,
+      z1: Math.max(...all.map((r) => r.z1)) + 2,
+    };
+    return paintTown(plan);
+  };
   const rentedNow: boolean[] = L.ROOMS.map(() => false);
   L.ROOMS.forEach((_, i) => setPlaque(i, false));
   let active = true;
@@ -1544,76 +1591,61 @@ export function createTown(gl: THREE.WebGLRenderer, scene: THREE.Scene): Town {
         }
       }
     },
-    drawMap(ctx, cw, ch, px, pz, py, time) {
+    drawMap(ctx, cw, ch, px, pz, py, time, facing, others, full = false) {
       const upper = py > 2;
-      const span = 40; // metres across
-      const k = Math.min(cw, ch) / span;
-      const X = (x: number) => cw / 2 + (x - px) * k;
-      const Z = (z: number) => ch / 2 + (z - pz) * k;
-      ctx.clearRect(0, 0, cw, ch);
-      ctx.fillStyle = "rgba(180,192,200,0.36)";
-      for (const r of L.REGIONS) {
-        if (r.kind === "flat") {
-          if (r.y > 2 !== upper) continue;
-          ctx.fillRect(X(r.x0), Z(r.z0), (r.x1 - r.x0) * k, (r.z1 - r.z0) * k);
-        } else if (r.kind === "rampZ") {
-          ctx.fillStyle = "rgba(214,186,128,0.45)";
-          ctx.fillRect(X(r.x0), Z(r.z0), (r.x1 - r.x0) * k, (r.z1 - r.z0) * k);
-          ctx.fillStyle = "rgba(180,192,200,0.36)";
-        }
-      }
-      // Walls and big furniture at this storey.
-      ctx.fillStyle = "rgba(30,26,22,0.8)";
+      const plan = upper ? (mapUpper ??= townPlan(true)) : (mapGround ??= townPlan(false));
+      // The minimap follows him; the big map fits the whole storey.
+      const w = plan.layer.width / plan.ppu;
+      const h = plan.layer.height / plan.ppu;
+      const v = full ? beginMap(ctx, cw, ch, plan.ox + w / 2, plan.oz + h / 2, Math.max(w, h)) : beginMap(ctx, cw, ch, px, pz, 40);
+      blitLayer(v, plan.layer, plan.ppu, plan.ox, plan.oz);
+      // Doors: shut ones are drawn in as walls, open ones leave the gap.
       const lo = upper ? L.UPPER_Y : 0;
-      for (const s of L.SOLIDS.concat(dynamicSolids())) {
+      ctx.fillStyle = "#c08a48";
+      for (const s of dynamicSolids()) {
         if (!s.walk || s.y1 <= lo + 0.3 || s.y0 >= lo + 1.7) continue;
-        ctx.fillRect(X(s.x0), Z(s.z0), Math.max(1, (s.x1 - s.x0) * k), Math.max(1, (s.z1 - s.z0) * k));
+        ctx.fillRect(v.X(s.x0), v.Z(s.z0), Math.max(2, (s.x1 - s.x0) * v.k), Math.max(2, (s.z1 - s.z0) * v.k));
       }
       if (!upper) {
-        // The sand ring, the stalls in their awning colours, the dais in violet, the desk in gold.
-        const R = L.RING;
-        ctx.fillStyle = "rgba(226,196,140,0.35)";
-        ctx.fillRect(X(R.x0), Z(R.z0), (R.x1 - R.x0) * k, (R.z1 - R.z0) * k);
+        // The stalls in their awning colours, the desk in gold, the dais in violet, the folk in green.
         L.townStalls().forEach((st) => {
           const m = MERCHANTS[st.merchant];
-          const sz = Math.max(5, k * 1.6);
-          ctx.fillStyle = css(m?.cloth ?? 0x888888);
-          ctx.strokeStyle = "#e6c48a";
-          ctx.lineWidth = 1;
-          const cx = st.x * 1.5;
-          const cz = st.z * 1.5 - 0.9;
-          ctx.fillRect(X(cx) - sz / 2, Z(cz) - sz / 2, sz, sz);
-          ctx.strokeRect(X(cx) - sz / 2, Z(cz) - sz / 2, sz, sz);
+          drawStall(v, st.x * 1.5, st.z * 1.5 - 0.9, css(m?.cloth ?? 0x888888));
         });
+        const dw = (L.DESK.x1 - L.DESK.x0) * v.k;
+        const dh = Math.max(2.5, (L.DESK.z1 - L.DESK.z0) * v.k);
         ctx.fillStyle = "#e8c060";
-        ctx.fillRect(X(L.DESK.x0), Z(L.DESK.z0), (L.DESK.x1 - L.DESK.x0) * k, Math.max(2, (L.DESK.z1 - L.DESK.z0) * k));
-        const r = L.DAIS.r * k * (1 + 0.06 * Math.sin(time * 4));
-        ctx.fillStyle = "rgba(160,110,255,0.35)";
-        ctx.strokeStyle = "#c9a8ff";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(X(L.DAIS.x), Z(L.DAIS.z), r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        ctx.strokeStyle = "rgba(20,12,2,0.9)";
+        ctx.lineWidth = 1;
+        ctx.fillRect(v.X(L.DESK.x0), v.Z(L.DESK.z0), dw, dh);
+        ctx.strokeRect(v.X(L.DESK.x0), v.Z(L.DESK.z0), dw, dh);
+        drawPortal(v, L.DAIS.x, L.DAIS.z, L.DAIS.r * v.k, time);
         for (const n of npcs) {
           if (!n.p) continue;
-          ctx.fillStyle = "#6ce88a";
-          ctx.beginPath();
-          ctx.arc(X(n.x), Z(n.z), Math.max(2, k * 0.3), 0, Math.PI * 2);
-          ctx.fill();
+          drawDot(v, n.x, n.z, "#6ce88a");
         }
       } else {
         // Rented rooms' chests.
         L.ROOMS.forEach((r, i) => {
           if (!rentedNow[i]) return;
-          ctx.fillStyle = "#ffcf5a";
-          for (const c of r.chests) ctx.fillRect(X(c.x) - 3, Z(c.z) - 3, 6, 6);
+          for (const c of r.chests) drawChest(v, c.x, c.z);
         });
       }
-      ctx.fillStyle = "#ffd84d";
-      ctx.beginPath();
-      ctx.arc(cw / 2, ch / 2, Math.max(3, k * 0.4), 0, Math.PI * 2);
-      ctx.fill();
+      // The other players on this storey.
+      for (const o of others) drawDot(v, o.x, o.z, "#6fb8ff");
+      if (full) {
+        const names: Array<[number, number, string]> = upper
+          ? [[(L.TAVERN.x0 + L.TAVERN.x1) / 2, L.GALLERY_Z + 0.9, "Gallery"]]
+          : [
+              [(L.TAVERN.x0 + L.TAVERN.x1) / 2, L.TAVERN.z0 + 1.6, "Tavern"],
+              [0, L.HALL.z0 + 3, "Guild Hall"],
+              [(L.ARENA_WING.x0 + L.ARENA_WING.x1) / 2, L.ARENA_WING.z0 + 2, "Arena"],
+              [0, (L.STREET.z0 + L.STREET.z1) / 2, "Guild Street"],
+            ];
+        for (const [x, z, text] of names) drawLabel(v, x, z, text);
+      }
+      drawPlayer(v, px, pz, facing);
+      endMap(v, full ? 0.45 : 0.85);
     },
     dispose() {
       alive = false;
